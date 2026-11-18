@@ -36,33 +36,42 @@ func (s *Service) approverKeys(ctx context.Context, p port.Principal) ([]string,
 	return keys, err
 }
 
-func (s *Service) mayRead(ctx context.Context, p port.Principal, a port.Approval) (bool, error) {
-	keys, err := s.approverKeys(ctx, p)
-	if err != nil {
-		return false, err
-	}
-	if slices.ContainsFunc(a.Approvers, func(x string) bool { return slices.Contains(keys, x) }) {
-		return true, nil
-	}
-	return s.authorize(ctx, p, authz.ApprovalRead, authz.Workspace(string(a.Tenant), string(a.Workspace))) == nil, nil
+func (s *Service) removed(tombs []port.Tombstone, person port.PersonID, ws port.WorkspaceID) bool {
+	return slices.ContainsFunc(tombs, func(t port.Tombstone) bool {
+		return t.Subject == string(person) && (t.Workspace == "" || t.Workspace == ws) && t.Live(s.now())
+	})
 }
 
-// ListApprovals returns the approvals the caller may read: those that name them or their groups, or all for an admin or auditor.
+func (s *Service) named(keys []string, tombs []port.Tombstone, p port.Principal, a port.Approval) bool {
+	return !s.removed(tombs, p.Person, a.Workspace) && slices.ContainsFunc(a.Approvers, func(x string) bool { return slices.Contains(keys, x) })
+}
+
+func (s *Service) mayRead(ctx context.Context, p port.Principal, keys []string, tombs []port.Tombstone, a port.Approval) bool {
+	return s.named(keys, tombs, p, a) || s.authorize(ctx, p, authz.ApprovalRead, authz.Workspace(string(a.Tenant), string(a.Workspace))) == nil
+}
+
+// ListApprovals returns the approvals the caller may read: those that name them or their groups unless they were removed, or all for an admin or auditor.
 func (s *Service) ListApprovals(ctx context.Context, p port.Principal, f port.ApprovalFilter) ([]port.Approval, error) {
 	if err := s.authorize(ctx, p, authz.ConnectorRead, s.tenantResource(p)); err != nil {
 		return nil, err
 	}
+	keys, err := s.approverKeys(ctx, p)
+	if err != nil {
+		return nil, err
+	}
 	var all, out []port.Approval
+	var tombs []port.Tombstone
 	if err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) (err error) {
-		all, err = tx.ListApprovals(f)
+		if all, err = tx.ListApprovals(f); err != nil {
+			return err
+		}
+		tombs, err = tx.ListTombstones(port.TombstonePerson)
 		return err
 	}); err != nil {
 		return nil, err
 	}
 	for _, a := range all {
-		if ok, err := s.mayRead(ctx, p, a); err != nil {
-			return nil, err
-		} else if ok {
+		if s.mayRead(ctx, p, keys, tombs, a) {
 			out = append(out, a)
 		}
 	}
@@ -75,12 +84,20 @@ func (s *Service) GetApproval(ctx context.Context, p port.Principal, id port.App
 	var siblings []port.Approval
 	var fn port.Function
 	var lv port.ListingVersion
-	err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
+	var tombs []port.Tombstone
+	keys, err := s.approverKeys(ctx, p)
+	if err != nil {
+		return d, err
+	}
+	err = s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
 		if err != nil {
 			return err
 		}
 		d.Approval = a
+		if tombs, err = tx.ListTombstones(port.TombstonePerson); err != nil {
+			return err
+		}
 		if siblings, err = tx.ListApprovals(port.ApprovalFilter{Session: a.Session, CallHash: a.CallHash}); err != nil {
 			return err
 		}
@@ -97,11 +114,8 @@ func (s *Service) GetApproval(ctx context.Context, p port.Principal, id port.App
 	if err != nil {
 		return d, err
 	}
-	if ok, err := s.mayRead(ctx, p, d.Approval); err != nil || !ok {
-		if err == nil {
-			err = port.Errorf(port.CodeNotFound, "approval %s not found", id)
-		}
-		return ApprovalDetail{}, err
+	if !s.mayRead(ctx, p, keys, tombs, d.Approval) {
+		return ApprovalDetail{}, port.Errorf(port.CodeNotFound, "approval %s not found", id)
 	}
 	if d.Approval.Arguments != nil {
 		if d.Arguments, err = s.d.Secrets.Open(ctx, p.Claims.Tenant, *d.Approval.Arguments); err != nil {
@@ -128,6 +142,13 @@ func (s *Service) DecideApproval(ctx context.Context, p port.Principal, id port.
 		a, err := tx.GetApproval(id)
 		if err != nil {
 			return err
+		}
+		tombs, err := tx.ListTombstones(port.TombstonePerson)
+		if err != nil {
+			return err
+		}
+		if s.removed(tombs, p.Person, a.Workspace) {
+			return port.Errorf(port.CodeNotAnApprover, "%s was removed and decides nothing", actor(p))
 		}
 		by := string(p.Person)
 		if i := slices.IndexFunc(a.Approvers, func(x string) bool { return slices.Contains(keys, x) }); i >= 0 {
@@ -160,7 +181,7 @@ func (s *Service) DecideApproval(ctx context.Context, p port.Principal, id port.
 }
 
 func (s *Service) writeSessionRow(tx port.Tx, a port.Approval) error {
-	row := grant.SessionRow(a, s.now(), time.Time{}, s.cfg.SessionGrantMax)
+	row := grant.SessionRow(a, s.now(), a.TokenExpiresAt, s.cfg.SessionGrantMax)
 	existing, err := tx.ListGrants(port.GrantFilter{ScopeKind: port.ScopeSession, ScopeID: string(a.Session)})
 	if err != nil {
 		return err
@@ -212,17 +233,20 @@ func (s *Service) CancelApproval(ctx context.Context, p port.Principal, id port.
 		if err != nil {
 			return err
 		}
-		named := slices.ContainsFunc(a.Approvers, func(x string) bool { return slices.Contains(keys, x) })
-		if !named && s.authorize(ctx, p, authz.ApprovalCancel, authz.Workspace(string(a.Tenant), string(a.Workspace))) != nil {
+		tombs, err := tx.ListTombstones(port.TombstonePerson)
+		if err != nil {
+			return err
+		}
+		if !s.named(keys, tombs, p, a) && s.authorize(ctx, p, authz.ApprovalCancel, authz.Workspace(string(a.Tenant), string(a.Workspace))) != nil {
 			return port.Errorf(port.CodeNotAnApprover, "%s is not an approver of %s", actor(p), id)
 		}
-		out, err = s.cancelOne(tx, a, reasonCancelledByApprover)
+		out, err = s.cancelOne(tx, a, reasonCancelledByApprover, actor(p))
 		return err
 	})
 	return out, err
 }
 
-func (s *Service) cancelOne(tx port.Tx, a port.Approval, reason port.Code) (port.Approval, error) {
+func (s *Service) cancelOne(tx port.Tx, a port.Approval, reason port.Code, by string) (port.Approval, error) {
 	c, err := approval.Cancel(a, reason)
 	if err != nil {
 		return a, err
@@ -230,7 +254,7 @@ func (s *Service) cancelOne(tx port.Tx, a port.Approval, reason port.Code) (port
 	if err := tx.UpdateApproval(c, port.ApprovalPending); err != nil {
 		return a, err
 	}
-	return c, s.emit(tx, a.Tenant, string(a.ID), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(a.ID), Reason: string(reason)})
+	return c, s.record(tx, a.Tenant, by, string(a.ID), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(a.ID), Reason: string(reason)})
 }
 
 // WatchApprovals returns the approval events of the caller's tenant after a sequence number; a surface turns it into a stream.

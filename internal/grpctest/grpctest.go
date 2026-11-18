@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -44,7 +45,23 @@ type Server struct {
 	mu    sync.Mutex
 	auth  []string
 	calls int
+	files swap
 }
+
+type swap struct {
+	atomic.Pointer[protoregistry.Files]
+}
+
+func (w *swap) FindFileByPath(path string) (protoreflect.FileDescriptor, error) {
+	return w.Load().FindFileByPath(path)
+}
+
+func (w *swap) FindDescriptorByName(name protoreflect.FullName) (protoreflect.Descriptor, error) {
+	return w.Load().FindDescriptorByName(name)
+}
+
+// Describe makes reflection answer from files from now on; the served methods do not change.
+func (s *Server) Describe(files *protoregistry.Files) { s.files.Store(files) }
 
 // Calls returns how many unary calls the server received.
 func (s *Server) Calls() int {
@@ -75,6 +92,7 @@ func Start(t testing.TB, mode Reflection) *Server {
 	t.Helper()
 	files := Files(t)
 	srv := &Server{}
+	srv.files.Store(files)
 	gs := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, h grpc.UnaryHandler) (any, error) {
 		md, _ := metadata.FromIncomingContext(ctx)
 		srv.mu.Lock()
@@ -88,7 +106,7 @@ func Start(t testing.TB, mode Reflection) *Server {
 		t.Fatal(err)
 	}
 	gs.RegisterService(serviceDesc(d.(protoreflect.ServiceDescriptor)), struct{}{})
-	opts := reflection.ServerOptions{Services: gs, DescriptorResolver: files}
+	opts := reflection.ServerOptions{Services: gs, DescriptorResolver: &srv.files}
 	switch mode {
 	case ReflectionV1:
 		v1grpc.RegisterServerReflectionServer(gs, reflection.NewServerV1(opts))

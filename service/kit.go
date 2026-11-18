@@ -35,7 +35,7 @@ func (s *Service) cancelPending(tx port.Tx, f port.ApprovalFilter, reason port.C
 		if err := tx.UpdateApproval(c, port.ApprovalPending); err != nil {
 			return n, err
 		}
-		if err := s.emit(tx, a.Tenant, string(a.ID), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(a.ID), Reason: string(reason)}); err != nil {
+		if err := s.record(tx, a.Tenant, "system", string(a.ID), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(a.ID), Reason: string(reason)}); err != nil {
 			return n, err
 		}
 		n++

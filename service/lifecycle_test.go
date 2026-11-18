@@ -190,14 +190,14 @@ func TestOverlayChangesServedDescription(t *testing.T) {
 	want(t, desc(), "Searches", "upstream text")
 	o1 := st.Ok(w.Svc.ProposeOverlay(w.Ctx, w.admin, target, "search", "", "Find things", h))
 	want(t, desc(), "Searches", "a proposal is not served")
-	st.Ok(w.Svc.AcceptOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
 	want(t, desc(), "Find things", "accepted text is served")
 	o2 := st.Ok(w.Svc.ProposeOverlay(w.Ctx, w.admin, target, "search", "", "Look things up", h))
-	st.Ok(w.Svc.AcceptOverlay(w.Ctx, w.admin, target, "search", o2.Version, h))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o2.Version, h))
 	want(t, desc(), "Look things up", "second version")
-	st.Ok(w.Svc.RestoreOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
 	want(t, desc(), "Find things", "restore")
-	_, err := w.Svc.AcceptOverlay(w.Ctx, w.admin, target, "search", o2.Version, "stale-hash")
+	_, err := w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o2.Version, "stale-hash")
 	want(t, port.IsCode(err, port.CodeDefinitionChanged), true, "acceptance names the hash seen")
 	if err := w.Svc.ClearOverlay(w.Ctx, w.admin, target, "search"); err != nil {
 		t.Fatal(err)
@@ -220,7 +220,7 @@ func TestProjectionThenFilter(t *testing.T) {
 	}
 	w.Runtime.SetDefinitions(listing, list...)
 	st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
-	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h))
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h, false))
 	st.Ok(w.Svc.ClassifyFunction(w.Ctx, w.admin, w.conn.ID, "search", port.ClassRead))
 	st.Ok(w.Svc.SetProjection(w.Ctx, w.admin, w.conn.ID, "search", true))
 	w.allowAll("x")
@@ -253,7 +253,7 @@ func TestProjectionAppliesBeforeTheFilter(t *testing.T) {
 	}
 	w.Runtime.SetDefinitions(listing, list...)
 	st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
-	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h))
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h, false))
 	st.Ok(w.Svc.ClassifyFunction(w.Ctx, w.admin, w.conn.ID, "search", port.ClassRead))
 	st.Ok(w.Svc.SetProjection(w.Ctx, w.admin, w.conn.ID, "search", true))
 	w.allowAll("x")
@@ -312,4 +312,127 @@ func TestRelistBeforeCallDecidesWhetherAnAllowedCallSeesUpstreamDrift(t *testing
 			want(t, w.call(x, "s__search", `{"q":"a"}`).Status, tc.status, "the call inside the relistMax window")
 		})
 	}
+}
+
+func TestAnUndeliveredAnswerIsRepeatedNotForwardedAgain(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "fn:create_issue", port.ModeAskOnce)
+	x := w.agent("x", "s1")
+	held := w.call(x, "s__create_issue", `{"q":"1"}`)
+	w.decide(held.Approval.ID, port.DecisionApproveForSession)
+	w.sweep()
+	want(t, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, held.Approval.ID)).Status, service.OutcomeResult, "the status answers the result")
+	again := w.call(x, "s__create_issue", `{"q":"1"}`)
+	want(t, again.Status, service.OutcomeResult, "the repeat gets the stored answer")
+	want(t, w.Runtime.CallsTo("create_issue"), 1, "an answer the agent may not have received is never forwarded again")
+	if err := w.Svc.MarkDelivered(w.Ctx, x, held.Approval.ID); err != nil {
+		t.Fatal(err)
+	}
+	w.call(x, "s__create_issue", `{"q":"1"}`)
+	want(t, w.Runtime.CallsTo("create_issue"), 2, "after delivery the session row forwards the repeat")
+}
+
+func TestAFailedRelistLeavesTheApprovedRecordForTheNextSweep(t *testing.T) {
+	w, x := askWorld(t)
+	held := w.call(x, "s__search", `{}`)
+	w.decide(held.Approval.ID, port.DecisionApprove)
+	w.Runtime.OnList = func() error { return port.Errorf(port.CodeUnavailable, "upstream down") }
+	if _, err := w.Worker.Sweep(w.Ctx); err == nil {
+		t.Fatal("the failed re-list is reported")
+	}
+	want(t, w.Runtime.CallsTo("search"), 0, "nothing is forwarded on a definition that could not be re-listed")
+	want(t, st.Ok(w.Svc.GetApproval(w.Ctx, w.alice, held.Approval.ID)).Approval.State, port.ApprovalApproved, "the record stays approved")
+	w.Runtime.OnList = nil
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 0, "a failed item backs off")
+	w.Clock.Advance(6 * time.Second)
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 1, "the sweep after the backoff runs it")
+
+	stale := w.call(x, "s__search", `{"q":"2"}`)
+	w.decide(stale.Approval.ID, port.DecisionApprove)
+	w.Runtime.OnList = func() error { return port.Errorf(port.CodeUnavailable, "upstream down") }
+	w.Clock.Advance(61 * time.Second)
+	_, _ = w.Worker.Sweep(w.Ctx)
+	want(t, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, stale.Approval.ID)).Code, port.CodeStaleApproval, "a record whose re-list keeps failing goes stale (A9)")
+}
+
+func TestACancelledOrPostSendFailureIsOutcomeUnknown(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.acceptAll()
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	for _, err := range []error{context.Canceled, port.Errorf(port.CodeOutcomeUnknown, "connection reset after the send")} {
+		w.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) { return port.Result{}, err })
+		want(t, w.call(x, "s__search", `{}`).Code, service.CodeOutcomeUnknown, err.Error())
+	}
+}
+
+func TestTheSessionRowEndsWithTheAgentToken(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "fn:create_issue", port.ModeAskOnce)
+	exp := st.Epoch.Add(10 * time.Minute)
+	x := w.AgentClaims(port.Claims{Tenant: tenant, Workspace: workspace, Agent: "x", Session: "s1", OnBehalfOf: "alice", ExpiresAt: exp})
+	held := w.call(x, "s__create_issue", `{"q":"1"}`)
+	w.decide(held.Approval.ID, port.DecisionApproveForSession)
+	rows := st.Ok(w.Svc.ListGrants(w.Ctx, w.admin, port.GrantFilter{ScopeKind: port.ScopeSession, ScopeID: "s1"}))
+	if len(rows) != 1 || !rows[0].ExpiresAt.Equal(exp) {
+		t.Fatalf("the session row ends with the token (G5): %+v", rows)
+	}
+}
+
+func TestAnUpstreamChangeKeepsOrSupersedesTheOverlayAtAcceptance(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	desc := func() string {
+		for _, f := range st.Ok(w.Svc.ListFunctions(w.Ctx, x)).Functions {
+			if f.Name == "s__search" {
+				var d struct{ Description string }
+				json.Unmarshal(f.Definition, &d)
+				return d.Description
+			}
+		}
+		return ""
+	}
+	target := service.OverlayTarget{Connector: w.conn.ID}
+	o1 := st.Ok(w.Svc.ProposeOverlay(w.Ctx, w.admin, target, "search", "", "Find things", w.hashes["search"]))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, w.hashes["search"]))
+	redefine := func(text string) port.Hash {
+		w.Runtime.SetDefinitions(listing, w.redefine("search", text)...)
+		res := st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
+		return res.Changes[0].NewHash
+	}
+	h2 := redefine("Searches v2")
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h2, true))
+	want(t, desc(), "Find things", "a kept overlay is carried to the new upstream hash")
+	h3 := redefine("Searches v3")
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h3, false))
+	want(t, desc(), "Searches v3", "an overlay not kept is superseded")
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, h3))
+	want(t, desc(), "Find things", "an older version is restored against the current upstream hash")
+}
+
+func TestASpentUseLimitedRowRunsOneApprovedRecord(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	once := port.Grant{ScopeKind: port.ScopeAgent, ScopeID: "x", Connector: w.conn.ID, Selector: "fn:search", Mode: port.ModeAskOnce, DefinitionHash: w.hashes["search"], MaxUses: 1}
+	st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, once))
+	x := w.agent("x", "s1")
+	first, second := w.call(x, "s__search", `{"q":"1"}`), w.call(x, "s__search", `{"q":"2"}`)
+	w.decide(first.Approval.ID, port.DecisionApprove)
+	w.decide(second.Approval.ID, port.DecisionApprove)
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 1, "a use-limited row runs once")
+	codes := []port.Code{st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, first.Approval.ID)).Code, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, second.Approval.ID)).Code}
+	spent := slices.Contains(codes, port.ReasonNoAgentGrant) || slices.Contains(codes, port.CodeGrantExhausted)
+	want(t, spent, true, "the other record is cancelled: the spent row no longer matches, or its reservation fails")
 }

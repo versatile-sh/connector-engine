@@ -2,7 +2,10 @@
 package config
 
 import (
+	"slices"
 	"time"
+
+	"github.com/agents-control/plugkit/adapters"
 )
 
 // Modes of the engine; production refuses what §14 lists unless acknowledged.
@@ -382,3 +385,29 @@ func Default() Config {
 
 // ReadOnly is the entry of manage.mcp.operations that offers the reading operations alone.
 const ReadOnly = "read_only"
+
+func (c Config) inert() adapters.Findings {
+	d := Default()
+	var fs adapters.Findings
+	for _, k := range []struct {
+		key string
+		ok  bool
+	}{
+		{"gateway.relayInstructions", c.Gateway.RelayInstructions == d.Gateway.RelayInstructions},
+		{"gateway.denyAs", c.Gateway.DenyAs == d.Gateway.DenyAs},
+		{"audit.arguments", c.Audit.Arguments == d.Audit.Arguments},
+		{"audit.hashChain", c.Audit.HashChain == d.Audit.HashChain},
+		{"pinning.hashIcons", c.Pinning.HashIcons == d.Pinning.HashIcons},
+		{"approval.inChat.classes", slices.Equal(c.Approval.InChat.Classes, d.Approval.InChat.Classes)},
+		{"listing.requireSignature", c.Listing.RequireSignature == d.Listing.RequireSignature},
+		{"secrets.dataKeyCache", c.Secrets.DataKeyCache == d.Secrets.DataKeyCache},
+		{"credentials.registrationOrder", slices.Equal(c.Credentials.RegistrationOrder, d.Credentials.RegistrationOrder)},
+		{"runtime.container", c.Runtime.Container == d.Runtime.Container},
+		{"grpc.unaryOnly", c.GRPC.UnaryOnly == d.GRPC.UnaryOnly},
+	} {
+		if !k.ok {
+			fs = append(fs, adapters.Finding{Level: adapters.LevelError, Where: k.key, Message: "this build does not act on the key; only its default is accepted"})
+		}
+	}
+	return fs
+}

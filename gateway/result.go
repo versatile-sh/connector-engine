@@ -1,10 +1,11 @@
 package gateway
 
 import (
-	"bytes"
 	"encoding/json"
+	"strings"
 	"time"
 
+	"github.com/agents-control/connector-engine/internal/tokenscan"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -25,21 +26,14 @@ func toolError(code port.Code, detail string) *mcp.CallToolResult {
 	return r
 }
 
-func scrub(raw json.RawMessage, token string) json.RawMessage {
-	if token == "" {
-		return raw
-	}
-	return bytes.ReplaceAll(raw, []byte(token), []byte(redacted))
-}
-
 func resultOf(res port.Result, token string) (*mcp.CallToolResult, error) {
-	content := scrub(res.Content, token)
+	content := tokenscan.Scrub(res.Content, token, redacted)
 	if len(content) == 0 {
 		content = json.RawMessage("[]")
 	}
 	wire := map[string]any{"content": content, "isError": res.IsError}
 	if len(res.Structured) > 0 {
-		wire["structuredContent"] = scrub(res.Structured, token)
+		wire["structuredContent"] = tokenscan.Scrub(res.Structured, token, redacted)
 	}
 	raw, err := json.Marshal(wire)
 	if err != nil {
@@ -84,6 +78,9 @@ func (g *Gateway) answer(name string, out service.Outcome, token string) (*mcp.C
 		return pendingResult(out), nil
 	case service.OutcomeUnknownTool:
 		return nil, unknownTool(name)
+	}
+	if token != "" {
+		out.Detail = strings.ReplaceAll(out.Detail, token, redacted)
 	}
 	return errorResult(out), nil
 }

@@ -21,6 +21,7 @@ const (
 	serverName       = "connector-engine"
 	changedSentinel  = "list-changed-sentinel"
 	principalExtra   = "connector-engine/principal"
+	deliveryExtra    = "connector-engine/deliveries"
 	fieldsMetaKey    = "connector-engine/fields"
 	defaultHoldPoll  = 250 * time.Millisecond
 	defaultSession   = 30 * time.Minute
@@ -33,6 +34,7 @@ type Core interface {
 	Call(ctx context.Context, p port.Principal, req service.CallRequest) (service.Outcome, error)
 	ApprovalStatus(ctx context.Context, p port.Principal, id port.ApprovalID) (service.Outcome, error)
 	ApprovalCancelByAgent(ctx context.Context, p port.Principal, id port.ApprovalID) (service.Outcome, error)
+	MarkDelivered(ctx context.Context, p port.Principal, id port.ApprovalID) error
 	TenantActive(ctx context.Context, tenant port.TenantID) error
 }
 
@@ -90,7 +92,7 @@ func New(core Core, verifier port.PrincipalVerifier, index port.ToolIndex, cfg C
 		}
 		sessions.ServeHTTP(w, r)
 	})
-	g.handler = auth.RequireBearerToken(g.verify, &auth.RequireBearerTokenOptions{ResourceMetadataURL: cfg.ResourceMetadataURL, AllowMissingExpiration: true})(eras)
+	g.handler = auth.RequireBearerToken(g.verify, &auth.RequireBearerTokenOptions{ResourceMetadataURL: cfg.ResourceMetadataURL, AllowMissingExpiration: true})(g.delivering(eras))
 	return g, nil
 }
 
@@ -120,5 +122,5 @@ func (g *Gateway) verify(ctx context.Context, token string, _ *http.Request) (*a
 	} else if err != nil {
 		return nil, err
 	}
-	return &auth.TokenInfo{UserID: string(p.Claims.Tenant) + "/" + string(p.Claims.Agent) + "/" + string(p.Claims.Session), Extra: map[string]any{principalExtra: p}}, nil
+	return &auth.TokenInfo{UserID: string(p.Claims.Tenant) + "/" + string(p.Claims.Agent) + "/" + string(p.Claims.Session), Extra: map[string]any{principalExtra: p, deliveryExtra: &deliveries{}}}, nil
 }

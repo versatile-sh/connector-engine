@@ -155,7 +155,7 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if c.Approval.SweepInterval <= 0 || c.Server.ShutdownGrace < 0 {
 		add(adapters.LevelError, "approval.sweepInterval", "durations are positive")
 	}
-	return fs
+	return append(fs, c.inert()...)
 }
 
 // Audience returns the audience of the agent endpoint, defaulting to the address of /mcp.

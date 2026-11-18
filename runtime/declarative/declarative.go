@@ -18,6 +18,7 @@ import (
 	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/handles"
 	"github.com/agents-control/connector-engine/internal/hints"
+	"github.com/agents-control/connector-engine/internal/outcome"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -130,10 +131,7 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	defer cancel()
 	resp, err := in.client.Do(req.WithContext(ctx))
 	if err != nil {
-		if ctx.Err() != nil {
-			return port.Result{}, ctx.Err()
-		}
-		return port.Result{}, port.Errorf(port.CodeUnavailable, "%s %s: %v", f.Method, f.Path, err)
+		return port.Result{}, outcome.Of(ctx, err, "%s %s: %v", f.Method, f.Path)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse+1))

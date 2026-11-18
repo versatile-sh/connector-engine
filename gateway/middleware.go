@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/agents-control/connector-engine/port"
@@ -43,9 +44,11 @@ func unknownTool(name string) error {
 }
 
 func (g *Gateway) failure(err error) error {
+	var pe *port.Error
 	switch port.CodeOf(err) {
 	case port.CodeInvalidArgument:
-		return &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: err.(*port.Error).Detail}
+		errors.As(err, &pe)
+		return &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: pe.Detail}
 	case port.CodePermissionDenied, port.CodeUnauthenticated, port.CodeAgentPrincipalRefused, port.CodeTenantRemoved:
 		return &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: "request refused"}
 	}

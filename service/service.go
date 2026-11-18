@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/singleflight"
+
 	"github.com/agents-control/connector-engine/authz"
 	"github.com/agents-control/connector-engine/port"
 )
@@ -36,7 +38,8 @@ type Service struct {
 	d       Deps
 	cfg     Config
 	mu      sync.Mutex
-	handles map[string]port.Handle
+	handles map[string]*started
+	flights singleflight.Group
 	connect map[string]pendingConnect
 }
 
@@ -48,7 +51,7 @@ func New(d Deps, cfg Config) (*Service, error) {
 	if d.NewID == nil {
 		d.NewID = randomID
 	}
-	return &Service{d: d, cfg: cfg, handles: map[string]port.Handle{}, connect: map[string]pendingConnect{}}, nil
+	return &Service{d: d, cfg: cfg, handles: map[string]*started{}, connect: map[string]pendingConnect{}}, nil
 }
 
 func randomID() string {

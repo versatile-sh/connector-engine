@@ -108,6 +108,8 @@ type Runtime struct {
 	Calls    []Invocation
 	Starts   int
 	Stops    int
+	OnStart  func(port.Connector) error
+	OnList   func() error
 }
 
 type startInfo struct {
@@ -159,8 +161,13 @@ func (r *Runtime) Describe() port.RuntimeCapabilities {
 	return port.RuntimeCapabilities{Kinds: []port.Kind{port.KindMCPRemote}}
 }
 
-// Start returns a handle bound to the listing of the manifest.
+// Start runs OnStart, then returns a handle bound to the listing of the manifest.
 func (r *Runtime) Start(_ context.Context, c port.Connector, m port.Manifest, s port.SecretsRef) (port.Handle, error) {
+	if r.OnStart != nil {
+		if err := r.OnStart(c); err != nil {
+			return "", err
+		}
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.Starts++
@@ -169,8 +176,13 @@ func (r *Runtime) Start(_ context.Context, c port.Connector, m port.Manifest, s 
 	return h, nil
 }
 
-// ListFunctions returns the scripted definitions of the handle's listing.
+// ListFunctions runs OnList, then returns the scripted definitions of the handle's listing.
 func (r *Runtime) ListFunctions(_ context.Context, h port.Handle) ([]port.RawDefinition, port.ListMeta, error) {
+	if r.OnList != nil {
+		if err := r.OnList(); err != nil {
+			return nil, port.ListMeta{}, err
+		}
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	in := r.handles[h]

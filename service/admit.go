@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,14 +16,13 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-func evaluatePeople(s port.Subject) []port.PersonID { return evaluate.People(s) }
-
 func catalogDenied(sub port.Subject, connector port.ConnectorID, function string, reason port.Code) catalog.CallDenied {
 	return catalog.CallDenied{Agent: string(sub.Agent), Connector: string(connector), Function: function, Reason: string(reason)}
 }
 
 type admitInput struct {
 	Sub    port.Subject
+	Exp    time.Time
 	T      target
 	Args   json.RawMessage
 	Fields []string
@@ -55,7 +55,7 @@ func (s *Service) admit(tx port.Tx, in admitInput) (admission, error) {
 	}
 	d := evaluate.Evaluate(f, evaluate.Request{Subject: sub, Function: in.T.Fn.Name, Now: s.now(), Arguments: in.Args, Call: true})
 	if d.Mode == port.ModeDeny {
-		return admission{Out: unknown(d.Reason)}, nil
+		return admission{Out: unknown(d.Reason)}, s.record(tx, sub.Tenant, string(sub.Agent), in.T.Fn.Name, evCallDenied, catalogDenied(sub, in.T.Conn.ID, in.T.Fn.Name, d.Reason))
 	}
 	conn, fn := *f.Connector, f.Functions[in.T.Fn.Name]
 	mode := d.Mode.Stricter(in.Dec.Mode)
@@ -148,8 +148,8 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 	}
 	a := port.Approval{ID: port.ApprovalID(s.d.NewID()), Tenant: sub.Tenant, Workspace: conn.Workspace, Agent: sub.Agent, Session: sub.Session, OnBehalfOf: sub.OnBehalfOf,
 		Connector: conn.ID, Function: fn.Name, DefinitionHash: fn.DefinitionHash, Class: fn.Class, Arguments: in.Sealed, CallHash: hash, Fields: in.Fields, Mode: mode,
-		Approvers: approval.Approvers(bind, sub.OnBehalfOf)}
-	if timeout := cmpOr(bind.ApprovalTimeout, conn.ApprovalTimeout); timeout > 0 {
+		Approvers: approval.Approvers(bind, sub.OnBehalfOf), TokenExpiresAt: in.Exp}
+	if timeout := cmp.Or(bind.ApprovalTimeout, conn.ApprovalTimeout); timeout > 0 {
 		a.ExpiresAt = s.now().Add(timeout)
 	}
 	open, err := tx.ListApprovals(port.ApprovalFilter{States: []port.ApprovalState{port.ApprovalPending}, Session: sub.Session, Agent: sub.Agent, Connector: conn.ID})
@@ -162,7 +162,9 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 		if err := s.record(tx, sub.Tenant, string(sub.Agent), fn.Name, evCallDenied, catalogDenied(sub, conn.ID, fn.Name, code)); err != nil {
 			return admission{}, err
 		}
-		return admission{Out: toolError(code, "%v", err.(*port.Error).Detail)}, nil
+		var pe *port.Error
+		errors.As(err, &pe)
+		return admission{Out: toolError(code, "%v", pe.Detail)}, nil
 	}
 	if err != nil {
 		return admission{}, err
@@ -173,13 +175,6 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 	err = s.record(tx, sub.Tenant, string(sub.Agent), string(a.ID), evApprovalRequested, catalog.ApprovalRequested{Approval: string(a.ID), Approvers: a.Approvers, Connector: string(conn.ID),
 		Function: fn.Name, Class: string(fn.Class), Agent: string(sub.Agent), Session: string(sub.Session), ExpiresAt: a.ExpiresAt, CallHash: string(hash)})
 	return admission{Out: s.pending(a)}, err
-}
-
-func cmpOr(a, b time.Duration) time.Duration {
-	if a != 0 {
-		return a
-	}
-	return b
 }
 
 type invocation struct {
@@ -215,11 +210,15 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 	if err != nil {
 		return invoked{Err: err}
 	}
+	defer s.release(ctx, h)
 	cctx, cancel := context.WithDeadline(ctx, in.Deadline)
 	defer cancel()
-	res, err := s.d.Runtime.Call(cctx, h, in.Function, in.Args, in.Deadline)
+	res, err := s.d.Runtime.Call(cctx, h.h, in.Function, in.Args, in.Deadline)
+	if port.IsCode(err, port.CodeUnavailable) {
+		s.drop(h)
+	}
 	switch {
-	case errors.Is(err, context.DeadlineExceeded):
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled), port.IsCode(err, port.CodeOutcomeUnknown):
 		return invoked{Unknown: true}
 	case err != nil:
 		return invoked{Err: err}
@@ -245,7 +244,7 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 
 func (s *Service) forwardDirect(ctx context.Context, in admitInput, plan forwardPlan) (Outcome, error) {
 	inv := s.invoke(ctx, invocation{Conn: plan.Conn, Manifest: in.T.Manifest, Function: in.T.Fn.Name, Credential: plan.Credential, Args: in.Args, Fields: in.Fields, Deadline: plan.Call.Deadline})
-	return s.settle(ctx, plan.Call, inv, nil)
+	return s.settle(context.WithoutCancel(ctx), plan.Call, inv, nil)
 }
 
 func (s *Service) settle(ctx context.Context, call port.Call, inv invoked, a *port.Approval) (Outcome, error) {
@@ -350,25 +349,6 @@ func (s *Service) answer(ctx context.Context, a port.Approval) (Outcome, error) 
 	return Outcome{Status: OutcomeError, Code: port.Code(a.Reason), Detail: "the approval was cancelled", Approval: &a}, nil
 }
 
-func (s *Service) answerAndDeliver(ctx context.Context, a port.Approval) (Outcome, error) {
-	out, err := s.answer(ctx, a)
-	if err != nil || !a.State.Terminal() {
-		return out, err
-	}
-	err = s.write(ctx, port.Scope{Tenant: a.Tenant}, "Deliver", func(tx port.Tx) error {
-		cur, err := tx.GetApproval(a.ID)
-		if err != nil {
-			return err
-		}
-		delivered, err := approval.Deliver(cur, s.now())
-		if err != nil {
-			return nil
-		}
-		return tx.UpdateApproval(delivered, cur.State)
-	})
-	return out, err
-}
-
 func (s *Service) ownApproval(ctx context.Context, p port.Principal, id port.ApprovalID) (port.Approval, error) {
 	sub, err := s.agentSubject(ctx, p)
 	if err != nil {
@@ -385,13 +365,32 @@ func (s *Service) ownApproval(ctx context.Context, p port.Principal, id port.App
 	return a, err
 }
 
-// ApprovalStatus is approval_status: the answer of one record of the calling agent and session; a terminal answer is marked delivered (A14).
+// ApprovalStatus is approval_status: the answer of one record of the calling agent and session; it does not mark the record delivered.
 func (s *Service) ApprovalStatus(ctx context.Context, p port.Principal, id port.ApprovalID) (Outcome, error) {
 	a, err := s.ownApproval(ctx, p, id)
 	if err != nil {
 		return Outcome{}, err
 	}
-	return s.answerAndDeliver(ctx, a)
+	return s.answer(ctx, a)
+}
+
+// MarkDelivered is A14: the surface calls it once the terminal answer of a record of the calling agent and session reached the agent.
+func (s *Service) MarkDelivered(ctx context.Context, p port.Principal, id port.ApprovalID) error {
+	a, err := s.ownApproval(ctx, p, id)
+	if err != nil {
+		return err
+	}
+	return s.write(ctx, port.Scope{Tenant: a.Tenant}, "Deliver", func(tx port.Tx) error {
+		cur, err := tx.GetApproval(id)
+		if err != nil {
+			return err
+		}
+		delivered, err := approval.Deliver(cur, s.now())
+		if err != nil {
+			return nil
+		}
+		return tx.UpdateApproval(delivered, cur.State)
+	})
 }
 
 // ApprovalCancelByAgent is approval_cancel: A7 for a pending record of the calling agent and session.
@@ -405,13 +404,10 @@ func (s *Service) ApprovalCancelByAgent(ctx context.Context, p port.Principal, i
 		if err != nil {
 			return err
 		}
-		a, err = s.cancelOne(tx, cur, reasonCancelledAgent)
+		a, err = s.cancelOne(tx, cur, reasonCancelledAgent, string(cur.Agent))
 		return err
 	})
-	if port.IsCode(err, port.CodeInvalidTransition) {
-		return s.answerAndDeliver(ctx, a)
-	}
-	if err != nil {
+	if err != nil && !port.IsCode(err, port.CodeInvalidTransition) {
 		return Outcome{}, err
 	}
 	return s.answer(ctx, a)

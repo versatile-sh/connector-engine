@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 
@@ -24,7 +25,7 @@ func (s *Service) ExpireApproval(ctx context.Context, tenant port.TenantID, id p
 		if err := tx.UpdateApproval(exp, port.ApprovalPending); err != nil {
 			return err
 		}
-		return s.emit(tx, tenant, string(id), evApprovalExpired, catalog.ApprovalRef{Approval: string(id)})
+		return s.record(tx, tenant, "worker", string(id), evApprovalExpired, catalog.ApprovalRef{Approval: string(id)})
 	})
 }
 
@@ -212,14 +213,16 @@ func (s *Service) loadHeld(ctx context.Context, tenant port.TenantID, id port.Ap
 	return h, true, err
 }
 
-// ExecuteApproved is A8 and A9 for one approved record: the re-check of §7.1 and the guards run in one transaction, then the stored arguments
-// are forwarded once; a failed guard cancels the record with its reason.
+// ExecuteApproved is A8 and A9 for one approved record: re-list, re-check and guards, then one forward; a failed re-list leaves it approved
+// for the next sweep until it is stale (A9), a failed guard cancels it.
 func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	h, ok, err := s.loadHeld(ctx, tenant, id)
 	if err != nil || !ok {
 		return err
 	}
-	_, _ = s.Relist(ctx, tenant, h.A.Connector)
+	if _, err := s.Relist(ctx, tenant, h.A.Connector); err != nil && s.now().Sub(h.A.DecidedAt) <= s.cfg.Approval.ExecuteWithin {
+		return err
+	}
 	ext, err := s.d.Authorizer.Evaluate(ctx, port.Query{Tenant: tenant, Workspace: h.A.Workspace, Agent: h.A.Agent, AgentOwner: h.Sub.AgentOwner, OnBehalfOf: h.A.OnBehalfOf,
 		Caller: port.CallerModel, Session: h.A.Session, Connector: h.A.Connector, Function: h.A.Function, Class: h.A.Class, Arguments: nonEmpty(h.Args)})
 	if err != nil {
@@ -236,19 +239,23 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 		if err != nil {
 			return err
 		}
-		timeout := cmpOr(h.Conn.CallTimeout, s.cfg.CallTimeout)
+		timeout := cmp.Or(h.Conn.CallTimeout, s.cfg.CallTimeout)
 		next, err := approval.Start(cur, refused, timeout, s.cfg.Approval, s.now())
 		if err != nil {
 			return err
+		}
+		if next.State == port.ApprovalExecuting {
+			if err := tx.ReserveGrants(reserved); port.IsCode(err, port.CodeGrantExhausted) {
+				next, _ = approval.Start(cur, port.CodeGrantExhausted, timeout, s.cfg.Approval, s.now())
+			} else if err != nil {
+				return err
+			}
 		}
 		if next.State == port.ApprovalCancelled {
 			if err := tx.UpdateApproval(next, port.ApprovalApproved); err != nil {
 				return err
 			}
-			return s.emit(tx, tenant, string(id), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(id), Reason: next.Reason})
-		}
-		if err := tx.ReserveGrants(reserved); err != nil {
-			return err
+			return s.record(tx, tenant, "worker", string(id), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(id), Reason: next.Reason})
 		}
 		fn, err := tx.GetFunction(cur.Connector, cur.Function)
 		if err != nil {
@@ -265,7 +272,7 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 		return err
 	}
 	inv := s.invoke(ctx, invocation{Conn: h.Conn, Manifest: h.M, Function: h.A.Function, Credential: plan.Credential, Args: json.RawMessage(nonEmpty(h.Args)), Fields: h.A.Fields, Deadline: plan.Call.Deadline})
-	_, err = s.settle(ctx, plan.Call, inv, &started)
+	_, err = s.settle(context.WithoutCancel(ctx), plan.Call, inv, &started)
 	return err
 }
 
@@ -296,15 +303,6 @@ func (s *Service) recheck(tx port.Tx, h heldRun, cur port.Approval, ext port.Acc
 		return "", nil, nil, err
 	case res.Code != "":
 		return port.CodeCredentialRequired, nil, nil, nil
-	}
-	for _, id := range d.Matched {
-		g, err := tx.GetGrant(id)
-		if err != nil {
-			return "", nil, nil, err
-		}
-		if g.MaxUses > 0 && g.Uses >= g.MaxUses {
-			return port.CodeGrantExhausted, nil, nil, nil
-		}
 	}
 	return "", res.Credential, d.Matched, nil
 }

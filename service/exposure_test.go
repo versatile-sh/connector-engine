@@ -3,6 +3,7 @@ package service_test
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/agents-control/connector-engine/authz/table"
 	"github.com/agents-control/connector-engine/port"
@@ -39,4 +40,24 @@ func TestForceAskTurnsLegCFunctionsIntoAsk(t *testing.T) {
 	d := st.Ok(w.Svc.ExplainAccess(w.Ctx, w.admin, port.Subject{Agent: "x", Workspace: workspace}, w.conn.ID, "create_issue"))
 	want(t, d.Mode, port.ModeAsk, "a leg c function is held every time")
 	want(t, slices.Contains(d.Notes, port.NoteForcedAsk), true, "forced_ask note")
+}
+
+func TestARelistRefreshesExposureOffTheCallPathAndWarnsWhenItEnds(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.acceptAll()
+	w.allowAll("x")
+	want(t, st.Ok(w.Svc.ListAgentFunctions(w.Ctx, w.admin, port.Subject{Agent: "x", Workspace: workspace})).Exposure.Exposed, true, "exposed")
+	before := len(w.Events())
+	quiet, _ := st.Definition("search", "Searches", `"annotations":{"readOnlyHint":true,"openWorldHint":false}`)
+	w.Runtime.SetDefinitions(listing, quiet)
+	st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
+	deadline := time.Now().Add(2 * time.Second)
+	for !slices.ContainsFunc(w.Events()[before:], func(e port.Event) bool {
+		return e.Type == "connector.agent.exposure_warning" && e.Data["exposed"] == false
+	}) {
+		if time.Now().After(deadline) {
+			t.Fatal("event 13 is emitted when the exposure ends")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }

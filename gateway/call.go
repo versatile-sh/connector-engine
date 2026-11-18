@@ -15,7 +15,7 @@ func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Resul
 	if err != nil {
 		return nil, err
 	}
-	params := req.Params
+	params, d := req.Params, deliveriesOf(req)
 	switch params.Name {
 	case toolFind:
 		return g.find(ctx, p, params.Arguments)
@@ -24,11 +24,11 @@ func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Resul
 		if err := json.Unmarshal(params.Arguments, &a); err != nil || a.Name == "" {
 			return toolError(port.CodeInvalidArgument, "call takes a name and arguments"), nil
 		}
-		return g.forward(ctx, p, service.CallRequest{Name: a.Name, Arguments: a.Arguments, Fields: fieldsOf(a.Fields, params.Meta)})
+		return g.forward(ctx, p, d, service.CallRequest{Name: a.Name, Arguments: a.Arguments, Fields: fieldsOf(a.Fields, params.Meta)})
 	case toolApprovalStatus, toolApprovalCancel:
-		return g.approval(ctx, p, params.Name, params.Arguments)
+		return g.approval(ctx, p, d, params.Name, params.Arguments)
 	}
-	return g.forward(ctx, p, service.CallRequest{Name: params.Name, Arguments: params.Arguments, Fields: fieldsOf(nil, params.Meta)})
+	return g.forward(ctx, p, d, service.CallRequest{Name: params.Name, Arguments: params.Arguments, Fields: fieldsOf(nil, params.Meta)})
 }
 
 func fieldsOf(fromArgs []string, meta mcp.Meta) []string {
@@ -45,7 +45,7 @@ func fieldsOf(fromArgs []string, meta mcp.Meta) []string {
 	return out
 }
 
-func (g *Gateway) forward(ctx context.Context, p port.Principal, req service.CallRequest) (*mcp.CallToolResult, error) {
+func (g *Gateway) forward(ctx context.Context, p port.Principal, d *deliveries, req service.CallRequest) (*mcp.CallToolResult, error) {
 	out, err := g.core.Call(ctx, p, req)
 	if err != nil {
 		return nil, g.failure(err)
@@ -53,6 +53,7 @@ func (g *Gateway) forward(ctx context.Context, p port.Principal, req service.Cal
 	if out, err = g.hold(ctx, p, out); err != nil {
 		return nil, g.failure(err)
 	}
+	owed(d, out)
 	return g.answer(req.Name, out, p.Token)
 }
 
@@ -72,7 +73,7 @@ func (g *Gateway) hold(ctx context.Context, p port.Principal, out service.Outcom
 	return out, nil
 }
 
-func (g *Gateway) approval(ctx context.Context, p port.Principal, tool string, raw json.RawMessage) (*mcp.CallToolResult, error) {
+func (g *Gateway) approval(ctx context.Context, p port.Principal, d *deliveries, tool string, raw json.RawMessage) (*mcp.CallToolResult, error) {
 	var a approvalArgs
 	if err := json.Unmarshal(raw, &a); err != nil || a.ApprovalID == "" {
 		return toolError(port.CodeInvalidArgument, tool+" takes an approval_id"), nil
@@ -91,5 +92,6 @@ func (g *Gateway) approval(ctx context.Context, p port.Principal, tool string, r
 	if tool == toolApprovalCancel && cancelled(out) {
 		return structured(map[string]any{"status": "cancelled", "approval_id": a.ApprovalID}), nil
 	}
+	owed(d, out)
 	return g.answer(tool, out, p.Token)
 }

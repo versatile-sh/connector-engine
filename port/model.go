@@ -139,6 +139,7 @@ type Approval struct {
 	CallDeadline       time.Duration `json:"call_deadline,omitempty"`
 	ResultRef          *Sealed       `json:"result_ref,omitempty"`
 	ResultExpiresAt    time.Time     `json:"result_expires_at,omitzero"`
+	TokenExpiresAt     time.Time     `json:"token_expires_at,omitzero"`
 }
 
 // Sealed is a record sealed by the SecretStore: the database never holds plaintext.
@@ -179,6 +180,9 @@ type Tombstone struct {
 	At        time.Time     `json:"at"`
 	ExpiresAt time.Time     `json:"expires_at"`
 }
+
+// Live reports whether the tombstone still refuses at now.
+func (t Tombstone) Live(now time.Time) bool { return t.ExpiresAt.IsZero() || now.Before(t.ExpiresAt) }
 
 // Credential is one sealed upstream credential (§11.1).
 type Credential struct {

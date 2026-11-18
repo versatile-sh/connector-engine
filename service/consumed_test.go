@@ -104,3 +104,24 @@ func TestGetCallReturnsTheAuditRow(t *testing.T) {
 	_, err := w.Svc.GetCall(w.Ctx, w.alice, port.CallID(id))
 	want(t, port.IsCode(err, port.CodePermissionDenied), true, "auditors and admins only")
 }
+
+func TestARemovedApproverNeitherDecidesNorSeesTheApproval(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	st.Ok(w.Svc.PutBinding(w.Ctx, w.admin, port.Binding{Connector: w.conn.ID, Agent: "x", Approvers: []string{"bob", "carol"}}))
+	w.row(port.ScopeAgent, "x", "*", port.ModeAsk)
+	held := w.call(w.agent("x", "s1"), "s__search", `{}`)
+	bob := w.Person(tenant, "bob")
+	want(t, len(st.Ok(w.Svc.ListApprovals(w.Ctx, bob, port.ApprovalFilter{}))), 1, "bob is named")
+	sys := w.Operator()
+	sys.Claims.Tenant = tenant
+	if err := w.Svc.RemovePerson(w.Ctx, sys, "bob", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Svc.DecideApproval(w.Ctx, bob, held.Approval.ID, port.DecisionApprove, "", "test"); !port.IsCode(err, port.CodeNotAnApprover) {
+		t.Fatalf("a removed approver decides nothing: %v", err)
+	}
+	want(t, len(st.Ok(w.Svc.ListApprovals(w.Ctx, bob, port.ApprovalFilter{}))), 0, "a removed approver no longer sees it")
+	want(t, st.Ok(w.Svc.DecideApproval(w.Ctx, w.Person(tenant, "carol"), held.Approval.ID, port.DecisionApprove, "", "test")).State, port.ApprovalApproved, "carol still decides")
+}

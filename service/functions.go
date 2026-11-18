@@ -38,7 +38,7 @@ func (s *Service) functionTx(ctx context.Context, p port.Principal, id port.Conn
 	})
 }
 
-func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port.Hash, by string) (AcceptResult, error) {
+func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port.Hash, keepOverlay bool, by string) (AcceptResult, error) {
 	var out AcceptResult
 	f, err := tx.GetFunction(c.ID, name)
 	if err != nil {
@@ -61,6 +61,9 @@ func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port
 	if err := tx.PutFunction(f); err != nil {
 		return out, err
 	}
+	if err := s.carryOverlay(tx, f, keepOverlay, by); err != nil {
+		return out, err
+	}
 	rows, err := tx.ListGrants(port.GrantFilter{Connector: c.ID})
 	if err != nil {
 		return out, err
@@ -75,11 +78,12 @@ func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port
 		Hash: string(f.DefinitionHash), Class: string(f.Class), ClassSource: string(f.ClassSource), By: by})
 }
 
-// AcceptFunction clears a quarantine; the admin names the hash they saw and the class is set again from §5.2 (§9).
-func (s *Service) AcceptFunction(ctx context.Context, p port.Principal, id port.ConnectorID, name string, seen port.Hash) (AcceptResult, error) {
+// AcceptFunction clears a quarantine at the hash the admin saw and sets the class again (§5.2, §9); keepOverlay carries the
+// active overlay to that hash, else it is superseded (§9.1).
+func (s *Service) AcceptFunction(ctx context.Context, p port.Principal, id port.ConnectorID, name string, seen port.Hash, keepOverlay bool) (AcceptResult, error) {
 	var out AcceptResult
 	err := s.functionTx(ctx, p, id, authz.FunctionManage, "AcceptFunction", func(tx port.Tx, c port.Connector) (err error) {
-		out, err = s.acceptOne(tx, c, name, seen, actor(p))
+		out, err = s.acceptOne(tx, c, name, seen, keepOverlay, actor(p))
 		return err
 	})
 	return out, err
@@ -90,7 +94,7 @@ func (s *Service) AcceptFunctions(ctx context.Context, p port.Principal, id port
 	var out []AcceptResult
 	err := s.functionTx(ctx, p, id, authz.FunctionManage, "AcceptFunctions", func(tx port.Tx, c port.Connector) error {
 		for _, name := range slices.Sorted(mapKeys(seen)) {
-			r, err := s.acceptOne(tx, c, name, seen[name], actor(p))
+			r, err := s.acceptOne(tx, c, name, seen[name], false, actor(p))
 			if err != nil {
 				return err
 			}

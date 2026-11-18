@@ -3,6 +3,8 @@ package gateway_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -112,6 +114,13 @@ func TestAskEachTimeHoldsThenAnswers(t *testing.T) {
 		status, err := callTool(cs, "approval_status", map[string]any{"approval_id": string(id)})
 		if err != nil || status.IsError {
 			t.Fatalf("status: %v %v", status, err)
+		}
+		deadline := time.Now().Add(2 * time.Second)
+		for st.Ok(w.Svc.GetApproval(w.Ctx, w.alice, id)).Approval.DeliveredAt.IsZero() {
+			if time.Now().After(deadline) {
+				t.Fatal("the answer written to the agent marks the record delivered")
+			}
+			time.Sleep(5 * time.Millisecond)
 		}
 		if again, err := callTool(cs, "approval_status", map[string]any{"approval_id": string(id)}); err != nil || again.IsError {
 			t.Fatalf("a delivered answer stays readable: %v %v", again, err)
@@ -274,9 +283,11 @@ func TestTokenInArgumentsIsRefused(t *testing.T) {
 		w.bind("x")
 		w.row(port.ScopeAgent, "x", "fn:search", port.ModeAllow)
 		cs, tok := w.agent("x", "s1", version)
-		res, err := callTool(cs, "s__search", map[string]any{"q": "see " + tok})
-		if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeTokenInArguments) {
-			t.Fatalf("token in arguments: %v %v", res, err)
+		for _, args := range []any{map[string]any{"q": "see " + tok}, json.RawMessage(`{"q":"see ` + escaped(tok) + `"}`)} {
+			res, err := callTool(cs, "s__search", args)
+			if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeTokenInArguments) {
+				t.Fatalf("token in arguments: %v %v", res, err)
+			}
 		}
 		if w.Runtime.CallsTo("search") != 0 {
 			t.Fatal("the call was forwarded")
@@ -290,14 +301,22 @@ func TestResultNeverCarriesTheAgentToken(t *testing.T) {
 	w.row(port.ScopeAgent, "x", "fn:search", port.ModeAllow)
 	cs, tok := w.agent("x", "s1", "2026-07-28")
 	w.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) {
-		return port.Result{Content: json.RawMessage(`[{"type":"text","text":"echo ` + tok + `"}]`), Structured: json.RawMessage(`{"t":"` + tok + `"}`)}, nil
+		return port.Result{Content: json.RawMessage(`[{"type":"text","text":"echo ` + escaped(tok) + `"}]`), Structured: json.RawMessage(`{"t":"` + tok + `"}`)}, nil
 	})
 	res, err := callTool(cs, "s__search", map[string]any{})
 	raw, _ := json.Marshal(res)
 	if err != nil || strings.Contains(string(raw), tok) {
 		t.Fatalf("token leaked: %s %v", raw, err)
 	}
+	w.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) { return port.Result{}, errors.New("upstream saw " + tok) })
+	res, err = callTool(cs, "s__search", map[string]any{"q": "fail"})
+	raw, _ = json.Marshal(res)
+	if err != nil || !res.IsError || strings.Contains(string(raw), tok) {
+		t.Fatalf("token leaked through an error detail: %s %v", raw, err)
+	}
 }
+
+func escaped(s string) string { return fmt.Sprintf(`\u%04x`, s[0]) + s[1:] }
 
 func rawPost(t *testing.T, url, token, body string, headers map[string]string) *http.Response {
 	t.Helper()

@@ -124,11 +124,12 @@ type FunctionRequest struct {
 	Name string           `json:"name"`
 }
 
-// AcceptFunctionRequest accepts one function at the hash the admin saw.
+// AcceptFunctionRequest accepts one function at the hash the admin saw; KeepOverlay carries its active overlay to that hash.
 type AcceptFunctionRequest struct {
-	ID   port.ConnectorID `json:"id"`
-	Name string           `json:"name"`
-	Seen port.Hash        `json:"seen"`
+	ID          port.ConnectorID `json:"id"`
+	Name        string           `json:"name"`
+	Seen        port.Hash        `json:"seen"`
+	KeepOverlay bool             `json:"keep_overlay,omitempty"`
 }
 
 // AcceptFunctionsRequest accepts many functions, each at the hash the admin saw.

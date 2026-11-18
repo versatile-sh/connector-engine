@@ -180,7 +180,7 @@ var operations = []Operation{
 		return items[Functions](e.Svc.ListFunctionsOf(ctx, p, in.ID))
 	}),
 	op("acceptFunction", post, "/v1/connectors/{id}/functions/{name}:accept", "AcceptFunction", ok200, func(ctx context.Context, e *Env, p port.Principal, in AcceptFunctionRequest) (service.AcceptResult, error) {
-		return e.Svc.AcceptFunction(ctx, p, in.ID, in.Name, in.Seen)
+		return e.Svc.AcceptFunction(ctx, p, in.ID, in.Name, in.Seen, in.KeepOverlay)
 	}),
 	op("acceptFunctions", post, "/v1/connectors/{id}/functions:accept", "AcceptFunctions", ok200, func(ctx context.Context, e *Env, p port.Principal, in AcceptFunctionsRequest) (AcceptResults, error) {
 		return items[AcceptResults](e.Svc.AcceptFunctions(ctx, p, in.ID, in.Seen))
@@ -206,10 +206,10 @@ var operations = []Operation{
 		return e.Svc.ProposeOverlay(ctx, p, in.target(), in.Function, in.Title, in.Description, in.UpstreamHash)
 	}),
 	op("acceptOverlay", post, "/v1/overlays/{version}:accept", "AcceptOverlay", ok200, func(ctx context.Context, e *Env, p port.Principal, in OverlayVersionRequest) (port.Overlay, error) {
-		return e.Svc.AcceptOverlay(ctx, p, in.target(), in.Function, in.Version, in.UpstreamSeen)
+		return e.Svc.ActivateOverlay(ctx, p, in.target(), in.Function, in.Version, in.UpstreamSeen)
 	}),
 	op("restoreOverlay", post, "/v1/overlays/{version}:restore", "RestoreOverlay", ok200, func(ctx context.Context, e *Env, p port.Principal, in OverlayVersionRequest) (port.Overlay, error) {
-		return e.Svc.RestoreOverlay(ctx, p, in.target(), in.Function, in.Version, in.UpstreamSeen)
+		return e.Svc.ActivateOverlay(ctx, p, in.target(), in.Function, in.Version, in.UpstreamSeen)
 	}),
 	op("clearOverlay", del, "/v1/overlays", "ClearOverlay", gone, func(ctx context.Context, e *Env, p port.Principal, in OverlayTargetRequest) (none, error) {
 		return done(e.Svc.ClearOverlay(ctx, p, in.target(), in.Function))

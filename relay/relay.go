@@ -2,6 +2,7 @@
 package relay
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"log/slog"
@@ -120,17 +121,9 @@ func (r Relay) sleep(ctx context.Context, d time.Duration) error {
 	}
 }
 
-func orDefault[T comparable](v, def T) T {
-	var zero T
-	if v == zero {
-		return def
-	}
-	return v
-}
-
-func (r Relay) batch() int                { return orDefault(r.Batch, 100) }
-func (r Relay) every() time.Duration      { return orDefault(r.Every, time.Second) }
-func (r Relay) maxBackoff() time.Duration { return orDefault(r.MaxBackoff, time.Minute) }
+func (r Relay) batch() int                { return cmp.Or(r.Batch, 100) }
+func (r Relay) every() time.Duration      { return cmp.Or(r.Every, time.Second) }
+func (r Relay) maxBackoff() time.Duration { return cmp.Or(r.MaxBackoff, time.Minute) }
 
 func (r Relay) now() time.Time {
 	if r.Now != nil {

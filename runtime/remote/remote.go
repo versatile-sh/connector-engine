@@ -4,17 +4,20 @@ package remote
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/agents-control/connector-engine/credential"
 	deadlines "github.com/agents-control/connector-engine/internal/deadline"
 	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/handles"
+	"github.com/agents-control/connector-engine/internal/outcome"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -79,7 +82,8 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	return r.started.Add(&instance{session: session, capture: capt, pages: map[string]page{}}), nil
 }
 
-// ListFunctions returns every tool definition as the server sent it; a list served from the SDK's TTL cache repeats the last bytes seen.
+// ListFunctions returns every tool definition as the server sent it; a list the SDK served from its TTL cache repeats the last bytes
+// seen, and a response that was sent but not captured is an error.
 func (r *Runtime) ListFunctions(ctx context.Context, h port.Handle) ([]port.RawDefinition, port.ListMeta, error) {
 	in, err := r.started.Get(h)
 	if err != nil {
@@ -97,7 +101,7 @@ func (r *Runtime) ListFunctions(ctx context.Context, h port.Handle) ([]port.RawD
 		}
 		pg, ok := in.pageFor(cursor)
 		if !ok {
-			return nil, port.ListMeta{}, port.Errorf(port.CodeInternal, "tools/list: no raw page for cursor %q", cursor)
+			return nil, port.ListMeta{}, port.Errorf(port.CodeUnavailable, "tools/list: no raw page for cursor %q", cursor)
 		}
 		for _, raw := range pg.Tools {
 			var name struct {
@@ -118,10 +122,10 @@ func (r *Runtime) ListFunctions(ctx context.Context, h port.Handle) ([]port.RawD
 }
 
 func (in *instance) pageFor(cursor string) (page, bool) {
-	raw, ok := in.capture.take()
-	if !ok {
+	raw, sent := in.capture.take()
+	if raw == nil {
 		pg, cached := in.pages[cursor]
-		return pg, cached
+		return pg, cached && !sent
 	}
 	var pg page
 	if json.Unmarshal(raw, &pg) != nil {
@@ -143,11 +147,15 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 		arguments = json.RawMessage(`{}`)
 	}
 	res, err := in.session.CallTool(ctx, &mcp.CallToolParams{Name: function, Arguments: arguments})
-	if err != nil {
-		if ctx.Err() != nil {
-			return port.Result{}, ctx.Err()
-		}
+	var rpc *jsonrpc.Error
+	switch {
+	case err == nil:
+	case errors.As(err, &rpc):
+		return port.Result{}, port.Errorf(port.CodeInternal, "tools/call %s: %v", function, err)
+	case errors.Is(err, mcp.ErrConnectionClosed):
 		return port.Result{}, port.Errorf(port.CodeUnavailable, "tools/call %s: %v", function, err)
+	default:
+		return port.Result{}, outcome.Of(ctx, err, "tools/call %s: %v", function)
 	}
 	out := port.Result{IsError: res.IsError}
 	if out.Content, err = json.Marshal(res.Content); err != nil {

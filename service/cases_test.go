@@ -46,7 +46,7 @@ func TestCaseOneFunctionForOneAgent(t *testing.T) {
 	want(t, len(w.names(x)), 0, "list after the description changed")
 	want(t, w.call(x, "s__create_issue", `{}`).Reason, port.ReasonQuarantined, "quarantined")
 
-	acc := st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "create_issue", res.Changes[0].NewHash))
+	acc := st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "create_issue", res.Changes[0].NewHash, false))
 	want(t, len(acc.StaleGrant), 1, "stale fn: rows listed by acceptFunction")
 	want(t, w.call(x, "s__create_issue", `{}`).Reason, port.ReasonGrantStale, "stale row answers deny")
 	want(t, len(w.names(x)), 0, "list while the row is stale")
@@ -82,6 +82,9 @@ func TestCaseEachUseAsksFirst(t *testing.T) {
 	delivered := w.call(x, "s__search", `{"q":"a"}`)
 	want(t, delivered.Status, service.OutcomeResult, "the first repeat after the terminal state gets the stored answer")
 	want(t, w.Runtime.CallsTo("search"), 1, "answering from the record forwards nothing")
+	if err := w.Svc.MarkDelivered(w.Ctx, x, id); err != nil {
+		t.Fatal(err)
+	}
 
 	second := w.call(x, "s__search", `{"q":"a"}`)
 	want(t, second.Status, service.OutcomePending, "after delivery a repeat is a new call")
@@ -116,7 +119,9 @@ func TestCaseAskOncePerSession(t *testing.T) {
 	w.decide(held.Approval.ID, port.DecisionApproveForSession)
 	w.sweep()
 	want(t, w.Runtime.CallsTo("create_issue"), 1, "the held call ran")
-	st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, held.Approval.ID))
+	if err := w.Svc.MarkDelivered(w.Ctx, x, held.Approval.ID); err != nil {
+		t.Fatal(err)
+	}
 
 	want(t, w.call(x, "s__create_issue", `{"q":"2"}`).Status, service.OutcomeResult, "second call in s1 is forwarded without a prompt")
 	want(t, w.call(w.agent("z", "s1"), "s__create_issue", `{"q":"3"}`).Status, service.OutcomePending, "another agent in the same session is held")
@@ -201,7 +206,7 @@ func TestAnApprovedHeldCallReturnsTheProjectedResult(t *testing.T) {
 		return port.Result{Content: json.RawMessage(`[]`), Structured: json.RawMessage(`{"name":"Ana","note":"vip"}`)}, nil
 	})
 	res := st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
-	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", res.Changes[0].NewHash))
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", res.Changes[0].NewHash, false))
 	st.Ok(w.Svc.SetProjection(w.Ctx, w.admin, w.conn.ID, "search", true))
 	x := w.agent("x", "s1")
 	req := service.CallRequest{Name: "s__search", Arguments: json.RawMessage(`{"q":"a"}`), Fields: []string{"/name"}}

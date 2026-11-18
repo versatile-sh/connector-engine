@@ -20,6 +20,9 @@ import (
 	"github.com/agents-control/connector-engine/internal/hints"
 	"github.com/agents-control/connector-engine/port"
 	rt "github.com/agents-control/connector-engine/runtime/grpc"
+	st "github.com/agents-control/connector-engine/service/servicetest"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 func runtime() *rt.Runtime {
@@ -164,5 +167,46 @@ func TestStartRefusals(t *testing.T) {
 	}
 	if caps := r.Describe(); !caps.UnaryOnly {
 		t.Fatal("the runtime states unary only")
+	}
+}
+
+func TestListFunctionsSeesUpstreamDrift(t *testing.T) {
+	srv := grpctest.Start(t, grpctest.ReflectionV1)
+	r := runtime()
+	ctx := context.Background()
+	h, err := r.Start(ctx, port.Connector{}, manifest(t, srv.Target, port.Descriptor{From: port.DescriptorReflection}), port.SecretsRef{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Stop(ctx, h)
+	hashOf := func() port.Hash {
+		defs, _, err := r.ListFunctions(ctx, h)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, d := range defs {
+			if d.Name == "Greeter_SayHello" {
+				return st.Ok(pinning.DefinitionHash(d.Raw))
+			}
+		}
+		t.Fatal("Greeter_SayHello is not listed")
+		return ""
+	}
+	before := hashOf()
+	var set descriptorpb.FileDescriptorSet
+	if err := proto.Unmarshal(grpctest.DescriptorSet, &set); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range set.File {
+		for _, m := range f.MessageType {
+			if f.GetName() == "demo/v1/demo.proto" && m.GetName() == "HelloRequest" {
+				m.Field = append(m.Field, &descriptorpb.FieldDescriptorProto{Name: proto.String("extra"), JsonName: proto.String("extra"), Number: proto.Int32(10),
+					Label: descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(), Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum()})
+			}
+		}
+	}
+	srv.Describe(st.Ok(grpcdesc.FromSet(st.Ok(proto.Marshal(&set)))))
+	if hashOf() == before {
+		t.Fatal("a re-list must see the changed upstream descriptors")
 	}
 }

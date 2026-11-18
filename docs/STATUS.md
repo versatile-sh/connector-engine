@@ -31,10 +31,10 @@ The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the op
 | 3 | `secrets/local` | Run | the root key persists across the restart case; `Destroy` (crypto-shredding) only unit-tested (`service/admin_test.go`) |
 | 3 | `runtime/remote` | Run | `idea_*`, `owner_*`; session era against the go-sdk server. The stateless era and SSE variants are only in `runtime/remote/remote_test.go` |
 | 3 | `runtime/declarative` | Run | `idea_openapi_import_lands_unreviewed_and_calls_rest` (GET, POST, DELETE with a path parameter) |
-| 3 | `runtime/grpc` | Run | `idea_grpc_kind_call_through_reflection_import`, plaintext upstream with `grpc.insecure`; the descriptor-set and BSR descriptor sources are only in `runtime/grpc/grpc_test.go` |
+| 3 | `runtime/grpc` | Run | `idea_grpc_kind_call_through_reflection_import`, plaintext upstream with `grpc.insecure`; descriptor sets and reflection v1alpha are only in `runtime/grpc/grpc_test.go` |
 | 3 | `runtime/memory`, `source/memory` | Built | fakes for the unit suites |
 | 5.2 | `source/files` | Run | `idea_files_listing_import_lands_unreviewed` (a second sync imports nothing) |
-| 5.2 | `source/openapi`, `source/reflection` | Run | the two idea cases above; URL-addressed OpenAPI documents are only fixture-tested |
+| 5.2 | `source/openapi`, `source/reflection` | Run | the two idea cases above; URL-addressed OpenAPI documents are not run |
 | 5.2 | `source/registry` (official v0.1), `source/docker`, `source/bsr` | Built | fixtures only; no call to the real registry, Docker catalog or BSR |
 | 4 | Roles, delegated actions | Run | tenant admin, approver (the requester) and the operator through the surfaces; `authz/table` tests for the whole matrix |
 | 4 | Tenant removal and the worker fan-out | Built | `service/admin_test.go`, `service/worker`; not run end to end |
@@ -42,7 +42,7 @@ The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the op
 | 5.5 | Catalog visibility, ceiling, offers, private listings | Run | owner case v and the tenancy cases; the V1 to V8 sweep is in `core/evaluate/catalog_test.go` |
 | 5.2 | Reviewed listings (`reviewListing`, trust levels) | Built | `core/listing`, `service`; the e2e cases classify with the admin class instead of a review |
 | 6 | Grant table, levels, row rules G1 to G10 | Run | owner cases; level `write` and agent level `read` in iii; the rule matrix is in `core/grant` |
-| 7 | Evaluation, truth table of §7.2 | Built | 67 rows in `core/evaluate/evaluate_test.go`; the owner cases above are the end-to-end subset |
+| 7 | Evaluation, truth table of §7.2 | Built | `TestTruthTable` in `core/evaluate/evaluate_test.go`; the owner cases above are the end-to-end subset |
 | 8 | Approval record, decide, hold window, status, cancel | Run | owner cases ii, iv, viii, the restart case and `cnctl_tools_*` |
 | 8.3 | Expiry, the denial brake, repeat rules R1 to R4, `outcome_unknown` | Built | `service/lifecycle_test.go`, `core/approval`; no e2e case waits for a timer |
 | 9 | Pinning, quarantine, `confirmGrant` | Run | owner cases vi and vii |
@@ -51,13 +51,13 @@ The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the op
 | 10 | Gateway: list, call, names, denial as unknown | Run | every case; both MCP eras are only tested in `gateway/gateway_test.go` |
 | 10 | `find` and `call` | Run | `find` through `cnctl tools search`; the collapse above the thresholds is only unit-tested (`gateway`) |
 | 10.5 | Response projection | Run | `idea_projection_trims_and_result_filter_masks_cpf` and the CLI case, including `invalid_path` |
-| 10 | Result filter, built-in regex and secrets | Run | the same case masks a CPF with `resultFilter.adapter: builtin`; the adapter being off is only unit-tested (`service/lifecycle_test.go`) |
+| 10 | Result filter, built-in regex and secrets | Run | the same case masks a CPF with `resultFilter.adapter: builtin`; the filter being off is not run |
 | 11 | Credential broker, API keys, OAuth | Built | `credential/` tests; no e2e case injects a credential or runs a connect flow |
-| 12 | Events: outbox, CloudEvents, Standard Webhooks | Run | install, grant and call events reach a verifying receiver; the other 37 published types are checked against their schemas in `catalog/` |
-| 13.1 | HTTP operations and `cnctl admin` | Run | about 30 of the operations are called in the cases |
+| 12 | Events: outbox, CloudEvents, Standard Webhooks | Run | install, grant and call events reach a verifying receiver; the other published types are only unit-tested (`catalog/`, `service/admin_test.go`) |
+| 13.1 | HTTP operations and `cnctl admin` | Run | 30 of the 81 operations are called in the cases |
 | 13.1 | gRPC operations, the OpenAPI document | Built | `server/parity_test.go` proves each operation has every form; the e2e config does not open the gRPC listener |
 | 13.2 | Management MCP `/mcp/manage` | Built | `server/mcpapi`: read-only by default, `decideApproval` never; not called in e2e |
-| 14 | Configuration | Run | the e2e files set about 20 keys; every key and default is in `config/connector-engine.yaml` with a test |
+| 14 | Configuration | Run | the e2e files override the keys of approvals, sources, runtime and filter; every key and default is in `config/connector-engine.yaml`, covered by `config/config_test.go` |
 | 15 | Controls for the threat table | Built | token never forwarded or returned (`gateway`), denial looks unknown (Run, case i) |
 | 15.2 | The exposure check (`exposure.onTrifecta`) | Not built | the key and the event type exist; nothing evaluates the lethal trifecta |
 | 3 | `ApprovalChannel` other than events, client registration by CIMD and DCR, shared reviewed catalog, ACI.dev converter, Presidio, container runtime, Cedar, OpenBao | Not built | out of scope in `docs/PLAN.md` §1 |

@@ -282,3 +282,22 @@ func TestOfficialSourceUsesItsTokenRefAndImportsDeprecatedVersionsAsDeprecated(t
 		t.Fatalf("version status %q: %v", v.Status, err)
 	}
 }
+
+func TestOperatorListenerServesMetrics(t *testing.T) {
+	e := boot(t, devConfig(t), fmt.Sprintf(localAdapters, "", "memory", ""), map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
+	res, err := http.Get(e.operator + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	if res.StatusCode != http.StatusOK || !strings.Contains(string(body), "connector_outbox_lag_seconds") {
+		t.Fatalf("/metrics: %d\n%s", res.StatusCode, body)
+	}
+	if res, err := http.Get(e.http + "/metrics"); err == nil {
+		res.Body.Close()
+		if res.StatusCode == http.StatusOK {
+			t.Fatal("the public listener must not serve metrics")
+		}
+	}
+}

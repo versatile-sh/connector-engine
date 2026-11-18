@@ -22,6 +22,7 @@ import (
 	"github.com/agents-control/connector-engine/server"
 	"github.com/agents-control/connector-engine/service"
 	"github.com/agents-control/connector-engine/service/worker"
+	"github.com/agents-control/connector-engine/telemetry"
 )
 
 type systemClock struct{}
@@ -52,6 +53,7 @@ type App struct {
 	sink     port.EventSink
 	sources  map[string]port.ListingSource
 	worker   *worker.Worker
+	metrics  *telemetry.Metrics
 	issuer   *local.Issuer
 	operator string
 	env      *server.Env
@@ -142,12 +144,13 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	gcfg.ResourceMetadataURL = a.Config.ResourceMetadataURL()
 	gcfg.HoldWindow, gcfg.Logger = a.Config.Approval.HoldWindow, a.log
 	gcfg.ThresholdTokens, gcfg.ThresholdFunctions, gcfg.SearchResultMax = a.Config.Search.ThresholdTokens, a.Config.Search.ThresholdFunctions, a.Config.Search.ResultMax
-	agent, err := gateway.New(a.Service, a.Verifier, a.Index, gcfg)
+	a.metrics = telemetry.New(a.outbox, a.Clock.Now)
+	agent, err := gateway.New(a.metrics.Core(a.Service), a.Verifier, a.Index, gcfg)
 	if err != nil {
 		return fmt.Errorf("gateway: %w", err)
 	}
 	a.agent = agent.Handler()
-	a.sink = listChanged{next: a.sink, notify: agent.ToolsChanged}
+	a.sink = a.metrics.Sink(listChanged{next: a.sink, notify: agent.ToolsChanged})
 	return a.bootstrap(ctx)
 }
 

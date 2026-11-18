@@ -80,6 +80,7 @@ func (a *App) operatorHandler() (http.Handler, error) {
 		return nil, err
 	}
 	mux.Handle("/v1/", api)
+	mux.Handle("GET /metrics", a.metrics.Handler())
 	a.probes(mux)
 	return mux, nil
 }

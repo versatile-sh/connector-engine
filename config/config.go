@@ -312,9 +312,10 @@ type Container struct {
 
 // Runtime is runtime.*.
 type Runtime struct {
-	Adapters    []string      `yaml:"adapters"`
-	CallTimeout time.Duration `yaml:"callTimeout"`
-	Container   Container     `yaml:"container"`
+	Adapters          []string      `yaml:"adapters"`
+	CallTimeout       time.Duration `yaml:"callTimeout"`
+	AllowPrivateHosts bool          `yaml:"allowPrivateHosts"`
+	Container         Container     `yaml:"container"`
 }
 
 // Audit is audit.*.

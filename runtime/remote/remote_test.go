@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/agents-control/connector-engine/core/pinning"
 	"github.com/agents-control/connector-engine/credential"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/runtime/remote"
 )
@@ -68,7 +70,7 @@ func runtimeFor(base string) (*remote.Runtime, port.Manifest) {
 		},
 		Injector: credential.Injector{},
 	}
-	return remote.New(applier, nil), port.Manifest{Kind: port.KindMCPRemote, Remote: &port.Remote{URL: base, Transport: "streamable-http"}}
+	return remote.New(applier, nil, egress.Guard{AllowPrivate: true}), port.Manifest{Kind: port.KindMCPRemote, Remote: &port.Remote{URL: base, Transport: "streamable-http"}}
 }
 
 func TestBothProtocolEras(t *testing.T) {
@@ -147,4 +149,20 @@ func TestStartRefusesWhatItDoesNotServe(t *testing.T) {
 			t.Fatalf("%s: %v", name, err)
 		}
 	}
+}
+
+func TestStartRefusesNonPublicAddressesUnlessAllowed(t *testing.T) {
+	up := newUpstream(t, &mcp.StreamableHTTPOptions{JSONResponse: true})
+	_, m := runtimeFor(up.URL)
+	ctx := context.Background()
+	if _, err := remote.New(credential.Applier{}, nil, egress.Guard{}).Start(ctx, port.Connector{}, m, port.SecretsRef{}); !port.IsCode(err, port.CodeUnavailable) {
+		t.Fatalf("loopback must be refused by default: %v", err)
+	}
+	host := strings.TrimPrefix(up.URL, "http://")
+	m.Egress = &port.Egress{AllowHosts: []string{host}}
+	h, err := remote.New(credential.Applier{}, nil, egress.Guard{}).Start(ctx, port.Connector{}, m, port.SecretsRef{})
+	if err != nil {
+		t.Fatalf("a host named in egress.allow_hosts is dialled: %v", err)
+	}
+	_ = h
 }

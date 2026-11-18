@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/fetch"
 	"github.com/agents-control/connector-engine/internal/importer"
 	"github.com/agents-control/connector-engine/port"
@@ -26,6 +27,7 @@ type Config struct {
 	PageSize          int
 	NamespaceVerified bool
 	HTTP              *http.Client
+	Guard             egress.Guard
 	Now               func() time.Time
 }
 
@@ -41,7 +43,7 @@ func New(cfg Config) *Source {
 		cfg.BaseURL = DefaultURL
 	}
 	if cfg.HTTP == nil {
-		cfg.HTTP = http.DefaultClient
+		cfg.HTTP = cfg.Guard.Client()
 	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now

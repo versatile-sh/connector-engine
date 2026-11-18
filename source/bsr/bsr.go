@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/agents-control/connector-engine/internal/digest"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/fetch"
 	"github.com/agents-control/connector-engine/internal/grpcdesc"
 	"github.com/agents-control/connector-engine/internal/importer"
@@ -38,6 +39,7 @@ type Config struct {
 	Targets  map[string]string
 	PageSize int
 	HTTP     *http.Client
+	Guard    egress.Guard
 	Now      func() time.Time
 }
 
@@ -53,7 +55,7 @@ func New(cfg Config) *Source {
 		cfg.BaseURL = DefaultURL
 	}
 	if cfg.HTTP == nil {
-		cfg.HTTP = http.DefaultClient
+		cfg.HTTP = cfg.Guard.Client()
 	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now

@@ -147,8 +147,8 @@ var operations = []Operation{
 	op("removeTenant", del, "/v1/tenants/{tenant}", "RemoveTenant", accept, func(ctx context.Context, e *Env, p port.Principal, in TenantRequest) (port.Operation, error) {
 		return e.Svc.RemoveTenant(ctx, p, in.Tenant)
 	}),
-	op("lintListing", post, "/v1/listings:lint", "LintListing", ok200, func(ctx context.Context, e *Env, _ port.Principal, in LintListingRequest) (service.LintResult, error) {
-		return e.Svc.LintListing(ctx, in.Manifest, lintCapture(e, in.Capture))
+	op("lintListing", post, "/v1/listings:lint", "LintListing", ok200, func(ctx context.Context, e *Env, p port.Principal, in LintListingRequest) (service.LintResult, error) {
+		return e.Svc.LintListing(ctx, p, in.Manifest, lintCapture(e, in.Capture))
 	}),
 	op("reviewListing", post, "/v1/listings:review", "ReviewListing", ok200, func(ctx context.Context, e *Env, p port.Principal, in ReviewListingRequest) (port.ListingVersion, error) {
 		return e.Svc.ReviewListing(ctx, p, in.version(), in.ReviewInput)

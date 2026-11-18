@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/agents-control/connector-engine/internal/digest"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/grpcdesc"
 	"github.com/agents-control/connector-engine/internal/importer"
 	"github.com/agents-control/connector-engine/port"
@@ -27,6 +28,7 @@ type Config struct {
 	Targets  []string
 	Insecure bool
 	Dial     []grpc.DialOption
+	Guard    egress.Guard
 	Now      func() time.Time
 }
 
@@ -52,7 +54,7 @@ func read(ctx context.Context, cfg Config, target string) (port.Manifest, bool, 
 	if cfg.Insecure {
 		transport = insecure.NewCredentials()
 	}
-	conn, err := grpc.NewClient(target, append([]grpc.DialOption{grpc.WithTransportCredentials(transport)}, cfg.Dial...)...)
+	conn, err := grpc.NewClient(target, append([]grpc.DialOption{grpc.WithTransportCredentials(transport), cfg.Guard.GRPC()}, cfg.Dial...)...)
 	if err != nil {
 		return port.Manifest{}, false, port.Errorf(port.CodeInvalidArgument, "grpc target %q: %v", target, err)
 	}

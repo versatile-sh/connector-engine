@@ -140,6 +140,7 @@ runtime:
     - remote
     - declarative
   callTimeout: 1m0s
+  allowPrivateHosts: false
   container:
     cpu: 1
     memory: 2GB

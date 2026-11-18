@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/grpctest"
 	"github.com/agents-control/connector-engine/internal/sourcetest"
 	"github.com/agents-control/connector-engine/port"
@@ -14,7 +15,7 @@ import (
 func TestImportsAServerThroughReflection(t *testing.T) {
 	v1 := grpctest.Start(t, grpctest.ReflectionV1)
 	alpha := grpctest.Start(t, grpctest.ReflectionV1Alpha)
-	got := sourcetest.Import(t, reflection.New(reflection.Config{Targets: []string{v1.Target, alpha.Target}, Insecure: true}))
+	got := sourcetest.Import(t, reflection.New(reflection.Config{Targets: []string{v1.Target, alpha.Target}, Insecure: true, Guard: egress.Guard{AllowPrivate: true}}))
 	if len(got) != 2 {
 		t.Fatalf("imported %d", len(got))
 	}
@@ -38,7 +39,7 @@ func TestImportsAServerThroughReflection(t *testing.T) {
 
 func TestFailsWhenReflectionIsOff(t *testing.T) {
 	off := grpctest.Start(t, grpctest.ReflectionNone)
-	if _, err := reflection.New(reflection.Config{Targets: []string{off.Target}, Insecure: true}).List(context.Background(), ""); err == nil {
+	if _, err := reflection.New(reflection.Config{Targets: []string{off.Target}, Insecure: true, Guard: egress.Guard{AllowPrivate: true}}).List(context.Background(), ""); err == nil {
 		t.Fatal("a server without reflection cannot be imported")
 	}
 }

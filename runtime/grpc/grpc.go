@@ -22,6 +22,7 @@ import (
 	"github.com/agents-control/connector-engine/credential"
 	deadlines "github.com/agents-control/connector-engine/internal/deadline"
 	"github.com/agents-control/connector-engine/internal/digest"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/fetch"
 	"github.com/agents-control/connector-engine/internal/grpcdesc"
 	"github.com/agents-control/connector-engine/internal/handles"
@@ -38,6 +39,7 @@ type Options struct {
 	Insecure bool
 	Fetch    Fetcher
 	Dial     []grpc.DialOption
+	Guard    egress.Guard
 }
 
 type instance struct {
@@ -56,7 +58,7 @@ type Runtime struct {
 // New returns a runtime with the given options.
 func New(opts Options) *Runtime {
 	if opts.Fetch == nil {
-		opts.Fetch = DefaultFetcher(http.DefaultClient)
+		opts.Fetch = DefaultFetcher(opts.Guard.Client())
 	}
 	return &Runtime{opts: opts, started: handles.New[*instance]("grpc")}
 }
@@ -129,8 +131,13 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	if r.opts.Insecure {
 		transport = insecure.NewCredentials()
 	}
+	var allow []string
+	if m.Egress != nil {
+		allow = m.Egress.AllowHosts
+	}
 	dial := append([]grpc.DialOption{
 		grpc.WithTransportCredentials(transport),
+		r.opts.Guard.GRPC(allow...),
 		grpc.WithPerRPCCredentials(perRPC{applier: r.opts.Applier, ref: secrets, secure: !r.opts.Insecure}),
 	}, r.opts.Dial...)
 	conn, err := grpc.NewClient(m.GRPC.Target, dial...)

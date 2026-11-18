@@ -33,10 +33,20 @@ func (s *Service) Capture(ctx context.Context, m port.Manifest) ([]port.RawDefin
 	return s.d.Runtime.ListFunctions(ctx, h)
 }
 
-// LintListing validates a manifest and, when capture is set, captures and scans its definitions; anyone may call it.
-func (s *Service) LintListing(ctx context.Context, m port.Manifest, capture CaptureFunc) (LintResult, error) {
+// LintListing validates a manifest; anyone may call it. Capturing and scanning the definitions starts the listing, so it needs the role that creates or reviews listings.
+func (s *Service) LintListing(ctx context.Context, p port.Principal, m port.Manifest, capture CaptureFunc) (LintResult, error) {
 	res := LintResult{Findings: listing.Lint(m, s.cfg.RequireDigest)}
-	if capture == nil || len(res.Findings) > 0 {
+	if capture == nil {
+		return res, nil
+	}
+	resource := authz.Installation
+	if t := p.Claims.Tenant; t != port.Installation {
+		resource = authz.Tenant(string(t))
+	}
+	if err := s.authorize(ctx, p, authz.ListingReview, resource); err != nil {
+		return res, err
+	}
+	if len(res.Findings) > 0 {
 		return res, nil
 	}
 	defs, _, err := capture(ctx, m)

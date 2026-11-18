@@ -26,11 +26,12 @@ const (
 	AckTrustedProxy      = "trusted_proxy"
 	AckManageMutations   = "manage_mcp_mutations"
 	AckPlaintextRootKey  = "plaintext_root_key"
+	AckPrivateEgress     = "private_egress"
 	maxAgentTokenDefault = time.Hour
 )
 
 // Acknowledgements lists every name an adapters file may acknowledge.
-var Acknowledgements = []string{AckLocalIssuer, AckLongLivedTokens, AckTrustedProxy, AckManageMutations, AckPlaintextRootKey}
+var Acknowledgements = []string{AckLocalIssuer, AckLongLivedTokens, AckTrustedProxy, AckManageMutations, AckPlaintextRootKey, AckPrivateEgress}
 
 // Parse reads connector-engine.yaml over the defaults, strictly: an unknown key is an error and a missing key keeps its default.
 func Parse(data []byte) (Config, error) {
@@ -141,6 +142,9 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	}
 	if len(c.Mutations()) > 0 && !acknowledged(AckManageMutations) {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
+	}
+	if c.Runtime.AllowPrivateHosts && !acknowledged(AckPrivateEgress) {
+		add(level, "runtime.allowPrivateHosts", "runtimes and sources may dial loopback, private and metadata addresses; acknowledge %s to allow it", AckPrivateEgress)
 	}
 	if c.Mode == ModeProduction && c.Server.PublicURL == "" && (c.Auth.Audience == "" || c.Auth.ManageAudience == "") {
 		add(adapters.LevelError, "auth.audience", "auth.audience and auth.manageAudience default to server.publicURL, which is empty")

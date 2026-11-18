@@ -15,6 +15,7 @@ import (
 
 	"github.com/agents-control/connector-engine/credential"
 	deadlines "github.com/agents-control/connector-engine/internal/deadline"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/handles"
 	"github.com/agents-control/connector-engine/internal/hints"
 	"github.com/agents-control/connector-engine/port"
@@ -35,12 +36,13 @@ type instance struct {
 type Runtime struct {
 	applier credential.Applier
 	base    http.RoundTripper
+	guard   egress.Guard
 	started *handles.Registry[*instance]
 }
 
-// New returns a runtime that injects credentials through applier; a nil base uses the default transport.
-func New(applier credential.Applier, base http.RoundTripper) *Runtime {
-	return &Runtime{applier: applier, base: base, started: handles.New[*instance]("rest")}
+// New returns a runtime that injects credentials through applier; a nil base dials through guard.
+func New(applier credential.Applier, base http.RoundTripper, guard egress.Guard) *Runtime {
+	return &Runtime{applier: applier, base: base, guard: guard, started: handles.New[*instance]("rest")}
 }
 
 // Describe states a runtime with no processes, whose connectors are data, reaching the allowed hosts only.
@@ -63,9 +65,13 @@ func (r *Runtime) Start(_ context.Context, _ port.Connector, m port.Manifest, se
 	if !credential.HostAllowed(m.Egress.AllowHosts, base.Host, base.Hostname()) {
 		return "", port.Errorf(port.CodeInvalidManifest, "rest.base_url host %s is not in egress.allow_hosts", base.Host)
 	}
+	transport := r.base
+	if transport == nil {
+		transport = r.guard.Transport(m.Egress.AllowHosts...)
+	}
 	in := &instance{
 		base:   strings.TrimRight(m.REST.BaseURL, "/"),
-		client: &http.Client{Transport: credential.Transport{Base: r.base, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}},
+		client: &http.Client{Transport: credential.Transport{Base: transport, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}},
 		order:  m.REST.Functions,
 		byName: map[string]port.RESTFunction{},
 	}

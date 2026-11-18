@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/grpctest"
 	"github.com/agents-control/connector-engine/internal/sourcetest"
 	"github.com/agents-control/connector-engine/port"
@@ -79,6 +80,7 @@ func TestImportsModulesWithATarget(t *testing.T) {
 	srv := grpctest.Start(t, grpctest.ReflectionNone)
 	src := bsr.New(bsr.Config{
 		BaseURL: fake.URL,
+		Guard:   egress.Guard{AllowPrivate: true},
 		Token:   "buf-token",
 		Owners:  []string{"acme", "globex"},
 		Targets: map[string]string{"acme/payments": srv.Target, "acme/old": srv.Target, "globex/ledger": srv.Target},
@@ -105,7 +107,7 @@ func TestImportsModulesWithATarget(t *testing.T) {
 func TestRuntimeCallsThroughABSRDescriptor(t *testing.T) {
 	fake := newFake(t)
 	srv := grpctest.Start(t, grpctest.ReflectionNone)
-	src := bsr.New(bsr.Config{BaseURL: fake.URL, Owners: []string{"acme"}, Targets: map[string]string{"acme/payments": srv.Target}})
+	src := bsr.New(bsr.Config{BaseURL: fake.URL, Guard: egress.Guard{AllowPrivate: true}, Owners: []string{"acme"}, Targets: map[string]string{"acme/payments": srv.Target}})
 	m, err := src.Fetch(context.Background(), "build.buf/acme.payments", "c0ffee")
 	if err != nil {
 		t.Fatal(err)
@@ -117,7 +119,7 @@ func TestRuntimeCallsThroughABSRDescriptor(t *testing.T) {
 		t.Fatalf("a version is requested as a commit ref: %v", refs)
 	}
 
-	rt := runtime.New(runtime.Options{Insecure: true, Fetch: src.FetchDescriptor})
+	rt := runtime.New(runtime.Options{Insecure: true, Guard: egress.Guard{AllowPrivate: true}, Fetch: src.FetchDescriptor})
 	h, err := rt.Start(context.Background(), port.Connector{}, m, port.SecretsRef{})
 	if err != nil {
 		t.Fatal(err)

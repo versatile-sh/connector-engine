@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -42,11 +43,16 @@ type Options struct {
 	Guard    egress.Guard
 }
 
-type instance struct {
-	conn    *grpc.ClientConn
+type described struct {
 	types   *dynamicpb.Types
 	order   []string
 	methods map[string]grpcdesc.Method
+}
+
+type instance struct {
+	conn *grpc.ClientConn
+	spec *port.GRPC
+	desc atomic.Pointer[described]
 }
 
 // Runtime calls unary gRPC methods declared by a listing; streaming methods are refused (grpc.unaryOnly).
@@ -144,42 +150,47 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	if err != nil {
 		return "", port.Errorf(port.CodeInvalidManifest, "grpc target %q: %v", m.GRPC.Target, err)
 	}
-	in, err := r.load(ctx, conn, m.GRPC)
-	if err != nil {
+	in := &instance{conn: conn, spec: m.GRPC}
+	if err := r.load(ctx, in); err != nil {
 		conn.Close()
 		return "", err
 	}
 	return r.started.Add(in), nil
 }
 
-func (r *Runtime) load(ctx context.Context, conn *grpc.ClientConn, g *port.GRPC) (*instance, error) {
-	files, err := r.descriptors(ctx, conn, g.Descriptor)
+func (r *Runtime) load(ctx context.Context, in *instance) error {
+	files, err := r.descriptors(ctx, in.conn, in.spec.Descriptor)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	in := &instance{conn: conn, types: dynamicpb.NewTypes(files), methods: map[string]grpcdesc.Method{}}
-	for _, f := range g.Methods {
+	d := &described{types: dynamicpb.NewTypes(files), methods: map[string]grpcdesc.Method{}}
+	for _, f := range in.spec.Methods {
 		md, err := grpcdesc.Unary(files, f.FullMethod)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		d := grpcdesc.Describe(md)
-		d.Function.Name = f.Name
-		in.order = append(in.order, f.Name)
-		in.methods[f.Name] = d
+		m := grpcdesc.Describe(md)
+		m.Function.Name = f.Name
+		d.order = append(d.order, f.Name)
+		d.methods[f.Name] = m
 	}
-	return in, nil
+	in.desc.Store(d)
+	return nil
 }
 
-// ListFunctions returns one definition per declared method, regenerated from the live descriptors, with the class hints in _meta.
-func (r *Runtime) ListFunctions(_ context.Context, h port.Handle) ([]port.RawDefinition, port.ListMeta, error) {
+// ListFunctions loads the descriptors again and returns one definition per declared method, with the class hints in _meta.
+func (r *Runtime) ListFunctions(ctx context.Context, h port.Handle) ([]port.RawDefinition, port.ListMeta, error) {
 	in, err := r.started.Get(h)
 	if err != nil {
 		return nil, port.ListMeta{}, err
 	}
-	out := make([]port.RawDefinition, len(in.order))
-	for i, name := range in.order {
-		d := in.methods[name]
+	if err := r.load(ctx, in); err != nil {
+		return nil, port.ListMeta{}, err
+	}
+	desc := in.desc.Load()
+	out := make([]port.RawDefinition, len(desc.order))
+	for i, name := range desc.order {
+		d := desc.methods[name]
 		raw, err := json.Marshal(map[string]any{
 			"name":         name,
 			"description":  "gRPC " + d.Function.FullMethod,
@@ -201,7 +212,8 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if err != nil {
 		return port.Result{}, err
 	}
-	m, ok := in.methods[function]
+	desc := in.desc.Load()
+	m, ok := desc.methods[function]
 	if !ok {
 		return port.Result{}, port.Errorf(port.CodeNotFound, "no declared method %q", function)
 	}
@@ -209,7 +221,7 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if len(arguments) == 0 {
 		arguments = json.RawMessage(`{}`)
 	}
-	if err := (protojson.UnmarshalOptions{Resolver: in.types}).Unmarshal(arguments, req); err != nil {
+	if err := (protojson.UnmarshalOptions{Resolver: desc.types}).Unmarshal(arguments, req); err != nil {
 		return port.Result{}, port.Errorf(port.CodeInvalidArgument, "arguments of %s: %v", function, err)
 	}
 	ctx, cancel := deadlines.Apply(ctx, deadline)
@@ -218,7 +230,7 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if err := in.conn.Invoke(ctx, m.Function.FullMethod, req, resp); err != nil {
 		return failure(ctx, function, err)
 	}
-	body, err := (protojson.MarshalOptions{Resolver: in.types}).Marshal(resp)
+	body, err := (protojson.MarshalOptions{Resolver: desc.types}).Marshal(resp)
 	if err != nil {
 		return port.Result{}, port.Errorf(port.CodeInternal, "response of %s: %v", function, err)
 	}

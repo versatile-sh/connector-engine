@@ -1,0 +1,1137 @@
+syntax = "proto3";
+
+package connectorengine.v1;
+
+option go_package = "github.com/agents-control/connector-engine/api/connectorengine/v1;connectorenginev1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+service ConnectorEngine {
+  rpc ListListings(ListListingsRequest) returns (ListingVersions);
+  rpc GetListing(GetListingRequest) returns (ListingVersion);
+  rpc ListOfferedListings(google.protobuf.Empty) returns (Listings);
+  rpc GetCatalogPolicy(WorkspaceRequest) returns (CatalogPolicy);
+  rpc PutCatalogPolicy(PutCatalogPolicyRequest) returns (CatalogPolicy);
+  rpc ListCatalogRules(google.protobuf.Empty) returns (CatalogRules);
+  rpc PutCatalogRule(CatalogRule) returns (CatalogRule);
+  rpc DeleteCatalogRule(RuleRequest) returns (google.protobuf.Empty);
+  rpc ExplainVisibility(ExplainVisibilityRequest) returns (Answer);
+  rpc ListOffers(TenantRequest) returns (Offers);
+  rpc PutOffer(OfferRequest) returns (Operation);
+  rpc CreateListing(CreateListingInput) returns (ListingVersion);
+  rpc QuarantineListing(ListingStatusRequest) returns (StatusChange);
+  rpc DeprecateListing(ListingStatusRequest) returns (StatusChange);
+  rpc WithdrawListing(ListingStatusRequest) returns (StatusChange);
+  rpc RestoreListing(ListingStatusRequest) returns (StatusChange);
+  rpc SetListingStarter(StarterRequest) returns (Listing);
+  rpc CreateTenant(TenantRequest) returns (Tenant);
+  rpc RemoveTenant(TenantRequest) returns (Operation);
+  rpc LintListing(LintListingRequest) returns (LintResult);
+  rpc ReviewListing(ReviewListingRequest) returns (ListingVersion);
+  rpc SyncSource(SourceRequest) returns (Operation);
+  rpc InstallConnector(InstallInput) returns (ConnectorView);
+  rpc EnableConnector(ConnectorRequest) returns (Connector);
+  rpc DisableConnector(ConnectorRequest) returns (Connector);
+  rpc GetConnector(ConnectorRequest) returns (ConnectorView);
+  rpc ListConnectors(WorkspaceRequest) returns (ConnectorViews);
+  rpc UpdateConnector(UpdateConnectorRequest) returns (UpdateResult);
+  rpc SetConnectorLevel(LevelRequest) returns (Grants);
+  rpc RemoveConnector(ConnectorRequest) returns (google.protobuf.Empty);
+  rpc ListFunctions(ConnectorRequest) returns (Functions);
+  rpc AcceptFunction(AcceptFunctionRequest) returns (AcceptResult);
+  rpc AcceptFunctions(AcceptFunctionsRequest) returns (AcceptResults);
+  rpc AcceptInstructions(ConnectorRequest) returns (Connector);
+  rpc ClassifyFunction(ClassifyFunctionRequest) returns (Function);
+  rpc SetProjection(ProjectionRequest) returns (Function);
+  rpc DisableFunction(FunctionRequest) returns (Function);
+  rpc EnableFunction(FunctionRequest) returns (Function);
+  rpc ListOverlays(OverlayTargetRequest) returns (Overlays);
+  rpc SuggestOverlay(OverlayTargetRequest) returns (Overlay);
+  rpc ProposeOverlay(ProposeOverlayRequest) returns (Overlay);
+  rpc AcceptOverlay(OverlayVersionRequest) returns (Overlay);
+  rpc RestoreOverlay(OverlayVersionRequest) returns (Overlay);
+  rpc ClearOverlay(OverlayTargetRequest) returns (google.protobuf.Empty);
+  rpc PutBinding(PutBindingRequest) returns (Binding);
+  rpc DeleteBinding(BindingRequest) returns (google.protobuf.Empty);
+  rpc ListBindings(ListBindingsRequest) returns (Bindings);
+  rpc SetAgentLevel(AgentLevelRequest) returns (Grants);
+  rpc CreateGrant(Grant) returns (GrantResult);
+  rpc DeleteGrant(GrantRequest) returns (google.protobuf.Empty);
+  rpc ListGrants(ListGrantsRequest) returns (Grants);
+  rpc ConfirmGrant(GrantRequest) returns (Grant);
+  rpc ExplainAccess(ExplainAccessRequest) returns (Decision);
+  rpc ListAgentFunctions(ListAgentFunctionsRequest) returns (AgentFunctions);
+  rpc ListApprovals(ListApprovalsRequest) returns (Approvals);
+  rpc GetApproval(ApprovalRequest) returns (ApprovalDetail);
+  rpc DecideApproval(DecideApprovalRequest) returns (Approval);
+  rpc CancelApproval(ApprovalRequest) returns (Approval);
+  rpc ListPauses(google.protobuf.Empty) returns (Pauses);
+  rpc ClearPause(PauseRequest) returns (google.protobuf.Empty);
+  rpc WatchApprovals(WatchApprovalsRequest) returns (stream Event);
+  rpc GetCall(CallRequest) returns (Call);
+  rpc CreateCredential(CredentialInput) returns (Credential);
+  rpc BeginConnect(BeginConnectRequest) returns (ConnectStart);
+  rpc CompleteConnect(CompleteConnectRequest) returns (Credential);
+  rpc ListCredentials(ListCredentialsRequest) returns (Credentials);
+  rpc RevokeCredential(CredentialRequest) returns (google.protobuf.Empty);
+  rpc PutClientRegistration(ClientRegistrationInput) returns (ClientRegistration);
+  rpc ListCalls(ListCallsRequest) returns (Calls);
+  rpc ListSources(google.protobuf.Empty) returns (Sources);
+  rpc RotateKey(RotateKeyRequest) returns (Operation);
+  rpc EndSession(SessionRequest) returns (google.protobuf.Empty);
+  rpc RemoveAgent(AgentRequest) returns (google.protobuf.Empty);
+  rpc RemovePerson(PersonRequest) returns (google.protobuf.Empty);
+  rpc RestorePerson(PersonRequest) returns (google.protobuf.Empty);
+  rpc ListRoles(ListRolesRequest) returns (Roles);
+  rpc PutRole(RoleAssignment) returns (RoleAssignment);
+  rpc DeleteRole(RoleAssignment) returns (google.protobuf.Empty);
+  rpc ListGroupMembers(ListMembersRequest) returns (GroupMembers);
+  rpc PutGroupMember(GroupMember) returns (GroupMember);
+  rpc DeleteGroupMember(GroupMember) returns (google.protobuf.Empty);
+  rpc GetOperation(OperationRequest) returns (Operation);
+  rpc ListEventTypes(google.protobuf.Empty) returns (EventTypes);
+  rpc GetEventType(EventTypeRequest) returns (EventType);
+  rpc ListAdapters(google.protobuf.Empty) returns (Document);
+}
+
+message AcceptFunctionRequest {
+  string id = 1;
+  string name = 2;
+  string seen = 3;
+  bool keep_overlay = 4;
+}
+
+message AcceptFunctionsRequest {
+  string id = 1;
+  map<string, string> seen = 2;
+}
+
+message AcceptResult {
+  Function function = 1;
+  repeated Grant stale_grant = 2;
+}
+
+message AcceptResults {
+  repeated AcceptResult items = 1;
+}
+
+message AgentFunction {
+  string name = 1;
+  string connector = 2;
+  string function = 3;
+  string mode = 4;
+  string overlay_hash = 5;
+}
+
+message AgentFunctions {
+  repeated AgentFunction functions = 1;
+  bool approval_tools = 2;
+  Exposure exposure = 3;
+}
+
+message AgentLevelRequest {
+  string id = 1;
+  string agent = 2;
+  string level = 3;
+}
+
+message AgentRequest {
+  string id = 1;
+}
+
+message Annotations {
+  bool readOnlyHint = 1;
+  bool destructiveHint = 2;
+  bool idempotentHint = 3;
+  bool openWorldHint = 4;
+}
+
+message Answer {
+  bool visible = 1;
+  bool installable = 2;
+  string ceiling = 3;
+  string version = 4;
+  Level tenant = 5;
+  Level workspace = 6;
+  repeated Level people = 7;
+}
+
+message Approval {
+  string id = 1;
+  string tenant = 2;
+  string workspace = 3;
+  string agent = 4;
+  string session = 5;
+  string on_behalf_of = 6;
+  string connector = 7;
+  string function = 8;
+  string definition_hash = 9;
+  string class = 10;
+  string inner_of = 11;
+  Sealed arguments = 12;
+  string call_hash = 13;
+  repeated string fields = 14;
+  string mode = 15;
+  repeated string approvers = 16;
+  string state = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp expires_at = 19;
+  string decided_by = 20;
+  google.protobuf.Timestamp decided_at = 21;
+  string channel = 22;
+  string decision_note = 23;
+  bool session_grant = 24;
+  string reason = 25;
+  google.protobuf.Timestamp delivered_at = 26;
+  google.protobuf.Timestamp execution_started_at = 27;
+  int64 call_deadline = 28;
+  Sealed result_ref = 29;
+  google.protobuf.Timestamp result_expires_at = 30;
+  google.protobuf.Timestamp token_expires_at = 31;
+}
+
+message ApprovalDetail {
+  Approval approval = 1;
+  bytes arguments = 2;
+  bool changed_recent = 3;
+  bool may_have_run = 4;
+  string trust_level = 5;
+  string publisher = 6;
+  bool reaches_outside = 7;
+}
+
+message ApprovalRequest {
+  string id = 1;
+}
+
+message Approvals {
+  repeated Approval items = 1;
+}
+
+message Artifact {
+  string type = 1;
+  string ref = 2;
+  string digest = 3;
+}
+
+message AuthSpec {
+  string kind = 1;
+  string issuer = 2;
+  string resource = 3;
+  google.protobuf.Struct scopes_by_function = 4;
+  string registration = 5;
+  repeated string owner_kinds_allowed = 6;
+}
+
+message BeginConnectRequest {
+  string id = 1;
+  string owner = 2;
+}
+
+message Binding {
+  string tenant = 1;
+  string workspace = 2;
+  string connector = 3;
+  string agent = 4;
+  string agent_owner = 5;
+  bool owner_removed = 6;
+  string credential_policy = 7;
+  bool ask_requester = 8;
+  repeated string approvers = 9;
+  int64 approval_timeout = 10;
+}
+
+message BindingRequest {
+  string id = 1;
+  string agent = 2;
+}
+
+message Bindings {
+  repeated Binding items = 1;
+}
+
+message Call {
+  string id = 1;
+  string tenant = 2;
+  string workspace = 3;
+  string agent = 4;
+  string session = 5;
+  string on_behalf_of = 6;
+  string connector = 7;
+  string function = 8;
+  string class = 9;
+  string call_hash = 10;
+  string approval = 11;
+  string credential = 12;
+  string overlay_hash = 13;
+  string state = 14;
+  google.protobuf.Timestamp started_at = 15;
+  google.protobuf.Timestamp deadline = 16;
+  google.protobuf.Timestamp finished_at = 17;
+  int64 result_bytes = 18;
+  bool is_error = 19;
+  string reason = 20;
+  map<string, int64> findings = 21;
+  bool late_answer = 22;
+}
+
+message CallRequest {
+  string id = 1;
+}
+
+message Calls {
+  repeated Call items = 1;
+}
+
+message CatalogPolicy {
+  string tenant = 1;
+  string workspace = 2;
+  string default = 3;
+}
+
+message CatalogRule {
+  string id = 1;
+  string tenant = 2;
+  string subject_kind = 3;
+  string subject_id = 4;
+  string target_kind = 5;
+  string target = 6;
+  bool show = 7;
+  bool install = 8;
+  string ceiling = 9;
+  string audience = 10;
+  string created_by = 11;
+}
+
+message CatalogRules {
+  repeated CatalogRule items = 1;
+}
+
+message Change {
+  string function = 1;
+  string kind = 2;
+  string old_hash = 3;
+  string new_hash = 4;
+  Effects effects = 5;
+}
+
+message ClassifyFunctionRequest {
+  string id = 1;
+  string name = 2;
+  string class = 3;
+}
+
+message ClientRegistration {
+  string tenant = 1;
+  string issuer = 2;
+  string client_id = 3;
+  Sealed secret = 4;
+  string redirect_url = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ClientRegistrationInput {
+  string issuer = 1;
+  string client_id = 2;
+  string secret = 3;
+  string redirect_url = 4;
+}
+
+message CompleteConnectRequest {
+  string state = 1;
+  string code = 2;
+}
+
+message ConfigField {
+  string key = 1;
+  string type = 2;
+  bool sensitive = 3;
+  bool required = 4;
+}
+
+message Conformance {
+  string report = 1;
+  string suite = 2;
+  bool passed = 3;
+}
+
+message ConnectStart {
+  string state = 1;
+  string url = 2;
+}
+
+message Connector {
+  string id = 1;
+  string tenant = 2;
+  string workspace = 3;
+  string alias = 4;
+  VersionRef listing = 5;
+  bool enabled = 6;
+  map<string, string> config = 7;
+  string instructions_hash = 8;
+  int64 call_timeout = 9;
+  int64 approval_timeout = 10;
+  google.protobuf.Timestamp last_relist_at = 11;
+  google.protobuf.Timestamp relist_after = 12;
+  google.protobuf.Timestamp removed_at = 13;
+  int64 revision = 14;
+}
+
+message ConnectorRequest {
+  string id = 1;
+}
+
+message ConnectorView {
+  Connector connector = 1;
+  repeated Function functions = 2;
+  string blocked = 3;
+}
+
+message ConnectorViews {
+  repeated ConnectorView items = 1;
+}
+
+message CreateListingInput {
+  Manifest manifest = 1;
+  bool first_party = 2;
+}
+
+message Credential {
+  string id = 1;
+  string tenant = 2;
+  string owner_kind = 3;
+  string owner_id = 4;
+  string connector = 5;
+  string kind = 6;
+  string issuer = 7;
+  string resource = 8;
+  string client_registration = 9;
+  repeated string scopes_granted = 10;
+  Sealed secret = 11;
+  google.protobuf.Timestamp expires_at = 12;
+  google.protobuf.Timestamp refresh_after = 13;
+  string status = 14;
+  string created_by = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp last_used_at = 17;
+  google.protobuf.Timestamp last_refreshed_at = 18;
+  int64 revision = 19;
+}
+
+message CredentialInput {
+  string connector = 1;
+  string owner_kind = 2;
+  string owner_id = 3;
+  string kind = 4;
+  string issuer = 5;
+  string resource = 6;
+  bytes secret = 7;
+  repeated string scopes = 8;
+  google.protobuf.Timestamp expires_at = 9;
+}
+
+message CredentialRequest {
+  string id = 1;
+}
+
+message Credentials {
+  repeated Credential items = 1;
+}
+
+message DecideApprovalRequest {
+  string id = 1;
+  string decision = 2;
+  string note = 3;
+  string channel = 4;
+}
+
+message Decision {
+  string mode = 1;
+  string reason = 2;
+  int64 step = 3;
+  repeated string notes = 4;
+  repeated string matched = 5;
+  repeated string layers = 6;
+  bool exposed = 7;
+}
+
+message Descriptor {
+  string from = 1;
+  string ref = 2;
+  string digest = 3;
+}
+
+message Document {
+  string engine = 1;
+  string build = 2;
+  string mode = 3;
+  repeated string acknowledge = 4;
+  map<string, google.protobuf.Value> extensions = 5;
+  repeated Row adapters = 6;
+}
+
+message Effects {
+  bool drop_session_rows = 1;
+  string cancel = 2;
+}
+
+message Egress {
+  repeated string allow_hosts = 1;
+}
+
+message Event {
+  string id = 1;
+  string type = 2;
+  string tenant = 3;
+  string source = 4;
+  string subject = 5;
+  string stream = 6;
+  int64 sequence = 7;
+  google.protobuf.Timestamp time = 8;
+  string traceparent = 9;
+  google.protobuf.Struct data = 10;
+}
+
+message EventType {
+  int64 number = 1;
+  string name = 2;
+  bool consumed = 3;
+  google.protobuf.Struct schema = 4;
+}
+
+message EventTypeRequest {
+  string type = 1;
+}
+
+message EventTypes {
+  repeated EventType types = 1;
+}
+
+message ExplainAccessRequest {
+  string workspace = 1;
+  string agent = 2;
+  string agent_owner = 3;
+  string on_behalf_of = 4;
+  string session = 5;
+  string caller = 6;
+  string connector = 7;
+  string function = 8;
+}
+
+message ExplainVisibilityRequest {
+  string workspace = 1;
+  string person = 2;
+  string owner = 3;
+  string name = 4;
+}
+
+message Exposure {
+  string tenant = 1;
+  string agent = 2;
+  bool exposed = 3;
+  repeated string leg_a = 4;
+  repeated string leg_b = 5;
+  repeated string leg_c = 6;
+}
+
+message Finding {
+  string kind = 1;
+  string severity = 2;
+  string detail = 3;
+}
+
+message Function {
+  string tenant = 1;
+  string connector = 2;
+  string name = 3;
+  google.protobuf.Value definition = 4;
+  string definition_hash = 5;
+  string ui_resource_hash = 6;
+  string class = 7;
+  string class_source = 8;
+  string state = 9;
+  string previous_state = 10;
+  repeated string visibility = 11;
+  bool open_world = 12;
+  bool reads_private = 13;
+  bool returns_third_party = 14;
+  bool projection = 15;
+  google.protobuf.Timestamp accepted_at = 16;
+  string accepted_by = 17;
+}
+
+message FunctionDef {
+  string name = 1;
+  string title = 2;
+  string description = 3;
+  google.protobuf.Value input_schema = 4;
+  google.protobuf.Value output_schema = 5;
+  Annotations annotations = 6;
+  MetaUI meta_ui = 7;
+  string definition_hash = 8;
+  string class = 9;
+  string class_source = 10;
+  bool reads_private = 11;
+  bool returns_third_party = 12;
+  bool idempotent = 13;
+  bool needs_reason = 14;
+  repeated string redact = 15;
+}
+
+message FunctionRequest {
+  string id = 1;
+  string name = 2;
+}
+
+message Functions {
+  repeated Function items = 1;
+}
+
+message GRPC {
+  string target = 1;
+  Descriptor descriptor = 2;
+  repeated string services = 3;
+  repeated GRPCFunction methods = 4;
+}
+
+message GRPCFunction {
+  string name = 1;
+  string full_method = 2;
+  google.protobuf.Value input_schema = 3;
+  google.protobuf.Value output_schema = 4;
+}
+
+message GetListingRequest {
+  string workspace = 1;
+  string owner = 2;
+  string name = 3;
+  string version = 4;
+}
+
+message Grant {
+  string id = 1;
+  string tenant = 2;
+  string scope_kind = 3;
+  string scope_id = 4;
+  string agent = 5;
+  string connector = 6;
+  ListingRef listing = 7;
+  string selector = 8;
+  string mode = 9;
+  string definition_hash = 10;
+  google.protobuf.Timestamp expires_at = 11;
+  int64 max_uses = 12;
+  int64 uses = 13;
+  string created_by = 14;
+  google.protobuf.Timestamp created_at = 15;
+  string reason = 16;
+  string origin = 17;
+}
+
+message GrantRequest {
+  string id = 1;
+}
+
+message GrantResult {
+  Grant grant = 1;
+  repeated string capped = 2;
+  Grant replaced = 3;
+}
+
+message Grants {
+  repeated Grant items = 1;
+}
+
+message GroupMember {
+  string tenant = 1;
+  string person = 2;
+  string group = 3;
+}
+
+message GroupMembers {
+  repeated GroupMember items = 1;
+}
+
+message InstallInput {
+  string workspace = 1;
+  string alias = 2;
+  ListingRef listing = 3;
+  string version = 4;
+  map<string, string> config = 5;
+  int64 call_timeout = 6;
+  int64 approval_timeout = 7;
+}
+
+message Level {
+  bool answered = 1;
+  bool show = 2;
+  bool install = 3;
+  string ceiling = 4;
+  bool named = 5;
+  repeated string rules = 6;
+}
+
+message LevelRequest {
+  string id = 1;
+  string level = 2;
+}
+
+message LintListingRequest {
+  Manifest manifest = 1;
+  bool capture = 2;
+}
+
+message LintResult {
+  repeated Finding findings = 1;
+  repeated RawDefinition definitions = 2;
+}
+
+message ListAgentFunctionsRequest {
+  string workspace = 1;
+  string agent = 2;
+  string agent_owner = 3;
+  string on_behalf_of = 4;
+  string session = 5;
+  string caller = 6;
+}
+
+message ListApprovalsRequest {
+  string state = 1;
+  string session = 2;
+  string agent = 3;
+  string connector = 4;
+}
+
+message ListBindingsRequest {
+  string id = 1;
+  string agent = 2;
+  string owner = 3;
+}
+
+message ListCallsRequest {
+  string agent = 1;
+  string session = 2;
+  string connector = 3;
+  string state = 4;
+}
+
+message ListCredentialsRequest {
+  string owner_kind = 1;
+  string owner_id = 2;
+  string connector = 3;
+}
+
+message ListGrantsRequest {
+  string scope_kind = 1;
+  string scope_id = 2;
+  string agent = 3;
+  string connector = 4;
+}
+
+message ListListingsRequest {
+  string workspace = 1;
+  string source = 2;
+  string trust_level = 3;
+  string kind = 4;
+  string q = 5;
+}
+
+message ListMembersRequest {
+  string person = 1;
+  string group = 2;
+}
+
+message ListRolesRequest {
+  string tenant = 1;
+  string person = 2;
+}
+
+message Listing {
+  ListingRef ref = 1;
+  string source = 2;
+  string publisher = 3;
+  string status = 4;
+  bool starter = 5;
+  repeated string versions = 6;
+}
+
+message ListingRef {
+  string owner = 1;
+  string name = 2;
+}
+
+message ListingStatusRequest {
+  string owner = 1;
+  string name = 2;
+  string version = 3;
+  string reason = 4;
+}
+
+message ListingVersion {
+  VersionRef ref = 1;
+  Manifest manifest = 2;
+  string status = 3;
+  google.protobuf.Timestamp imported_at = 4;
+}
+
+message ListingVersions {
+  repeated ListingVersion items = 1;
+}
+
+message Listings {
+  repeated Listing items = 1;
+}
+
+message Manifest {
+  string owner = 1;
+  string name = 2;
+  string version = 3;
+  string title = 4;
+  string description = 5;
+  string icon = 6;
+  string kind = 7;
+  SourceInfo source = 8;
+  Remote remote = 9;
+  Artifact artifact = 10;
+  REST rest = 11;
+  GRPC grpc = 12;
+  Signature signature = 13;
+  repeated FunctionDef functions = 14;
+  string instructions_hash = 15;
+  repeated AuthSpec auth = 16;
+  repeated ConfigField config = 17;
+  Egress egress = 18;
+  RuntimeNeeds runtime = 19;
+  UI ui = 20;
+  Publisher publisher = 21;
+  string licence = 22;
+  Review review = 23;
+  string trust_level = 24;
+}
+
+message MetaUI {
+  string resourceUri = 1;
+  repeated string visibility = 2;
+}
+
+message Offer {
+  string tenant = 1;
+  string target_kind = 2;
+  string target = 3;
+  bool withheld = 4;
+}
+
+message OfferRequest {
+  string tenant = 1;
+  string target_kind = 2;
+  string target = 3;
+  bool withheld = 4;
+}
+
+message Offers {
+  repeated Offer items = 1;
+}
+
+message Operation {
+  string id = 1;
+  string tenant = 2;
+  string kind = 3;
+  bool done = 4;
+  string error = 5;
+  map<string, int64> counts = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message OperationRequest {
+  string id = 1;
+}
+
+message Overlay {
+  string tenant = 1;
+  string connector = 2;
+  ListingRef listing = 3;
+  string function = 4;
+  int64 overlay_version = 5;
+  string title = 6;
+  string description = 7;
+  string upstream_hash = 8;
+  string overlay_hash = 9;
+  string state = 10;
+  string by = 11;
+  string source = 12;
+  google.protobuf.Timestamp at = 13;
+}
+
+message OverlayTargetRequest {
+  string connector = 1;
+  string listing_owner = 2;
+  string listing_name = 3;
+  string function = 4;
+}
+
+message OverlayVersionRequest {
+  string connector = 1;
+  string listing_owner = 2;
+  string listing_name = 3;
+  string function = 4;
+  int64 version = 5;
+  string upstream_seen = 6;
+}
+
+message Overlays {
+  repeated Overlay items = 1;
+}
+
+message Pause {
+  string id = 1;
+  string tenant = 2;
+  string session = 3;
+  string agent = 4;
+  string connector = 5;
+  bool paused = 6;
+  google.protobuf.Timestamp paused_at = 7;
+  int64 consecutive = 8;
+  int64 total = 9;
+  google.protobuf.Timestamp expires_at = 10;
+}
+
+message PauseRequest {
+  string id = 1;
+}
+
+message Pauses {
+  repeated Pause items = 1;
+}
+
+message PersonRequest {
+  string id = 1;
+  string workspace = 2;
+}
+
+message ProjectionRequest {
+  string id = 1;
+  string name = 2;
+  bool on = 3;
+}
+
+message ProposeOverlayRequest {
+  string connector = 1;
+  string listing_owner = 2;
+  string listing_name = 3;
+  string function = 4;
+  string title = 5;
+  string description = 6;
+  string upstream_hash = 7;
+}
+
+message Publisher {
+  string name = 1;
+  string verified_by = 2;
+  string contact = 3;
+}
+
+message PutBindingRequest {
+  string id = 1;
+  string agent = 2;
+  string agent_owner = 3;
+  string credential_policy = 4;
+  bool ask_requester = 5;
+  repeated string approvers = 6;
+}
+
+message PutCatalogPolicyRequest {
+  string workspace = 1;
+  string subject = 2;
+  string default = 3;
+}
+
+message REST {
+  string base_url = 1;
+  repeated RESTFunction functions = 2;
+}
+
+message RESTFunction {
+  string name = 1;
+  string description = 2;
+  string method = 3;
+  string path = 4;
+  google.protobuf.Value input_schema = 5;
+  google.protobuf.Value output_schema = 6;
+}
+
+message RawDefinition {
+  string name = 1;
+  google.protobuf.Value raw = 2;
+}
+
+message Remote {
+  string url = 1;
+  string transport = 2;
+}
+
+message Review {
+  string by = 1;
+  string scope = 2;
+  google.protobuf.Timestamp at = 3;
+  repeated string definition_hashes = 4;
+  string note = 5;
+}
+
+message ReviewFunction {
+  string name = 1;
+  string hash = 2;
+  string class = 3;
+}
+
+message ReviewListingRequest {
+  string owner = 1;
+  string name = 2;
+  string version = 3;
+  repeated ReviewFunction functions = 4;
+  string note = 5;
+}
+
+message RoleAssignment {
+  string tenant = 1;
+  string issuer = 2;
+  string person = 3;
+  string role = 4;
+  string scope = 5;
+}
+
+message Roles {
+  repeated RoleAssignment items = 1;
+}
+
+message RotateKeyRequest {
+  bool root = 1;
+  string tenant = 2;
+}
+
+message Row {
+  string kind = 1;
+  string port = 2;
+  string tier = 3;
+  string name = 4;
+  string version = 5;
+  string protocol = 6;
+  string manifestDigest = 7;
+  repeated string capabilities = 8;
+  string status = 9;
+  bool plaintext = 10;
+  Conformance conformance = 11;
+}
+
+message RuleRequest {
+  string id = 1;
+}
+
+message RuntimeNeeds {
+  string isolation_min = 1;
+  string cpu = 2;
+  string memory = 3;
+  bool long_lived = 4;
+}
+
+message Sealed {
+  bytes ciphertext = 1;
+  string key_ref = 2;
+}
+
+message SessionRequest {
+  string id = 1;
+}
+
+message Signature {
+  string type = 1;
+  string identity = 2;
+  string issuer = 3;
+}
+
+message SourceInfo {
+  string registry = 1;
+  string upstream_name = 2;
+  string upstream_version = 3;
+  string status = 4;
+  google.protobuf.Timestamp imported_at = 5;
+}
+
+message SourceRequest {
+  string source = 1;
+}
+
+message SourceStatus {
+  string name = 1;
+  SourceSync last_sync = 2;
+}
+
+message SourceSync {
+  string source = 1;
+  google.protobuf.Timestamp last_sync = 2;
+  int64 imported = 3;
+  int64 skipped = 4;
+  string error = 5;
+}
+
+message Sources {
+  repeated SourceStatus items = 1;
+}
+
+message StarterRequest {
+  string owner = 1;
+  string name = 2;
+  bool starter = 3;
+}
+
+message StatusChange {
+  Listing listing = 1;
+  Operation operation = 2;
+  repeated string blocked = 3;
+}
+
+message Tenant {
+  string id = 1;
+  string state = 2;
+  string key_ref = 3;
+  string created_by = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp removed_at = 6;
+  map<string, int64> counts = 7;
+}
+
+message TenantRequest {
+  string tenant = 1;
+}
+
+message UI {
+  bool mcp_apps = 1;
+}
+
+message UpdateConnectorRequest {
+  string id = 1;
+  string version = 2;
+}
+
+message UpdateResult {
+  Connector connector = 1;
+  repeated Change changes = 2;
+  repeated string quarantined = 3;
+  repeated string tenant_rows_unmatched = 4;
+}
+
+message VersionRef {
+  ListingRef listing = 1;
+  string version = 2;
+}
+
+message WatchApprovalsRequest {
+  int64 after = 1;
+  int64 limit = 2;
+}
+
+message WorkspaceRequest {
+  string workspace = 1;
+}

@@ -1,0 +1,121 @@
+// Package gateway is the agent endpoint of §10: an MCP server over Streamable HTTP that lists and calls the functions the engine grants to one agent.
+package gateway
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/service"
+	"github.com/modelcontextprotocol/go-sdk/auth"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+const (
+	newEraVersion    = "2026-07-28"
+	versionHeader    = "MCP-Protocol-Version"
+	instructions     = "Functions reach connectors through an approval gateway. A call that needs a person's approval answers pending_approval; poll approval_status."
+	serverName       = "connector-engine"
+	changedSentinel  = "list-changed-sentinel"
+	principalExtra   = "connector-engine/principal"
+	fieldsMetaKey    = "connector-engine/fields"
+	defaultHoldPoll  = 250 * time.Millisecond
+	defaultSession   = 30 * time.Minute
+	tokenBytesPerTok = 4
+)
+
+// Core is what the gateway asks of the use cases; *service.Service is one.
+type Core interface {
+	ListFunctions(ctx context.Context, p port.Principal) (service.FunctionList, error)
+	Call(ctx context.Context, p port.Principal, req service.CallRequest) (service.Outcome, error)
+	ApprovalStatus(ctx context.Context, p port.Principal, id port.ApprovalID) (service.Outcome, error)
+	ApprovalCancelByAgent(ctx context.Context, p port.Principal, id port.ApprovalID) (service.Outcome, error)
+	TenantActive(ctx context.Context, tenant port.TenantID) error
+}
+
+// Config holds the keys of §14 the gateway reads; DefaultConfig is the defaults of that table.
+type Config struct {
+	Audience            string
+	ResourceMetadataURL string
+	HoldWindow          time.Duration
+	HoldPoll            time.Duration
+	ThresholdTokens     int
+	ThresholdFunctions  int
+	SearchResultMax     int
+	SessionTimeout      time.Duration
+	Logger              *slog.Logger
+}
+
+// DefaultConfig returns the defaults of §14 for an endpoint with the given audience.
+func DefaultConfig(audience string) Config {
+	return Config{Audience: audience, HoldWindow: 20 * time.Second, HoldPoll: defaultHoldPoll, ThresholdTokens: 10000, ThresholdFunctions: 30,
+		SearchResultMax: 5, SessionTimeout: defaultSession}
+}
+
+// Gateway serves the agent endpoint.
+type Gateway struct {
+	core     Core
+	verifier port.PrincipalVerifier
+	index    port.ToolIndex
+	cfg      Config
+	server   *mcp.Server
+	handler  http.Handler
+}
+
+// New builds a Gateway; the index may be nil, and then a large list is served whole instead of through find and call.
+func New(core Core, verifier port.PrincipalVerifier, index port.ToolIndex, cfg Config) (*Gateway, error) {
+	if core == nil || verifier == nil || cfg.Audience == "" {
+		return nil, port.Errorf(port.CodeInvalidArgument, "core, verifier and audience are required")
+	}
+	if cfg.Logger == nil {
+		cfg.Logger = slog.New(slog.DiscardHandler)
+	}
+	if cfg.HoldPoll <= 0 {
+		cfg.HoldPoll = defaultHoldPoll
+	}
+	g := &Gateway{core: core, verifier: verifier, index: index, cfg: cfg}
+	g.server = mcp.NewServer(&mcp.Implementation{Name: serverName, Version: "1"},
+		&mcp.ServerOptions{Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{ListChanged: true}}, Instructions: instructions})
+	g.server.AddReceivingMiddleware(g.middleware)
+	sessionless := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return g.server }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
+	sessions := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return g.server }, &mcp.StreamableHTTPOptions{SessionTimeout: cfg.SessionTimeout})
+	eras := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(versionHeader) >= newEraVersion {
+			sessionless.ServeHTTP(w, r)
+			return
+		}
+		sessions.ServeHTTP(w, r)
+	})
+	g.handler = auth.RequireBearerToken(g.verify, &auth.RequireBearerTokenOptions{ResourceMetadataURL: cfg.ResourceMetadataURL, AllowMissingExpiration: true})(eras)
+	return g, nil
+}
+
+// Handler serves /mcp: requests of protocol 2026-07-28 and later run without a session, older ones in an SDK session, and each request carries its own identity.
+func (g *Gateway) Handler() http.Handler { return g.handler }
+
+// ToolsChanged sends notifications/tools/list_changed to the sessions and listen streams that can receive it (§10.2 L7).
+func (g *Gateway) ToolsChanged() {
+	g.server.AddTool(&mcp.Tool{Name: changedSentinel, InputSchema: map[string]any{"type": "object"}}, nil)
+	g.server.RemoveTools(changedSentinel)
+}
+
+func (g *Gateway) verify(ctx context.Context, token string, _ *http.Request) (*auth.TokenInfo, error) {
+	p, err := g.verifier.Verify(ctx, token, g.cfg.Audience)
+	switch {
+	case port.IsCode(err, port.CodeUnauthenticated):
+		return nil, fmt.Errorf("%w: %w", auth.ErrInvalidToken, err)
+	case err != nil:
+		return nil, err
+	case p.Kind != port.PrincipalAgent && p.Kind != port.PrincipalView:
+		return nil, fmt.Errorf("%w: the agent endpoint takes an agent or view token", auth.ErrInvalidToken)
+	}
+	if err := g.core.TenantActive(ctx, p.Claims.Tenant); port.IsCode(err, port.CodeTenantRemoved) {
+		return nil, fmt.Errorf("%w: %w", auth.ErrInvalidToken, err)
+	} else if err != nil {
+		return nil, err
+	}
+	return &auth.TokenInfo{UserID: string(p.Claims.Tenant) + "/" + string(p.Claims.Agent) + "/" + string(p.Claims.Session), Extra: map[string]any{principalExtra: p}}, nil
+}

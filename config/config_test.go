@@ -166,3 +166,26 @@ func TestAdaptersFileFollowsTheDefaultsAndTheAcknowledgements(t *testing.T) {
 		t.Fatal("builtin:local was selected without auth.localIssuer.enabled")
 	}
 }
+
+func TestKeysThisBuildDoesNotActOnAcceptOnlyTheirDefault(t *testing.T) {
+	for where, edit := range map[string]func(*config.Config){
+		"gateway.relayInstructions":     func(c *config.Config) { c.Gateway.RelayInstructions = "pinned" },
+		"gateway.denyAs":                func(c *config.Config) { c.Gateway.DenyAs = "error" },
+		"audit.arguments":               func(c *config.Config) { c.Audit.Arguments = "redacted" },
+		"audit.hashChain":               func(c *config.Config) { c.Audit.HashChain = true },
+		"pinning.hashIcons":             func(c *config.Config) { c.Pinning.HashIcons = true },
+		"approval.inChat.classes":       func(c *config.Config) { c.Approval.InChat.Classes = []string{"read"} },
+		"listing.requireSignature":      func(c *config.Config) { c.Listing.RequireSignature = true },
+		"secrets.dataKeyCache":          func(c *config.Config) { c.Secrets.DataKeyCache = time.Minute },
+		"credentials.registrationOrder": func(c *config.Config) { c.Credentials.RegistrationOrder = []string{"dcr"} },
+		"runtime.container":             func(c *config.Config) { c.Runtime.Container.CPU = 2 },
+		"grpc.unaryOnly":                func(c *config.Config) { c.GRPC.UnaryOnly = false },
+	} {
+		cfg := config.Default()
+		cfg.Mode = config.ModeDev
+		edit(&cfg)
+		if !has(cfg.Check(none), where, adapters.LevelError) {
+			t.Errorf("%s: a value this build ignores is accepted", where)
+		}
+	}
+}

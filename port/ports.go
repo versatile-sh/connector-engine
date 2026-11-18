@@ -114,6 +114,7 @@ type RuntimeCapabilities struct {
 
 // SecretsRef names the credential a runtime injects through the CredentialInjector; never its plaintext.
 type SecretsRef struct {
+	Tenant     TenantID     `json:"tenant,omitempty"`
 	Credential CredentialID `json:"credential,omitempty"`
 	Owner      OwnerKind    `json:"owner,omitempty"`
 }

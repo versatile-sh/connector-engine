@@ -77,6 +77,8 @@ type data struct {
 	exposures   table[port.Exposure]
 	operations  table[port.Operation]
 	fanouts     table[port.FanOut]
+	roles       table[port.RoleAssignment]
+	members     table[port.GroupMember]
 	audit       []row[port.AuditRow]
 	events      []event
 	streams     map[string]int64
@@ -89,6 +91,7 @@ func (d data) clone() data {
 	d.bindings, d.grants, d.approvals, d.pauses = d.bindings.clone(), d.grants.clone(), d.approvals.clone(), d.pauses.clone()
 	d.tombstones, d.credentials, d.overlays, d.calls = d.tombstones.clone(), d.credentials.clone(), d.overlays.clone(), d.calls.clone()
 	d.exposures, d.operations, d.fanouts = d.exposures.clone(), d.operations.clone(), d.fanouts.clone()
+	d.roles, d.members = d.roles.clone(), d.members.clone()
 	d.audit, d.events = slices.Clone(d.audit), slices.Clone(d.events)
 	d.streams, d.inbox = maps.Clone(d.streams), maps.Clone(d.inbox)
 	return d
@@ -112,7 +115,8 @@ func New() *Store {
 		tombstones: newTable[port.Tombstone](tenantRows), credentials: newTable[port.Credential](tenantRows),
 		overlays: newTable[port.Overlay](tenantRows), calls: newTable[port.Call](tenantRows),
 		exposures: newTable[port.Exposure](tenantRows), operations: newTable[port.Operation](tenantRows),
-		fanouts: newTable[port.FanOut](tenantRows), streams: map[string]int64{}, inbox: map[string]time.Time{},
+		fanouts: newTable[port.FanOut](tenantRows), roles: newTable[port.RoleAssignment](tenantRows),
+		members: newTable[port.GroupMember](tenantRows), streams: map[string]int64{}, inbox: map[string]time.Time{},
 	}}
 }
 

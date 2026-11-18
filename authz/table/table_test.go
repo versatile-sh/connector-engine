@@ -46,12 +46,28 @@ func TestAllowedFollowsRolesAndScopes(t *testing.T) {
 
 func TestGroupsAreTheJoinedOnes(t *testing.T) {
 	e := st.New(t)
-	e.Roles.Join("t1", "m", "platform")
+	e.Join("t1", "m", "platform")
 	g, _ := e.Auth.Groups(e.Ctx, "t1", "m")
 	if len(g) != 1 || g[0] != "platform" {
 		t.Fatalf("groups: %v", g)
 	}
 	if other, _ := e.Auth.Groups(e.Ctx, "t2", "m"); len(other) != 0 {
 		t.Fatal("groups do not cross tenants")
+	}
+}
+
+func TestAnInstallationRoleRowCoversEveryTenantAndAnotherTenantsRowDoesNot(t *testing.T) {
+	e := st.New(t)
+	e.Write("", func(tx port.Tx) error {
+		return tx.PutRole(port.RoleAssignment{Person: "boss", Role: string(table.Operator), Scope: authz.Installation})
+	})
+	e.Write("t2", func(tx port.Tx) error {
+		return tx.PutRole(port.RoleAssignment{Tenant: "t2", Person: "boss", Role: string(table.TenantAdmin), Scope: authz.Tenant("t2")})
+	})
+	boss := port.Principal{Kind: port.PrincipalPerson, Person: "boss", Claims: port.Claims{Tenant: "t1", Subject: "boss"}}
+	for action, want := range map[string]bool{authz.TenantCreate: true, authz.CatalogWrite: false} {
+		if got, err := e.Auth.Allowed(e.Ctx, port.Permission{Principal: boss, Action: action, Resource: authz.Tenant("t2")}); err != nil || got != want {
+			t.Errorf("%s: %v %v, want %v", action, got, err, want)
+		}
 	}
 }

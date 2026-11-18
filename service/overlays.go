@@ -12,8 +12,8 @@ import (
 
 // OverlayTarget names what an overlay applies to: one connector, or a listing in every workspace of the tenant (§9.1).
 type OverlayTarget struct {
-	Connector port.ConnectorID
-	Listing   *port.ListingRef
+	Connector port.ConnectorID `json:"connector"`
+	Listing   *port.ListingRef `json:"listing,omitempty"`
 }
 
 func (s *Service) overlayAuth(ctx context.Context, p port.Principal, t OverlayTarget) error {

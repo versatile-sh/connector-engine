@@ -589,3 +589,33 @@ func (t *tx) MarkInbox(id string, at time.Time) (bool, error) {
 	t.d.inbox[k] = at
 	return true, nil
 }
+
+func roleKey(r port.RoleAssignment) string {
+	return key(string(r.Tenant), string(r.Person), r.Role, r.Scope)
+}
+
+func (t *tx) ListRoles(f port.RoleFilter) ([]port.RoleAssignment, error) {
+	return list(t, t.d.roles, f.Match)
+}
+
+func (t *tx) PutRole(r port.RoleAssignment) error {
+	_, err := put(t, t.d.roles, roleKey(r), r.Tenant, r, port.AnyRevision)
+	return err
+}
+
+func (t *tx) DeleteRole(r port.RoleAssignment) error { return del(t, t.d.roles, roleKey(r)) }
+
+func memberKey(m port.GroupMember) string {
+	return key(string(m.Tenant), string(m.Person), string(m.Group))
+}
+
+func (t *tx) ListMembers(f port.MemberFilter) ([]port.GroupMember, error) {
+	return list(t, t.d.members, f.Match)
+}
+
+func (t *tx) PutMember(m port.GroupMember) error {
+	_, err := put(t, t.d.members, memberKey(m), m.Tenant, m, port.AnyRevision)
+	return err
+}
+
+func (t *tx) DeleteMember(m port.GroupMember) error { return del(t, t.d.members, memberKey(m)) }

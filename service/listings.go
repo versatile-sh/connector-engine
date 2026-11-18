@@ -18,8 +18,8 @@ type CaptureFunc func(ctx context.Context, m port.Manifest) ([]port.RawDefinitio
 
 // LintResult is what lintListing found: manifest findings, scanner findings and, with a capture, the definitions.
 type LintResult struct {
-	Findings    []port.Finding
-	Definitions []port.RawDefinition
+	Findings    []port.Finding       `json:"findings,omitempty"`
+	Definitions []port.RawDefinition `json:"definitions,omitempty"`
 }
 
 // Capture starts the manifest on the runtime without a credential, lists its functions and stops it.
@@ -130,8 +130,8 @@ func (s *Service) importManifest(tx port.Tx, source string, m port.Manifest) (bo
 
 // CreateListingInput is a manifest to create; FirstParty marks an installation listing the operator built.
 type CreateListingInput struct {
-	Manifest   port.Manifest
-	FirstParty bool
+	Manifest   port.Manifest `json:"manifest"`
+	FirstParty bool          `json:"first_party"`
 }
 
 // CreateListing creates a listing version: an installation listing for the operator, a private one for a tenant admin (§13.1).
@@ -207,10 +207,10 @@ func (s *Service) visibleView(ctx context.Context, p port.Principal, tx port.Tx,
 
 // ListingFilter narrows ListListings; zero fields match all.
 type ListingFilter struct {
-	Source string
-	Trust  port.TrustLevel
-	Kind   port.Kind
-	Query  string
+	Source string          `json:"source"`
+	Trust  port.TrustLevel `json:"trust"`
+	Kind   port.Kind       `json:"kind"`
+	Query  string          `json:"query"`
 }
 
 // ListListings returns the newest version of every listing visible to the caller in the workspace (§5.5).
@@ -293,15 +293,15 @@ func (s *Service) ListOfferedListings(ctx context.Context, p port.Principal) ([]
 
 // ReviewFunction is a reviewer's class for one function at the hash the reviewer saw.
 type ReviewFunction struct {
-	Name  string
-	Hash  port.Hash
-	Class port.Class
+	Name  string     `json:"name"`
+	Hash  port.Hash  `json:"hash"`
+	Class port.Class `json:"class"`
 }
 
 // ReviewInput is a review: the reviewed classes and a note.
 type ReviewInput struct {
-	Functions []ReviewFunction
-	Note      string
+	Functions []ReviewFunction `json:"functions,omitempty"`
+	Note      string           `json:"note"`
 }
 
 // ReviewListing makes the class map of a version trusted at the reviewed hashes and recomputes its trust level (§5.2).
@@ -381,9 +381,9 @@ func (s *Service) SetListingStarter(ctx context.Context, p port.Principal, ref p
 // StatusChange is the result of a listing status change: the listing, and either the operation of the operator's fan-out
 // or, for a private listing, the connectors it blocks.
 type StatusChange struct {
-	Listing   port.Listing
-	Operation *port.Operation
-	Blocked   []port.ConnectorID
+	Listing   port.Listing       `json:"listing"`
+	Operation *port.Operation    `json:"operation,omitempty"`
+	Blocked   []port.ConnectorID `json:"blocked,omitempty"`
 }
 
 // ChangeListingStatus is quarantineListing, deprecateListing, withdrawListing and restoreListing: the status maps to

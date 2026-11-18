@@ -18,20 +18,20 @@ import (
 
 // InstallInput is one install: the listing, an optional version (newest that exists when empty) and the connector's settings.
 type InstallInput struct {
-	Workspace       port.WorkspaceID
-	Alias           string
-	Listing         port.ListingRef
-	Version         string
-	Config          map[string]string
-	CallTimeout     time.Duration
-	ApprovalTimeout time.Duration
+	Workspace       port.WorkspaceID  `json:"workspace"`
+	Alias           string            `json:"alias"`
+	Listing         port.ListingRef   `json:"listing"`
+	Version         string            `json:"version"`
+	Config          map[string]string `json:"config,omitempty"`
+	CallTimeout     time.Duration     `json:"call_timeout"`
+	ApprovalTimeout time.Duration     `json:"approval_timeout"`
 }
 
 // ConnectorView is a connector with its functions and, when its listing is hidden or quarantined, the reason it is blocked.
 type ConnectorView struct {
-	Connector port.Connector
-	Functions []port.Function
-	Blocked   port.Code
+	Connector port.Connector  `json:"connector"`
+	Functions []port.Function `json:"functions,omitempty"`
+	Blocked   port.Code       `json:"blocked"`
 }
 
 func canInstall(a corecatalog.Answer) bool {
@@ -146,10 +146,10 @@ func (s *Service) InstallConnector(ctx context.Context, p port.Principal, in Ins
 
 // UpdateResult is what an update or a re-list found: the changes, the functions it quarantined and the tenant rows left unmatched.
 type UpdateResult struct {
-	Connector           port.Connector
-	Changes             []pinning.Change
-	Quarantined         []string
-	TenantRowsUnmatched []string
+	Connector           port.Connector   `json:"connector"`
+	Changes             []pinning.Change `json:"changes,omitempty"`
+	Quarantined         []string         `json:"quarantined,omitempty"`
+	TenantRowsUnmatched []string         `json:"tenant_rows_unmatched,omitempty"`
 }
 
 // UpdateConnector pins a newer listing version by an explicit act; changed and new functions are quarantined (§5.4, §9).

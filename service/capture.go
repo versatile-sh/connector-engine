@@ -40,7 +40,7 @@ func (s *Service) handle(ctx context.Context, c port.Connector, m port.Manifest,
 	if h, ok := s.handles[key]; ok {
 		return h, nil
 	}
-	h, err := s.d.Runtime.Start(ctx, c, m, port.SecretsRef{Credential: cred, Owner: owner})
+	h, err := s.d.Runtime.Start(ctx, c, m, port.SecretsRef{Tenant: c.Tenant, Credential: cred, Owner: owner})
 	if err != nil {
 		return "", port.Errorf(port.CodeUnavailable, "connector %s did not start: %v", c.ID, err)
 	}

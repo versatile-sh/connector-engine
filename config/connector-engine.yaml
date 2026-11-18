@@ -1,0 +1,152 @@
+mode: production
+server:
+  listen: :8080
+  grpcListen: :9090
+  operatorListen: ""
+  publicURL: ""
+  maxBodyBytes: 1048576
+  shutdownGrace: 15s
+auth:
+  issuers: []
+  audience: ""
+  manageAudience: ""
+  localIssuer:
+    enabled: false
+    name: connector-engine-local
+  agentTokenMaxLifetime: 1h0m0s
+  senderConstraint: none
+  trustedProxy:
+    listen: ""
+    cidrs: []
+  operator:
+    tokenRef: ""
+bootstrap:
+  roles: []
+gateway:
+  protocolVersions:
+    - "2026-07-28"
+    - "2025-11-25"
+    - "2025-06-18"
+    - "2025-03-26"
+  relayInstructions: never
+  scanArgumentsForToken: true
+  listTtl: 1m0s
+  toolNameMax: 64
+  separator: __
+  denyAs: unknown_tool
+apps:
+  appOnlyFunctions: refuse
+manage:
+  mcp:
+    operations:
+      - read_only
+catalog:
+  tenantDefault: none
+  offerDefault: enabled_sources
+  defaultCeiling: write
+  privateListings: true
+permission:
+  defaultMode: deny
+  levelWrite:
+    write: ask_once
+    destructive: ask
+  destructiveMax: ask_once
+  sessionGrantMax: 8h0m0s
+  unclassified: destructive
+  install:
+    levelReviewed: write
+    levelOther: "off"
+  alwaysMaxDuration: 2160h0m0s
+  external:
+    endpoint: ""
+approval:
+  holdWindow: 20s
+  timeout: 10m0s
+  pollAfter: 15s
+  resultRetention: 1h0m0s
+  denialBrake:
+    consecutive: 3
+    perSession: 10
+  maxPendingPerSession: 5
+  executeWithin: 1m0s
+  sweepInterval: 5s
+  executeGrace: 10s
+  proofOfReading: "off"
+  inChat:
+    classes:
+      - write
+  noteMaxChars: 500
+  changedWarningDays: 7
+pinning:
+  relistMin: 30s
+  relistMax: 5m0s
+  hashIcons: false
+  autoAcceptReviewed: none
+  relistBeforeCall: held
+exposure:
+  onTrifecta: warn
+search:
+  thresholdTokens: 10000
+  thresholdFunctions: 30
+  resultMax: 5
+projection:
+  default: "off"
+  maxPaths: 20
+resultFilter:
+  adapter: none
+overlay:
+  suggester: none
+cli:
+  defaultForCodingAgents: true
+grpc:
+  unaryOnly: true
+sources:
+  official:
+    enabled: false
+    url: https://registry.modelcontextprotocol.io
+  docker:
+    enabled: false
+    dir: ""
+  files:
+    enabled: false
+    dir: ""
+  openapi:
+    enabled: false
+    dir: ""
+    urls: []
+  reflection:
+    enabled: false
+    targets: []
+    insecure: false
+  syncInterval: 6h0m0s
+listing:
+  requireDigest: true
+  requireSignature: false
+credentials:
+  refreshMargin: 5m0s
+  registrationOrder:
+    - pre_registered
+    - cimd
+    - dcr
+    - manual
+  fallback: none
+  clients: []
+secrets:
+  adapter: localfile
+  dataKeyCache: 5m0s
+  dir: /var/lib/connector-engine/secrets
+runtime:
+  adapters:
+    - remote
+    - declarative
+  callTimeout: 1m0s
+  container:
+    cpu: 1
+    memory: 2GB
+    idleStop: 1m0s
+    network: none
+audit:
+  arguments: reference
+  hashChain: false
+outbox:
+  signing: standard-webhooks

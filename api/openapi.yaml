@@ -1,0 +1,4532 @@
+components:
+  parameters:
+    IdempotencyKey:
+      description: A retry with the same key runs the mutation once.
+      in: header
+      name: Idempotency-Key
+      schema:
+        type: string
+  responses:
+    Problem:
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+      description: An RFC 9457 problem document.
+  schemas:
+    AcceptFunctionRequest:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        seen:
+          type: string
+      required:
+        - id
+        - name
+        - seen
+      type: object
+    AcceptFunctionsRequest:
+      properties:
+        id:
+          type: string
+        seen:
+          additionalProperties:
+            type: string
+          type: object
+      required:
+        - id
+        - seen
+      type: object
+    AcceptResult:
+      properties:
+        function:
+          $ref: '#/components/schemas/Function'
+        stale_grant:
+          items:
+            $ref: '#/components/schemas/Grant'
+          type: array
+      required:
+        - function
+      type: object
+    AcceptResults:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AcceptResult'
+          type: array
+      required:
+        - items
+      type: object
+    AgentFunction:
+      properties:
+        connector:
+          type: string
+        function:
+          type: string
+        mode:
+          type: string
+        name:
+          type: string
+        overlay_hash:
+          type: string
+      required:
+        - name
+        - connector
+        - function
+        - mode
+      type: object
+    AgentFunctions:
+      properties:
+        approval_tools:
+          type: boolean
+        functions:
+          items:
+            $ref: '#/components/schemas/AgentFunction'
+          type: array
+      required:
+        - functions
+        - approval_tools
+      type: object
+    AgentLevelRequest:
+      properties:
+        agent:
+          type: string
+        id:
+          type: string
+        level:
+          type: string
+      required:
+        - id
+        - agent
+        - level
+      type: object
+    AgentRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    Annotations:
+      properties:
+        destructiveHint:
+          type: boolean
+        idempotentHint:
+          type: boolean
+        openWorldHint:
+          type: boolean
+        readOnlyHint:
+          type: boolean
+      type: object
+    Answer:
+      properties:
+        ceiling:
+          type: string
+        installable:
+          type: boolean
+        people:
+          items:
+            $ref: '#/components/schemas/Level'
+          type: array
+        tenant:
+          $ref: '#/components/schemas/Level'
+        version:
+          type: string
+        visible:
+          type: boolean
+        workspace:
+          $ref: '#/components/schemas/Level'
+      required:
+        - visible
+        - installable
+        - ceiling
+        - version
+        - tenant
+        - workspace
+      type: object
+    Approval:
+      properties:
+        agent:
+          type: string
+        approvers:
+          items:
+            type: string
+          type: array
+        arguments:
+          $ref: '#/components/schemas/Sealed'
+        call_deadline:
+          type: integer
+        call_hash:
+          type: string
+        channel:
+          type: string
+        class:
+          type: string
+        connector:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        decided_at:
+          format: date-time
+          type: string
+        decided_by:
+          type: string
+        decision_note:
+          type: string
+        definition_hash:
+          type: string
+        delivered_at:
+          format: date-time
+          type: string
+        execution_started_at:
+          format: date-time
+          type: string
+        expires_at:
+          format: date-time
+          type: string
+        function:
+          type: string
+        id:
+          type: string
+        inner_of:
+          type: string
+        mode:
+          type: string
+        on_behalf_of:
+          type: string
+        reason:
+          type: string
+        result_expires_at:
+          format: date-time
+          type: string
+        result_ref:
+          $ref: '#/components/schemas/Sealed'
+        session:
+          type: string
+        session_grant:
+          type: boolean
+        state:
+          type: string
+        tenant:
+          type: string
+        workspace:
+          type: string
+      required:
+        - id
+        - tenant
+        - workspace
+        - agent
+        - session
+        - connector
+        - function
+        - definition_hash
+        - call_hash
+        - mode
+        - approvers
+        - state
+        - created_at
+        - expires_at
+        - decided_at
+        - delivered_at
+        - execution_started_at
+        - result_expires_at
+      type: object
+    ApprovalDetail:
+      properties:
+        approval:
+          $ref: '#/components/schemas/Approval'
+        arguments:
+          contentEncoding: base64
+          type: string
+        changed_recent:
+          type: boolean
+        may_have_run:
+          type: boolean
+        publisher:
+          type: string
+        reaches_outside:
+          type: boolean
+        trust_level:
+          type: string
+      required:
+        - approval
+        - changed_recent
+        - may_have_run
+        - trust_level
+        - publisher
+        - reaches_outside
+      type: object
+    ApprovalRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    Approvals:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Approval'
+          type: array
+      required:
+        - items
+      type: object
+    Artifact:
+      properties:
+        digest:
+          type: string
+        ref:
+          type: string
+        type:
+          type: string
+      required:
+        - type
+        - ref
+        - digest
+      type: object
+    AuthSpec:
+      properties:
+        issuer:
+          type: string
+        kind:
+          type: string
+        owner_kinds_allowed:
+          items:
+            type: string
+          type: array
+        registration:
+          type: string
+        resource:
+          type: string
+        scopes_by_function:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+      required:
+        - kind
+      type: object
+    BeginConnectRequest:
+      properties:
+        id:
+          type: string
+        owner:
+          type: string
+      required:
+        - id
+        - owner
+      type: object
+    Binding:
+      properties:
+        agent:
+          type: string
+        agent_owner:
+          type: string
+        approval_timeout:
+          type: integer
+        approvers:
+          items:
+            type: string
+          type: array
+        ask_requester:
+          type: boolean
+        connector:
+          type: string
+        credential_policy:
+          type: string
+        owner_removed:
+          type: boolean
+        tenant:
+          type: string
+        workspace:
+          type: string
+      required:
+        - tenant
+        - workspace
+        - connector
+        - agent
+        - credential_policy
+        - ask_requester
+      type: object
+    BindingRequest:
+      properties:
+        agent:
+          type: string
+        id:
+          type: string
+      required:
+        - id
+        - agent
+      type: object
+    Bindings:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Binding'
+          type: array
+      required:
+        - items
+      type: object
+    Call:
+      properties:
+        agent:
+          type: string
+        approval:
+          type: string
+        call_hash:
+          type: string
+        class:
+          type: string
+        connector:
+          type: string
+        credential:
+          type: string
+        deadline:
+          format: date-time
+          type: string
+        findings:
+          additionalProperties:
+            type: integer
+          type: object
+        finished_at:
+          format: date-time
+          type: string
+        function:
+          type: string
+        id:
+          type: string
+        is_error:
+          type: boolean
+        late_answer:
+          type: boolean
+        on_behalf_of:
+          type: string
+        overlay_hash:
+          type: string
+        reason:
+          type: string
+        result_bytes:
+          type: integer
+        session:
+          type: string
+        started_at:
+          format: date-time
+          type: string
+        state:
+          type: string
+        tenant:
+          type: string
+        workspace:
+          type: string
+      required:
+        - id
+        - tenant
+        - workspace
+        - agent
+        - session
+        - connector
+        - function
+        - call_hash
+        - state
+        - started_at
+        - deadline
+        - finished_at
+      type: object
+    CallRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    CatalogPolicy:
+      properties:
+        default:
+          type: string
+        tenant:
+          type: string
+        workspace:
+          type: string
+      required:
+        - tenant
+        - workspace
+        - default
+      type: object
+    CatalogRule:
+      properties:
+        audience:
+          type: string
+        ceiling:
+          type: string
+        created_by:
+          type: string
+        id:
+          type: string
+        install:
+          type: boolean
+        show:
+          type: boolean
+        subject_id:
+          type: string
+        subject_kind:
+          type: string
+        target:
+          type: string
+        target_kind:
+          type: string
+        tenant:
+          type: string
+      required:
+        - id
+        - tenant
+        - subject_kind
+        - subject_id
+        - target_kind
+        - target
+        - show
+        - install
+        - ceiling
+      type: object
+    CatalogRules:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/CatalogRule'
+          type: array
+      required:
+        - items
+      type: object
+    Change:
+      properties:
+        effects:
+          $ref: '#/components/schemas/Effects'
+        function:
+          type: string
+        kind:
+          type: string
+        new_hash:
+          type: string
+        old_hash:
+          type: string
+      required:
+        - function
+        - kind
+        - old_hash
+        - new_hash
+        - effects
+      type: object
+    ClassifyFunctionRequest:
+      properties:
+        class:
+          type: string
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+        - class
+      type: object
+    CompleteConnectRequest:
+      properties:
+        code:
+          type: string
+        state:
+          type: string
+      required:
+        - state
+        - code
+      type: object
+    ConfigField:
+      properties:
+        key:
+          type: string
+        required:
+          type: boolean
+        sensitive:
+          type: boolean
+        type:
+          type: string
+      required:
+        - key
+        - type
+      type: object
+    Conformance:
+      properties:
+        passed:
+          type: boolean
+        report:
+          type: string
+        suite:
+          type: string
+      required:
+        - report
+        - passed
+      type: object
+    ConnectStart:
+      properties:
+        state:
+          type: string
+        url:
+          type: string
+      required:
+        - state
+        - url
+      type: object
+    Connector:
+      properties:
+        alias:
+          type: string
+        approval_timeout:
+          type: integer
+        call_timeout:
+          type: integer
+        config:
+          additionalProperties:
+            type: string
+          type: object
+        enabled:
+          type: boolean
+        id:
+          type: string
+        instructions_hash:
+          type: string
+        last_relist_at:
+          format: date-time
+          type: string
+        listing:
+          $ref: '#/components/schemas/VersionRef'
+        removed_at:
+          format: date-time
+          type: string
+        revision:
+          type: integer
+        tenant:
+          type: string
+        workspace:
+          type: string
+      required:
+        - id
+        - tenant
+        - workspace
+        - alias
+        - listing
+        - enabled
+        - last_relist_at
+        - removed_at
+        - revision
+      type: object
+    ConnectorRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    ConnectorView:
+      properties:
+        blocked:
+          type: string
+        connector:
+          $ref: '#/components/schemas/Connector'
+        functions:
+          items:
+            $ref: '#/components/schemas/Function'
+          type: array
+      required:
+        - connector
+        - blocked
+      type: object
+    ConnectorViews:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ConnectorView'
+          type: array
+      required:
+        - items
+      type: object
+    CreateListingInput:
+      properties:
+        first_party:
+          type: boolean
+        manifest:
+          $ref: '#/components/schemas/Manifest'
+      required:
+        - manifest
+        - first_party
+      type: object
+    Credential:
+      properties:
+        client_registration:
+          type: string
+        connector:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        expires_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        issuer:
+          type: string
+        kind:
+          type: string
+        last_refreshed_at:
+          format: date-time
+          type: string
+        last_used_at:
+          format: date-time
+          type: string
+        owner_id:
+          type: string
+        owner_kind:
+          type: string
+        refresh_after:
+          format: date-time
+          type: string
+        resource:
+          type: string
+        revision:
+          type: integer
+        scopes_granted:
+          items:
+            type: string
+          type: array
+        secret:
+          $ref: '#/components/schemas/Sealed'
+        status:
+          type: string
+        tenant:
+          type: string
+      required:
+        - id
+        - tenant
+        - owner_kind
+        - owner_id
+        - connector
+        - kind
+        - secret
+        - expires_at
+        - refresh_after
+        - status
+        - created_at
+        - last_used_at
+        - last_refreshed_at
+        - revision
+      type: object
+    CredentialInput:
+      properties:
+        connector:
+          type: string
+        expires_at:
+          format: date-time
+          type: string
+        issuer:
+          type: string
+        kind:
+          type: string
+        owner_id:
+          type: string
+        owner_kind:
+          type: string
+        resource:
+          type: string
+        scopes:
+          items:
+            type: string
+          type: array
+        secret:
+          contentEncoding: base64
+          type: string
+      required:
+        - connector
+        - owner_kind
+        - owner_id
+        - kind
+        - issuer
+        - resource
+        - expires_at
+      type: object
+    CredentialRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    Credentials:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Credential'
+          type: array
+      required:
+        - items
+      type: object
+    DecideApprovalRequest:
+      properties:
+        channel:
+          type: string
+        decision:
+          type: string
+        id:
+          type: string
+        note:
+          type: string
+      required:
+        - id
+        - decision
+      type: object
+    Decision:
+      properties:
+        layers:
+          items:
+            type: string
+          type: array
+        matched:
+          items:
+            type: string
+          type: array
+        mode:
+          type: string
+        notes:
+          items:
+            type: string
+          type: array
+        reason:
+          type: string
+        step:
+          type: integer
+      required:
+        - mode
+        - step
+        - layers
+      type: object
+    Descriptor:
+      properties:
+        digest:
+          type: string
+        from:
+          type: string
+        ref:
+          type: string
+      required:
+        - from
+      type: object
+    Document:
+      properties:
+        acknowledge:
+          items:
+            type: string
+          type: array
+        adapters:
+          items:
+            $ref: '#/components/schemas/Row'
+          type: array
+        build:
+          type: string
+        engine:
+          type: string
+        extensions:
+          additionalProperties: {}
+          type: object
+        mode:
+          type: string
+      required:
+        - engine
+        - adapters
+      type: object
+    Effects:
+      properties:
+        cancel:
+          type: string
+        drop_session_rows:
+          type: boolean
+      required:
+        - drop_session_rows
+        - cancel
+      type: object
+    Egress:
+      properties:
+        allow_hosts:
+          items:
+            type: string
+          type: array
+      required:
+        - allow_hosts
+      type: object
+    Event:
+      properties:
+        data:
+          type: object
+        id:
+          type: string
+        sequence:
+          type: integer
+        source:
+          type: string
+        stream:
+          type: string
+        subject:
+          type: string
+        tenant:
+          type: string
+        time:
+          format: date-time
+          type: string
+        traceparent:
+          type: string
+        type:
+          type: string
+      required:
+        - id
+        - type
+        - source
+        - stream
+        - sequence
+        - time
+        - data
+      type: object
+    EventType:
+      properties:
+        consumed:
+          type: boolean
+        name:
+          type: string
+        number:
+          type: integer
+        schema:
+          type: object
+      required:
+        - name
+        - consumed
+        - schema
+      type: object
+    EventTypeRequest:
+      properties:
+        type:
+          type: string
+      required:
+        - type
+      type: object
+    EventTypes:
+      properties:
+        types:
+          items:
+            $ref: '#/components/schemas/EventType'
+          type: array
+      required:
+        - types
+      type: object
+    ExplainAccessRequest:
+      properties:
+        agent:
+          type: string
+        agent_owner:
+          type: string
+        caller:
+          type: string
+        connector:
+          type: string
+        function:
+          type: string
+        on_behalf_of:
+          type: string
+        session:
+          type: string
+        workspace:
+          type: string
+      required:
+        - workspace
+        - agent
+        - connector
+        - function
+      type: object
+    ExplainVisibilityRequest:
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+        person:
+          type: string
+        workspace:
+          type: string
+      required:
+        - workspace
+        - name
+      type: object
+    Finding:
+      properties:
+        detail:
+          type: string
+        kind:
+          type: string
+        severity:
+          type: string
+      required:
+        - kind
+      type: object
+    Function:
+      properties:
+        accepted_at:
+          format: date-time
+          type: string
+        accepted_by:
+          type: string
+        class:
+          type: string
+        class_source:
+          type: string
+        connector:
+          type: string
+        definition: {}
+        definition_hash:
+          type: string
+        name:
+          type: string
+        open_world:
+          type: boolean
+        previous_state:
+          type: string
+        projection:
+          type: boolean
+        reads_private:
+          type: boolean
+        returns_third_party:
+          type: boolean
+        state:
+          type: string
+        tenant:
+          type: string
+        ui_resource_hash:
+          type: string
+        visibility:
+          items:
+            type: string
+          type: array
+      required:
+        - tenant
+        - connector
+        - name
+        - definition
+        - definition_hash
+        - state
+        - open_world
+        - accepted_at
+      type: object
+    FunctionDef:
+      properties:
+        annotations:
+          $ref: '#/components/schemas/Annotations'
+        class:
+          type: string
+        class_source:
+          type: string
+        definition_hash:
+          type: string
+        description:
+          type: string
+        idempotent:
+          type: boolean
+        input_schema: {}
+        meta_ui:
+          $ref: '#/components/schemas/MetaUI'
+        name:
+          type: string
+        needs_reason:
+          type: boolean
+        output_schema: {}
+        reads_private:
+          type: boolean
+        redact:
+          items:
+            type: string
+          type: array
+        returns_third_party:
+          type: boolean
+        title:
+          type: string
+      required:
+        - name
+      type: object
+    FunctionRequest:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+      type: object
+    Functions:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Function'
+          type: array
+      required:
+        - items
+      type: object
+    GRPC:
+      properties:
+        descriptor:
+          $ref: '#/components/schemas/Descriptor'
+        methods:
+          items:
+            $ref: '#/components/schemas/GRPCFunction'
+          type: array
+        services:
+          items:
+            type: string
+          type: array
+        target:
+          type: string
+      required:
+        - target
+        - descriptor
+        - methods
+      type: object
+    GRPCFunction:
+      properties:
+        full_method:
+          type: string
+        input_schema: {}
+        name:
+          type: string
+        output_schema: {}
+      required:
+        - name
+        - full_method
+      type: object
+    GetListingRequest:
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+        version:
+          type: string
+        workspace:
+          type: string
+      required:
+        - workspace
+        - name
+      type: object
+    Grant:
+      properties:
+        agent:
+          type: string
+        connector:
+          type: string
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        definition_hash:
+          type: string
+        expires_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        listing:
+          $ref: '#/components/schemas/ListingRef'
+        max_uses:
+          type: integer
+        mode:
+          type: string
+        origin:
+          type: string
+        reason:
+          type: string
+        scope_id:
+          type: string
+        scope_kind:
+          type: string
+        selector:
+          type: string
+        tenant:
+          type: string
+        uses:
+          type: integer
+      required:
+        - id
+        - tenant
+        - scope_kind
+        - scope_id
+        - selector
+        - mode
+        - expires_at
+        - created_at
+        - origin
+      type: object
+    GrantRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    GrantResult:
+      properties:
+        capped:
+          items:
+            type: string
+          type: array
+        grant:
+          $ref: '#/components/schemas/Grant'
+        replaced:
+          $ref: '#/components/schemas/Grant'
+      required:
+        - grant
+      type: object
+    Grants:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Grant'
+          type: array
+      required:
+        - items
+      type: object
+    GroupMember:
+      properties:
+        group:
+          type: string
+        person:
+          type: string
+        tenant:
+          type: string
+      required:
+        - tenant
+        - person
+        - group
+      type: object
+    GroupMembers:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/GroupMember'
+          type: array
+      required:
+        - items
+      type: object
+    InstallInput:
+      properties:
+        alias:
+          type: string
+        approval_timeout:
+          type: integer
+        call_timeout:
+          type: integer
+        config:
+          additionalProperties:
+            type: string
+          type: object
+        listing:
+          $ref: '#/components/schemas/ListingRef'
+        version:
+          type: string
+        workspace:
+          type: string
+      required:
+        - workspace
+        - alias
+        - listing
+        - version
+        - call_timeout
+        - approval_timeout
+      type: object
+    Level:
+      properties:
+        answered:
+          type: boolean
+        ceiling:
+          type: string
+        install:
+          type: boolean
+        named:
+          type: boolean
+        rules:
+          items:
+            type: string
+          type: array
+        show:
+          type: boolean
+      required:
+        - answered
+        - show
+        - install
+        - ceiling
+        - named
+      type: object
+    LevelRequest:
+      properties:
+        id:
+          type: string
+        level:
+          type: string
+      required:
+        - id
+        - level
+      type: object
+    LintListingRequest:
+      properties:
+        capture:
+          type: boolean
+        manifest:
+          $ref: '#/components/schemas/Manifest'
+      required:
+        - manifest
+      type: object
+    LintResult:
+      properties:
+        definitions:
+          items:
+            $ref: '#/components/schemas/RawDefinition'
+          type: array
+        findings:
+          items:
+            $ref: '#/components/schemas/Finding'
+          type: array
+      type: object
+    ListAgentFunctionsRequest:
+      properties:
+        agent:
+          type: string
+        agent_owner:
+          type: string
+        caller:
+          type: string
+        on_behalf_of:
+          type: string
+        session:
+          type: string
+        workspace:
+          type: string
+      required:
+        - workspace
+        - agent
+      type: object
+    ListApprovalsRequest:
+      properties:
+        agent:
+          type: string
+        connector:
+          type: string
+        session:
+          type: string
+        state:
+          type: string
+      type: object
+    ListBindingsRequest:
+      properties:
+        agent:
+          type: string
+        id:
+          type: string
+        owner:
+          type: string
+      required:
+        - id
+      type: object
+    ListCredentialsRequest:
+      properties:
+        connector:
+          type: string
+        owner_id:
+          type: string
+        owner_kind:
+          type: string
+      type: object
+    ListGrantsRequest:
+      properties:
+        agent:
+          type: string
+        connector:
+          type: string
+        scope_id:
+          type: string
+        scope_kind:
+          type: string
+      type: object
+    ListListingsRequest:
+      properties:
+        kind:
+          type: string
+        q:
+          type: string
+        source:
+          type: string
+        trust_level:
+          type: string
+        workspace:
+          type: string
+      required:
+        - workspace
+      type: object
+    ListMembersRequest:
+      properties:
+        group:
+          type: string
+        person:
+          type: string
+      type: object
+    ListRolesRequest:
+      properties:
+        person:
+          type: string
+        tenant:
+          type: string
+      type: object
+    Listing:
+      properties:
+        publisher:
+          type: string
+        ref:
+          $ref: '#/components/schemas/ListingRef'
+        source:
+          type: string
+        starter:
+          type: boolean
+        status:
+          type: string
+        versions:
+          items:
+            type: string
+          type: array
+      required:
+        - ref
+        - source
+        - publisher
+        - status
+      type: object
+    ListingRef:
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+      required:
+        - name
+      type: object
+    ListingStatusRequest:
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+        reason:
+          type: string
+        version:
+          type: string
+      required:
+        - name
+      type: object
+    ListingVersion:
+      properties:
+        imported_at:
+          format: date-time
+          type: string
+        manifest:
+          $ref: '#/components/schemas/Manifest'
+        ref:
+          $ref: '#/components/schemas/VersionRef'
+        status:
+          type: string
+      required:
+        - ref
+        - manifest
+        - status
+        - imported_at
+      type: object
+    ListingVersions:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ListingVersion'
+          type: array
+      required:
+        - items
+      type: object
+    Listings:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Listing'
+          type: array
+      required:
+        - items
+      type: object
+    Manifest:
+      properties:
+        artifact:
+          $ref: '#/components/schemas/Artifact'
+        auth:
+          items:
+            $ref: '#/components/schemas/AuthSpec'
+          type: array
+        config:
+          items:
+            $ref: '#/components/schemas/ConfigField'
+          type: array
+        description:
+          type: string
+        egress:
+          $ref: '#/components/schemas/Egress'
+        functions:
+          items:
+            $ref: '#/components/schemas/FunctionDef'
+          type: array
+        grpc:
+          $ref: '#/components/schemas/GRPC'
+        icon:
+          type: string
+        instructions_hash:
+          type: string
+        kind:
+          type: string
+        licence:
+          type: string
+        name:
+          type: string
+        owner:
+          type: string
+        publisher:
+          $ref: '#/components/schemas/Publisher'
+        remote:
+          $ref: '#/components/schemas/Remote'
+        rest:
+          $ref: '#/components/schemas/REST'
+        review:
+          $ref: '#/components/schemas/Review'
+        runtime:
+          $ref: '#/components/schemas/RuntimeNeeds'
+        signature:
+          $ref: '#/components/schemas/Signature'
+        source:
+          $ref: '#/components/schemas/SourceInfo'
+        title:
+          type: string
+        trust_level:
+          type: string
+        ui:
+          $ref: '#/components/schemas/UI'
+        version:
+          type: string
+      required:
+        - name
+        - version
+        - kind
+        - publisher
+      type: object
+    MetaUI:
+      properties:
+        resourceUri:
+          type: string
+        visibility:
+          items:
+            type: string
+          type: array
+      type: object
+    Offer:
+      properties:
+        target:
+          type: string
+        target_kind:
+          type: string
+        tenant:
+          type: string
+        withheld:
+          type: boolean
+      required:
+        - tenant
+        - target_kind
+        - target
+        - withheld
+      type: object
+    OfferRequest:
+      properties:
+        target:
+          type: string
+        target_kind:
+          type: string
+        tenant:
+          type: string
+        withheld:
+          type: boolean
+      required:
+        - tenant
+        - target_kind
+        - target
+        - withheld
+      type: object
+    Offers:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Offer'
+          type: array
+      required:
+        - items
+      type: object
+    Operation:
+      properties:
+        counts:
+          additionalProperties:
+            type: integer
+          type: object
+        created_at:
+          format: date-time
+          type: string
+        done:
+          type: boolean
+        error:
+          type: string
+        id:
+          type: string
+        kind:
+          type: string
+        tenant:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - id
+        - kind
+        - done
+        - created_at
+        - updated_at
+      type: object
+    OperationRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    Overlay:
+      properties:
+        at:
+          format: date-time
+          type: string
+        by:
+          type: string
+        connector:
+          type: string
+        description:
+          type: string
+        function:
+          type: string
+        listing:
+          $ref: '#/components/schemas/ListingRef'
+        overlay_hash:
+          type: string
+        overlay_version:
+          type: integer
+        source:
+          type: string
+        state:
+          type: string
+        tenant:
+          type: string
+        title:
+          type: string
+        upstream_hash:
+          type: string
+      required:
+        - tenant
+        - function
+        - overlay_version
+        - upstream_hash
+        - overlay_hash
+        - state
+        - by
+        - source
+        - at
+      type: object
+    OverlayTargetRequest:
+      properties:
+        connector:
+          type: string
+        function:
+          type: string
+        listing_name:
+          type: string
+        listing_owner:
+          type: string
+      required:
+        - function
+      type: object
+    OverlayVersionRequest:
+      properties:
+        connector:
+          type: string
+        function:
+          type: string
+        listing_name:
+          type: string
+        listing_owner:
+          type: string
+        upstream_seen:
+          type: string
+        version:
+          type: integer
+      required:
+        - function
+        - version
+        - upstream_seen
+      type: object
+    Overlays:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Overlay'
+          type: array
+      required:
+        - items
+      type: object
+    Pause:
+      properties:
+        agent:
+          type: string
+        connector:
+          type: string
+        consecutive:
+          type: integer
+        expires_at:
+          format: date-time
+          type: string
+        id:
+          type: string
+        paused:
+          type: boolean
+        paused_at:
+          format: date-time
+          type: string
+        session:
+          type: string
+        tenant:
+          type: string
+        total:
+          type: integer
+      required:
+        - id
+        - tenant
+        - session
+        - agent
+        - connector
+        - paused
+        - paused_at
+        - consecutive
+        - total
+        - expires_at
+      type: object
+    PauseRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    Pauses:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Pause'
+          type: array
+      required:
+        - items
+      type: object
+    PersonRequest:
+      properties:
+        id:
+          type: string
+        workspace:
+          type: string
+      required:
+        - id
+      type: object
+    Problem:
+      additionalProperties: true
+      properties:
+        code:
+          type: string
+        detail:
+          type: string
+        status:
+          type: integer
+        title:
+          type: string
+        type:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - detail
+        - code
+      type: object
+    ProjectionRequest:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        "on":
+          type: boolean
+      required:
+        - id
+        - name
+        - "on"
+      type: object
+    ProposeOverlayRequest:
+      properties:
+        connector:
+          type: string
+        description:
+          type: string
+        function:
+          type: string
+        listing_name:
+          type: string
+        listing_owner:
+          type: string
+        title:
+          type: string
+        upstream_hash:
+          type: string
+      required:
+        - function
+        - description
+        - upstream_hash
+      type: object
+    Publisher:
+      properties:
+        contact:
+          type: string
+        name:
+          type: string
+        verified_by:
+          type: string
+      required:
+        - name
+      type: object
+    PutBindingRequest:
+      properties:
+        agent:
+          type: string
+        agent_owner:
+          type: string
+        approvers:
+          items:
+            type: string
+          type: array
+        ask_requester:
+          type: boolean
+        credential_policy:
+          type: string
+        id:
+          type: string
+      required:
+        - id
+        - agent
+        - credential_policy
+      type: object
+    PutCatalogPolicyRequest:
+      properties:
+        default:
+          type: string
+        subject:
+          type: string
+        workspace:
+          type: string
+      required:
+        - workspace
+        - subject
+        - default
+      type: object
+    REST:
+      properties:
+        base_url:
+          type: string
+        functions:
+          items:
+            $ref: '#/components/schemas/RESTFunction'
+          type: array
+      required:
+        - base_url
+        - functions
+      type: object
+    RESTFunction:
+      properties:
+        description:
+          type: string
+        input_schema: {}
+        method:
+          type: string
+        name:
+          type: string
+        output_schema: {}
+        path:
+          type: string
+      required:
+        - name
+        - method
+        - path
+      type: object
+    RawDefinition:
+      properties:
+        name:
+          type: string
+        raw: {}
+      required:
+        - name
+        - raw
+      type: object
+    Remote:
+      properties:
+        transport:
+          type: string
+        url:
+          type: string
+      required:
+        - url
+        - transport
+      type: object
+    Review:
+      properties:
+        at:
+          format: date-time
+          type: string
+        by:
+          type: string
+        definition_hashes:
+          items:
+            type: string
+          type: array
+        note:
+          type: string
+        scope:
+          type: string
+      required:
+        - by
+        - at
+        - definition_hashes
+      type: object
+    ReviewFunction:
+      properties:
+        class:
+          type: string
+        hash:
+          type: string
+        name:
+          type: string
+      required:
+        - name
+        - hash
+        - class
+      type: object
+    ReviewListingRequest:
+      properties:
+        functions:
+          items:
+            $ref: '#/components/schemas/ReviewFunction'
+          type: array
+        name:
+          type: string
+        note:
+          type: string
+        owner:
+          type: string
+        version:
+          type: string
+      required:
+        - name
+        - note
+      type: object
+    RoleAssignment:
+      properties:
+        person:
+          type: string
+        role:
+          type: string
+        scope:
+          type: string
+        tenant:
+          type: string
+      required:
+        - person
+        - role
+        - scope
+      type: object
+    Roles:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/RoleAssignment'
+          type: array
+      required:
+        - items
+      type: object
+    Row:
+      properties:
+        capabilities:
+          items:
+            type: string
+          type: array
+        conformance:
+          $ref: '#/components/schemas/Conformance'
+        kind:
+          type: string
+        manifestDigest:
+          type: string
+        name:
+          type: string
+        plaintext:
+          type: boolean
+        port:
+          type: string
+        protocol:
+          type: string
+        status:
+          type: string
+        tier:
+          type: string
+        version:
+          type: string
+      required:
+        - kind
+        - port
+        - tier
+        - name
+        - status
+      type: object
+    RuleRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    RuntimeNeeds:
+      properties:
+        cpu:
+          type: string
+        isolation_min:
+          type: string
+        long_lived:
+          type: boolean
+        memory:
+          type: string
+      type: object
+    Sealed:
+      properties:
+        ciphertext:
+          contentEncoding: base64
+          type: string
+        key_ref:
+          type: string
+      required:
+        - ciphertext
+        - key_ref
+      type: object
+    SessionRequest:
+      properties:
+        id:
+          type: string
+      required:
+        - id
+      type: object
+    Signature:
+      properties:
+        identity:
+          type: string
+        issuer:
+          type: string
+        type:
+          type: string
+      required:
+        - type
+      type: object
+    SourceInfo:
+      properties:
+        imported_at:
+          format: date-time
+          type: string
+        registry:
+          type: string
+        upstream_name:
+          type: string
+        upstream_version:
+          type: string
+      required:
+        - registry
+      type: object
+    SourceRequest:
+      properties:
+        source:
+          type: string
+      required:
+        - source
+      type: object
+    StarterRequest:
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+        starter:
+          type: boolean
+      required:
+        - name
+        - starter
+      type: object
+    StatusChange:
+      properties:
+        blocked:
+          items:
+            type: string
+          type: array
+        listing:
+          $ref: '#/components/schemas/Listing'
+        operation:
+          $ref: '#/components/schemas/Operation'
+      required:
+        - listing
+      type: object
+    Tenant:
+      properties:
+        counts:
+          additionalProperties:
+            type: integer
+          type: object
+        created_at:
+          format: date-time
+          type: string
+        created_by:
+          type: string
+        id:
+          type: string
+        key_ref:
+          type: string
+        removed_at:
+          format: date-time
+          type: string
+        state:
+          type: string
+      required:
+        - id
+        - state
+        - created_at
+        - removed_at
+      type: object
+    TenantRequest:
+      properties:
+        tenant:
+          type: string
+      required:
+        - tenant
+      type: object
+    UI:
+      properties:
+        mcp_apps:
+          type: boolean
+      required:
+        - mcp_apps
+      type: object
+    UpdateConnectorRequest:
+      properties:
+        id:
+          type: string
+        version:
+          type: string
+      required:
+        - id
+        - version
+      type: object
+    UpdateResult:
+      properties:
+        changes:
+          items:
+            $ref: '#/components/schemas/Change'
+          type: array
+        connector:
+          $ref: '#/components/schemas/Connector'
+        quarantined:
+          items:
+            type: string
+          type: array
+        tenant_rows_unmatched:
+          items:
+            type: string
+          type: array
+      required:
+        - connector
+      type: object
+    VersionRef:
+      properties:
+        listing:
+          $ref: '#/components/schemas/ListingRef'
+        version:
+          type: string
+      required:
+        - listing
+        - version
+      type: object
+    WatchApprovalsRequest:
+      properties:
+        after:
+          type: integer
+        limit:
+          type: integer
+      type: object
+    WorkspaceRequest:
+      properties:
+        workspace:
+          type: string
+      required:
+        - workspace
+      type: object
+  securitySchemes:
+    bearer:
+      description: A token of an issuer in auth.issuers[] for the audience auth.manageAudience; a token with an agent claim is refused.
+      scheme: bearer
+      type: http
+info:
+  title: connector-engine
+  version: 1.0.0
+openapi: 3.1.0
+paths:
+  /v1/access:explain:
+    post:
+      operationId: explainAccess
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                agent:
+                  type: string
+                agent_owner:
+                  type: string
+                caller:
+                  type: string
+                connector:
+                  type: string
+                function:
+                  type: string
+                on_behalf_of:
+                  type: string
+                session:
+                  type: string
+                workspace:
+                  type: string
+              required:
+                - workspace
+                - agent
+                - connector
+                - function
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Decision'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/adapters:
+    get:
+      operationId: listAdapters
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/agents/{agent}/functions:
+    get:
+      operationId: listAgentFunctions
+      parameters:
+        - in: path
+          name: agent
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: workspace
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: agent_owner
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: on_behalf_of
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: session
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: caller
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentFunctions'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/agents/{id}:
+    delete:
+      operationId: removeAgent
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/approvals:
+    get:
+      operationId: listApprovals
+      parameters:
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: session
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: agent
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: connector
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approvals'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/approvals/{id}:
+    get:
+      operationId: getApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalDetail'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/approvals/{id}:cancel:
+    post:
+      operationId: cancelApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/approvals/{id}:decide:
+    post:
+      operationId: decideApproval
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                channel:
+                  type: string
+                decision:
+                  type: string
+                note:
+                  type: string
+              required:
+                - decision
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/approvals:watch:
+    get:
+      operationId: watchApprovals
+      parameters:
+        - in: query
+          name: after
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/calls/{id}:
+    get:
+      operationId: getCall
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Call'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/catalog/offered:
+    get:
+      operationId: listOfferedListings
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listings'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/catalog/policies/{workspace}:
+    get:
+      operationId: getCatalogPolicy
+      parameters:
+        - in: path
+          name: workspace
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogPolicy'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    put:
+      operationId: putCatalogPolicy
+      parameters:
+        - in: path
+          name: workspace
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                default:
+                  type: string
+                subject:
+                  type: string
+              required:
+                - subject
+                - default
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogPolicy'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/catalog/rules:
+    get:
+      operationId: listCatalogRules
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogRules'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    put:
+      operationId: putCatalogRule
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                audience:
+                  type: string
+                ceiling:
+                  type: string
+                created_by:
+                  type: string
+                id:
+                  type: string
+                install:
+                  type: boolean
+                show:
+                  type: boolean
+                subject_id:
+                  type: string
+                subject_kind:
+                  type: string
+                target:
+                  type: string
+                target_kind:
+                  type: string
+                tenant:
+                  type: string
+              required:
+                - id
+                - tenant
+                - subject_kind
+                - subject_id
+                - target_kind
+                - target
+                - show
+                - install
+                - ceiling
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogRule'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/catalog/rules/{id}:
+    delete:
+      operationId: deleteCatalogRule
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/catalog:explain:
+    post:
+      operationId: explainVisibility
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                owner:
+                  type: string
+                person:
+                  type: string
+                workspace:
+                  type: string
+              required:
+                - workspace
+                - name
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors:
+    get:
+      operationId: listConnectors
+      parameters:
+        - in: query
+          name: workspace
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorViews'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    post:
+      operationId: installConnector
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                alias:
+                  type: string
+                approval_timeout:
+                  type: integer
+                call_timeout:
+                  type: integer
+                config:
+                  additionalProperties:
+                    type: string
+                  type: object
+                listing:
+                  $ref: '#/components/schemas/ListingRef'
+                version:
+                  type: string
+                workspace:
+                  type: string
+              required:
+                - workspace
+                - alias
+                - listing
+                - version
+                - call_timeout
+                - approval_timeout
+              type: object
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorView'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}:
+    delete:
+      operationId: removeConnector
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    get:
+      operationId: getConnector
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorView'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/bindings:
+    get:
+      operationId: listBindings
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: agent
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: owner
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bindings'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/bindings/{agent}:
+    delete:
+      operationId: deleteBinding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: agent
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    put:
+      operationId: putBinding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: agent
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                agent_owner:
+                  type: string
+                approvers:
+                  items:
+                    type: string
+                  type: array
+                ask_requester:
+                  type: boolean
+                credential_policy:
+                  type: string
+              required:
+                - credential_policy
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Binding'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/bindings/{agent}/level:
+    put:
+      operationId: setAgentLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: agent
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                level:
+                  type: string
+              required:
+                - level
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grants'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/credentials:connect:
+    post:
+      operationId: beginConnect
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                owner:
+                  type: string
+              required:
+                - owner
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectStart'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/functions:
+    get:
+      operationId: listFunctions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Functions'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/functions/{name}/class:
+    put:
+      operationId: classifyFunction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                class:
+                  type: string
+              required:
+                - class
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Function'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/functions/{name}/projection:
+    put:
+      operationId: setProjection
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                "on":
+                  type: boolean
+              required:
+                - "on"
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Function'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/functions/{name}:accept:
+    post:
+      operationId: acceptFunction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                seen:
+                  type: string
+              required:
+                - seen
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptResult'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/functions/{name}:disable:
+    post:
+      operationId: disableFunction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Function'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/functions/{name}:enable:
+    post:
+      operationId: enableFunction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Function'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/functions:accept:
+    post:
+      operationId: acceptFunctions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                seen:
+                  additionalProperties:
+                    type: string
+                  type: object
+              required:
+                - seen
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptResults'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/instructions:accept:
+    post:
+      operationId: acceptInstructions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connector'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}/level:
+    put:
+      operationId: setConnectorLevel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                level:
+                  type: string
+              required:
+                - level
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grants'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}:disable:
+    post:
+      operationId: disableConnector
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connector'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}:enable:
+    post:
+      operationId: enableConnector
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connector'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/connectors/{id}:update:
+    post:
+      operationId: updateConnector
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                version:
+                  type: string
+              required:
+                - version
+              type: object
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateResult'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/credentials:
+    get:
+      operationId: listCredentials
+      parameters:
+        - in: query
+          name: owner_kind
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: owner_id
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: connector
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credentials'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    post:
+      operationId: createCredential
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                connector:
+                  type: string
+                expires_at:
+                  format: date-time
+                  type: string
+                issuer:
+                  type: string
+                kind:
+                  type: string
+                owner_id:
+                  type: string
+                owner_kind:
+                  type: string
+                resource:
+                  type: string
+                scopes:
+                  items:
+                    type: string
+                  type: array
+                secret:
+                  contentEncoding: base64
+                  type: string
+              required:
+                - connector
+                - owner_kind
+                - owner_id
+                - kind
+                - issuer
+                - resource
+                - expires_at
+              type: object
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credential'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/credentials/{id}:
+    delete:
+      operationId: revokeCredential
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/credentials:complete:
+    post:
+      operationId: completeConnect
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                code:
+                  type: string
+                state:
+                  type: string
+              required:
+                - state
+                - code
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credential'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/event-types:
+    get:
+      operationId: listEventTypes
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTypes'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      security: []
+      tags:
+        - connector
+  /v1/event-types/{type}:
+    get:
+      operationId: getEventType
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      security: []
+      tags:
+        - connector
+  /v1/grants:
+    get:
+      operationId: listGrants
+      parameters:
+        - in: query
+          name: scope_kind
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: scope_id
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: agent
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: connector
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grants'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    post:
+      operationId: createGrant
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                agent:
+                  type: string
+                connector:
+                  type: string
+                created_at:
+                  format: date-time
+                  type: string
+                created_by:
+                  type: string
+                definition_hash:
+                  type: string
+                expires_at:
+                  format: date-time
+                  type: string
+                id:
+                  type: string
+                listing:
+                  $ref: '#/components/schemas/ListingRef'
+                max_uses:
+                  type: integer
+                mode:
+                  type: string
+                origin:
+                  type: string
+                reason:
+                  type: string
+                scope_id:
+                  type: string
+                scope_kind:
+                  type: string
+                selector:
+                  type: string
+                tenant:
+                  type: string
+                uses:
+                  type: integer
+              required:
+                - id
+                - tenant
+                - scope_kind
+                - scope_id
+                - selector
+                - mode
+                - expires_at
+                - created_at
+                - origin
+              type: object
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantResult'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/grants/{id}:
+    delete:
+      operationId: deleteGrant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/grants/{id}:confirm:
+    post:
+      operationId: confirmGrant
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grant'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/groups/members:
+    delete:
+      operationId: deleteGroupMember
+      parameters:
+        - in: query
+          name: tenant
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: person
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: group
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    get:
+      operationId: listGroupMembers
+      parameters:
+        - in: query
+          name: person
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: group
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembers'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    put:
+      operationId: putGroupMember
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                group:
+                  type: string
+                person:
+                  type: string
+                tenant:
+                  type: string
+              required:
+                - tenant
+                - person
+                - group
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMember'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings:
+    get:
+      operationId: listListings
+      parameters:
+        - in: query
+          name: workspace
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: source
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: trust_level
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: kind
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingVersions'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    post:
+      operationId: createListing
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                first_party:
+                  type: boolean
+                manifest:
+                  $ref: '#/components/schemas/Manifest'
+              required:
+                - manifest
+                - first_party
+              type: object
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingVersion'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings/starter:
+    put:
+      operationId: setListingStarter
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                owner:
+                  type: string
+                starter:
+                  type: boolean
+              required:
+                - name
+                - starter
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Listing'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings/version:
+    get:
+      operationId: getListing
+      parameters:
+        - in: query
+          name: workspace
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: owner
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: name
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: version
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingVersion'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings:deprecate:
+    post:
+      operationId: deprecateListing
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                owner:
+                  type: string
+                reason:
+                  type: string
+                version:
+                  type: string
+              required:
+                - name
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusChange'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings:lint:
+    post:
+      operationId: lintListing
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                capture:
+                  type: boolean
+                manifest:
+                  $ref: '#/components/schemas/Manifest'
+              required:
+                - manifest
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LintResult'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings:quarantine:
+    post:
+      operationId: quarantineListing
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                owner:
+                  type: string
+                reason:
+                  type: string
+                version:
+                  type: string
+              required:
+                - name
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusChange'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings:restore:
+    post:
+      operationId: restoreListing
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                owner:
+                  type: string
+                reason:
+                  type: string
+                version:
+                  type: string
+              required:
+                - name
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusChange'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings:review:
+    post:
+      operationId: reviewListing
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                functions:
+                  items:
+                    $ref: '#/components/schemas/ReviewFunction'
+                  type: array
+                name:
+                  type: string
+                note:
+                  type: string
+                owner:
+                  type: string
+                version:
+                  type: string
+              required:
+                - name
+                - note
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingVersion'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/listings:withdraw:
+    post:
+      operationId: withdrawListing
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                name:
+                  type: string
+                owner:
+                  type: string
+                reason:
+                  type: string
+                version:
+                  type: string
+              required:
+                - name
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusChange'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/operations/{id}:
+    get:
+      operationId: getOperation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/overlays:
+    delete:
+      operationId: clearOverlay
+      parameters:
+        - in: query
+          name: connector
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: listing_owner
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: listing_name
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: function
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    get:
+      operationId: listOverlays
+      parameters:
+        - in: query
+          name: connector
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: listing_owner
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: listing_name
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: function
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overlays'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    post:
+      operationId: proposeOverlay
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                connector:
+                  type: string
+                description:
+                  type: string
+                function:
+                  type: string
+                listing_name:
+                  type: string
+                listing_owner:
+                  type: string
+                title:
+                  type: string
+                upstream_hash:
+                  type: string
+              required:
+                - function
+                - description
+                - upstream_hash
+              type: object
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overlay'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/overlays/{version}:accept:
+    post:
+      operationId: acceptOverlay
+      parameters:
+        - in: path
+          name: version
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                connector:
+                  type: string
+                function:
+                  type: string
+                listing_name:
+                  type: string
+                listing_owner:
+                  type: string
+                upstream_seen:
+                  type: string
+              required:
+                - function
+                - upstream_seen
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overlay'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/overlays/{version}:restore:
+    post:
+      operationId: restoreOverlay
+      parameters:
+        - in: path
+          name: version
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                connector:
+                  type: string
+                function:
+                  type: string
+                listing_name:
+                  type: string
+                listing_owner:
+                  type: string
+                upstream_seen:
+                  type: string
+              required:
+                - function
+                - upstream_seen
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overlay'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/overlays:suggest:
+    post:
+      operationId: suggestOverlay
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                connector:
+                  type: string
+                function:
+                  type: string
+                listing_name:
+                  type: string
+                listing_owner:
+                  type: string
+              required:
+                - function
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Overlay'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/pauses:
+    get:
+      operationId: listPauses
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pauses'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/pauses/{id}:
+    delete:
+      operationId: clearPause
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/people/{id}:
+    delete:
+      operationId: removePerson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: workspace
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/people/{id}:restore:
+    post:
+      operationId: restorePerson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                workspace:
+                  type: string
+              type: object
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/roles:
+    delete:
+      operationId: deleteRole
+      parameters:
+        - in: query
+          name: tenant
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: person
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: role
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: scope
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    get:
+      operationId: listRoles
+      parameters:
+        - in: query
+          name: tenant
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: person
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Roles'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    put:
+      operationId: putRole
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                person:
+                  type: string
+                role:
+                  type: string
+                scope:
+                  type: string
+                tenant:
+                  type: string
+              required:
+                - person
+                - role
+                - scope
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleAssignment'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/sessions/{id}:end:
+    post:
+      operationId: endSession
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/sources/{source}:sync:
+    post:
+      operationId: syncSource
+      parameters:
+        - in: path
+          name: source
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/tenants/{tenant}:
+    delete:
+      operationId: removeTenant
+      parameters:
+        - in: path
+          name: tenant
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    put:
+      operationId: createTenant
+      parameters:
+        - in: path
+          name: tenant
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tenant'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/tenants/{tenant}/offers:
+    get:
+      operationId: listOffers
+      parameters:
+        - in: path
+          name: tenant
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offers'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+    put:
+      operationId: putOffer
+      parameters:
+        - in: path
+          name: tenant
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                target:
+                  type: string
+                target_kind:
+                  type: string
+                withheld:
+                  type: boolean
+              required:
+                - target_kind
+                - target
+                - withheld
+              type: object
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+security:
+  - bearer: []

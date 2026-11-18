@@ -46,7 +46,7 @@ const (
 // Codes of tool errors that are not in package port.
 const (
 	CodeApprovalDenied   port.Code = "approval_denied"
-	CodeOutcomeUnknown   port.Code = "outcome_unknown"
+	CodeOutcomeUnknown   port.Code = port.CodeOutcomeUnknown
 	CodeResultNotKept    port.Code = "result_not_kept"
 	CodeCallFailed       port.Code = "call_failed"
 	reasonCancelledAgent port.Code = "cancelled_by_agent"

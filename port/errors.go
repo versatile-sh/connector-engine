@@ -78,6 +78,7 @@ const (
 	CodeInvalidAlias          Code = "invalid_alias"
 	CodeInvalidTransition     Code = "invalid_transition"
 	CodeClassChanged          Code = "class_changed"
+	CodeOutcomeUnknown        Code = "outcome_unknown"
 )
 
 // Error is an error with a code the surfaces translate.

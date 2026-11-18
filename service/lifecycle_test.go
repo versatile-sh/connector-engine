@@ -359,3 +359,14 @@ func TestAFailedRelistLeavesTheApprovedRecordForTheNextSweep(t *testing.T) {
 	_, _ = w.Worker.Sweep(w.Ctx)
 	want(t, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, stale.Approval.ID)).Code, port.CodeStaleApproval, "a record whose re-list keeps failing goes stale (A9)")
 }
+
+func TestACancelledOrPostSendFailureIsOutcomeUnknown(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.acceptAll()
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	for _, err := range []error{context.Canceled, port.Errorf(port.CodeOutcomeUnknown, "connection reset after the send")} {
+		w.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) { return port.Result{}, err })
+		want(t, w.call(x, "s__search", `{}`).Code, service.CodeOutcomeUnknown, err.Error())
+	}
+}

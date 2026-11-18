@@ -267,7 +267,7 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 		return err
 	}
 	inv := s.invoke(ctx, invocation{Conn: h.Conn, Manifest: h.M, Function: h.A.Function, Credential: plan.Credential, Args: json.RawMessage(nonEmpty(h.Args)), Fields: h.A.Fields, Deadline: plan.Call.Deadline})
-	_, err = s.settle(ctx, plan.Call, inv, &started)
+	_, err = s.settle(context.WithoutCancel(ctx), plan.Call, inv, &started)
 	return err
 }
 

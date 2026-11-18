@@ -223,7 +223,7 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 		s.drop(h)
 	}
 	switch {
-	case errors.Is(err, context.DeadlineExceeded):
+	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled), port.IsCode(err, port.CodeOutcomeUnknown):
 		return invoked{Unknown: true}
 	case err != nil:
 		return invoked{Err: err}
@@ -249,7 +249,7 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 
 func (s *Service) forwardDirect(ctx context.Context, in admitInput, plan forwardPlan) (Outcome, error) {
 	inv := s.invoke(ctx, invocation{Conn: plan.Conn, Manifest: in.T.Manifest, Function: in.T.Fn.Name, Credential: plan.Credential, Args: in.Args, Fields: in.Fields, Deadline: plan.Call.Deadline})
-	return s.settle(ctx, plan.Call, inv, nil)
+	return s.settle(context.WithoutCancel(ctx), plan.Call, inv, nil)
 }
 
 func (s *Service) settle(ctx context.Context, call port.Call, inv invoked, a *port.Approval) (Outcome, error) {

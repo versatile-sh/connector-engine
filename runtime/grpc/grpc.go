@@ -28,6 +28,7 @@ import (
 	"github.com/agents-control/connector-engine/internal/grpcdesc"
 	"github.com/agents-control/connector-engine/internal/handles"
 	"github.com/agents-control/connector-engine/internal/hints"
+	"github.com/agents-control/connector-engine/internal/outcome"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -240,7 +241,9 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 func failure(ctx context.Context, function string, err error) (port.Result, error) {
 	st := status.Convert(err)
 	switch st.Code() {
-	case codes.Unavailable, codes.DeadlineExceeded, codes.Canceled:
+	case codes.DeadlineExceeded, codes.Canceled:
+		return port.Result{}, outcome.Of(ctx, err, "%s: %v", function)
+	case codes.Unavailable:
 		if ctx.Err() != nil {
 			return port.Result{}, ctx.Err()
 		}

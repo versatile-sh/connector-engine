@@ -4,17 +4,20 @@ package remote
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/agents-control/connector-engine/credential"
 	deadlines "github.com/agents-control/connector-engine/internal/deadline"
 	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/handles"
+	"github.com/agents-control/connector-engine/internal/outcome"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -143,11 +146,15 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 		arguments = json.RawMessage(`{}`)
 	}
 	res, err := in.session.CallTool(ctx, &mcp.CallToolParams{Name: function, Arguments: arguments})
-	if err != nil {
-		if ctx.Err() != nil {
-			return port.Result{}, ctx.Err()
-		}
+	var rpc *jsonrpc.Error
+	switch {
+	case err == nil:
+	case errors.As(err, &rpc):
+		return port.Result{}, port.Errorf(port.CodeInternal, "tools/call %s: %v", function, err)
+	case errors.Is(err, mcp.ErrConnectionClosed):
 		return port.Result{}, port.Errorf(port.CodeUnavailable, "tools/call %s: %v", function, err)
+	default:
+		return port.Result{}, outcome.Of(ctx, err, "tools/call %s: %v", function)
 	}
 	out := port.Result{IsError: res.IsError}
 	if out.Content, err = json.Marshal(res.Content); err != nil {

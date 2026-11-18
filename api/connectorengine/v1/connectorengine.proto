@@ -171,22 +171,23 @@ message Approval {
   string inner_of = 11;
   Sealed arguments = 12;
   string call_hash = 13;
-  string mode = 14;
-  repeated string approvers = 15;
-  string state = 16;
-  google.protobuf.Timestamp created_at = 17;
-  google.protobuf.Timestamp expires_at = 18;
-  string decided_by = 19;
-  google.protobuf.Timestamp decided_at = 20;
-  string channel = 21;
-  string decision_note = 22;
-  bool session_grant = 23;
-  string reason = 24;
-  google.protobuf.Timestamp delivered_at = 25;
-  google.protobuf.Timestamp execution_started_at = 26;
-  int64 call_deadline = 27;
-  Sealed result_ref = 28;
-  google.protobuf.Timestamp result_expires_at = 29;
+  repeated string fields = 14;
+  string mode = 15;
+  repeated string approvers = 16;
+  string state = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp expires_at = 19;
+  string decided_by = 20;
+  google.protobuf.Timestamp decided_at = 21;
+  string channel = 22;
+  string decision_note = 23;
+  bool session_grant = 24;
+  string reason = 25;
+  google.protobuf.Timestamp delivered_at = 26;
+  google.protobuf.Timestamp execution_started_at = 27;
+  int64 call_deadline = 28;
+  Sealed result_ref = 29;
+  google.protobuf.Timestamp result_expires_at = 30;
 }
 
 message ApprovalDetail {

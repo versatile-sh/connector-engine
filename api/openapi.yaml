@@ -190,6 +190,10 @@ components:
         expires_at:
           format: date-time
           type: string
+        fields:
+          items:
+            type: string
+          type: array
         function:
           type: string
         id:

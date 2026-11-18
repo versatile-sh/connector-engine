@@ -122,6 +122,7 @@ type Approval struct {
 	InnerOf            string        `json:"inner_of,omitempty"`
 	Arguments          *Sealed       `json:"arguments,omitempty"`
 	CallHash           Hash          `json:"call_hash"`
+	Fields             []string      `json:"fields,omitempty"`
 	Mode               Mode          `json:"mode"`
 	Approvers          []string      `json:"approvers"`
 	State              ApprovalState `json:"state"`

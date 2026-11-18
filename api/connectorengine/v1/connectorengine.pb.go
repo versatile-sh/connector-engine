@@ -647,22 +647,23 @@ type Approval struct {
 	InnerOf            string                 `protobuf:"bytes,11,opt,name=inner_of,json=innerOf,proto3" json:"inner_of,omitempty"`
 	Arguments          *Sealed                `protobuf:"bytes,12,opt,name=arguments,proto3" json:"arguments,omitempty"`
 	CallHash           string                 `protobuf:"bytes,13,opt,name=call_hash,json=callHash,proto3" json:"call_hash,omitempty"`
-	Mode               string                 `protobuf:"bytes,14,opt,name=mode,proto3" json:"mode,omitempty"`
-	Approvers          []string               `protobuf:"bytes,15,rep,name=approvers,proto3" json:"approvers,omitempty"`
-	State              string                 `protobuf:"bytes,16,opt,name=state,proto3" json:"state,omitempty"`
-	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	ExpiresAt          *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	DecidedBy          string                 `protobuf:"bytes,19,opt,name=decided_by,json=decidedBy,proto3" json:"decided_by,omitempty"`
-	DecidedAt          *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
-	Channel            string                 `protobuf:"bytes,21,opt,name=channel,proto3" json:"channel,omitempty"`
-	DecisionNote       string                 `protobuf:"bytes,22,opt,name=decision_note,json=decisionNote,proto3" json:"decision_note,omitempty"`
-	SessionGrant       bool                   `protobuf:"varint,23,opt,name=session_grant,json=sessionGrant,proto3" json:"session_grant,omitempty"`
-	Reason             string                 `protobuf:"bytes,24,opt,name=reason,proto3" json:"reason,omitempty"`
-	DeliveredAt        *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=delivered_at,json=deliveredAt,proto3" json:"delivered_at,omitempty"`
-	ExecutionStartedAt *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=execution_started_at,json=executionStartedAt,proto3" json:"execution_started_at,omitempty"`
-	CallDeadline       int64                  `protobuf:"varint,27,opt,name=call_deadline,json=callDeadline,proto3" json:"call_deadline,omitempty"`
-	ResultRef          *Sealed                `protobuf:"bytes,28,opt,name=result_ref,json=resultRef,proto3" json:"result_ref,omitempty"`
-	ResultExpiresAt    *timestamppb.Timestamp `protobuf:"bytes,29,opt,name=result_expires_at,json=resultExpiresAt,proto3" json:"result_expires_at,omitempty"`
+	Fields             []string               `protobuf:"bytes,14,rep,name=fields,proto3" json:"fields,omitempty"`
+	Mode               string                 `protobuf:"bytes,15,opt,name=mode,proto3" json:"mode,omitempty"`
+	Approvers          []string               `protobuf:"bytes,16,rep,name=approvers,proto3" json:"approvers,omitempty"`
+	State              string                 `protobuf:"bytes,17,opt,name=state,proto3" json:"state,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ExpiresAt          *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	DecidedBy          string                 `protobuf:"bytes,20,opt,name=decided_by,json=decidedBy,proto3" json:"decided_by,omitempty"`
+	DecidedAt          *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
+	Channel            string                 `protobuf:"bytes,22,opt,name=channel,proto3" json:"channel,omitempty"`
+	DecisionNote       string                 `protobuf:"bytes,23,opt,name=decision_note,json=decisionNote,proto3" json:"decision_note,omitempty"`
+	SessionGrant       bool                   `protobuf:"varint,24,opt,name=session_grant,json=sessionGrant,proto3" json:"session_grant,omitempty"`
+	Reason             string                 `protobuf:"bytes,25,opt,name=reason,proto3" json:"reason,omitempty"`
+	DeliveredAt        *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=delivered_at,json=deliveredAt,proto3" json:"delivered_at,omitempty"`
+	ExecutionStartedAt *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=execution_started_at,json=executionStartedAt,proto3" json:"execution_started_at,omitempty"`
+	CallDeadline       int64                  `protobuf:"varint,28,opt,name=call_deadline,json=callDeadline,proto3" json:"call_deadline,omitempty"`
+	ResultRef          *Sealed                `protobuf:"bytes,29,opt,name=result_ref,json=resultRef,proto3" json:"result_ref,omitempty"`
+	ResultExpiresAt    *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=result_expires_at,json=resultExpiresAt,proto3" json:"result_expires_at,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -786,6 +787,13 @@ func (x *Approval) GetCallHash() string {
 		return x.CallHash
 	}
 	return ""
+}
+
+func (x *Approval) GetFields() []string {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
 }
 
 func (x *Approval) GetMode() string {
@@ -10045,7 +10053,7 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\aversion\x18\x04 \x01(\tR\aversion\x121\n" +
 	"\x06tenant\x18\x05 \x01(\v2\x19.connectorengine.v1.LevelR\x06tenant\x127\n" +
 	"\tworkspace\x18\x06 \x01(\v2\x19.connectorengine.v1.LevelR\tworkspace\x121\n" +
-	"\x06people\x18\a \x03(\v2\x19.connectorengine.v1.LevelR\x06people\"\xd6\b\n" +
+	"\x06people\x18\a \x03(\v2\x19.connectorengine.v1.LevelR\x06people\"\xee\b\n" +
 	"\bApproval\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06tenant\x18\x02 \x01(\tR\x06tenant\x12\x1c\n" +
@@ -10061,28 +10069,29 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	" \x01(\tR\x05class\x12\x19\n" +
 	"\binner_of\x18\v \x01(\tR\ainnerOf\x128\n" +
 	"\targuments\x18\f \x01(\v2\x1a.connectorengine.v1.SealedR\targuments\x12\x1b\n" +
-	"\tcall_hash\x18\r \x01(\tR\bcallHash\x12\x12\n" +
-	"\x04mode\x18\x0e \x01(\tR\x04mode\x12\x1c\n" +
-	"\tapprovers\x18\x0f \x03(\tR\tapprovers\x12\x14\n" +
-	"\x05state\x18\x10 \x01(\tR\x05state\x129\n" +
+	"\tcall_hash\x18\r \x01(\tR\bcallHash\x12\x16\n" +
+	"\x06fields\x18\x0e \x03(\tR\x06fields\x12\x12\n" +
+	"\x04mode\x18\x0f \x01(\tR\x04mode\x12\x1c\n" +
+	"\tapprovers\x18\x10 \x03(\tR\tapprovers\x12\x14\n" +
+	"\x05state\x18\x11 \x01(\tR\x05state\x129\n" +
 	"\n" +
-	"created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"expires_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x1d\n" +
+	"expires_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x1d\n" +
 	"\n" +
-	"decided_by\x18\x13 \x01(\tR\tdecidedBy\x129\n" +
+	"decided_by\x18\x14 \x01(\tR\tdecidedBy\x129\n" +
 	"\n" +
-	"decided_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\x12\x18\n" +
-	"\achannel\x18\x15 \x01(\tR\achannel\x12#\n" +
-	"\rdecision_note\x18\x16 \x01(\tR\fdecisionNote\x12#\n" +
-	"\rsession_grant\x18\x17 \x01(\bR\fsessionGrant\x12\x16\n" +
-	"\x06reason\x18\x18 \x01(\tR\x06reason\x12=\n" +
-	"\fdelivered_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampR\vdeliveredAt\x12L\n" +
-	"\x14execution_started_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\x12executionStartedAt\x12#\n" +
-	"\rcall_deadline\x18\x1b \x01(\x03R\fcallDeadline\x129\n" +
+	"decided_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\x12\x18\n" +
+	"\achannel\x18\x16 \x01(\tR\achannel\x12#\n" +
+	"\rdecision_note\x18\x17 \x01(\tR\fdecisionNote\x12#\n" +
+	"\rsession_grant\x18\x18 \x01(\bR\fsessionGrant\x12\x16\n" +
+	"\x06reason\x18\x19 \x01(\tR\x06reason\x12=\n" +
+	"\fdelivered_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\vdeliveredAt\x12L\n" +
+	"\x14execution_started_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\x12executionStartedAt\x12#\n" +
+	"\rcall_deadline\x18\x1c \x01(\x03R\fcallDeadline\x129\n" +
 	"\n" +
-	"result_ref\x18\x1c \x01(\v2\x1a.connectorengine.v1.SealedR\tresultRef\x12F\n" +
-	"\x11result_expires_at\x18\x1d \x01(\v2\x1a.google.protobuf.TimestampR\x0fresultExpiresAt\"\x99\x02\n" +
+	"result_ref\x18\x1d \x01(\v2\x1a.connectorengine.v1.SealedR\tresultRef\x12F\n" +
+	"\x11result_expires_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\x0fresultExpiresAt\"\x99\x02\n" +
 	"\x0eApprovalDetail\x128\n" +
 	"\bapproval\x18\x01 \x01(\v2\x1c.connectorengine.v1.ApprovalR\bapproval\x12\x1c\n" +
 	"\targuments\x18\x02 \x01(\fR\targuments\x12%\n" +

@@ -64,6 +64,17 @@ type CredentialFilter struct {
 	Connector ConnectorID
 }
 
+// RoleFilter narrows ListRoles; zero fields match all.
+type RoleFilter struct {
+	Person PersonID
+}
+
+// MemberFilter narrows ListMembers; zero fields match all.
+type MemberFilter struct {
+	Person PersonID
+	Group  GroupID
+}
+
 // Tx is the view of the store inside one unit of work; reads outside the scope answer not found.
 type Tx interface {
 	GetTenant(id TenantID) (Tenant, error)
@@ -137,6 +148,13 @@ type Tx interface {
 	PutOperation(op Operation) error
 	ListFanOuts() ([]FanOut, error)
 	PutFanOut(f FanOut) error
+
+	ListRoles(f RoleFilter) ([]RoleAssignment, error)
+	PutRole(r RoleAssignment) error
+	DeleteRole(r RoleAssignment) error
+	ListMembers(f MemberFilter) ([]GroupMember, error)
+	PutMember(m GroupMember) error
+	DeleteMember(m GroupMember) error
 
 	DueWork(now time.Time, limit int) ([]WorkItem, error)
 

@@ -35,6 +35,7 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 		"approvals": purge(d.approvals, tenant), "pauses": purge(d.pauses, tenant), "tombstones": purge(d.tombstones, tenant),
 		"credentials": purge(d.credentials, tenant), "overlays": purge(d.overlays, tenant), "calls": purge(d.calls, tenant),
 		"exposures": purge(d.exposures, tenant), "operations": purge(d.operations, tenant),
+		"roles": purge(d.roles, tenant), "members": purge(d.members, tenant),
 		"listings": purge(d.listings, tenant), "versions": purge(d.versions, tenant), "offers": purge(d.offers, tenant),
 	}
 	before := len(d.audit)

@@ -32,6 +32,8 @@ const (
 	kindExposure   = "exposure"
 	kindOperation  = "operation"
 	kindFanOut     = "fanout"
+	kindRole       = "role"
+	kindMember     = "member"
 )
 
 const (
@@ -490,4 +492,28 @@ func (t *tx) SeenInbox(id string) (bool, error) {
 func (t *tx) MarkInbox(id string, at time.Time) (bool, error) {
 	n, err := t.exec(`INSERT INTO inbox (tenant_id, id, at) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, string(t.scope.Tenant), id, at)
 	return n == 1, err
+}
+
+func (t *tx) ListRoles(f port.RoleFilter) ([]port.RoleAssignment, error) {
+	return list[port.RoleAssignment](t, kindRole, want("person", string(f.Person)), "k", nil)
+}
+
+func (t *tx) PutRole(r port.RoleAssignment) error {
+	return t.set(kindRole, key(string(r.Tenant), string(r.Person), r.Role, r.Scope), r.Tenant, r)
+}
+
+func (t *tx) DeleteRole(r port.RoleAssignment) error {
+	return t.del(kindRole, key(string(r.Tenant), string(r.Person), r.Role, r.Scope))
+}
+
+func (t *tx) ListMembers(f port.MemberFilter) ([]port.GroupMember, error) {
+	return list[port.GroupMember](t, kindMember, want("person", string(f.Person), "group", string(f.Group)), "k", nil)
+}
+
+func (t *tx) PutMember(m port.GroupMember) error {
+	return t.set(kindMember, key(string(m.Tenant), string(m.Person), string(m.Group)), m.Tenant, m)
+}
+
+func (t *tx) DeleteMember(m port.GroupMember) error {
+	return t.del(kindMember, key(string(m.Tenant), string(m.Person), string(m.Group)))
 }

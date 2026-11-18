@@ -40,3 +40,11 @@ func (o Overlay) Targets(connector ConnectorID, listing *ListingRef, function st
 	}
 	return *o.Listing == *listing
 }
+
+// Match reports whether r passes the filter.
+func (f RoleFilter) Match(r RoleAssignment) bool { return f.Person == "" || r.Person == f.Person }
+
+// Match reports whether m passes the filter.
+func (f MemberFilter) Match(m GroupMember) bool {
+	return (f.Person == "" || m.Person == f.Person) && (f.Group == "" || m.Group == f.Group)
+}

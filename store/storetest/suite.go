@@ -51,6 +51,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"inbox":                     inbox,
 		"scope validation":          scopeValidation,
 		"records":                   records,
+		"roles and groups":          rolesAndGroups,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -652,6 +653,34 @@ func records(e *env) {
 		_, paused, err := tx.GetPause("s1", "x", "c1")
 		ts, _ := tx.ListTombstones(port.TombstoneSession)
 		e.same([]any{false, 0}, []any{paused, len(ts)})
+		return err
+	}))
+}
+
+func rolesAndGroups(e *env) {
+	opRole := port.RoleAssignment{Person: "op", Role: "operator", Scope: "installation"}
+	adminA := port.RoleAssignment{Tenant: "ta", Person: "ana", Role: "tenant_admin", Scope: "t/ta"}
+	adminB := port.RoleAssignment{Tenant: "tb", Person: "ana", Role: "tenant_admin", Scope: "t/tb"}
+	member := port.GroupMember{Tenant: "ta", Person: "ana", Group: "ops"}
+	e.must(e.write(inst, func(tx port.Tx) error { return errors.Join(tx.PutRole(opRole), tx.PutRole(opRole)) }))
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		return errors.Join(tx.PutRole(adminA), tx.PutMember(member), tx.PutMember(member))
+	}))
+	e.must(e.write(scopeB, func(tx port.Tx) error { return tx.PutRole(adminB) }))
+	e.code(e.write(scopeA, func(tx port.Tx) error { return tx.PutRole(opRole) }), port.CodePermissionDenied)
+	e.code(e.write(scopeA, func(tx port.Tx) error { return tx.PutRole(adminB) }), port.CodePermissionDenied)
+	e.must(e.read(port.Scope{Tenant: "ta", Installation: true}, func(tx port.Tx) error {
+		roles, err1 := tx.ListRoles(port.RoleFilter{})
+		ana, err2 := tx.ListRoles(port.RoleFilter{Person: "ana"})
+		members, err3 := tx.ListMembers(port.MemberFilter{Group: "ops"})
+		e.same([]any{[]port.RoleAssignment{opRole, adminA}, []port.RoleAssignment{adminA}, []port.GroupMember{member}}, []any{roles, ana, members})
+		return errors.Join(err1, err2, err3)
+	}))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return errors.Join(tx.DeleteRole(adminA), tx.DeleteMember(member)) }))
+	e.code(e.write(scopeA, func(tx port.Tx) error { return tx.DeleteRole(adminA) }), port.CodeNotFound)
+	e.must(e.read(scopeB, func(tx port.Tx) error {
+		roles, err := tx.ListRoles(port.RoleFilter{})
+		e.same([]port.RoleAssignment{adminB}, roles)
 		return err
 	}))
 }

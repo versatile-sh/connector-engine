@@ -5,6 +5,8 @@ go 1.27.3
 require (
 	github.com/agents-control/plugkit v0.0.0-20261113184401-329d53ecfe45
 	github.com/invopop/jsonschema v0.14.0
+	golang.org/x/oauth2 v0.37.0
+	golang.org/x/sync v0.25.0
 )
 
 require (

@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/agents-control/connector-engine/core/listing"
 	"github.com/agents-control/connector-engine/core/names"
@@ -33,34 +35,107 @@ func (s *Service) handleKey(c port.Connector, version string, cred port.Credenti
 	return strings.Join([]string{string(c.Tenant), string(c.ID), version, string(cred)}, "|")
 }
 
-func (s *Service) handle(ctx context.Context, c port.Connector, m port.Manifest, cred port.CredentialID, owner port.OwnerKind) (port.Handle, error) {
+const handleIdle = 15 * time.Minute
+
+type started struct {
+	key     string
+	ready   chan struct{}
+	h       port.Handle
+	err     error
+	refs    int
+	used    time.Time
+	dropped bool
+}
+
+func upstream(err error, format string, args ...any) error {
+	if pe := (*port.Error)(nil); errors.As(err, &pe) {
+		return err
+	}
+	return port.Errorf(port.CodeUnavailable, format, append(args, err)...)
+}
+
+func (s *Service) handle(ctx context.Context, c port.Connector, m port.Manifest, cred port.CredentialID, owner port.OwnerKind) (*started, error) {
 	key := s.handleKey(c, m.Version, cred)
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if h, ok := s.handles[key]; ok {
-		return h, nil
+	e, ok := s.handles[key]
+	if !ok {
+		e = &started{key: key, ready: make(chan struct{})}
+		s.handles[key] = e
 	}
-	h, err := s.d.Runtime.Start(ctx, c, m, port.SecretsRef{Tenant: c.Tenant, Credential: cred, Owner: owner})
-	if err != nil {
-		return "", port.Errorf(port.CodeUnavailable, "connector %s did not start: %v", c.ID, err)
+	e.refs++
+	idle := s.takeIdle(key)
+	s.mu.Unlock()
+	s.stopAll(ctx, idle)
+	if !ok {
+		e.h, e.err = s.d.Runtime.Start(ctx, c, m, port.SecretsRef{Tenant: c.Tenant, Credential: cred, Owner: owner})
+		close(e.ready)
 	}
-	s.handles[key] = h
-	return h, nil
+	select {
+	case <-e.ready:
+	case <-ctx.Done():
+		s.release(ctx, e)
+		return nil, ctx.Err()
+	}
+	if e.err != nil {
+		s.drop(e)
+		s.release(ctx, e)
+		return nil, upstream(e.err, "connector %s did not start: %v", c.ID)
+	}
+	return e, nil
+}
+
+func (s *Service) takeIdle(keep string) []*started {
+	var out []*started
+	for k, e := range s.handles {
+		if k != keep && e.refs == 0 && e.err == nil && s.now().Sub(e.used) > handleIdle {
+			delete(s.handles, k)
+			e.dropped = true
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+func (s *Service) release(ctx context.Context, e *started) {
+	s.mu.Lock()
+	e.refs--
+	e.used = s.now()
+	stop := e.dropped && e.refs == 0 && e.err == nil
+	s.mu.Unlock()
+	if stop {
+		_ = s.d.Runtime.Stop(context.WithoutCancel(ctx), e.h)
+	}
+}
+
+func (s *Service) drop(e *started) {
+	s.mu.Lock()
+	if s.handles[e.key] == e {
+		delete(s.handles, e.key)
+	}
+	e.dropped = true
+	s.mu.Unlock()
+}
+
+func (s *Service) stopAll(ctx context.Context, list []*started) {
+	for _, e := range list {
+		_ = s.d.Runtime.Stop(context.WithoutCancel(ctx), e.h)
+	}
 }
 
 func (s *Service) dropHandles(ctx context.Context, match func(key string) bool) {
 	s.mu.Lock()
-	var stop []port.Handle
-	for k, h := range s.handles {
+	var stop []*started
+	for k, e := range s.handles {
 		if match(k) {
-			stop = append(stop, h)
 			delete(s.handles, k)
+			e.dropped = true
+			if e.refs == 0 && e.err == nil {
+				stop = append(stop, e)
+			}
 		}
 	}
 	s.mu.Unlock()
-	for _, h := range stop {
-		_ = s.d.Runtime.Stop(ctx, h)
-	}
+	s.stopAll(ctx, stop)
 }
 
 func (s *Service) stopHandles(ctx context.Context, tenant port.TenantID) {
@@ -107,9 +182,13 @@ func (s *Service) captureFunctions(ctx context.Context, c port.Connector, m port
 	if err != nil {
 		return nil, port.ListMeta{}, err
 	}
-	defs, meta, err := s.d.Runtime.ListFunctions(ctx, h)
+	defer s.release(ctx, h)
+	defs, meta, err := s.d.Runtime.ListFunctions(ctx, h.h)
 	if err != nil {
-		return nil, meta, port.Errorf(port.CodeUnavailable, "connector %s did not list its functions: %v", c.ID, err)
+		if port.IsCode(err, port.CodeUnavailable) {
+			s.drop(h)
+		}
+		return nil, meta, upstream(err, "connector %s did not list its functions: %v", c.ID)
 	}
 	out := make([]port.Function, 0, len(defs))
 	for _, d := range defs {

@@ -215,9 +215,13 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 	if err != nil {
 		return invoked{Err: err}
 	}
+	defer s.release(ctx, h)
 	cctx, cancel := context.WithDeadline(ctx, in.Deadline)
 	defer cancel()
-	res, err := s.d.Runtime.Call(cctx, h, in.Function, in.Args, in.Deadline)
+	res, err := s.d.Runtime.Call(cctx, h.h, in.Function, in.Args, in.Deadline)
+	if port.IsCode(err, port.CodeUnavailable) {
+		s.drop(h)
+	}
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
 		return invoked{Unknown: true}

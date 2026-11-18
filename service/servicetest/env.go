@@ -3,6 +3,7 @@ package servicetest
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ type Env struct {
 	Auth    *table.Authorizer
 	Svc     *service.Service
 	Worker  *worker.Worker
-	n       int
+	n       atomic.Int64
 }
 
 // Epoch is the fake time every Env starts at.
@@ -50,8 +51,7 @@ func New(t *testing.T, tune ...func(*service.Config, *service.Deps)) *Env {
 }
 
 func (e *Env) id() string {
-	e.n++
-	return fmt.Sprintf("id%04d", e.n)
+	return fmt.Sprintf("id%04d", e.n.Add(1))
 }
 
 // Operator is the system principal of the installation.
@@ -74,8 +74,7 @@ func (e *Env) TenantAdmin(tenant port.TenantID) port.Principal {
 
 // AgentClaims builds the principal of one run of an agent.
 func (e *Env) AgentClaims(c port.Claims) port.Principal {
-	e.n++
-	return port.Principal{Kind: port.KindOf(c), Claims: c, Token: fmt.Sprintf("bearer-token-%d", e.n)}
+	return port.Principal{Kind: port.KindOf(c), Claims: c, Token: fmt.Sprintf("bearer-token-%d", e.n.Add(1))}
 }
 
 // Write runs fn on a write transaction of the tenant, or of the installation for the empty tenant.

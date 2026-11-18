@@ -136,7 +136,6 @@ func startEngine(t *testing.T, bin binaries, s settings) *engine {
 		t.Fatal(err)
 	}
 	go func() { e.done <- e.cmd.Wait(); logFile.Close() }()
-	t.Cleanup(func() { e.stop(t) })
 	lines := make(chan string, 1)
 	go func() {
 		sc := bufio.NewScanner(out)

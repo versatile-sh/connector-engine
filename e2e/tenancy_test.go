@@ -8,14 +8,6 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-func init() {
-	scenarios = append(scenarios,
-		scenario{"tenancy_listing_hidden_for_a_tenant", tenancyHidden},
-		scenario{"tenancy_two_tenants_same_names_isolated", tenancyIsolated},
-		scenario{"tenancy_private_listing", tenancyPrivate},
-	)
-}
-
 func (k *kit) visible(t *testing.T) []string {
 	t.Helper()
 	var list items[port.ListingVersion]

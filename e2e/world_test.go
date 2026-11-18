@@ -178,11 +178,35 @@ func TestE2E(t *testing.T) {
 		w.hasPG = true
 	}
 	w.eng = startEngine(t, w.bin, w.cfg)
+	t.Cleanup(func() { w.eng.stop(t) })
 	w.syncAll(t)
 
 	for _, c := range scenarios {
 		t.Run(c.name, func(t *testing.T) { c.run(t, w) })
 	}
+}
+
+var scenarios = []scenario{
+	{"owner_i_only_F_for_agent_X", ownerOne},
+	{"owner_ii_all_enabled_ask_each_time", ownerAskEachTime},
+	{"owner_iii_read_only_for_agent_Y", ownerReadOnly},
+	{"owner_iv_ask_once_per_session", ownerAskOnce},
+	{"owner_v_workspace_ceiling_cannot_be_widened", ownerCeiling},
+	{"owner_vi_description_change_quarantine_accept_confirm", ownerDrift},
+	{"owner_vii_new_function_in_update_is_quarantined", ownerNewFunction},
+	{"owner_viii_unclassified_function", ownerUnclassified},
+	{"owner_enable_all", ownerEnableAll},
+	{"tenancy_listing_hidden_for_a_tenant", tenancyHidden},
+	{"tenancy_two_tenants_same_names_isolated", tenancyIsolated},
+	{"tenancy_private_listing", tenancyPrivate},
+	{"idea_files_listing_import_lands_unreviewed", ideaFilesImport},
+	{"idea_grpc_kind_call_through_reflection_import", ideaGRPC},
+	{"idea_openapi_import_lands_unreviewed_and_calls_rest", ideaOpenAPI},
+	{"idea_overlay_accept_and_restore_change_the_served_description", ideaOverlay},
+	{"idea_projection_trims_and_result_filter_masks_cpf", ideaProjectionAndFilter},
+	{"cnctl_tools_list_search_call_write_the_output_file", cliTools},
+	{"events_webhook_receives_signed_cloudevents", eventsSigned},
+	{"restart_state_and_pending_approval_survive", restartSurvives},
 }
 
 type scenario struct {

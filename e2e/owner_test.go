@@ -12,18 +12,6 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-var scenarios = []scenario{
-	{"owner_i_only_F_for_agent_X", ownerOne},
-	{"owner_ii_all_enabled_ask_each_time", ownerAskEachTime},
-	{"owner_iii_read_only_for_agent_Y", ownerReadOnly},
-	{"owner_iv_ask_once_per_session", ownerAskOnce},
-	{"owner_v_workspace_ceiling_cannot_be_widened", ownerCeiling},
-	{"owner_vi_description_change_quarantine_accept_confirm", ownerDrift},
-	{"owner_vii_new_function_in_update_is_quarantined", ownerNewFunction},
-	{"owner_viii_unclassified_function", ownerUnclassified},
-	{"owner_enable_all", ownerEnableAll},
-}
-
 func isUnknownTool(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "unknown tool")
 }

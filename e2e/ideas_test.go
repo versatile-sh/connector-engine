@@ -12,16 +12,6 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-func init() {
-	scenarios = append(scenarios,
-		scenario{"idea_files_listing_import_lands_unreviewed", ideaFilesImport},
-		scenario{"idea_grpc_kind_call_through_reflection_import", ideaGRPC},
-		scenario{"idea_openapi_import_lands_unreviewed_and_calls_rest", ideaOpenAPI},
-		scenario{"idea_overlay_accept_and_restore_change_the_served_description", ideaOverlay},
-		scenario{"idea_projection_trims_and_result_filter_masks_cpf", ideaProjectionAndFilter},
-	)
-}
-
 var unsafeTarget = regexp.MustCompile(`[^a-z0-9._-]+`)
 
 func grpcListingName(target string) string {

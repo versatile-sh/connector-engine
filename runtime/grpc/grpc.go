@@ -1,0 +1,245 @@
+// Package grpc is the ConnectorRuntime for grpc_declarative listings: descriptors from reflection or a descriptor set, calls through dynamicpb and protojson.
+package grpc
+
+import (
+	"context"
+	"crypto/tls"
+	"encoding/json"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/dynamicpb"
+
+	"github.com/agents-control/connector-engine/credential"
+	deadlines "github.com/agents-control/connector-engine/internal/deadline"
+	"github.com/agents-control/connector-engine/internal/digest"
+	"github.com/agents-control/connector-engine/internal/fetch"
+	"github.com/agents-control/connector-engine/internal/grpcdesc"
+	"github.com/agents-control/connector-engine/internal/handles"
+	"github.com/agents-control/connector-engine/internal/hints"
+	"github.com/agents-control/connector-engine/port"
+)
+
+// Fetcher returns the bytes of a FileDescriptorSet a manifest points to.
+type Fetcher func(ctx context.Context, d port.Descriptor) ([]byte, error)
+
+// Options configure a Runtime; the zero value reaches servers over TLS and reads descriptor sets from paths and http(s) addresses.
+type Options struct {
+	Applier  credential.Applier
+	Insecure bool
+	Fetch    Fetcher
+	Dial     []grpc.DialOption
+}
+
+type instance struct {
+	conn    *grpc.ClientConn
+	types   *dynamicpb.Types
+	order   []string
+	methods map[string]grpcdesc.Method
+}
+
+// Runtime calls unary gRPC methods declared by a listing; streaming methods are refused (grpc.unaryOnly).
+type Runtime struct {
+	opts    Options
+	started *handles.Registry[*instance]
+}
+
+// New returns a runtime with the given options.
+func New(opts Options) *Runtime {
+	if opts.Fetch == nil {
+		opts.Fetch = DefaultFetcher(http.DefaultClient)
+	}
+	return &Runtime{opts: opts, started: handles.New[*instance]("grpc")}
+}
+
+// DefaultFetcher reads a file_descriptor_set from a path or an http(s) address; a bsr descriptor needs a Fetcher of its own.
+func DefaultFetcher(c *http.Client) Fetcher {
+	return func(ctx context.Context, d port.Descriptor) ([]byte, error) {
+		switch {
+		case d.From != port.DescriptorFileSet:
+			return nil, port.Errorf(port.CodeInvalidManifest, "no fetcher is configured for %s descriptors", d.From)
+		case strings.HasPrefix(d.Ref, "http://") || strings.HasPrefix(d.Ref, "https://"):
+			return fetch.Do(ctx, c, http.MethodGet, d.Ref, nil, nil)
+		}
+		b, err := os.ReadFile(d.Ref)
+		if err != nil {
+			return nil, port.Errorf(port.CodeNotFound, "descriptor set %s: %v", d.Ref, err)
+		}
+		return b, nil
+	}
+}
+
+// Describe states a runtime with no processes that reaches one address and serves unary methods only.
+func (*Runtime) Describe() port.RuntimeCapabilities {
+	return port.RuntimeCapabilities{Kinds: []port.Kind{port.KindGRPCDeclarative}, Isolation: "none", Egress: "grpc.target", UnaryOnly: true}
+}
+
+type perRPC struct {
+	applier credential.Applier
+	ref     port.SecretsRef
+	secure  bool
+}
+
+func (p perRPC) GetRequestMetadata(ctx context.Context, _ ...string) (map[string]string, error) {
+	headers, err := p.applier.Headers(ctx, p.ref)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]string{}
+	for k, v := range headers {
+		out[strings.ToLower(k)] = strings.Join(v, ",")
+	}
+	return out, nil
+}
+
+func (p perRPC) RequireTransportSecurity() bool { return p.secure }
+
+func (r *Runtime) descriptors(ctx context.Context, conn *grpc.ClientConn, d port.Descriptor) (*protoregistry.Files, error) {
+	if d.From == port.DescriptorReflection {
+		return grpcdesc.FromReflection(ctx, conn)
+	}
+	if d.Digest == "" {
+		return nil, port.Errorf(port.CodeInvalidManifest, "a %s descriptor carries a digest", d.From)
+	}
+	b, err := r.opts.Fetch(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+	if !digest.Matches(d.Digest, b) {
+		return nil, port.Errorf(port.CodeInvalidManifest, "the descriptor set %s does not match its digest", d.Ref)
+	}
+	return grpcdesc.FromSet(b)
+}
+
+// Start dials the target, loads the descriptors and resolves every declared method; a streaming or unknown method fails the start.
+func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, secrets port.SecretsRef) (port.Handle, error) {
+	if m.Kind != port.KindGRPCDeclarative || m.GRPC == nil || m.GRPC.Target == "" {
+		return "", port.Errorf(port.CodeInvalidManifest, "the grpc runtime serves grpc_declarative listings with a target")
+	}
+	transport := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
+	if r.opts.Insecure {
+		transport = insecure.NewCredentials()
+	}
+	dial := append([]grpc.DialOption{
+		grpc.WithTransportCredentials(transport),
+		grpc.WithPerRPCCredentials(perRPC{applier: r.opts.Applier, ref: secrets, secure: !r.opts.Insecure}),
+	}, r.opts.Dial...)
+	conn, err := grpc.NewClient(m.GRPC.Target, dial...)
+	if err != nil {
+		return "", port.Errorf(port.CodeInvalidManifest, "grpc target %q: %v", m.GRPC.Target, err)
+	}
+	in, err := r.load(ctx, conn, m.GRPC)
+	if err != nil {
+		conn.Close()
+		return "", err
+	}
+	return r.started.Add(in), nil
+}
+
+func (r *Runtime) load(ctx context.Context, conn *grpc.ClientConn, g *port.GRPC) (*instance, error) {
+	files, err := r.descriptors(ctx, conn, g.Descriptor)
+	if err != nil {
+		return nil, err
+	}
+	in := &instance{conn: conn, types: dynamicpb.NewTypes(files), methods: map[string]grpcdesc.Method{}}
+	for _, f := range g.Methods {
+		md, err := grpcdesc.Unary(files, f.FullMethod)
+		if err != nil {
+			return nil, err
+		}
+		d := grpcdesc.Describe(md)
+		d.Function.Name = f.Name
+		in.order = append(in.order, f.Name)
+		in.methods[f.Name] = d
+	}
+	return in, nil
+}
+
+// ListFunctions returns one definition per declared method, regenerated from the live descriptors, with the class hints in _meta.
+func (r *Runtime) ListFunctions(_ context.Context, h port.Handle) ([]port.RawDefinition, port.ListMeta, error) {
+	in, err := r.started.Get(h)
+	if err != nil {
+		return nil, port.ListMeta{}, err
+	}
+	out := make([]port.RawDefinition, len(in.order))
+	for i, name := range in.order {
+		d := in.methods[name]
+		raw, err := json.Marshal(map[string]any{
+			"name":         name,
+			"description":  "gRPC " + d.Function.FullMethod,
+			"inputSchema":  d.Function.InputSchema,
+			"outputSchema": d.Function.OutputSchema,
+			"_meta":        hints.Meta(d.Idempotency, d.HTTPVerb),
+		})
+		if err != nil {
+			return nil, port.ListMeta{}, port.Errorf(port.CodeInternal, "definition %s: %v", name, err)
+		}
+		out[i] = port.RawDefinition{Name: name, Raw: raw}
+	}
+	return out, port.ListMeta{}, nil
+}
+
+// Call builds the request message from the JSON arguments, invokes the method and returns the response as JSON; a status other than unavailable or deadline_exceeded is an error result.
+func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, arguments json.RawMessage, deadline time.Time) (port.Result, error) {
+	in, err := r.started.Get(h)
+	if err != nil {
+		return port.Result{}, err
+	}
+	m, ok := in.methods[function]
+	if !ok {
+		return port.Result{}, port.Errorf(port.CodeNotFound, "no declared method %q", function)
+	}
+	req := dynamicpb.NewMessage(m.Descriptor.Input())
+	if len(arguments) == 0 {
+		arguments = json.RawMessage(`{}`)
+	}
+	if err := (protojson.UnmarshalOptions{Resolver: in.types}).Unmarshal(arguments, req); err != nil {
+		return port.Result{}, port.Errorf(port.CodeInvalidArgument, "arguments of %s: %v", function, err)
+	}
+	ctx, cancel := deadlines.Apply(ctx, deadline)
+	defer cancel()
+	resp := dynamicpb.NewMessage(m.Descriptor.Output())
+	if err := in.conn.Invoke(ctx, m.Function.FullMethod, req, resp); err != nil {
+		return failure(ctx, function, err)
+	}
+	body, err := (protojson.MarshalOptions{Resolver: in.types}).Marshal(resp)
+	if err != nil {
+		return port.Result{}, port.Errorf(port.CodeInternal, "response of %s: %v", function, err)
+	}
+	return port.Result{Content: textContent(string(body)), Structured: body}, nil
+}
+
+func failure(ctx context.Context, function string, err error) (port.Result, error) {
+	st := status.Convert(err)
+	switch st.Code() {
+	case codes.Unavailable, codes.DeadlineExceeded, codes.Canceled:
+		if ctx.Err() != nil {
+			return port.Result{}, ctx.Err()
+		}
+		return port.Result{}, port.Errorf(port.CodeUnavailable, "%s: %v", function, err)
+	}
+	return port.Result{Content: textContent(st.Code().String() + ": " + st.Message()), IsError: true}, nil
+}
+
+func textContent(s string) json.RawMessage {
+	b, _ := json.Marshal([]map[string]string{{"type": "text", "text": s}})
+	return b
+}
+
+// Stop closes the connection.
+func (r *Runtime) Stop(_ context.Context, h port.Handle) error {
+	in, ok := r.started.Remove(h)
+	if !ok {
+		return port.Errorf(port.CodeNotFound, "no started instance %q", h)
+	}
+	return in.conn.Close()
+}

@@ -1,0 +1,15 @@
+{
+  "servers": [
+    {
+      "server": {
+        "name": "com.example/files",
+        "description": "Files",
+        "version": "0.4.0",
+        "packages": [{"registryType": "mcpb", "identifier": "https://example.com/files.mcpb", "fileSha256": "abc123", "environmentVariables": [{"name": "FILES_ROOT", "isRequired": true}]}]
+      },
+      "_meta": {"io.modelcontextprotocol.registry/official": {"status": "deprecated"}}
+    },
+    {"server": {"name": "com.example/empty", "version": "1"}}
+  ],
+  "metadata": {"count": 2}
+}

@@ -1,0 +1,28 @@
+name: github-official
+image: mcp/github-mcp-server
+type: server
+meta:
+  category: devops
+about:
+  title: GitHub Official
+  description: Official GitHub MCP server
+  icon: https://example.test/github.svg
+source:
+  project: https://github.com/github/github-mcp-server
+  commit: 0ba9e31
+run:
+  allowHosts:
+    - api.github.com:443
+config:
+  description: Needs a token
+  secrets:
+    - name: github.personal_access_token
+      env: GITHUB_PERSONAL_ACCESS_TOKEN
+      example: <TOKEN>
+  env:
+    - name: GITHUB_TOOLSETS
+      example: all
+oauth:
+  - provider: github
+    secret: github.personal_access_token
+    env: GITHUB_PERSONAL_ACCESS_TOKEN

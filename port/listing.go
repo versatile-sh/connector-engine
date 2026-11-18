@@ -66,6 +66,7 @@ type REST struct {
 // RESTFunction is one declared REST function.
 type RESTFunction struct {
 	Name         string          `json:"name"`
+	Description  string          `json:"description,omitempty"`
 	Method       string          `json:"method"`
 	Path         string          `json:"path"`
 	InputSchema  json.RawMessage `json:"input_schema,omitempty"`

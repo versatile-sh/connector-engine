@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package demo.v1;
+
+import "google/api/http.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "example.test/demo/v1;demov1";
+
+enum Mode {
+  MODE_UNSPECIFIED = 0;
+  MODE_LOUD = 1;
+}
+
+message Node {
+  string label = 1;
+  Node child = 2;
+}
+
+message HelloRequest {
+  string name = 1;
+  repeated string tags = 2;
+  int64 count = 3;
+  Mode mode = 4;
+  map<string, int32> scores = 5;
+  bytes blob = 6;
+  oneof choice {
+    string alpha = 7;
+    int32 beta = 8;
+  }
+  Node tree = 9;
+}
+
+message HelloReply {
+  string message = 1;
+  google.protobuf.Timestamp at = 2;
+  int64 total = 3;
+}
+
+service Greeter {
+  rpc SayHello(HelloRequest) returns (HelloReply) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc Rename(HelloRequest) returns (HelloReply) {
+    option idempotency_level = IDEMPOTENT;
+  }
+  rpc Lookup(HelloRequest) returns (HelloReply) {
+    option (google.api.http) = {get: "/v1/lookup"};
+  }
+  rpc Purge(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Watch(HelloRequest) returns (stream HelloReply);
+}

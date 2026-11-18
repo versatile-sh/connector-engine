@@ -99,9 +99,10 @@ func (c *capture) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func (c *capture) take() (json.RawMessage, bool) {
+func (c *capture) take() (raw json.RawMessage, sent bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	sent = len(c.list) > 0
 	for len(c.list) > 0 {
 		rec := c.list[0]
 		c.list = c.list[1:]
@@ -109,7 +110,7 @@ func (c *capture) take() (json.RawMessage, bool) {
 			return raw, true
 		}
 	}
-	return nil, false
+	return nil, sent
 }
 
 func (c *capture) reset() {

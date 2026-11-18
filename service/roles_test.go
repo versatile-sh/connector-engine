@@ -89,3 +89,18 @@ func TestATenantThatWasNeverCreatedIsNotActive(t *testing.T) {
 	e.Tenant("t1")
 	want(t, e.Svc.TenantActive(e.Ctx, "t1"), nil, "registered tenant")
 }
+
+func TestRemovePersonDropsTheirRolesAndGroups(t *testing.T) {
+	e := st.New(t)
+	admin := e.TenantAdmin("t1")
+	bia := e.Person("t1", "bia", [2]string{string(table.Approver), authz.Workspace("t1", "w1")}, [2]string{string(table.Auditor), authz.Workspace("t1", "w2")})
+	e.Join("t1", "bia", "ops")
+	sys := e.Operator()
+	sys.Claims.Tenant = "t1"
+	want(t, e.Svc.RemovePerson(e.Ctx, sys, bia.Person, "w1"), nil, "remove from w1")
+	want(t, len(st.Ok(e.Svc.ListRoles(e.Ctx, admin, "t1", port.RoleFilter{Person: "bia"}))), 1, "the w2 role stays")
+	want(t, len(st.Ok(e.Auth.Groups(e.Ctx, "t1", "bia"))), 1, "groups stay on a workspace removal")
+	want(t, e.Svc.RemovePerson(e.Ctx, sys, bia.Person, ""), nil, "remove everywhere")
+	want(t, len(st.Ok(e.Svc.ListRoles(e.Ctx, admin, "t1", port.RoleFilter{Person: "bia"}))), 0, "no role left")
+	want(t, len(st.Ok(e.Auth.Groups(e.Ctx, "t1", "bia"))), 0, "no group left")
+}

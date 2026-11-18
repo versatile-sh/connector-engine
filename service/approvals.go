@@ -273,3 +273,16 @@ func (s *Service) ExplainAccess(ctx context.Context, p port.Principal, sub port.
 	})
 	return out, err
 }
+
+// GetCall returns the audit row of a forwarded call; arguments are references and hashes only (§13.1 getCall).
+func (s *Service) GetCall(ctx context.Context, p port.Principal, id port.CallID) (port.Call, error) {
+	var out port.Call
+	if err := s.authorize(ctx, p, authz.AuditRead, s.tenantResource(p)); err != nil {
+		return out, err
+	}
+	err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) (err error) {
+		out, err = tx.GetCall(id)
+		return err
+	})
+	return out, err
+}

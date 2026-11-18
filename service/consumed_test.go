@@ -86,3 +86,21 @@ func TestListAgentFunctionsMatchesWhatTheAgentSees(t *testing.T) {
 	_, err := w.Svc.ListAgentFunctions(w.Ctx, w.alice, port.Subject{Agent: "x"})
 	want(t, port.IsCode(err, port.CodePermissionDenied), true, "agent configurers only")
 }
+
+func TestGetCallReturnsTheAuditRow(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.allowAll("x")
+	before := len(w.Events())
+	w.call(w.agent("x", "s1"), "s__search", `{}`)
+	var id string
+	for _, e := range w.Events()[before:] {
+		if e.Type == "connector.call.finished" {
+			id, _ = e.Data["call"].(string)
+		}
+	}
+	row := st.Ok(w.Svc.GetCall(w.Ctx, w.admin, port.CallID(id)))
+	want(t, row.State, port.CallFinished, "state")
+	want(t, row.Function, "search", "function")
+	_, err := w.Svc.GetCall(w.Ctx, w.alice, port.CallID(id))
+	want(t, port.IsCode(err, port.CodePermissionDenied), true, "auditors and admins only")
+}

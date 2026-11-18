@@ -22,7 +22,6 @@ type Env struct {
 	Store   *memory.Store
 	Secrets *Secrets
 	Runtime *Runtime
-	Roles   *table.Roles
 	Auth    *table.Authorizer
 	Svc     *service.Service
 	Worker  *worker.Worker
@@ -35,9 +34,9 @@ var Epoch = time.Date(2026, 11, 18, 9, 0, 0, 0, time.UTC)
 // New builds an Env; tune may change the config and the dependencies before the Service is built.
 func New(t *testing.T, tune ...func(*service.Config, *service.Deps)) *Env {
 	t.Helper()
-	e := &Env{T: t, Ctx: context.Background(), Clock: NewClock(Epoch), Store: memory.New(), Secrets: NewSecrets(), Runtime: NewRuntime(), Roles: table.NewRoles()}
+	e := &Env{T: t, Ctx: context.Background(), Clock: NewClock(Epoch), Store: memory.New(), Secrets: NewSecrets(), Runtime: NewRuntime()}
 	cfg := service.DefaultConfig()
-	e.Auth = table.New(e.Store, e.Clock, e.Roles, table.Settings{DestructiveMax: cfg.DestructiveMax})
+	e.Auth = table.New(e.Store, e.Clock, table.Settings{DestructiveMax: cfg.DestructiveMax})
 	deps := service.Deps{Store: e.Store, Clock: e.Clock, Authorizer: e.Auth, Secrets: e.Secrets, Runtime: e.Runtime, NewID: e.id}
 	for _, f := range tune {
 		f(&cfg, &deps)
@@ -61,7 +60,9 @@ func (e *Env) Operator() port.Principal { return port.Principal{Kind: port.Princ
 // Person is a person principal of a tenant with the given role assignments (role, scope).
 func (e *Env) Person(tenant port.TenantID, id string, grants ...[2]string) port.Principal {
 	for _, g := range grants {
-		e.Roles.Assign(table.Assignment{Tenant: tenant, Person: port.PersonID(id), Role: table.Role(g[0]), Scope: g[1]})
+		e.Write(tenant, func(tx port.Tx) error {
+			return tx.PutRole(port.RoleAssignment{Tenant: tenant, Person: port.PersonID(id), Role: g[0], Scope: g[1]})
+		})
 	}
 	return port.Principal{Kind: port.PrincipalPerson, Person: port.PersonID(id), Claims: port.Claims{Tenant: tenant, Subject: id}}
 }
@@ -75,6 +76,22 @@ func (e *Env) TenantAdmin(tenant port.TenantID) port.Principal {
 func (e *Env) AgentClaims(c port.Claims) port.Principal {
 	e.n++
 	return port.Principal{Kind: port.KindOf(c), Claims: c, Token: fmt.Sprintf("bearer-token-%d", e.n)}
+}
+
+// Write runs fn on a write transaction of the tenant, or of the installation for the empty tenant.
+func (e *Env) Write(tenant port.TenantID, fn func(port.Tx) error) {
+	e.T.Helper()
+	if err := e.Store.Write(e.Ctx, port.Scope{Tenant: tenant, Installation: tenant == ""}, fn); err != nil {
+		e.T.Fatal(err)
+	}
+}
+
+// Join makes a person a member of a group.
+func (e *Env) Join(tenant port.TenantID, person port.PersonID, group port.GroupID) {
+	e.T.Helper()
+	e.Write(tenant, func(tx port.Tx) error {
+		return tx.PutMember(port.GroupMember{Tenant: tenant, Person: person, Group: group})
+	})
 }
 
 // Events returns every undelivered outbox event in order.

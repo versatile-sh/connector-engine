@@ -10,17 +10,16 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Authorizer evaluates calls with core/evaluate over the store's rows and answers role questions from Roles.
+// Authorizer evaluates calls with core/evaluate over the store's rows and answers role questions from the role rows of the store.
 type Authorizer struct {
 	store    port.Store
 	clock    port.Clock
-	roles    *Roles
 	settings Settings
 }
 
 // New returns the table authorizer.
-func New(store port.Store, clock port.Clock, roles *Roles, settings Settings) *Authorizer {
-	return &Authorizer{store: store, clock: clock, roles: roles, settings: settings}
+func New(store port.Store, clock port.Clock, settings Settings) *Authorizer {
+	return &Authorizer{store: store, clock: clock, settings: settings}
 }
 
 var _ port.Authorizer = (*Authorizer)(nil)
@@ -30,11 +29,15 @@ func subjectOf(q port.Query) port.Subject {
 }
 
 func (a *Authorizer) facts(ctx context.Context, s port.Subject, connector port.ConnectorID, fn func(evaluate.Facts) error) error {
-	groups := map[port.PersonID][]port.GroupID{}
-	for _, p := range evaluate.People(s) {
-		groups[p] = a.roles.groupsOf(s.Tenant, p)
-	}
 	return a.store.Read(ctx, port.Scope{Tenant: s.Tenant}, func(tx port.Tx) error {
+		groups := map[port.PersonID][]port.GroupID{}
+		for _, p := range evaluate.People(s) {
+			g, err := groupsOf(tx, p)
+			if err != nil {
+				return err
+			}
+			groups[p] = g
+		}
 		f, err := LoadFacts(tx, a.clock.Now(), s, connector, groups, a.settings)
 		if err != nil {
 			return err
@@ -64,8 +67,22 @@ func (a *Authorizer) Search(ctx context.Context, s port.Subject, connector port.
 }
 
 // Groups returns the groups of a person.
-func (a *Authorizer) Groups(_ context.Context, tenant port.TenantID, person port.PersonID) ([]port.GroupID, error) {
-	return a.roles.groupsOf(tenant, person), nil
+func (a *Authorizer) Groups(ctx context.Context, tenant port.TenantID, person port.PersonID) ([]port.GroupID, error) {
+	var out []port.GroupID
+	err := a.store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) (err error) {
+		out, err = groupsOf(tx, person)
+		return err
+	})
+	return out, err
+}
+
+func groupsOf(tx port.Tx, person port.PersonID) ([]port.GroupID, error) {
+	rows, err := tx.ListMembers(port.MemberFilter{Person: person})
+	out := make([]port.GroupID, len(rows))
+	for i, m := range rows {
+		out[i] = m.Group
+	}
+	return out, err
 }
 
 var operatorOnly = []Role{Operator}
@@ -90,7 +107,7 @@ var tenantActions = []string{authz.ConnectorRead, authz.ApprovalDecide}
 var systemActions = []string{authz.SessionEnd, authz.AgentRemove, authz.PersonRemove}
 
 // Allowed answers a role question of §4.2 from the assignments: an agent is never allowed, the operator acts as system.
-func (a *Authorizer) Allowed(_ context.Context, p port.Permission) (bool, error) {
+func (a *Authorizer) Allowed(ctx context.Context, p port.Permission) (bool, error) {
 	if p.Principal.Kind == port.PrincipalAgent || p.Principal.Kind == port.PrincipalView || p.Principal.Claims.Agent != "" {
 		return false, nil
 	}
@@ -108,10 +125,15 @@ func (a *Authorizer) Allowed(_ context.Context, p port.Permission) (bool, error)
 	if slices.Contains(selfActions, p.Action) && p.Resource == authz.Person(string(tenant), string(person)) {
 		return true, nil
 	}
-	for _, g := range a.roles.of(tenant, person) {
-		if slices.Contains(roles, g.Role) && authz.Covers(g.Scope, p.Resource) {
-			return true, nil
+	var held []port.RoleAssignment
+	err := a.store.Read(ctx, port.Scope{Tenant: tenant, Installation: true}, func(tx port.Tx) (err error) {
+		held, err = tx.ListRoles(port.RoleFilter{Person: person})
+		return err
+	})
+	for _, g := range held {
+		if slices.Contains(roles, Role(g.Role)) && authz.Covers(g.Scope, p.Resource) {
+			return true, err
 		}
 	}
-	return false, nil
+	return false, err
 }

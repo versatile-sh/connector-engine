@@ -96,7 +96,7 @@ func (a *Authorizer) Allowed(_ context.Context, p port.Permission) (bool, error)
 	}
 	roles := actionRoles[p.Action]
 	if p.Principal.Kind == port.PrincipalSystem || p.Principal.Kind == port.PrincipalWorker {
-		return slices.Equal(roles, operatorOnly) || slices.Contains(systemActions, p.Action), nil
+		return slices.Contains(roles, Operator) || slices.Contains(systemActions, p.Action), nil
 	}
 	tenant, person := p.Principal.Claims.Tenant, p.Principal.Person
 	if person == "" {

@@ -119,7 +119,7 @@ func (w *Worker) dispatch(ctx context.Context, it port.WorkItem) error {
 }
 
 func (w *Worker) fanOut(ctx context.Context, f port.FanOut) error {
-	if f.Kind == "remove_tenant" {
+	if f.Kind == service.RemoveTenantKind {
 		return w.svc.RemoveTenantData(ctx, f)
 	}
 	var errs []error

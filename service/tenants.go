@@ -10,7 +10,8 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-const removeTenantKind = "remove_tenant"
+// RemoveTenantKind is the kind of the fan-out row of a tenant removal.
+const RemoveTenantKind = "remove_tenant"
 
 // CreateTenant registers a tenant with its key and, under catalog.tenantDefault = starter, the starter rules; a second call writes nothing (§4.4).
 func (s *Service) CreateTenant(ctx context.Context, p port.Principal, tenant port.TenantID) (port.Tenant, error) {
@@ -70,11 +71,11 @@ func (s *Service) RemoveTenant(ctx context.Context, p port.Principal, tenant por
 		if err := tx.PutTenant(t); err != nil {
 			return err
 		}
-		op = port.Operation{ID: port.OperationID(s.d.NewID()), Kind: removeTenantKind, Counts: map[string]int{}, CreatedAt: s.now(), UpdatedAt: s.now()}
+		op = port.Operation{ID: port.OperationID(s.d.NewID()), Kind: RemoveTenantKind, Counts: map[string]int{}, CreatedAt: s.now(), UpdatedAt: s.now()}
 		if err := tx.PutOperation(op); err != nil {
 			return err
 		}
-		return tx.PutFanOut(port.FanOut{ID: op.ID, Kind: removeTenantKind, Tenant: tenant, Pending: []port.TenantID{tenant}, CreatedAt: s.now()})
+		return tx.PutFanOut(port.FanOut{ID: op.ID, Kind: RemoveTenantKind, Tenant: tenant, Pending: []port.TenantID{tenant}, CreatedAt: s.now()})
 	})
 	return op, err
 }

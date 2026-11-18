@@ -5,6 +5,7 @@ import (
 
 	"github.com/agents-control/connector-engine/core/catalog"
 	"github.com/agents-control/connector-engine/core/evaluate"
+	"github.com/agents-control/connector-engine/core/exposure"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -96,8 +97,10 @@ func LoadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.Connect
 	}
 	if ok && e.Exposed {
 		f.LegC = map[string]bool{}
-		for _, n := range e.LegC {
-			f.LegC[n] = true
+		for _, key := range e.LegC {
+			if c, fn := exposure.ParseKey(key); c == connector {
+				f.LegC[fn] = true
+			}
 		}
 	}
 	return f, nil

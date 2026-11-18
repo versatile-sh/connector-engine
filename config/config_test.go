@@ -110,6 +110,7 @@ func TestProductionRefusesWhatSection14Lists(t *testing.T) {
 	}{
 		"empty issuer list": {func(c *config.Config) { c.Auth.Issuers = nil }, "auth.issuers", ""},
 		"local issuer":      {func(c *config.Config) { c.Auth.Issuers, c.Auth.LocalIssuer.Enabled = nil, true }, "auth.localIssuer.enabled", config.AckLocalIssuer},
+		"private egress":    {func(c *config.Config) { c.Runtime.AllowPrivateHosts = true }, "runtime.allowPrivateHosts", config.AckPrivateEgress},
 		"long agent tokens": {func(c *config.Config) { c.Auth.AgentTokenMaxLifetime = 48 * time.Hour }, "auth.agentTokenMaxLifetime", config.AckLongLivedTokens},
 		"trusted proxy":     {func(c *config.Config) { c.Auth.TrustedProxy.Listen = ":8081" }, "auth.trustedProxy.listen", config.AckTrustedProxy},
 		"manage mutation":   {func(c *config.Config) { c.Manage.MCP.Operations = []string{"read_only", "putRole"} }, "manage.mcp.operations", config.AckManageMutations},

@@ -58,7 +58,7 @@ func orNotFound(err error, format string, args ...any) error {
 
 func agentFunctions(ctx context.Context, e *Env, p port.Principal, in ListAgentFunctionsRequest) (AgentFunctions, error) {
 	list, err := e.Svc.ListAgentFunctions(ctx, p, in.subject(p))
-	out := AgentFunctions{Functions: make([]AgentFunction, len(list.Functions)), ApprovalTools: list.ApprovalTools}
+	out := AgentFunctions{Functions: make([]AgentFunction, len(list.Functions)), ApprovalTools: list.ApprovalTools, Exposure: list.Exposure}
 	for i, f := range list.Functions {
 		out.Functions[i] = AgentFunction{Name: f.Name, Connector: f.Connector, Function: f.Function, Mode: f.Mode, OverlayHash: f.OverlayHash}
 	}
@@ -147,8 +147,8 @@ var operations = []Operation{
 	op("removeTenant", del, "/v1/tenants/{tenant}", "RemoveTenant", accept, func(ctx context.Context, e *Env, p port.Principal, in TenantRequest) (port.Operation, error) {
 		return e.Svc.RemoveTenant(ctx, p, in.Tenant)
 	}),
-	op("lintListing", post, "/v1/listings:lint", "LintListing", ok200, func(ctx context.Context, e *Env, _ port.Principal, in LintListingRequest) (service.LintResult, error) {
-		return e.Svc.LintListing(ctx, in.Manifest, lintCapture(e, in.Capture))
+	op("lintListing", post, "/v1/listings:lint", "LintListing", ok200, func(ctx context.Context, e *Env, p port.Principal, in LintListingRequest) (service.LintResult, error) {
+		return e.Svc.LintListing(ctx, p, in.Manifest, lintCapture(e, in.Capture))
 	}),
 	op("reviewListing", post, "/v1/listings:review", "ReviewListing", ok200, func(ctx context.Context, e *Env, p port.Principal, in ReviewListingRequest) (port.ListingVersion, error) {
 		return e.Svc.ReviewListing(ctx, p, in.version(), in.ReviewInput)
@@ -284,6 +284,18 @@ var operations = []Operation{
 	}),
 	op("revokeCredential", del, "/v1/credentials/{id}", "RevokeCredential", gone, func(ctx context.Context, e *Env, p port.Principal, in CredentialRequest) (none, error) {
 		return done(e.Svc.RevokeCredential(ctx, p, in.ID))
+	}),
+	op("putClientRegistration", put, "/v1/issuers/client", "PutClientRegistration", ok200, func(ctx context.Context, e *Env, p port.Principal, in service.ClientRegistrationInput) (port.ClientRegistration, error) {
+		return e.Svc.PutClientRegistration(ctx, p, in)
+	}),
+	op("listCalls", get, "/v1/calls", "ListCalls", ok200, func(ctx context.Context, e *Env, p port.Principal, in ListCallsRequest) (Calls, error) {
+		return items[Calls](e.Svc.ListCalls(ctx, p, port.CallFilter{Agent: in.Agent, Session: in.Session, Connector: in.Connector, State: in.State}))
+	}),
+	op("listSources", get, "/v1/sources", "ListSources", ok200, func(ctx context.Context, e *Env, p port.Principal, _ none) (Sources, error) {
+		return items[Sources](e.Svc.ListSources(ctx, p))
+	}),
+	op("rotateKey", post, "/v1/secrets:rotate", "RotateKey", accept, func(ctx context.Context, e *Env, p port.Principal, in RotateKeyRequest) (port.Operation, error) {
+		return e.Svc.RotateKey(ctx, p, port.KeyScope{Root: in.Root, Tenant: in.Tenant})
 	}),
 	op("endSession", post, "/v1/sessions/{id}:end", "EndSession", gone, func(ctx context.Context, e *Env, p port.Principal, in SessionRequest) (none, error) {
 		return done(e.Svc.EndSession(ctx, p, in.ID))

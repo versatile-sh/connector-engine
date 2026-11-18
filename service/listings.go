@@ -33,10 +33,16 @@ func (s *Service) Capture(ctx context.Context, m port.Manifest) ([]port.RawDefin
 	return s.d.Runtime.ListFunctions(ctx, h)
 }
 
-// LintListing validates a manifest and, when capture is set, captures and scans its definitions; anyone may call it.
-func (s *Service) LintListing(ctx context.Context, m port.Manifest, capture CaptureFunc) (LintResult, error) {
+// LintListing validates a manifest; anyone may call it. Capturing and scanning the definitions starts the listing, so it needs the role that creates or reviews listings.
+func (s *Service) LintListing(ctx context.Context, p port.Principal, m port.Manifest, capture CaptureFunc) (LintResult, error) {
 	res := LintResult{Findings: listing.Lint(m, s.cfg.RequireDigest)}
-	if capture == nil || len(res.Findings) > 0 {
+	if capture == nil {
+		return res, nil
+	}
+	if err := s.authorize(ctx, p, authz.ListingReview, s.scopeResource(p)); err != nil {
+		return res, err
+	}
+	if len(res.Findings) > 0 {
 		return res, nil
 	}
 	defs, _, err := capture(ctx, m)
@@ -90,6 +96,9 @@ func (s *Service) SyncSource(ctx context.Context, p port.Principal, source strin
 				op.Counts["skipped"]++
 			}
 		}
+		if err := tx.PutSourceSync(port.SourceSync{Source: source, LastSync: s.now(), Imported: op.Counts["imported"], Skipped: op.Counts["skipped"]}); err != nil {
+			return err
+		}
 		return tx.PutOperation(op)
 	})
 	return op, err
@@ -121,7 +130,11 @@ func (s *Service) importManifest(tx port.Tx, source string, m port.Manifest) (bo
 	if err := tx.PutListing(l); err != nil {
 		return false, err
 	}
-	if err := tx.PutVersion(port.ListingVersion{Ref: vref, Manifest: m, Status: port.ListingActive, ImportedAt: s.now()}); err != nil {
+	status := port.ListingActive
+	if m.Source.Status == "deprecated" {
+		status = port.ListingDeprecated
+	}
+	if err := tx.PutVersion(port.ListingVersion{Ref: vref, Manifest: m, Status: status, ImportedAt: s.now()}); err != nil {
 		return false, err
 	}
 	return true, s.record(tx, port.Installation, "system", ref.String()+"@"+m.Version, evListingImported,

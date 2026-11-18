@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"encoding/json"
 	"slices"
 	"testing"
 
@@ -180,4 +181,37 @@ func TestTenantRowDenyOneFunction(t *testing.T) {
 	x := w.agent("x", "s1")
 	want(t, w.names(x), []string{"s__create_issue", "s__export", "s__search"}, "only delete_repo is gone")
 	want(t, w.call(x, "s__delete_repo", `{}`).Reason, port.ReasonDeniedByRow, "denied by the tenant row")
+}
+
+func TestAnApprovedHeldCallReturnsTheProjectedResult(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "*", port.ModeAsk)
+	def, _ := st.Definition("search", "Searches", `"outputSchema":{"type":"object","properties":{"name":{"type":"string"},"note":{"type":"string"}}}`)
+	_, _, list := definitions("Searches", "Creates an issue")
+	for i, d := range list {
+		if d.Name == "search" {
+			list[i] = def
+		}
+	}
+	w.Runtime.SetDefinitions(listing, list...)
+	w.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) {
+		return port.Result{Content: json.RawMessage(`[]`), Structured: json.RawMessage(`{"name":"Ana","note":"vip"}`)}, nil
+	})
+	res := st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", res.Changes[0].NewHash))
+	st.Ok(w.Svc.SetProjection(w.Ctx, w.admin, w.conn.ID, "search", true))
+	x := w.agent("x", "s1")
+	req := service.CallRequest{Name: "s__search", Arguments: json.RawMessage(`{"q":"a"}`), Fields: []string{"/name"}}
+
+	held := st.Ok(w.Svc.Call(w.Ctx, x, req))
+	want(t, held.Status, service.OutcomePending, "held")
+	w.decide(held.Approval.ID, port.DecisionApprove)
+	w.sweep()
+	w.sweep()
+	got := st.Ok(w.Svc.Call(w.Ctx, x, service.CallRequest{Name: "s__search", Arguments: json.RawMessage(`{"q":"a"}`)}))
+	want(t, got.Status, service.OutcomeResult, "delivered from the record")
+	want(t, string(got.Result.Structured), `{"name":"Ana"}`, "the stored paths trim the approved call's result")
 }

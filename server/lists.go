@@ -49,6 +49,12 @@ type (
 	Roles struct {
 		Items []port.RoleAssignment `json:"items"`
 	}
+	Calls struct {
+		Items []port.Call `json:"items"`
+	}
+	Sources struct {
+		Items []service.SourceStatus `json:"items"`
+	}
 	GroupMembers struct {
 		Items []port.GroupMember `json:"items"`
 	}

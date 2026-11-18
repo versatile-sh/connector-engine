@@ -312,6 +312,7 @@ type AgentFunctions struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Functions     []*AgentFunction       `protobuf:"bytes,1,rep,name=functions,proto3" json:"functions,omitempty"`
 	ApprovalTools bool                   `protobuf:"varint,2,opt,name=approval_tools,json=approvalTools,proto3" json:"approval_tools,omitempty"`
+	Exposure      *Exposure              `protobuf:"bytes,3,opt,name=exposure,proto3" json:"exposure,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -358,6 +359,13 @@ func (x *AgentFunctions) GetApprovalTools() bool {
 		return x.ApprovalTools
 	}
 	return false
+}
+
+func (x *AgentFunctions) GetExposure() *Exposure {
+	if x != nil {
+		return x.Exposure
+	}
+	return nil
 }
 
 type AgentLevelRequest struct {
@@ -639,22 +647,23 @@ type Approval struct {
 	InnerOf            string                 `protobuf:"bytes,11,opt,name=inner_of,json=innerOf,proto3" json:"inner_of,omitempty"`
 	Arguments          *Sealed                `protobuf:"bytes,12,opt,name=arguments,proto3" json:"arguments,omitempty"`
 	CallHash           string                 `protobuf:"bytes,13,opt,name=call_hash,json=callHash,proto3" json:"call_hash,omitempty"`
-	Mode               string                 `protobuf:"bytes,14,opt,name=mode,proto3" json:"mode,omitempty"`
-	Approvers          []string               `protobuf:"bytes,15,rep,name=approvers,proto3" json:"approvers,omitempty"`
-	State              string                 `protobuf:"bytes,16,opt,name=state,proto3" json:"state,omitempty"`
-	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	ExpiresAt          *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	DecidedBy          string                 `protobuf:"bytes,19,opt,name=decided_by,json=decidedBy,proto3" json:"decided_by,omitempty"`
-	DecidedAt          *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
-	Channel            string                 `protobuf:"bytes,21,opt,name=channel,proto3" json:"channel,omitempty"`
-	DecisionNote       string                 `protobuf:"bytes,22,opt,name=decision_note,json=decisionNote,proto3" json:"decision_note,omitempty"`
-	SessionGrant       bool                   `protobuf:"varint,23,opt,name=session_grant,json=sessionGrant,proto3" json:"session_grant,omitempty"`
-	Reason             string                 `protobuf:"bytes,24,opt,name=reason,proto3" json:"reason,omitempty"`
-	DeliveredAt        *timestamppb.Timestamp `protobuf:"bytes,25,opt,name=delivered_at,json=deliveredAt,proto3" json:"delivered_at,omitempty"`
-	ExecutionStartedAt *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=execution_started_at,json=executionStartedAt,proto3" json:"execution_started_at,omitempty"`
-	CallDeadline       int64                  `protobuf:"varint,27,opt,name=call_deadline,json=callDeadline,proto3" json:"call_deadline,omitempty"`
-	ResultRef          *Sealed                `protobuf:"bytes,28,opt,name=result_ref,json=resultRef,proto3" json:"result_ref,omitempty"`
-	ResultExpiresAt    *timestamppb.Timestamp `protobuf:"bytes,29,opt,name=result_expires_at,json=resultExpiresAt,proto3" json:"result_expires_at,omitempty"`
+	Fields             []string               `protobuf:"bytes,14,rep,name=fields,proto3" json:"fields,omitempty"`
+	Mode               string                 `protobuf:"bytes,15,opt,name=mode,proto3" json:"mode,omitempty"`
+	Approvers          []string               `protobuf:"bytes,16,rep,name=approvers,proto3" json:"approvers,omitempty"`
+	State              string                 `protobuf:"bytes,17,opt,name=state,proto3" json:"state,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,18,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ExpiresAt          *timestamppb.Timestamp `protobuf:"bytes,19,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	DecidedBy          string                 `protobuf:"bytes,20,opt,name=decided_by,json=decidedBy,proto3" json:"decided_by,omitempty"`
+	DecidedAt          *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
+	Channel            string                 `protobuf:"bytes,22,opt,name=channel,proto3" json:"channel,omitempty"`
+	DecisionNote       string                 `protobuf:"bytes,23,opt,name=decision_note,json=decisionNote,proto3" json:"decision_note,omitempty"`
+	SessionGrant       bool                   `protobuf:"varint,24,opt,name=session_grant,json=sessionGrant,proto3" json:"session_grant,omitempty"`
+	Reason             string                 `protobuf:"bytes,25,opt,name=reason,proto3" json:"reason,omitempty"`
+	DeliveredAt        *timestamppb.Timestamp `protobuf:"bytes,26,opt,name=delivered_at,json=deliveredAt,proto3" json:"delivered_at,omitempty"`
+	ExecutionStartedAt *timestamppb.Timestamp `protobuf:"bytes,27,opt,name=execution_started_at,json=executionStartedAt,proto3" json:"execution_started_at,omitempty"`
+	CallDeadline       int64                  `protobuf:"varint,28,opt,name=call_deadline,json=callDeadline,proto3" json:"call_deadline,omitempty"`
+	ResultRef          *Sealed                `protobuf:"bytes,29,opt,name=result_ref,json=resultRef,proto3" json:"result_ref,omitempty"`
+	ResultExpiresAt    *timestamppb.Timestamp `protobuf:"bytes,30,opt,name=result_expires_at,json=resultExpiresAt,proto3" json:"result_expires_at,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -778,6 +787,13 @@ func (x *Approval) GetCallHash() string {
 		return x.CallHash
 	}
 	return ""
+}
+
+func (x *Approval) GetFields() []string {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
 }
 
 func (x *Approval) GetMode() string {
@@ -1736,6 +1752,50 @@ func (x *CallRequest) GetId() string {
 	return ""
 }
 
+type Calls struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*Call                `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Calls) Reset() {
+	*x = Calls{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Calls) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Calls) ProtoMessage() {}
+
+func (x *Calls) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Calls.ProtoReflect.Descriptor instead.
+func (*Calls) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *Calls) GetItems() []*Call {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 type CatalogPolicy struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Tenant        string                 `protobuf:"bytes,1,opt,name=tenant,proto3" json:"tenant,omitempty"`
@@ -1747,7 +1807,7 @@ type CatalogPolicy struct {
 
 func (x *CatalogPolicy) Reset() {
 	*x = CatalogPolicy{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[22]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1759,7 +1819,7 @@ func (x *CatalogPolicy) String() string {
 func (*CatalogPolicy) ProtoMessage() {}
 
 func (x *CatalogPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[22]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1772,7 +1832,7 @@ func (x *CatalogPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CatalogPolicy.ProtoReflect.Descriptor instead.
 func (*CatalogPolicy) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{22}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CatalogPolicy) GetTenant() string {
@@ -1815,7 +1875,7 @@ type CatalogRule struct {
 
 func (x *CatalogRule) Reset() {
 	*x = CatalogRule{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[23]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1827,7 +1887,7 @@ func (x *CatalogRule) String() string {
 func (*CatalogRule) ProtoMessage() {}
 
 func (x *CatalogRule) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[23]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1840,7 +1900,7 @@ func (x *CatalogRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CatalogRule.ProtoReflect.Descriptor instead.
 func (*CatalogRule) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{23}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *CatalogRule) GetId() string {
@@ -1929,7 +1989,7 @@ type CatalogRules struct {
 
 func (x *CatalogRules) Reset() {
 	*x = CatalogRules{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[24]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1941,7 +2001,7 @@ func (x *CatalogRules) String() string {
 func (*CatalogRules) ProtoMessage() {}
 
 func (x *CatalogRules) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[24]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1954,7 +2014,7 @@ func (x *CatalogRules) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CatalogRules.ProtoReflect.Descriptor instead.
 func (*CatalogRules) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{24}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CatalogRules) GetItems() []*CatalogRule {
@@ -1977,7 +2037,7 @@ type Change struct {
 
 func (x *Change) Reset() {
 	*x = Change{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[25]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1989,7 +2049,7 @@ func (x *Change) String() string {
 func (*Change) ProtoMessage() {}
 
 func (x *Change) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[25]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2002,7 +2062,7 @@ func (x *Change) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Change.ProtoReflect.Descriptor instead.
 func (*Change) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{25}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *Change) GetFunction() string {
@@ -2051,7 +2111,7 @@ type ClassifyFunctionRequest struct {
 
 func (x *ClassifyFunctionRequest) Reset() {
 	*x = ClassifyFunctionRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[26]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2063,7 +2123,7 @@ func (x *ClassifyFunctionRequest) String() string {
 func (*ClassifyFunctionRequest) ProtoMessage() {}
 
 func (x *ClassifyFunctionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[26]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2076,7 +2136,7 @@ func (x *ClassifyFunctionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClassifyFunctionRequest.ProtoReflect.Descriptor instead.
 func (*ClassifyFunctionRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{26}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ClassifyFunctionRequest) GetId() string {
@@ -2100,6 +2160,158 @@ func (x *ClassifyFunctionRequest) GetClass() string {
 	return ""
 }
 
+type ClientRegistration struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tenant        string                 `protobuf:"bytes,1,opt,name=tenant,proto3" json:"tenant,omitempty"`
+	Issuer        string                 `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	ClientId      string                 `protobuf:"bytes,3,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	Secret        *Sealed                `protobuf:"bytes,4,opt,name=secret,proto3" json:"secret,omitempty"`
+	RedirectUrl   string                 `protobuf:"bytes,5,opt,name=redirect_url,json=redirectUrl,proto3" json:"redirect_url,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClientRegistration) Reset() {
+	*x = ClientRegistration{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClientRegistration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientRegistration) ProtoMessage() {}
+
+func (x *ClientRegistration) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientRegistration.ProtoReflect.Descriptor instead.
+func (*ClientRegistration) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ClientRegistration) GetTenant() string {
+	if x != nil {
+		return x.Tenant
+	}
+	return ""
+}
+
+func (x *ClientRegistration) GetIssuer() string {
+	if x != nil {
+		return x.Issuer
+	}
+	return ""
+}
+
+func (x *ClientRegistration) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *ClientRegistration) GetSecret() *Sealed {
+	if x != nil {
+		return x.Secret
+	}
+	return nil
+}
+
+func (x *ClientRegistration) GetRedirectUrl() string {
+	if x != nil {
+		return x.RedirectUrl
+	}
+	return ""
+}
+
+func (x *ClientRegistration) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type ClientRegistrationInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Issuer        string                 `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	ClientId      string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	Secret        string                 `protobuf:"bytes,3,opt,name=secret,proto3" json:"secret,omitempty"`
+	RedirectUrl   string                 `protobuf:"bytes,4,opt,name=redirect_url,json=redirectUrl,proto3" json:"redirect_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClientRegistrationInput) Reset() {
+	*x = ClientRegistrationInput{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClientRegistrationInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientRegistrationInput) ProtoMessage() {}
+
+func (x *ClientRegistrationInput) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientRegistrationInput.ProtoReflect.Descriptor instead.
+func (*ClientRegistrationInput) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ClientRegistrationInput) GetIssuer() string {
+	if x != nil {
+		return x.Issuer
+	}
+	return ""
+}
+
+func (x *ClientRegistrationInput) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *ClientRegistrationInput) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
+}
+
+func (x *ClientRegistrationInput) GetRedirectUrl() string {
+	if x != nil {
+		return x.RedirectUrl
+	}
+	return ""
+}
+
 type CompleteConnectRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	State         string                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
@@ -2110,7 +2322,7 @@ type CompleteConnectRequest struct {
 
 func (x *CompleteConnectRequest) Reset() {
 	*x = CompleteConnectRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[27]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2122,7 +2334,7 @@ func (x *CompleteConnectRequest) String() string {
 func (*CompleteConnectRequest) ProtoMessage() {}
 
 func (x *CompleteConnectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[27]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2135,7 +2347,7 @@ func (x *CompleteConnectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteConnectRequest.ProtoReflect.Descriptor instead.
 func (*CompleteConnectRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{27}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CompleteConnectRequest) GetState() string {
@@ -2164,7 +2376,7 @@ type ConfigField struct {
 
 func (x *ConfigField) Reset() {
 	*x = ConfigField{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[28]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2176,7 +2388,7 @@ func (x *ConfigField) String() string {
 func (*ConfigField) ProtoMessage() {}
 
 func (x *ConfigField) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[28]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2189,7 +2401,7 @@ func (x *ConfigField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigField.ProtoReflect.Descriptor instead.
 func (*ConfigField) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{28}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ConfigField) GetKey() string {
@@ -2231,7 +2443,7 @@ type Conformance struct {
 
 func (x *Conformance) Reset() {
 	*x = Conformance{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[29]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2243,7 +2455,7 @@ func (x *Conformance) String() string {
 func (*Conformance) ProtoMessage() {}
 
 func (x *Conformance) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[29]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2256,7 +2468,7 @@ func (x *Conformance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Conformance.ProtoReflect.Descriptor instead.
 func (*Conformance) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{29}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *Conformance) GetReport() string {
@@ -2290,7 +2502,7 @@ type ConnectStart struct {
 
 func (x *ConnectStart) Reset() {
 	*x = ConnectStart{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[30]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2302,7 +2514,7 @@ func (x *ConnectStart) String() string {
 func (*ConnectStart) ProtoMessage() {}
 
 func (x *ConnectStart) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[30]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2315,7 +2527,7 @@ func (x *ConnectStart) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectStart.ProtoReflect.Descriptor instead.
 func (*ConnectStart) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{30}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ConnectStart) GetState() string {
@@ -2345,15 +2557,16 @@ type Connector struct {
 	CallTimeout      int64                  `protobuf:"varint,9,opt,name=call_timeout,json=callTimeout,proto3" json:"call_timeout,omitempty"`
 	ApprovalTimeout  int64                  `protobuf:"varint,10,opt,name=approval_timeout,json=approvalTimeout,proto3" json:"approval_timeout,omitempty"`
 	LastRelistAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=last_relist_at,json=lastRelistAt,proto3" json:"last_relist_at,omitempty"`
-	RemovedAt        *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=removed_at,json=removedAt,proto3" json:"removed_at,omitempty"`
-	Revision         int64                  `protobuf:"varint,13,opt,name=revision,proto3" json:"revision,omitempty"`
+	RelistAfter      *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=relist_after,json=relistAfter,proto3" json:"relist_after,omitempty"`
+	RemovedAt        *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=removed_at,json=removedAt,proto3" json:"removed_at,omitempty"`
+	Revision         int64                  `protobuf:"varint,14,opt,name=revision,proto3" json:"revision,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Connector) Reset() {
 	*x = Connector{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[31]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2365,7 +2578,7 @@ func (x *Connector) String() string {
 func (*Connector) ProtoMessage() {}
 
 func (x *Connector) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[31]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2378,7 +2591,7 @@ func (x *Connector) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Connector.ProtoReflect.Descriptor instead.
 func (*Connector) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{31}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *Connector) GetId() string {
@@ -2458,6 +2671,13 @@ func (x *Connector) GetLastRelistAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Connector) GetRelistAfter() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RelistAfter
+	}
+	return nil
+}
+
 func (x *Connector) GetRemovedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.RemovedAt
@@ -2481,7 +2701,7 @@ type ConnectorRequest struct {
 
 func (x *ConnectorRequest) Reset() {
 	*x = ConnectorRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[32]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2493,7 +2713,7 @@ func (x *ConnectorRequest) String() string {
 func (*ConnectorRequest) ProtoMessage() {}
 
 func (x *ConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[32]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2506,7 +2726,7 @@ func (x *ConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorRequest.ProtoReflect.Descriptor instead.
 func (*ConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{32}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ConnectorRequest) GetId() string {
@@ -2527,7 +2747,7 @@ type ConnectorView struct {
 
 func (x *ConnectorView) Reset() {
 	*x = ConnectorView{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[33]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2539,7 +2759,7 @@ func (x *ConnectorView) String() string {
 func (*ConnectorView) ProtoMessage() {}
 
 func (x *ConnectorView) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[33]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2552,7 +2772,7 @@ func (x *ConnectorView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorView.ProtoReflect.Descriptor instead.
 func (*ConnectorView) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{33}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ConnectorView) GetConnector() *Connector {
@@ -2585,7 +2805,7 @@ type ConnectorViews struct {
 
 func (x *ConnectorViews) Reset() {
 	*x = ConnectorViews{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[34]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2597,7 +2817,7 @@ func (x *ConnectorViews) String() string {
 func (*ConnectorViews) ProtoMessage() {}
 
 func (x *ConnectorViews) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[34]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2610,7 +2830,7 @@ func (x *ConnectorViews) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectorViews.ProtoReflect.Descriptor instead.
 func (*ConnectorViews) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{34}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *ConnectorViews) GetItems() []*ConnectorView {
@@ -2630,7 +2850,7 @@ type CreateListingInput struct {
 
 func (x *CreateListingInput) Reset() {
 	*x = CreateListingInput{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[35]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2642,7 +2862,7 @@ func (x *CreateListingInput) String() string {
 func (*CreateListingInput) ProtoMessage() {}
 
 func (x *CreateListingInput) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[35]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2655,7 +2875,7 @@ func (x *CreateListingInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateListingInput.ProtoReflect.Descriptor instead.
 func (*CreateListingInput) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{35}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CreateListingInput) GetManifest() *Manifest {
@@ -2699,7 +2919,7 @@ type Credential struct {
 
 func (x *Credential) Reset() {
 	*x = Credential{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[36]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2711,7 +2931,7 @@ func (x *Credential) String() string {
 func (*Credential) ProtoMessage() {}
 
 func (x *Credential) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[36]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2724,7 +2944,7 @@ func (x *Credential) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Credential.ProtoReflect.Descriptor instead.
 func (*Credential) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{36}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *Credential) GetId() string {
@@ -2877,7 +3097,7 @@ type CredentialInput struct {
 
 func (x *CredentialInput) Reset() {
 	*x = CredentialInput{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[37]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2889,7 +3109,7 @@ func (x *CredentialInput) String() string {
 func (*CredentialInput) ProtoMessage() {}
 
 func (x *CredentialInput) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[37]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2902,7 +3122,7 @@ func (x *CredentialInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CredentialInput.ProtoReflect.Descriptor instead.
 func (*CredentialInput) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{37}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *CredentialInput) GetConnector() string {
@@ -2977,7 +3197,7 @@ type CredentialRequest struct {
 
 func (x *CredentialRequest) Reset() {
 	*x = CredentialRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[38]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2989,7 +3209,7 @@ func (x *CredentialRequest) String() string {
 func (*CredentialRequest) ProtoMessage() {}
 
 func (x *CredentialRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[38]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3002,7 +3222,7 @@ func (x *CredentialRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CredentialRequest.ProtoReflect.Descriptor instead.
 func (*CredentialRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{38}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *CredentialRequest) GetId() string {
@@ -3021,7 +3241,7 @@ type Credentials struct {
 
 func (x *Credentials) Reset() {
 	*x = Credentials{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[39]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3033,7 +3253,7 @@ func (x *Credentials) String() string {
 func (*Credentials) ProtoMessage() {}
 
 func (x *Credentials) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[39]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3046,7 +3266,7 @@ func (x *Credentials) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Credentials.ProtoReflect.Descriptor instead.
 func (*Credentials) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{39}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *Credentials) GetItems() []*Credential {
@@ -3068,7 +3288,7 @@ type DecideApprovalRequest struct {
 
 func (x *DecideApprovalRequest) Reset() {
 	*x = DecideApprovalRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[40]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3080,7 +3300,7 @@ func (x *DecideApprovalRequest) String() string {
 func (*DecideApprovalRequest) ProtoMessage() {}
 
 func (x *DecideApprovalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[40]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3093,7 +3313,7 @@ func (x *DecideApprovalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideApprovalRequest.ProtoReflect.Descriptor instead.
 func (*DecideApprovalRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{40}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *DecideApprovalRequest) GetId() string {
@@ -3132,13 +3352,14 @@ type Decision struct {
 	Notes         []string               `protobuf:"bytes,4,rep,name=notes,proto3" json:"notes,omitempty"`
 	Matched       []string               `protobuf:"bytes,5,rep,name=matched,proto3" json:"matched,omitempty"`
 	Layers        []string               `protobuf:"bytes,6,rep,name=layers,proto3" json:"layers,omitempty"`
+	Exposed       bool                   `protobuf:"varint,7,opt,name=exposed,proto3" json:"exposed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Decision) Reset() {
 	*x = Decision{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[41]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3150,7 +3371,7 @@ func (x *Decision) String() string {
 func (*Decision) ProtoMessage() {}
 
 func (x *Decision) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[41]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3163,7 +3384,7 @@ func (x *Decision) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Decision.ProtoReflect.Descriptor instead.
 func (*Decision) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{41}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *Decision) GetMode() string {
@@ -3208,6 +3429,13 @@ func (x *Decision) GetLayers() []string {
 	return nil
 }
 
+func (x *Decision) GetExposed() bool {
+	if x != nil {
+		return x.Exposed
+	}
+	return false
+}
+
 type Descriptor struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	From          string                 `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
@@ -3219,7 +3447,7 @@ type Descriptor struct {
 
 func (x *Descriptor) Reset() {
 	*x = Descriptor{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[42]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3231,7 +3459,7 @@ func (x *Descriptor) String() string {
 func (*Descriptor) ProtoMessage() {}
 
 func (x *Descriptor) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[42]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3244,7 +3472,7 @@ func (x *Descriptor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Descriptor.ProtoReflect.Descriptor instead.
 func (*Descriptor) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{42}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *Descriptor) GetFrom() string {
@@ -3282,7 +3510,7 @@ type Document struct {
 
 func (x *Document) Reset() {
 	*x = Document{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[43]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3294,7 +3522,7 @@ func (x *Document) String() string {
 func (*Document) ProtoMessage() {}
 
 func (x *Document) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[43]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3307,7 +3535,7 @@ func (x *Document) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Document.ProtoReflect.Descriptor instead.
 func (*Document) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{43}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *Document) GetEngine() string {
@@ -3362,7 +3590,7 @@ type Effects struct {
 
 func (x *Effects) Reset() {
 	*x = Effects{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[44]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3374,7 +3602,7 @@ func (x *Effects) String() string {
 func (*Effects) ProtoMessage() {}
 
 func (x *Effects) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[44]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3387,7 +3615,7 @@ func (x *Effects) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Effects.ProtoReflect.Descriptor instead.
 func (*Effects) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{44}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *Effects) GetDropSessionRows() bool {
@@ -3413,7 +3641,7 @@ type Egress struct {
 
 func (x *Egress) Reset() {
 	*x = Egress{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[45]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3425,7 +3653,7 @@ func (x *Egress) String() string {
 func (*Egress) ProtoMessage() {}
 
 func (x *Egress) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[45]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3438,7 +3666,7 @@ func (x *Egress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Egress.ProtoReflect.Descriptor instead.
 func (*Egress) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{45}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *Egress) GetAllowHosts() []string {
@@ -3466,7 +3694,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[46]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3478,7 +3706,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[46]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3491,7 +3719,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{46}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *Event) GetId() string {
@@ -3576,7 +3804,7 @@ type EventType struct {
 
 func (x *EventType) Reset() {
 	*x = EventType{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[47]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3588,7 +3816,7 @@ func (x *EventType) String() string {
 func (*EventType) ProtoMessage() {}
 
 func (x *EventType) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[47]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3601,7 +3829,7 @@ func (x *EventType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventType.ProtoReflect.Descriptor instead.
 func (*EventType) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{47}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *EventType) GetNumber() int64 {
@@ -3641,7 +3869,7 @@ type EventTypeRequest struct {
 
 func (x *EventTypeRequest) Reset() {
 	*x = EventTypeRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[48]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3653,7 +3881,7 @@ func (x *EventTypeRequest) String() string {
 func (*EventTypeRequest) ProtoMessage() {}
 
 func (x *EventTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[48]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3666,7 +3894,7 @@ func (x *EventTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypeRequest.ProtoReflect.Descriptor instead.
 func (*EventTypeRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{48}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *EventTypeRequest) GetType() string {
@@ -3685,7 +3913,7 @@ type EventTypes struct {
 
 func (x *EventTypes) Reset() {
 	*x = EventTypes{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[49]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3697,7 +3925,7 @@ func (x *EventTypes) String() string {
 func (*EventTypes) ProtoMessage() {}
 
 func (x *EventTypes) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[49]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3710,7 +3938,7 @@ func (x *EventTypes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTypes.ProtoReflect.Descriptor instead.
 func (*EventTypes) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{49}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *EventTypes) GetTypes() []*EventType {
@@ -3736,7 +3964,7 @@ type ExplainAccessRequest struct {
 
 func (x *ExplainAccessRequest) Reset() {
 	*x = ExplainAccessRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[50]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3748,7 +3976,7 @@ func (x *ExplainAccessRequest) String() string {
 func (*ExplainAccessRequest) ProtoMessage() {}
 
 func (x *ExplainAccessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[50]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3761,7 +3989,7 @@ func (x *ExplainAccessRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExplainAccessRequest.ProtoReflect.Descriptor instead.
 func (*ExplainAccessRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{50}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ExplainAccessRequest) GetWorkspace() string {
@@ -3832,7 +4060,7 @@ type ExplainVisibilityRequest struct {
 
 func (x *ExplainVisibilityRequest) Reset() {
 	*x = ExplainVisibilityRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[51]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3844,7 +4072,7 @@ func (x *ExplainVisibilityRequest) String() string {
 func (*ExplainVisibilityRequest) ProtoMessage() {}
 
 func (x *ExplainVisibilityRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[51]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3857,7 +4085,7 @@ func (x *ExplainVisibilityRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExplainVisibilityRequest.ProtoReflect.Descriptor instead.
 func (*ExplainVisibilityRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{51}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ExplainVisibilityRequest) GetWorkspace() string {
@@ -3888,6 +4116,90 @@ func (x *ExplainVisibilityRequest) GetName() string {
 	return ""
 }
 
+type Exposure struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tenant        string                 `protobuf:"bytes,1,opt,name=tenant,proto3" json:"tenant,omitempty"`
+	Agent         string                 `protobuf:"bytes,2,opt,name=agent,proto3" json:"agent,omitempty"`
+	Exposed       bool                   `protobuf:"varint,3,opt,name=exposed,proto3" json:"exposed,omitempty"`
+	LegA          []string               `protobuf:"bytes,4,rep,name=leg_a,json=legA,proto3" json:"leg_a,omitempty"`
+	LegB          []string               `protobuf:"bytes,5,rep,name=leg_b,json=legB,proto3" json:"leg_b,omitempty"`
+	LegC          []string               `protobuf:"bytes,6,rep,name=leg_c,json=legC,proto3" json:"leg_c,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Exposure) Reset() {
+	*x = Exposure{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Exposure) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Exposure) ProtoMessage() {}
+
+func (x *Exposure) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Exposure.ProtoReflect.Descriptor instead.
+func (*Exposure) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *Exposure) GetTenant() string {
+	if x != nil {
+		return x.Tenant
+	}
+	return ""
+}
+
+func (x *Exposure) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
+func (x *Exposure) GetExposed() bool {
+	if x != nil {
+		return x.Exposed
+	}
+	return false
+}
+
+func (x *Exposure) GetLegA() []string {
+	if x != nil {
+		return x.LegA
+	}
+	return nil
+}
+
+func (x *Exposure) GetLegB() []string {
+	if x != nil {
+		return x.LegB
+	}
+	return nil
+}
+
+func (x *Exposure) GetLegC() []string {
+	if x != nil {
+		return x.LegC
+	}
+	return nil
+}
+
 type Finding struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
@@ -3899,7 +4211,7 @@ type Finding struct {
 
 func (x *Finding) Reset() {
 	*x = Finding{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[52]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3911,7 +4223,7 @@ func (x *Finding) String() string {
 func (*Finding) ProtoMessage() {}
 
 func (x *Finding) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[52]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3924,7 +4236,7 @@ func (x *Finding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Finding.ProtoReflect.Descriptor instead.
 func (*Finding) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{52}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *Finding) GetKind() string {
@@ -3973,7 +4285,7 @@ type Function struct {
 
 func (x *Function) Reset() {
 	*x = Function{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[53]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3985,7 +4297,7 @@ func (x *Function) String() string {
 func (*Function) ProtoMessage() {}
 
 func (x *Function) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[53]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3998,7 +4310,7 @@ func (x *Function) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Function.ProtoReflect.Descriptor instead.
 func (*Function) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{53}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *Function) GetTenant() string {
@@ -4143,7 +4455,7 @@ type FunctionDef struct {
 
 func (x *FunctionDef) Reset() {
 	*x = FunctionDef{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[54]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4155,7 +4467,7 @@ func (x *FunctionDef) String() string {
 func (*FunctionDef) ProtoMessage() {}
 
 func (x *FunctionDef) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[54]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4168,7 +4480,7 @@ func (x *FunctionDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FunctionDef.ProtoReflect.Descriptor instead.
 func (*FunctionDef) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{54}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *FunctionDef) GetName() string {
@@ -4286,7 +4598,7 @@ type FunctionRequest struct {
 
 func (x *FunctionRequest) Reset() {
 	*x = FunctionRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[55]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4298,7 +4610,7 @@ func (x *FunctionRequest) String() string {
 func (*FunctionRequest) ProtoMessage() {}
 
 func (x *FunctionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[55]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4311,7 +4623,7 @@ func (x *FunctionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FunctionRequest.ProtoReflect.Descriptor instead.
 func (*FunctionRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{55}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *FunctionRequest) GetId() string {
@@ -4337,7 +4649,7 @@ type Functions struct {
 
 func (x *Functions) Reset() {
 	*x = Functions{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[56]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4349,7 +4661,7 @@ func (x *Functions) String() string {
 func (*Functions) ProtoMessage() {}
 
 func (x *Functions) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[56]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4362,7 +4674,7 @@ func (x *Functions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Functions.ProtoReflect.Descriptor instead.
 func (*Functions) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{56}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *Functions) GetItems() []*Function {
@@ -4384,7 +4696,7 @@ type GRPC struct {
 
 func (x *GRPC) Reset() {
 	*x = GRPC{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[57]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4396,7 +4708,7 @@ func (x *GRPC) String() string {
 func (*GRPC) ProtoMessage() {}
 
 func (x *GRPC) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[57]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4409,7 +4721,7 @@ func (x *GRPC) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GRPC.ProtoReflect.Descriptor instead.
 func (*GRPC) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{57}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *GRPC) GetTarget() string {
@@ -4452,7 +4764,7 @@ type GRPCFunction struct {
 
 func (x *GRPCFunction) Reset() {
 	*x = GRPCFunction{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[58]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4464,7 +4776,7 @@ func (x *GRPCFunction) String() string {
 func (*GRPCFunction) ProtoMessage() {}
 
 func (x *GRPCFunction) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[58]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4477,7 +4789,7 @@ func (x *GRPCFunction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GRPCFunction.ProtoReflect.Descriptor instead.
 func (*GRPCFunction) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{58}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GRPCFunction) GetName() string {
@@ -4520,7 +4832,7 @@ type GetListingRequest struct {
 
 func (x *GetListingRequest) Reset() {
 	*x = GetListingRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[59]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4532,7 +4844,7 @@ func (x *GetListingRequest) String() string {
 func (*GetListingRequest) ProtoMessage() {}
 
 func (x *GetListingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[59]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4545,7 +4857,7 @@ func (x *GetListingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetListingRequest.ProtoReflect.Descriptor instead.
 func (*GetListingRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{59}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *GetListingRequest) GetWorkspace() string {
@@ -4601,7 +4913,7 @@ type Grant struct {
 
 func (x *Grant) Reset() {
 	*x = Grant{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[60]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4613,7 +4925,7 @@ func (x *Grant) String() string {
 func (*Grant) ProtoMessage() {}
 
 func (x *Grant) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[60]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4626,7 +4938,7 @@ func (x *Grant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Grant.ProtoReflect.Descriptor instead.
 func (*Grant) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{60}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *Grant) GetId() string {
@@ -4757,7 +5069,7 @@ type GrantRequest struct {
 
 func (x *GrantRequest) Reset() {
 	*x = GrantRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[61]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4769,7 +5081,7 @@ func (x *GrantRequest) String() string {
 func (*GrantRequest) ProtoMessage() {}
 
 func (x *GrantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[61]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4782,7 +5094,7 @@ func (x *GrantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantRequest.ProtoReflect.Descriptor instead.
 func (*GrantRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{61}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *GrantRequest) GetId() string {
@@ -4803,7 +5115,7 @@ type GrantResult struct {
 
 func (x *GrantResult) Reset() {
 	*x = GrantResult{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[62]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4815,7 +5127,7 @@ func (x *GrantResult) String() string {
 func (*GrantResult) ProtoMessage() {}
 
 func (x *GrantResult) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[62]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4828,7 +5140,7 @@ func (x *GrantResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantResult.ProtoReflect.Descriptor instead.
 func (*GrantResult) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{62}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *GrantResult) GetGrant() *Grant {
@@ -4861,7 +5173,7 @@ type Grants struct {
 
 func (x *Grants) Reset() {
 	*x = Grants{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[63]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4873,7 +5185,7 @@ func (x *Grants) String() string {
 func (*Grants) ProtoMessage() {}
 
 func (x *Grants) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[63]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4886,7 +5198,7 @@ func (x *Grants) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Grants.ProtoReflect.Descriptor instead.
 func (*Grants) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{63}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *Grants) GetItems() []*Grant {
@@ -4907,7 +5219,7 @@ type GroupMember struct {
 
 func (x *GroupMember) Reset() {
 	*x = GroupMember{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[64]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4919,7 +5231,7 @@ func (x *GroupMember) String() string {
 func (*GroupMember) ProtoMessage() {}
 
 func (x *GroupMember) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[64]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4932,7 +5244,7 @@ func (x *GroupMember) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupMember.ProtoReflect.Descriptor instead.
 func (*GroupMember) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{64}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *GroupMember) GetTenant() string {
@@ -4965,7 +5277,7 @@ type GroupMembers struct {
 
 func (x *GroupMembers) Reset() {
 	*x = GroupMembers{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[65]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4977,7 +5289,7 @@ func (x *GroupMembers) String() string {
 func (*GroupMembers) ProtoMessage() {}
 
 func (x *GroupMembers) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[65]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4990,7 +5302,7 @@ func (x *GroupMembers) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupMembers.ProtoReflect.Descriptor instead.
 func (*GroupMembers) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{65}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *GroupMembers) GetItems() []*GroupMember {
@@ -5015,7 +5327,7 @@ type InstallInput struct {
 
 func (x *InstallInput) Reset() {
 	*x = InstallInput{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[66]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5027,7 +5339,7 @@ func (x *InstallInput) String() string {
 func (*InstallInput) ProtoMessage() {}
 
 func (x *InstallInput) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[66]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5040,7 +5352,7 @@ func (x *InstallInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstallInput.ProtoReflect.Descriptor instead.
 func (*InstallInput) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{66}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *InstallInput) GetWorkspace() string {
@@ -5106,7 +5418,7 @@ type Level struct {
 
 func (x *Level) Reset() {
 	*x = Level{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[67]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5118,7 +5430,7 @@ func (x *Level) String() string {
 func (*Level) ProtoMessage() {}
 
 func (x *Level) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[67]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5131,7 +5443,7 @@ func (x *Level) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Level.ProtoReflect.Descriptor instead.
 func (*Level) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{67}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *Level) GetAnswered() bool {
@@ -5186,7 +5498,7 @@ type LevelRequest struct {
 
 func (x *LevelRequest) Reset() {
 	*x = LevelRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[68]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5198,7 +5510,7 @@ func (x *LevelRequest) String() string {
 func (*LevelRequest) ProtoMessage() {}
 
 func (x *LevelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[68]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5211,7 +5523,7 @@ func (x *LevelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LevelRequest.ProtoReflect.Descriptor instead.
 func (*LevelRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{68}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *LevelRequest) GetId() string {
@@ -5238,7 +5550,7 @@ type LintListingRequest struct {
 
 func (x *LintListingRequest) Reset() {
 	*x = LintListingRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[69]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5250,7 +5562,7 @@ func (x *LintListingRequest) String() string {
 func (*LintListingRequest) ProtoMessage() {}
 
 func (x *LintListingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[69]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5263,7 +5575,7 @@ func (x *LintListingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LintListingRequest.ProtoReflect.Descriptor instead.
 func (*LintListingRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{69}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *LintListingRequest) GetManifest() *Manifest {
@@ -5290,7 +5602,7 @@ type LintResult struct {
 
 func (x *LintResult) Reset() {
 	*x = LintResult{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[70]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5302,7 +5614,7 @@ func (x *LintResult) String() string {
 func (*LintResult) ProtoMessage() {}
 
 func (x *LintResult) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[70]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5315,7 +5627,7 @@ func (x *LintResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LintResult.ProtoReflect.Descriptor instead.
 func (*LintResult) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{70}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *LintResult) GetFindings() []*Finding {
@@ -5346,7 +5658,7 @@ type ListAgentFunctionsRequest struct {
 
 func (x *ListAgentFunctionsRequest) Reset() {
 	*x = ListAgentFunctionsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[71]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5358,7 +5670,7 @@ func (x *ListAgentFunctionsRequest) String() string {
 func (*ListAgentFunctionsRequest) ProtoMessage() {}
 
 func (x *ListAgentFunctionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[71]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5371,7 +5683,7 @@ func (x *ListAgentFunctionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentFunctionsRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentFunctionsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{71}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ListAgentFunctionsRequest) GetWorkspace() string {
@@ -5428,7 +5740,7 @@ type ListApprovalsRequest struct {
 
 func (x *ListApprovalsRequest) Reset() {
 	*x = ListApprovalsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[72]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5440,7 +5752,7 @@ func (x *ListApprovalsRequest) String() string {
 func (*ListApprovalsRequest) ProtoMessage() {}
 
 func (x *ListApprovalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[72]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5453,7 +5765,7 @@ func (x *ListApprovalsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListApprovalsRequest.ProtoReflect.Descriptor instead.
 func (*ListApprovalsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{72}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ListApprovalsRequest) GetState() string {
@@ -5495,7 +5807,7 @@ type ListBindingsRequest struct {
 
 func (x *ListBindingsRequest) Reset() {
 	*x = ListBindingsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[73]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5507,7 +5819,7 @@ func (x *ListBindingsRequest) String() string {
 func (*ListBindingsRequest) ProtoMessage() {}
 
 func (x *ListBindingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[73]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5520,7 +5832,7 @@ func (x *ListBindingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBindingsRequest.ProtoReflect.Descriptor instead.
 func (*ListBindingsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{73}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ListBindingsRequest) GetId() string {
@@ -5544,6 +5856,74 @@ func (x *ListBindingsRequest) GetOwner() string {
 	return ""
 }
 
+type ListCallsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Agent         string                 `protobuf:"bytes,1,opt,name=agent,proto3" json:"agent,omitempty"`
+	Session       string                 `protobuf:"bytes,2,opt,name=session,proto3" json:"session,omitempty"`
+	Connector     string                 `protobuf:"bytes,3,opt,name=connector,proto3" json:"connector,omitempty"`
+	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCallsRequest) Reset() {
+	*x = ListCallsRequest{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCallsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCallsRequest) ProtoMessage() {}
+
+func (x *ListCallsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCallsRequest.ProtoReflect.Descriptor instead.
+func (*ListCallsRequest) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *ListCallsRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
+func (x *ListCallsRequest) GetSession() string {
+	if x != nil {
+		return x.Session
+	}
+	return ""
+}
+
+func (x *ListCallsRequest) GetConnector() string {
+	if x != nil {
+		return x.Connector
+	}
+	return ""
+}
+
+func (x *ListCallsRequest) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
 type ListCredentialsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	OwnerKind     string                 `protobuf:"bytes,1,opt,name=owner_kind,json=ownerKind,proto3" json:"owner_kind,omitempty"`
@@ -5555,7 +5935,7 @@ type ListCredentialsRequest struct {
 
 func (x *ListCredentialsRequest) Reset() {
 	*x = ListCredentialsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[74]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5567,7 +5947,7 @@ func (x *ListCredentialsRequest) String() string {
 func (*ListCredentialsRequest) ProtoMessage() {}
 
 func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[74]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5580,7 +5960,7 @@ func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*ListCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{74}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ListCredentialsRequest) GetOwnerKind() string {
@@ -5616,7 +5996,7 @@ type ListGrantsRequest struct {
 
 func (x *ListGrantsRequest) Reset() {
 	*x = ListGrantsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[75]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5628,7 +6008,7 @@ func (x *ListGrantsRequest) String() string {
 func (*ListGrantsRequest) ProtoMessage() {}
 
 func (x *ListGrantsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[75]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5641,7 +6021,7 @@ func (x *ListGrantsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGrantsRequest.ProtoReflect.Descriptor instead.
 func (*ListGrantsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{75}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ListGrantsRequest) GetScopeKind() string {
@@ -5685,7 +6065,7 @@ type ListListingsRequest struct {
 
 func (x *ListListingsRequest) Reset() {
 	*x = ListListingsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[76]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5697,7 +6077,7 @@ func (x *ListListingsRequest) String() string {
 func (*ListListingsRequest) ProtoMessage() {}
 
 func (x *ListListingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[76]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5710,7 +6090,7 @@ func (x *ListListingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListListingsRequest.ProtoReflect.Descriptor instead.
 func (*ListListingsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{76}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *ListListingsRequest) GetWorkspace() string {
@@ -5758,7 +6138,7 @@ type ListMembersRequest struct {
 
 func (x *ListMembersRequest) Reset() {
 	*x = ListMembersRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[77]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5770,7 +6150,7 @@ func (x *ListMembersRequest) String() string {
 func (*ListMembersRequest) ProtoMessage() {}
 
 func (x *ListMembersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[77]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5783,7 +6163,7 @@ func (x *ListMembersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMembersRequest.ProtoReflect.Descriptor instead.
 func (*ListMembersRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{77}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ListMembersRequest) GetPerson() string {
@@ -5810,7 +6190,7 @@ type ListRolesRequest struct {
 
 func (x *ListRolesRequest) Reset() {
 	*x = ListRolesRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[78]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5822,7 +6202,7 @@ func (x *ListRolesRequest) String() string {
 func (*ListRolesRequest) ProtoMessage() {}
 
 func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[78]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5835,7 +6215,7 @@ func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRolesRequest.ProtoReflect.Descriptor instead.
 func (*ListRolesRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{78}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *ListRolesRequest) GetTenant() string {
@@ -5866,7 +6246,7 @@ type Listing struct {
 
 func (x *Listing) Reset() {
 	*x = Listing{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[79]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5878,7 +6258,7 @@ func (x *Listing) String() string {
 func (*Listing) ProtoMessage() {}
 
 func (x *Listing) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[79]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5891,7 +6271,7 @@ func (x *Listing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Listing.ProtoReflect.Descriptor instead.
 func (*Listing) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{79}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *Listing) GetRef() *ListingRef {
@@ -5946,7 +6326,7 @@ type ListingRef struct {
 
 func (x *ListingRef) Reset() {
 	*x = ListingRef{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[80]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5958,7 +6338,7 @@ func (x *ListingRef) String() string {
 func (*ListingRef) ProtoMessage() {}
 
 func (x *ListingRef) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[80]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5971,7 +6351,7 @@ func (x *ListingRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListingRef.ProtoReflect.Descriptor instead.
 func (*ListingRef) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{80}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *ListingRef) GetOwner() string {
@@ -6000,7 +6380,7 @@ type ListingStatusRequest struct {
 
 func (x *ListingStatusRequest) Reset() {
 	*x = ListingStatusRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[81]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6012,7 +6392,7 @@ func (x *ListingStatusRequest) String() string {
 func (*ListingStatusRequest) ProtoMessage() {}
 
 func (x *ListingStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[81]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6025,7 +6405,7 @@ func (x *ListingStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListingStatusRequest.ProtoReflect.Descriptor instead.
 func (*ListingStatusRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{81}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *ListingStatusRequest) GetOwner() string {
@@ -6068,7 +6448,7 @@ type ListingVersion struct {
 
 func (x *ListingVersion) Reset() {
 	*x = ListingVersion{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[82]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6080,7 +6460,7 @@ func (x *ListingVersion) String() string {
 func (*ListingVersion) ProtoMessage() {}
 
 func (x *ListingVersion) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[82]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6093,7 +6473,7 @@ func (x *ListingVersion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListingVersion.ProtoReflect.Descriptor instead.
 func (*ListingVersion) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{82}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *ListingVersion) GetRef() *VersionRef {
@@ -6133,7 +6513,7 @@ type ListingVersions struct {
 
 func (x *ListingVersions) Reset() {
 	*x = ListingVersions{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[83]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6145,7 +6525,7 @@ func (x *ListingVersions) String() string {
 func (*ListingVersions) ProtoMessage() {}
 
 func (x *ListingVersions) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[83]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6158,7 +6538,7 @@ func (x *ListingVersions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListingVersions.ProtoReflect.Descriptor instead.
 func (*ListingVersions) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{83}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *ListingVersions) GetItems() []*ListingVersion {
@@ -6177,7 +6557,7 @@ type Listings struct {
 
 func (x *Listings) Reset() {
 	*x = Listings{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[84]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6189,7 +6569,7 @@ func (x *Listings) String() string {
 func (*Listings) ProtoMessage() {}
 
 func (x *Listings) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[84]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6202,7 +6582,7 @@ func (x *Listings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Listings.ProtoReflect.Descriptor instead.
 func (*Listings) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{84}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *Listings) GetItems() []*Listing {
@@ -6244,7 +6624,7 @@ type Manifest struct {
 
 func (x *Manifest) Reset() {
 	*x = Manifest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[85]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6256,7 +6636,7 @@ func (x *Manifest) String() string {
 func (*Manifest) ProtoMessage() {}
 
 func (x *Manifest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[85]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6269,7 +6649,7 @@ func (x *Manifest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Manifest.ProtoReflect.Descriptor instead.
 func (*Manifest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{85}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *Manifest) GetOwner() string {
@@ -6450,7 +6830,7 @@ type MetaUI struct {
 
 func (x *MetaUI) Reset() {
 	*x = MetaUI{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[86]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6462,7 +6842,7 @@ func (x *MetaUI) String() string {
 func (*MetaUI) ProtoMessage() {}
 
 func (x *MetaUI) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[86]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6475,7 +6855,7 @@ func (x *MetaUI) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MetaUI.ProtoReflect.Descriptor instead.
 func (*MetaUI) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{86}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *MetaUI) GetResourceUri() string {
@@ -6504,7 +6884,7 @@ type Offer struct {
 
 func (x *Offer) Reset() {
 	*x = Offer{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[87]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6516,7 +6896,7 @@ func (x *Offer) String() string {
 func (*Offer) ProtoMessage() {}
 
 func (x *Offer) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[87]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6529,7 +6909,7 @@ func (x *Offer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Offer.ProtoReflect.Descriptor instead.
 func (*Offer) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{87}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *Offer) GetTenant() string {
@@ -6572,7 +6952,7 @@ type OfferRequest struct {
 
 func (x *OfferRequest) Reset() {
 	*x = OfferRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[88]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6584,7 +6964,7 @@ func (x *OfferRequest) String() string {
 func (*OfferRequest) ProtoMessage() {}
 
 func (x *OfferRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[88]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6597,7 +6977,7 @@ func (x *OfferRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OfferRequest.ProtoReflect.Descriptor instead.
 func (*OfferRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{88}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *OfferRequest) GetTenant() string {
@@ -6637,7 +7017,7 @@ type Offers struct {
 
 func (x *Offers) Reset() {
 	*x = Offers{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[89]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6649,7 +7029,7 @@ func (x *Offers) String() string {
 func (*Offers) ProtoMessage() {}
 
 func (x *Offers) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[89]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6662,7 +7042,7 @@ func (x *Offers) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Offers.ProtoReflect.Descriptor instead.
 func (*Offers) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{89}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *Offers) GetItems() []*Offer {
@@ -6688,7 +7068,7 @@ type Operation struct {
 
 func (x *Operation) Reset() {
 	*x = Operation{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[90]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6700,7 +7080,7 @@ func (x *Operation) String() string {
 func (*Operation) ProtoMessage() {}
 
 func (x *Operation) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[90]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6713,7 +7093,7 @@ func (x *Operation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Operation.ProtoReflect.Descriptor instead.
 func (*Operation) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{90}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *Operation) GetId() string {
@@ -6781,7 +7161,7 @@ type OperationRequest struct {
 
 func (x *OperationRequest) Reset() {
 	*x = OperationRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[91]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6793,7 +7173,7 @@ func (x *OperationRequest) String() string {
 func (*OperationRequest) ProtoMessage() {}
 
 func (x *OperationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[91]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6806,7 +7186,7 @@ func (x *OperationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationRequest.ProtoReflect.Descriptor instead.
 func (*OperationRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{91}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *OperationRequest) GetId() string {
@@ -6837,7 +7217,7 @@ type Overlay struct {
 
 func (x *Overlay) Reset() {
 	*x = Overlay{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[92]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6849,7 +7229,7 @@ func (x *Overlay) String() string {
 func (*Overlay) ProtoMessage() {}
 
 func (x *Overlay) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[92]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6862,7 +7242,7 @@ func (x *Overlay) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Overlay.ProtoReflect.Descriptor instead.
 func (*Overlay) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{92}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *Overlay) GetTenant() string {
@@ -6968,7 +7348,7 @@ type OverlayTargetRequest struct {
 
 func (x *OverlayTargetRequest) Reset() {
 	*x = OverlayTargetRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[93]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6980,7 +7360,7 @@ func (x *OverlayTargetRequest) String() string {
 func (*OverlayTargetRequest) ProtoMessage() {}
 
 func (x *OverlayTargetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[93]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6993,7 +7373,7 @@ func (x *OverlayTargetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverlayTargetRequest.ProtoReflect.Descriptor instead.
 func (*OverlayTargetRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{93}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *OverlayTargetRequest) GetConnector() string {
@@ -7038,7 +7418,7 @@ type OverlayVersionRequest struct {
 
 func (x *OverlayVersionRequest) Reset() {
 	*x = OverlayVersionRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[94]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7050,7 +7430,7 @@ func (x *OverlayVersionRequest) String() string {
 func (*OverlayVersionRequest) ProtoMessage() {}
 
 func (x *OverlayVersionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[94]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7063,7 +7443,7 @@ func (x *OverlayVersionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OverlayVersionRequest.ProtoReflect.Descriptor instead.
 func (*OverlayVersionRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{94}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *OverlayVersionRequest) GetConnector() string {
@@ -7117,7 +7497,7 @@ type Overlays struct {
 
 func (x *Overlays) Reset() {
 	*x = Overlays{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[95]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7129,7 +7509,7 @@ func (x *Overlays) String() string {
 func (*Overlays) ProtoMessage() {}
 
 func (x *Overlays) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[95]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7142,7 +7522,7 @@ func (x *Overlays) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Overlays.ProtoReflect.Descriptor instead.
 func (*Overlays) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{95}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *Overlays) GetItems() []*Overlay {
@@ -7170,7 +7550,7 @@ type Pause struct {
 
 func (x *Pause) Reset() {
 	*x = Pause{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[96]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7182,7 +7562,7 @@ func (x *Pause) String() string {
 func (*Pause) ProtoMessage() {}
 
 func (x *Pause) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[96]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7195,7 +7575,7 @@ func (x *Pause) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pause.ProtoReflect.Descriptor instead.
 func (*Pause) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{96}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *Pause) GetId() string {
@@ -7277,7 +7657,7 @@ type PauseRequest struct {
 
 func (x *PauseRequest) Reset() {
 	*x = PauseRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[97]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7289,7 +7669,7 @@ func (x *PauseRequest) String() string {
 func (*PauseRequest) ProtoMessage() {}
 
 func (x *PauseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[97]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7302,7 +7682,7 @@ func (x *PauseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PauseRequest.ProtoReflect.Descriptor instead.
 func (*PauseRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{97}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *PauseRequest) GetId() string {
@@ -7321,7 +7701,7 @@ type Pauses struct {
 
 func (x *Pauses) Reset() {
 	*x = Pauses{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[98]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7333,7 +7713,7 @@ func (x *Pauses) String() string {
 func (*Pauses) ProtoMessage() {}
 
 func (x *Pauses) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[98]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7346,7 +7726,7 @@ func (x *Pauses) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pauses.ProtoReflect.Descriptor instead.
 func (*Pauses) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{98}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *Pauses) GetItems() []*Pause {
@@ -7366,7 +7746,7 @@ type PersonRequest struct {
 
 func (x *PersonRequest) Reset() {
 	*x = PersonRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[99]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7378,7 +7758,7 @@ func (x *PersonRequest) String() string {
 func (*PersonRequest) ProtoMessage() {}
 
 func (x *PersonRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[99]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7391,7 +7771,7 @@ func (x *PersonRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PersonRequest.ProtoReflect.Descriptor instead.
 func (*PersonRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{99}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *PersonRequest) GetId() string {
@@ -7419,7 +7799,7 @@ type ProjectionRequest struct {
 
 func (x *ProjectionRequest) Reset() {
 	*x = ProjectionRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[100]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7431,7 +7811,7 @@ func (x *ProjectionRequest) String() string {
 func (*ProjectionRequest) ProtoMessage() {}
 
 func (x *ProjectionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[100]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7444,7 +7824,7 @@ func (x *ProjectionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectionRequest.ProtoReflect.Descriptor instead.
 func (*ProjectionRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{100}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ProjectionRequest) GetId() string {
@@ -7483,7 +7863,7 @@ type ProposeOverlayRequest struct {
 
 func (x *ProposeOverlayRequest) Reset() {
 	*x = ProposeOverlayRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[101]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7495,7 +7875,7 @@ func (x *ProposeOverlayRequest) String() string {
 func (*ProposeOverlayRequest) ProtoMessage() {}
 
 func (x *ProposeOverlayRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[101]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7508,7 +7888,7 @@ func (x *ProposeOverlayRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProposeOverlayRequest.ProtoReflect.Descriptor instead.
 func (*ProposeOverlayRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{101}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *ProposeOverlayRequest) GetConnector() string {
@@ -7571,7 +7951,7 @@ type Publisher struct {
 
 func (x *Publisher) Reset() {
 	*x = Publisher{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[102]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7583,7 +7963,7 @@ func (x *Publisher) String() string {
 func (*Publisher) ProtoMessage() {}
 
 func (x *Publisher) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[102]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7596,7 +7976,7 @@ func (x *Publisher) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Publisher.ProtoReflect.Descriptor instead.
 func (*Publisher) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{102}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *Publisher) GetName() string {
@@ -7634,7 +8014,7 @@ type PutBindingRequest struct {
 
 func (x *PutBindingRequest) Reset() {
 	*x = PutBindingRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[103]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7646,7 +8026,7 @@ func (x *PutBindingRequest) String() string {
 func (*PutBindingRequest) ProtoMessage() {}
 
 func (x *PutBindingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[103]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7659,7 +8039,7 @@ func (x *PutBindingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutBindingRequest.ProtoReflect.Descriptor instead.
 func (*PutBindingRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{103}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *PutBindingRequest) GetId() string {
@@ -7715,7 +8095,7 @@ type PutCatalogPolicyRequest struct {
 
 func (x *PutCatalogPolicyRequest) Reset() {
 	*x = PutCatalogPolicyRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[104]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7727,7 +8107,7 @@ func (x *PutCatalogPolicyRequest) String() string {
 func (*PutCatalogPolicyRequest) ProtoMessage() {}
 
 func (x *PutCatalogPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[104]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7740,7 +8120,7 @@ func (x *PutCatalogPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutCatalogPolicyRequest.ProtoReflect.Descriptor instead.
 func (*PutCatalogPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{104}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *PutCatalogPolicyRequest) GetWorkspace() string {
@@ -7774,7 +8154,7 @@ type REST struct {
 
 func (x *REST) Reset() {
 	*x = REST{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[105]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7786,7 +8166,7 @@ func (x *REST) String() string {
 func (*REST) ProtoMessage() {}
 
 func (x *REST) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[105]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7799,7 +8179,7 @@ func (x *REST) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use REST.ProtoReflect.Descriptor instead.
 func (*REST) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{105}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *REST) GetBaseUrl() string {
@@ -7830,7 +8210,7 @@ type RESTFunction struct {
 
 func (x *RESTFunction) Reset() {
 	*x = RESTFunction{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[106]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7842,7 +8222,7 @@ func (x *RESTFunction) String() string {
 func (*RESTFunction) ProtoMessage() {}
 
 func (x *RESTFunction) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[106]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7855,7 +8235,7 @@ func (x *RESTFunction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RESTFunction.ProtoReflect.Descriptor instead.
 func (*RESTFunction) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{106}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *RESTFunction) GetName() string {
@@ -7910,7 +8290,7 @@ type RawDefinition struct {
 
 func (x *RawDefinition) Reset() {
 	*x = RawDefinition{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[107]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7922,7 +8302,7 @@ func (x *RawDefinition) String() string {
 func (*RawDefinition) ProtoMessage() {}
 
 func (x *RawDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[107]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7935,7 +8315,7 @@ func (x *RawDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RawDefinition.ProtoReflect.Descriptor instead.
 func (*RawDefinition) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{107}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *RawDefinition) GetName() string {
@@ -7962,7 +8342,7 @@ type Remote struct {
 
 func (x *Remote) Reset() {
 	*x = Remote{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[108]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7974,7 +8354,7 @@ func (x *Remote) String() string {
 func (*Remote) ProtoMessage() {}
 
 func (x *Remote) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[108]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7987,7 +8367,7 @@ func (x *Remote) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Remote.ProtoReflect.Descriptor instead.
 func (*Remote) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{108}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *Remote) GetUrl() string {
@@ -8017,7 +8397,7 @@ type Review struct {
 
 func (x *Review) Reset() {
 	*x = Review{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[109]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8029,7 +8409,7 @@ func (x *Review) String() string {
 func (*Review) ProtoMessage() {}
 
 func (x *Review) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[109]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8042,7 +8422,7 @@ func (x *Review) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Review.ProtoReflect.Descriptor instead.
 func (*Review) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{109}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *Review) GetBy() string {
@@ -8091,7 +8471,7 @@ type ReviewFunction struct {
 
 func (x *ReviewFunction) Reset() {
 	*x = ReviewFunction{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[110]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8103,7 +8483,7 @@ func (x *ReviewFunction) String() string {
 func (*ReviewFunction) ProtoMessage() {}
 
 func (x *ReviewFunction) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[110]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8116,7 +8496,7 @@ func (x *ReviewFunction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewFunction.ProtoReflect.Descriptor instead.
 func (*ReviewFunction) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{110}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *ReviewFunction) GetName() string {
@@ -8153,7 +8533,7 @@ type ReviewListingRequest struct {
 
 func (x *ReviewListingRequest) Reset() {
 	*x = ReviewListingRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[111]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8165,7 +8545,7 @@ func (x *ReviewListingRequest) String() string {
 func (*ReviewListingRequest) ProtoMessage() {}
 
 func (x *ReviewListingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[111]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8178,7 +8558,7 @@ func (x *ReviewListingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReviewListingRequest.ProtoReflect.Descriptor instead.
 func (*ReviewListingRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{111}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *ReviewListingRequest) GetOwner() string {
@@ -8228,7 +8608,7 @@ type RoleAssignment struct {
 
 func (x *RoleAssignment) Reset() {
 	*x = RoleAssignment{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[112]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8240,7 +8620,7 @@ func (x *RoleAssignment) String() string {
 func (*RoleAssignment) ProtoMessage() {}
 
 func (x *RoleAssignment) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[112]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8253,7 +8633,7 @@ func (x *RoleAssignment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleAssignment.ProtoReflect.Descriptor instead.
 func (*RoleAssignment) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{112}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *RoleAssignment) GetTenant() string {
@@ -8293,7 +8673,7 @@ type Roles struct {
 
 func (x *Roles) Reset() {
 	*x = Roles{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[113]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8305,7 +8685,7 @@ func (x *Roles) String() string {
 func (*Roles) ProtoMessage() {}
 
 func (x *Roles) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[113]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8318,7 +8698,7 @@ func (x *Roles) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Roles.ProtoReflect.Descriptor instead.
 func (*Roles) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{113}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *Roles) GetItems() []*RoleAssignment {
@@ -8326,6 +8706,58 @@ func (x *Roles) GetItems() []*RoleAssignment {
 		return x.Items
 	}
 	return nil
+}
+
+type RotateKeyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Root          bool                   `protobuf:"varint,1,opt,name=root,proto3" json:"root,omitempty"`
+	Tenant        string                 `protobuf:"bytes,2,opt,name=tenant,proto3" json:"tenant,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateKeyRequest) Reset() {
+	*x = RotateKeyRequest{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[119]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateKeyRequest) ProtoMessage() {}
+
+func (x *RotateKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[119]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateKeyRequest.ProtoReflect.Descriptor instead.
+func (*RotateKeyRequest) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{119}
+}
+
+func (x *RotateKeyRequest) GetRoot() bool {
+	if x != nil {
+		return x.Root
+	}
+	return false
+}
+
+func (x *RotateKeyRequest) GetTenant() string {
+	if x != nil {
+		return x.Tenant
+	}
+	return ""
 }
 
 type Row struct {
@@ -8347,7 +8779,7 @@ type Row struct {
 
 func (x *Row) Reset() {
 	*x = Row{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[114]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8359,7 +8791,7 @@ func (x *Row) String() string {
 func (*Row) ProtoMessage() {}
 
 func (x *Row) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[114]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8372,7 +8804,7 @@ func (x *Row) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Row.ProtoReflect.Descriptor instead.
 func (*Row) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{114}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *Row) GetKind() string {
@@ -8461,7 +8893,7 @@ type RuleRequest struct {
 
 func (x *RuleRequest) Reset() {
 	*x = RuleRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[115]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8473,7 +8905,7 @@ func (x *RuleRequest) String() string {
 func (*RuleRequest) ProtoMessage() {}
 
 func (x *RuleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[115]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8486,7 +8918,7 @@ func (x *RuleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuleRequest.ProtoReflect.Descriptor instead.
 func (*RuleRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{115}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *RuleRequest) GetId() string {
@@ -8508,7 +8940,7 @@ type RuntimeNeeds struct {
 
 func (x *RuntimeNeeds) Reset() {
 	*x = RuntimeNeeds{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[116]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8520,7 +8952,7 @@ func (x *RuntimeNeeds) String() string {
 func (*RuntimeNeeds) ProtoMessage() {}
 
 func (x *RuntimeNeeds) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[116]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8533,7 +8965,7 @@ func (x *RuntimeNeeds) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeNeeds.ProtoReflect.Descriptor instead.
 func (*RuntimeNeeds) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{116}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *RuntimeNeeds) GetIsolationMin() string {
@@ -8574,7 +9006,7 @@ type Sealed struct {
 
 func (x *Sealed) Reset() {
 	*x = Sealed{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[117]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8586,7 +9018,7 @@ func (x *Sealed) String() string {
 func (*Sealed) ProtoMessage() {}
 
 func (x *Sealed) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[117]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8599,7 +9031,7 @@ func (x *Sealed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sealed.ProtoReflect.Descriptor instead.
 func (*Sealed) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{117}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *Sealed) GetCiphertext() []byte {
@@ -8625,7 +9057,7 @@ type SessionRequest struct {
 
 func (x *SessionRequest) Reset() {
 	*x = SessionRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[118]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8637,7 +9069,7 @@ func (x *SessionRequest) String() string {
 func (*SessionRequest) ProtoMessage() {}
 
 func (x *SessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[118]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8650,7 +9082,7 @@ func (x *SessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SessionRequest.ProtoReflect.Descriptor instead.
 func (*SessionRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{118}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *SessionRequest) GetId() string {
@@ -8671,7 +9103,7 @@ type Signature struct {
 
 func (x *Signature) Reset() {
 	*x = Signature{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[119]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8683,7 +9115,7 @@ func (x *Signature) String() string {
 func (*Signature) ProtoMessage() {}
 
 func (x *Signature) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[119]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8696,7 +9128,7 @@ func (x *Signature) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Signature.ProtoReflect.Descriptor instead.
 func (*Signature) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{119}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *Signature) GetType() string {
@@ -8725,14 +9157,15 @@ type SourceInfo struct {
 	Registry        string                 `protobuf:"bytes,1,opt,name=registry,proto3" json:"registry,omitempty"`
 	UpstreamName    string                 `protobuf:"bytes,2,opt,name=upstream_name,json=upstreamName,proto3" json:"upstream_name,omitempty"`
 	UpstreamVersion string                 `protobuf:"bytes,3,opt,name=upstream_version,json=upstreamVersion,proto3" json:"upstream_version,omitempty"`
-	ImportedAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=imported_at,json=importedAt,proto3" json:"imported_at,omitempty"`
+	Status          string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	ImportedAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=imported_at,json=importedAt,proto3" json:"imported_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SourceInfo) Reset() {
 	*x = SourceInfo{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[120]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[126]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8744,7 +9177,7 @@ func (x *SourceInfo) String() string {
 func (*SourceInfo) ProtoMessage() {}
 
 func (x *SourceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[120]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[126]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8757,7 +9190,7 @@ func (x *SourceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceInfo.ProtoReflect.Descriptor instead.
 func (*SourceInfo) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{120}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *SourceInfo) GetRegistry() string {
@@ -8781,6 +9214,13 @@ func (x *SourceInfo) GetUpstreamVersion() string {
 	return ""
 }
 
+func (x *SourceInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 func (x *SourceInfo) GetImportedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.ImportedAt
@@ -8797,7 +9237,7 @@ type SourceRequest struct {
 
 func (x *SourceRequest) Reset() {
 	*x = SourceRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[121]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8809,7 +9249,7 @@ func (x *SourceRequest) String() string {
 func (*SourceRequest) ProtoMessage() {}
 
 func (x *SourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[121]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8822,7 +9262,7 @@ func (x *SourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceRequest.ProtoReflect.Descriptor instead.
 func (*SourceRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{121}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *SourceRequest) GetSource() string {
@@ -8830,6 +9270,178 @@ func (x *SourceRequest) GetSource() string {
 		return x.Source
 	}
 	return ""
+}
+
+type SourceStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	LastSync      *SourceSync            `protobuf:"bytes,2,opt,name=last_sync,json=lastSync,proto3" json:"last_sync,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SourceStatus) Reset() {
+	*x = SourceStatus{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SourceStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SourceStatus) ProtoMessage() {}
+
+func (x *SourceStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SourceStatus.ProtoReflect.Descriptor instead.
+func (*SourceStatus) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{128}
+}
+
+func (x *SourceStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *SourceStatus) GetLastSync() *SourceSync {
+	if x != nil {
+		return x.LastSync
+	}
+	return nil
+}
+
+type SourceSync struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	LastSync      *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=last_sync,json=lastSync,proto3" json:"last_sync,omitempty"`
+	Imported      int64                  `protobuf:"varint,3,opt,name=imported,proto3" json:"imported,omitempty"`
+	Skipped       int64                  `protobuf:"varint,4,opt,name=skipped,proto3" json:"skipped,omitempty"`
+	Error         string                 `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SourceSync) Reset() {
+	*x = SourceSync{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SourceSync) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SourceSync) ProtoMessage() {}
+
+func (x *SourceSync) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SourceSync.ProtoReflect.Descriptor instead.
+func (*SourceSync) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{129}
+}
+
+func (x *SourceSync) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *SourceSync) GetLastSync() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastSync
+	}
+	return nil
+}
+
+func (x *SourceSync) GetImported() int64 {
+	if x != nil {
+		return x.Imported
+	}
+	return 0
+}
+
+func (x *SourceSync) GetSkipped() int64 {
+	if x != nil {
+		return x.Skipped
+	}
+	return 0
+}
+
+func (x *SourceSync) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type Sources struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*SourceStatus        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Sources) Reset() {
+	*x = Sources{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Sources) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Sources) ProtoMessage() {}
+
+func (x *Sources) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Sources.ProtoReflect.Descriptor instead.
+func (*Sources) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{130}
+}
+
+func (x *Sources) GetItems() []*SourceStatus {
+	if x != nil {
+		return x.Items
+	}
+	return nil
 }
 
 type StarterRequest struct {
@@ -8843,7 +9455,7 @@ type StarterRequest struct {
 
 func (x *StarterRequest) Reset() {
 	*x = StarterRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[122]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8855,7 +9467,7 @@ func (x *StarterRequest) String() string {
 func (*StarterRequest) ProtoMessage() {}
 
 func (x *StarterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[122]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8868,7 +9480,7 @@ func (x *StarterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StarterRequest.ProtoReflect.Descriptor instead.
 func (*StarterRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{122}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *StarterRequest) GetOwner() string {
@@ -8903,7 +9515,7 @@ type StatusChange struct {
 
 func (x *StatusChange) Reset() {
 	*x = StatusChange{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[123]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8915,7 +9527,7 @@ func (x *StatusChange) String() string {
 func (*StatusChange) ProtoMessage() {}
 
 func (x *StatusChange) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[123]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8928,7 +9540,7 @@ func (x *StatusChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusChange.ProtoReflect.Descriptor instead.
 func (*StatusChange) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{123}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *StatusChange) GetListing() *Listing {
@@ -8967,7 +9579,7 @@ type Tenant struct {
 
 func (x *Tenant) Reset() {
 	*x = Tenant{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[124]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8979,7 +9591,7 @@ func (x *Tenant) String() string {
 func (*Tenant) ProtoMessage() {}
 
 func (x *Tenant) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[124]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8992,7 +9604,7 @@ func (x *Tenant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tenant.ProtoReflect.Descriptor instead.
 func (*Tenant) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{124}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *Tenant) GetId() string {
@@ -9053,7 +9665,7 @@ type TenantRequest struct {
 
 func (x *TenantRequest) Reset() {
 	*x = TenantRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[125]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9065,7 +9677,7 @@ func (x *TenantRequest) String() string {
 func (*TenantRequest) ProtoMessage() {}
 
 func (x *TenantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[125]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9078,7 +9690,7 @@ func (x *TenantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TenantRequest.ProtoReflect.Descriptor instead.
 func (*TenantRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{125}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *TenantRequest) GetTenant() string {
@@ -9097,7 +9709,7 @@ type UI struct {
 
 func (x *UI) Reset() {
 	*x = UI{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[126]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9109,7 +9721,7 @@ func (x *UI) String() string {
 func (*UI) ProtoMessage() {}
 
 func (x *UI) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[126]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9122,7 +9734,7 @@ func (x *UI) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UI.ProtoReflect.Descriptor instead.
 func (*UI) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{126}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *UI) GetMcpApps() bool {
@@ -9142,7 +9754,7 @@ type UpdateConnectorRequest struct {
 
 func (x *UpdateConnectorRequest) Reset() {
 	*x = UpdateConnectorRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9154,7 +9766,7 @@ func (x *UpdateConnectorRequest) String() string {
 func (*UpdateConnectorRequest) ProtoMessage() {}
 
 func (x *UpdateConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9167,7 +9779,7 @@ func (x *UpdateConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateConnectorRequest.ProtoReflect.Descriptor instead.
 func (*UpdateConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{127}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *UpdateConnectorRequest) GetId() string {
@@ -9196,7 +9808,7 @@ type UpdateResult struct {
 
 func (x *UpdateResult) Reset() {
 	*x = UpdateResult{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9208,7 +9820,7 @@ func (x *UpdateResult) String() string {
 func (*UpdateResult) ProtoMessage() {}
 
 func (x *UpdateResult) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9221,7 +9833,7 @@ func (x *UpdateResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateResult.ProtoReflect.Descriptor instead.
 func (*UpdateResult) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{128}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *UpdateResult) GetConnector() *Connector {
@@ -9262,7 +9874,7 @@ type VersionRef struct {
 
 func (x *VersionRef) Reset() {
 	*x = VersionRef{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9274,7 +9886,7 @@ func (x *VersionRef) String() string {
 func (*VersionRef) ProtoMessage() {}
 
 func (x *VersionRef) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9287,7 +9899,7 @@ func (x *VersionRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VersionRef.ProtoReflect.Descriptor instead.
 func (*VersionRef) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{129}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *VersionRef) GetListing() *ListingRef {
@@ -9314,7 +9926,7 @@ type WatchApprovalsRequest struct {
 
 func (x *WatchApprovalsRequest) Reset() {
 	*x = WatchApprovalsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9326,7 +9938,7 @@ func (x *WatchApprovalsRequest) String() string {
 func (*WatchApprovalsRequest) ProtoMessage() {}
 
 func (x *WatchApprovalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9339,7 +9951,7 @@ func (x *WatchApprovalsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchApprovalsRequest.ProtoReflect.Descriptor instead.
 func (*WatchApprovalsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{130}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *WatchApprovalsRequest) GetAfter() int64 {
@@ -9365,7 +9977,7 @@ type WorkspaceRequest struct {
 
 func (x *WorkspaceRequest) Reset() {
 	*x = WorkspaceRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9377,7 +9989,7 @@ func (x *WorkspaceRequest) String() string {
 func (*WorkspaceRequest) ProtoMessage() {}
 
 func (x *WorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9390,7 +10002,7 @@ func (x *WorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*WorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{131}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *WorkspaceRequest) GetWorkspace() string {
@@ -9426,10 +10038,11 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\tconnector\x18\x02 \x01(\tR\tconnector\x12\x1a\n" +
 	"\bfunction\x18\x03 \x01(\tR\bfunction\x12\x12\n" +
 	"\x04mode\x18\x04 \x01(\tR\x04mode\x12!\n" +
-	"\foverlay_hash\x18\x05 \x01(\tR\voverlayHash\"x\n" +
+	"\foverlay_hash\x18\x05 \x01(\tR\voverlayHash\"\xb2\x01\n" +
 	"\x0eAgentFunctions\x12?\n" +
 	"\tfunctions\x18\x01 \x03(\v2!.connectorengine.v1.AgentFunctionR\tfunctions\x12%\n" +
-	"\x0eapproval_tools\x18\x02 \x01(\bR\rapprovalTools\"O\n" +
+	"\x0eapproval_tools\x18\x02 \x01(\bR\rapprovalTools\x128\n" +
+	"\bexposure\x18\x03 \x01(\v2\x1c.connectorengine.v1.ExposureR\bexposure\"O\n" +
 	"\x11AgentLevelRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x14\n" +
@@ -9448,7 +10061,7 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\aversion\x18\x04 \x01(\tR\aversion\x121\n" +
 	"\x06tenant\x18\x05 \x01(\v2\x19.connectorengine.v1.LevelR\x06tenant\x127\n" +
 	"\tworkspace\x18\x06 \x01(\v2\x19.connectorengine.v1.LevelR\tworkspace\x121\n" +
-	"\x06people\x18\a \x03(\v2\x19.connectorengine.v1.LevelR\x06people\"\xd6\b\n" +
+	"\x06people\x18\a \x03(\v2\x19.connectorengine.v1.LevelR\x06people\"\xee\b\n" +
 	"\bApproval\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06tenant\x18\x02 \x01(\tR\x06tenant\x12\x1c\n" +
@@ -9464,28 +10077,29 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	" \x01(\tR\x05class\x12\x19\n" +
 	"\binner_of\x18\v \x01(\tR\ainnerOf\x128\n" +
 	"\targuments\x18\f \x01(\v2\x1a.connectorengine.v1.SealedR\targuments\x12\x1b\n" +
-	"\tcall_hash\x18\r \x01(\tR\bcallHash\x12\x12\n" +
-	"\x04mode\x18\x0e \x01(\tR\x04mode\x12\x1c\n" +
-	"\tapprovers\x18\x0f \x03(\tR\tapprovers\x12\x14\n" +
-	"\x05state\x18\x10 \x01(\tR\x05state\x129\n" +
+	"\tcall_hash\x18\r \x01(\tR\bcallHash\x12\x16\n" +
+	"\x06fields\x18\x0e \x03(\tR\x06fields\x12\x12\n" +
+	"\x04mode\x18\x0f \x01(\tR\x04mode\x12\x1c\n" +
+	"\tapprovers\x18\x10 \x03(\tR\tapprovers\x12\x14\n" +
+	"\x05state\x18\x11 \x01(\tR\x05state\x129\n" +
 	"\n" +
-	"created_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"expires_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x1d\n" +
+	"expires_at\x18\x13 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x12\x1d\n" +
 	"\n" +
-	"decided_by\x18\x13 \x01(\tR\tdecidedBy\x129\n" +
+	"decided_by\x18\x14 \x01(\tR\tdecidedBy\x129\n" +
 	"\n" +
-	"decided_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\x12\x18\n" +
-	"\achannel\x18\x15 \x01(\tR\achannel\x12#\n" +
-	"\rdecision_note\x18\x16 \x01(\tR\fdecisionNote\x12#\n" +
-	"\rsession_grant\x18\x17 \x01(\bR\fsessionGrant\x12\x16\n" +
-	"\x06reason\x18\x18 \x01(\tR\x06reason\x12=\n" +
-	"\fdelivered_at\x18\x19 \x01(\v2\x1a.google.protobuf.TimestampR\vdeliveredAt\x12L\n" +
-	"\x14execution_started_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\x12executionStartedAt\x12#\n" +
-	"\rcall_deadline\x18\x1b \x01(\x03R\fcallDeadline\x129\n" +
+	"decided_at\x18\x15 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\x12\x18\n" +
+	"\achannel\x18\x16 \x01(\tR\achannel\x12#\n" +
+	"\rdecision_note\x18\x17 \x01(\tR\fdecisionNote\x12#\n" +
+	"\rsession_grant\x18\x18 \x01(\bR\fsessionGrant\x12\x16\n" +
+	"\x06reason\x18\x19 \x01(\tR\x06reason\x12=\n" +
+	"\fdelivered_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampR\vdeliveredAt\x12L\n" +
+	"\x14execution_started_at\x18\x1b \x01(\v2\x1a.google.protobuf.TimestampR\x12executionStartedAt\x12#\n" +
+	"\rcall_deadline\x18\x1c \x01(\x03R\fcallDeadline\x129\n" +
 	"\n" +
-	"result_ref\x18\x1c \x01(\v2\x1a.connectorengine.v1.SealedR\tresultRef\x12F\n" +
-	"\x11result_expires_at\x18\x1d \x01(\v2\x1a.google.protobuf.TimestampR\x0fresultExpiresAt\"\x99\x02\n" +
+	"result_ref\x18\x1d \x01(\v2\x1a.connectorengine.v1.SealedR\tresultRef\x12F\n" +
+	"\x11result_expires_at\x18\x1e \x01(\v2\x1a.google.protobuf.TimestampR\x0fresultExpiresAt\"\x99\x02\n" +
 	"\x0eApprovalDetail\x128\n" +
 	"\bapproval\x18\x01 \x01(\v2\x1c.connectorengine.v1.ApprovalR\bapproval\x12\x1c\n" +
 	"\targuments\x18\x02 \x01(\fR\targuments\x12%\n" +
@@ -9566,7 +10180,9 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x1d\n" +
 	"\vCallRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"_\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"7\n" +
+	"\x05Calls\x12.\n" +
+	"\x05items\x18\x01 \x03(\v2\x18.connectorengine.v1.CallR\x05items\"_\n" +
 	"\rCatalogPolicy\x12\x16\n" +
 	"\x06tenant\x18\x01 \x01(\tR\x06tenant\x12\x1c\n" +
 	"\tworkspace\x18\x02 \x01(\tR\tworkspace\x12\x18\n" +
@@ -9598,7 +10214,20 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x17ClassifyFunctionRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
-	"\x05class\x18\x03 \x01(\tR\x05class\"B\n" +
+	"\x05class\x18\x03 \x01(\tR\x05class\"\xf3\x01\n" +
+	"\x12ClientRegistration\x12\x16\n" +
+	"\x06tenant\x18\x01 \x01(\tR\x06tenant\x12\x16\n" +
+	"\x06issuer\x18\x02 \x01(\tR\x06issuer\x12\x1b\n" +
+	"\tclient_id\x18\x03 \x01(\tR\bclientId\x122\n" +
+	"\x06secret\x18\x04 \x01(\v2\x1a.connectorengine.v1.SealedR\x06secret\x12!\n" +
+	"\fredirect_url\x18\x05 \x01(\tR\vredirectUrl\x129\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x89\x01\n" +
+	"\x17ClientRegistrationInput\x12\x16\n" +
+	"\x06issuer\x18\x01 \x01(\tR\x06issuer\x12\x1b\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12\x16\n" +
+	"\x06secret\x18\x03 \x01(\tR\x06secret\x12!\n" +
+	"\fredirect_url\x18\x04 \x01(\tR\vredirectUrl\"B\n" +
 	"\x16CompleteConnectRequest\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\"m\n" +
@@ -9613,7 +10242,7 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x06passed\x18\x03 \x01(\bR\x06passed\"6\n" +
 	"\fConnectStart\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\"\xcd\x04\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\"\x8c\x05\n" +
 	"\tConnector\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06tenant\x18\x02 \x01(\tR\x06tenant\x12\x1c\n" +
@@ -9626,10 +10255,11 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\fcall_timeout\x18\t \x01(\x03R\vcallTimeout\x12)\n" +
 	"\x10approval_timeout\x18\n" +
 	" \x01(\x03R\x0fapprovalTimeout\x12@\n" +
-	"\x0elast_relist_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\flastRelistAt\x129\n" +
+	"\x0elast_relist_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\flastRelistAt\x12=\n" +
+	"\frelist_after\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\vrelistAfter\x129\n" +
 	"\n" +
-	"removed_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tremovedAt\x12\x1a\n" +
-	"\brevision\x18\r \x01(\x03R\brevision\x1a9\n" +
+	"removed_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tremovedAt\x12\x1a\n" +
+	"\brevision\x18\x0e \x01(\x03R\brevision\x1a9\n" +
 	"\vConfigEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\"\n" +
@@ -9692,14 +10322,15 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bdecision\x18\x02 \x01(\tR\bdecision\x12\x12\n" +
 	"\x04note\x18\x03 \x01(\tR\x04note\x12\x18\n" +
-	"\achannel\x18\x04 \x01(\tR\achannel\"\x92\x01\n" +
+	"\achannel\x18\x04 \x01(\tR\achannel\"\xac\x01\n" +
 	"\bDecision\x12\x12\n" +
 	"\x04mode\x18\x01 \x01(\tR\x04mode\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x12\n" +
 	"\x04step\x18\x03 \x01(\x03R\x04step\x12\x14\n" +
 	"\x05notes\x18\x04 \x03(\tR\x05notes\x12\x18\n" +
 	"\amatched\x18\x05 \x03(\tR\amatched\x12\x16\n" +
-	"\x06layers\x18\x06 \x03(\tR\x06layers\"J\n" +
+	"\x06layers\x18\x06 \x03(\tR\x06layers\x12\x18\n" +
+	"\aexposed\x18\a \x01(\bR\aexposed\"J\n" +
 	"\n" +
 	"Descriptor\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\tR\x04from\x12\x10\n" +
@@ -9760,7 +10391,14 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\tworkspace\x18\x01 \x01(\tR\tworkspace\x12\x16\n" +
 	"\x06person\x18\x02 \x01(\tR\x06person\x12\x14\n" +
 	"\x05owner\x18\x03 \x01(\tR\x05owner\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\"Q\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\"\x91\x01\n" +
+	"\bExposure\x12\x16\n" +
+	"\x06tenant\x18\x01 \x01(\tR\x06tenant\x12\x14\n" +
+	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x18\n" +
+	"\aexposed\x18\x03 \x01(\bR\aexposed\x12\x13\n" +
+	"\x05leg_a\x18\x04 \x03(\tR\x04legA\x12\x13\n" +
+	"\x05leg_b\x18\x05 \x03(\tR\x04legB\x12\x13\n" +
+	"\x05leg_c\x18\x06 \x03(\tR\x04legC\"Q\n" +
 	"\aFinding\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x16\n" +
@@ -9917,7 +10555,12 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x13ListBindingsRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x14\n" +
-	"\x05owner\x18\x03 \x01(\tR\x05owner\"p\n" +
+	"\x05owner\x18\x03 \x01(\tR\x05owner\"v\n" +
+	"\x10ListCallsRequest\x12\x14\n" +
+	"\x05agent\x18\x01 \x01(\tR\x05agent\x12\x18\n" +
+	"\asession\x18\x02 \x01(\tR\asession\x12\x1c\n" +
+	"\tconnector\x18\x03 \x01(\tR\tconnector\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\"p\n" +
 	"\x16ListCredentialsRequest\x12\x1d\n" +
 	"\n" +
 	"owner_kind\x18\x01 \x01(\tR\townerKind\x12\x19\n" +
@@ -10146,7 +10789,10 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x04role\x18\x03 \x01(\tR\x04role\x12\x14\n" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\"A\n" +
 	"\x05Roles\x128\n" +
-	"\x05items\x18\x01 \x03(\v2\".connectorengine.v1.RoleAssignmentR\x05items\"\xd0\x02\n" +
+	"\x05items\x18\x01 \x03(\v2\".connectorengine.v1.RoleAssignmentR\x05items\">\n" +
+	"\x10RotateKeyRequest\x12\x12\n" +
+	"\x04root\x18\x01 \x01(\bR\x04root\x12\x16\n" +
+	"\x06tenant\x18\x02 \x01(\tR\x06tenant\"\xd0\x02\n" +
 	"\x03Row\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\tR\x04port\x12\x12\n" +
@@ -10178,16 +10824,29 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\tSignature\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1a\n" +
 	"\bidentity\x18\x02 \x01(\tR\bidentity\x12\x16\n" +
-	"\x06issuer\x18\x03 \x01(\tR\x06issuer\"\xb5\x01\n" +
+	"\x06issuer\x18\x03 \x01(\tR\x06issuer\"\xcd\x01\n" +
 	"\n" +
 	"SourceInfo\x12\x1a\n" +
 	"\bregistry\x18\x01 \x01(\tR\bregistry\x12#\n" +
 	"\rupstream_name\x18\x02 \x01(\tR\fupstreamName\x12)\n" +
-	"\x10upstream_version\x18\x03 \x01(\tR\x0fupstreamVersion\x12;\n" +
-	"\vimported_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\x10upstream_version\x18\x03 \x01(\tR\x0fupstreamVersion\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12;\n" +
+	"\vimported_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"importedAt\"'\n" +
 	"\rSourceRequest\x12\x16\n" +
-	"\x06source\x18\x01 \x01(\tR\x06source\"T\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\"_\n" +
+	"\fSourceStatus\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12;\n" +
+	"\tlast_sync\x18\x02 \x01(\v2\x1e.connectorengine.v1.SourceSyncR\blastSync\"\xa9\x01\n" +
+	"\n" +
+	"SourceSync\x12\x16\n" +
+	"\x06source\x18\x01 \x01(\tR\x06source\x127\n" +
+	"\tlast_sync\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\blastSync\x12\x1a\n" +
+	"\bimported\x18\x03 \x01(\x03R\bimported\x12\x18\n" +
+	"\askipped\x18\x04 \x01(\x03R\askipped\x12\x14\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error\"A\n" +
+	"\aSources\x126\n" +
+	"\x05items\x18\x01 \x03(\v2 .connectorengine.v1.SourceStatusR\x05items\"T\n" +
 	"\x0eStarterRequest\x12\x14\n" +
 	"\x05owner\x18\x01 \x01(\tR\x05owner\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -10230,7 +10889,7 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x05after\x18\x01 \x01(\x03R\x05after\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x03R\x05limit\"0\n" +
 	"\x10WorkspaceRequest\x12\x1c\n" +
-	"\tworkspace\x18\x01 \x01(\tR\tworkspace2\x9c6\n" +
+	"\tworkspace\x18\x01 \x01(\tR\tworkspace2\xee8\n" +
 	"\x0fConnectorEngine\x12\\\n" +
 	"\fListListings\x12'.connectorengine.v1.ListListingsRequest\x1a#.connectorengine.v1.ListingVersions\x12W\n" +
 	"\n" +
@@ -10305,7 +10964,11 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\fBeginConnect\x12'.connectorengine.v1.BeginConnectRequest\x1a .connectorengine.v1.ConnectStart\x12]\n" +
 	"\x0fCompleteConnect\x12*.connectorengine.v1.CompleteConnectRequest\x1a\x1e.connectorengine.v1.Credential\x12^\n" +
 	"\x0fListCredentials\x12*.connectorengine.v1.ListCredentialsRequest\x1a\x1f.connectorengine.v1.Credentials\x12Q\n" +
-	"\x10RevokeCredential\x12%.connectorengine.v1.CredentialRequest\x1a\x16.google.protobuf.Empty\x12H\n" +
+	"\x10RevokeCredential\x12%.connectorengine.v1.CredentialRequest\x1a\x16.google.protobuf.Empty\x12l\n" +
+	"\x15PutClientRegistration\x12+.connectorengine.v1.ClientRegistrationInput\x1a&.connectorengine.v1.ClientRegistration\x12L\n" +
+	"\tListCalls\x12$.connectorengine.v1.ListCallsRequest\x1a\x19.connectorengine.v1.Calls\x12B\n" +
+	"\vListSources\x12\x16.google.protobuf.Empty\x1a\x1b.connectorengine.v1.Sources\x12P\n" +
+	"\tRotateKey\x12$.connectorengine.v1.RotateKeyRequest\x1a\x1d.connectorengine.v1.Operation\x12H\n" +
 	"\n" +
 	"EndSession\x12\".connectorengine.v1.SessionRequest\x1a\x16.google.protobuf.Empty\x12G\n" +
 	"\vRemoveAgent\x12 .connectorengine.v1.AgentRequest\x1a\x16.google.protobuf.Empty\x12I\n" +
@@ -10335,7 +10998,7 @@ func file_connectorengine_v1_connectorengine_proto_rawDescGZIP() []byte {
 	return file_connectorengine_v1_connectorengine_proto_rawDescData
 }
 
-var file_connectorengine_v1_connectorengine_proto_msgTypes = make([]protoimpl.MessageInfo, 139)
+var file_connectorengine_v1_connectorengine_proto_msgTypes = make([]protoimpl.MessageInfo, 148)
 var file_connectorengine_v1_connectorengine_proto_goTypes = []any{
 	(*AcceptFunctionRequest)(nil),     // 0: connectorengine.v1.AcceptFunctionRequest
 	(*AcceptFunctionsRequest)(nil),    // 1: connectorengine.v1.AcceptFunctionsRequest
@@ -10359,415 +11022,440 @@ var file_connectorengine_v1_connectorengine_proto_goTypes = []any{
 	(*Bindings)(nil),                  // 19: connectorengine.v1.Bindings
 	(*Call)(nil),                      // 20: connectorengine.v1.Call
 	(*CallRequest)(nil),               // 21: connectorengine.v1.CallRequest
-	(*CatalogPolicy)(nil),             // 22: connectorengine.v1.CatalogPolicy
-	(*CatalogRule)(nil),               // 23: connectorengine.v1.CatalogRule
-	(*CatalogRules)(nil),              // 24: connectorengine.v1.CatalogRules
-	(*Change)(nil),                    // 25: connectorengine.v1.Change
-	(*ClassifyFunctionRequest)(nil),   // 26: connectorengine.v1.ClassifyFunctionRequest
-	(*CompleteConnectRequest)(nil),    // 27: connectorengine.v1.CompleteConnectRequest
-	(*ConfigField)(nil),               // 28: connectorengine.v1.ConfigField
-	(*Conformance)(nil),               // 29: connectorengine.v1.Conformance
-	(*ConnectStart)(nil),              // 30: connectorengine.v1.ConnectStart
-	(*Connector)(nil),                 // 31: connectorengine.v1.Connector
-	(*ConnectorRequest)(nil),          // 32: connectorengine.v1.ConnectorRequest
-	(*ConnectorView)(nil),             // 33: connectorengine.v1.ConnectorView
-	(*ConnectorViews)(nil),            // 34: connectorengine.v1.ConnectorViews
-	(*CreateListingInput)(nil),        // 35: connectorengine.v1.CreateListingInput
-	(*Credential)(nil),                // 36: connectorengine.v1.Credential
-	(*CredentialInput)(nil),           // 37: connectorengine.v1.CredentialInput
-	(*CredentialRequest)(nil),         // 38: connectorengine.v1.CredentialRequest
-	(*Credentials)(nil),               // 39: connectorengine.v1.Credentials
-	(*DecideApprovalRequest)(nil),     // 40: connectorengine.v1.DecideApprovalRequest
-	(*Decision)(nil),                  // 41: connectorengine.v1.Decision
-	(*Descriptor)(nil),                // 42: connectorengine.v1.Descriptor
-	(*Document)(nil),                  // 43: connectorengine.v1.Document
-	(*Effects)(nil),                   // 44: connectorengine.v1.Effects
-	(*Egress)(nil),                    // 45: connectorengine.v1.Egress
-	(*Event)(nil),                     // 46: connectorengine.v1.Event
-	(*EventType)(nil),                 // 47: connectorengine.v1.EventType
-	(*EventTypeRequest)(nil),          // 48: connectorengine.v1.EventTypeRequest
-	(*EventTypes)(nil),                // 49: connectorengine.v1.EventTypes
-	(*ExplainAccessRequest)(nil),      // 50: connectorengine.v1.ExplainAccessRequest
-	(*ExplainVisibilityRequest)(nil),  // 51: connectorengine.v1.ExplainVisibilityRequest
-	(*Finding)(nil),                   // 52: connectorengine.v1.Finding
-	(*Function)(nil),                  // 53: connectorengine.v1.Function
-	(*FunctionDef)(nil),               // 54: connectorengine.v1.FunctionDef
-	(*FunctionRequest)(nil),           // 55: connectorengine.v1.FunctionRequest
-	(*Functions)(nil),                 // 56: connectorengine.v1.Functions
-	(*GRPC)(nil),                      // 57: connectorengine.v1.GRPC
-	(*GRPCFunction)(nil),              // 58: connectorengine.v1.GRPCFunction
-	(*GetListingRequest)(nil),         // 59: connectorengine.v1.GetListingRequest
-	(*Grant)(nil),                     // 60: connectorengine.v1.Grant
-	(*GrantRequest)(nil),              // 61: connectorengine.v1.GrantRequest
-	(*GrantResult)(nil),               // 62: connectorengine.v1.GrantResult
-	(*Grants)(nil),                    // 63: connectorengine.v1.Grants
-	(*GroupMember)(nil),               // 64: connectorengine.v1.GroupMember
-	(*GroupMembers)(nil),              // 65: connectorengine.v1.GroupMembers
-	(*InstallInput)(nil),              // 66: connectorengine.v1.InstallInput
-	(*Level)(nil),                     // 67: connectorengine.v1.Level
-	(*LevelRequest)(nil),              // 68: connectorengine.v1.LevelRequest
-	(*LintListingRequest)(nil),        // 69: connectorengine.v1.LintListingRequest
-	(*LintResult)(nil),                // 70: connectorengine.v1.LintResult
-	(*ListAgentFunctionsRequest)(nil), // 71: connectorengine.v1.ListAgentFunctionsRequest
-	(*ListApprovalsRequest)(nil),      // 72: connectorengine.v1.ListApprovalsRequest
-	(*ListBindingsRequest)(nil),       // 73: connectorengine.v1.ListBindingsRequest
-	(*ListCredentialsRequest)(nil),    // 74: connectorengine.v1.ListCredentialsRequest
-	(*ListGrantsRequest)(nil),         // 75: connectorengine.v1.ListGrantsRequest
-	(*ListListingsRequest)(nil),       // 76: connectorengine.v1.ListListingsRequest
-	(*ListMembersRequest)(nil),        // 77: connectorengine.v1.ListMembersRequest
-	(*ListRolesRequest)(nil),          // 78: connectorengine.v1.ListRolesRequest
-	(*Listing)(nil),                   // 79: connectorengine.v1.Listing
-	(*ListingRef)(nil),                // 80: connectorengine.v1.ListingRef
-	(*ListingStatusRequest)(nil),      // 81: connectorengine.v1.ListingStatusRequest
-	(*ListingVersion)(nil),            // 82: connectorengine.v1.ListingVersion
-	(*ListingVersions)(nil),           // 83: connectorengine.v1.ListingVersions
-	(*Listings)(nil),                  // 84: connectorengine.v1.Listings
-	(*Manifest)(nil),                  // 85: connectorengine.v1.Manifest
-	(*MetaUI)(nil),                    // 86: connectorengine.v1.MetaUI
-	(*Offer)(nil),                     // 87: connectorengine.v1.Offer
-	(*OfferRequest)(nil),              // 88: connectorengine.v1.OfferRequest
-	(*Offers)(nil),                    // 89: connectorengine.v1.Offers
-	(*Operation)(nil),                 // 90: connectorengine.v1.Operation
-	(*OperationRequest)(nil),          // 91: connectorengine.v1.OperationRequest
-	(*Overlay)(nil),                   // 92: connectorengine.v1.Overlay
-	(*OverlayTargetRequest)(nil),      // 93: connectorengine.v1.OverlayTargetRequest
-	(*OverlayVersionRequest)(nil),     // 94: connectorengine.v1.OverlayVersionRequest
-	(*Overlays)(nil),                  // 95: connectorengine.v1.Overlays
-	(*Pause)(nil),                     // 96: connectorengine.v1.Pause
-	(*PauseRequest)(nil),              // 97: connectorengine.v1.PauseRequest
-	(*Pauses)(nil),                    // 98: connectorengine.v1.Pauses
-	(*PersonRequest)(nil),             // 99: connectorengine.v1.PersonRequest
-	(*ProjectionRequest)(nil),         // 100: connectorengine.v1.ProjectionRequest
-	(*ProposeOverlayRequest)(nil),     // 101: connectorengine.v1.ProposeOverlayRequest
-	(*Publisher)(nil),                 // 102: connectorengine.v1.Publisher
-	(*PutBindingRequest)(nil),         // 103: connectorengine.v1.PutBindingRequest
-	(*PutCatalogPolicyRequest)(nil),   // 104: connectorengine.v1.PutCatalogPolicyRequest
-	(*REST)(nil),                      // 105: connectorengine.v1.REST
-	(*RESTFunction)(nil),              // 106: connectorengine.v1.RESTFunction
-	(*RawDefinition)(nil),             // 107: connectorengine.v1.RawDefinition
-	(*Remote)(nil),                    // 108: connectorengine.v1.Remote
-	(*Review)(nil),                    // 109: connectorengine.v1.Review
-	(*ReviewFunction)(nil),            // 110: connectorengine.v1.ReviewFunction
-	(*ReviewListingRequest)(nil),      // 111: connectorengine.v1.ReviewListingRequest
-	(*RoleAssignment)(nil),            // 112: connectorengine.v1.RoleAssignment
-	(*Roles)(nil),                     // 113: connectorengine.v1.Roles
-	(*Row)(nil),                       // 114: connectorengine.v1.Row
-	(*RuleRequest)(nil),               // 115: connectorengine.v1.RuleRequest
-	(*RuntimeNeeds)(nil),              // 116: connectorengine.v1.RuntimeNeeds
-	(*Sealed)(nil),                    // 117: connectorengine.v1.Sealed
-	(*SessionRequest)(nil),            // 118: connectorengine.v1.SessionRequest
-	(*Signature)(nil),                 // 119: connectorengine.v1.Signature
-	(*SourceInfo)(nil),                // 120: connectorengine.v1.SourceInfo
-	(*SourceRequest)(nil),             // 121: connectorengine.v1.SourceRequest
-	(*StarterRequest)(nil),            // 122: connectorengine.v1.StarterRequest
-	(*StatusChange)(nil),              // 123: connectorengine.v1.StatusChange
-	(*Tenant)(nil),                    // 124: connectorengine.v1.Tenant
-	(*TenantRequest)(nil),             // 125: connectorengine.v1.TenantRequest
-	(*UI)(nil),                        // 126: connectorengine.v1.UI
-	(*UpdateConnectorRequest)(nil),    // 127: connectorengine.v1.UpdateConnectorRequest
-	(*UpdateResult)(nil),              // 128: connectorengine.v1.UpdateResult
-	(*VersionRef)(nil),                // 129: connectorengine.v1.VersionRef
-	(*WatchApprovalsRequest)(nil),     // 130: connectorengine.v1.WatchApprovalsRequest
-	(*WorkspaceRequest)(nil),          // 131: connectorengine.v1.WorkspaceRequest
-	nil,                               // 132: connectorengine.v1.AcceptFunctionsRequest.SeenEntry
-	nil,                               // 133: connectorengine.v1.Call.FindingsEntry
-	nil,                               // 134: connectorengine.v1.Connector.ConfigEntry
-	nil,                               // 135: connectorengine.v1.Document.ExtensionsEntry
-	nil,                               // 136: connectorengine.v1.InstallInput.ConfigEntry
-	nil,                               // 137: connectorengine.v1.Operation.CountsEntry
-	nil,                               // 138: connectorengine.v1.Tenant.CountsEntry
-	(*timestamppb.Timestamp)(nil),     // 139: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),           // 140: google.protobuf.Struct
-	(*structpb.Value)(nil),            // 141: google.protobuf.Value
-	(*emptypb.Empty)(nil),             // 142: google.protobuf.Empty
+	(*Calls)(nil),                     // 22: connectorengine.v1.Calls
+	(*CatalogPolicy)(nil),             // 23: connectorengine.v1.CatalogPolicy
+	(*CatalogRule)(nil),               // 24: connectorengine.v1.CatalogRule
+	(*CatalogRules)(nil),              // 25: connectorengine.v1.CatalogRules
+	(*Change)(nil),                    // 26: connectorengine.v1.Change
+	(*ClassifyFunctionRequest)(nil),   // 27: connectorengine.v1.ClassifyFunctionRequest
+	(*ClientRegistration)(nil),        // 28: connectorengine.v1.ClientRegistration
+	(*ClientRegistrationInput)(nil),   // 29: connectorengine.v1.ClientRegistrationInput
+	(*CompleteConnectRequest)(nil),    // 30: connectorengine.v1.CompleteConnectRequest
+	(*ConfigField)(nil),               // 31: connectorengine.v1.ConfigField
+	(*Conformance)(nil),               // 32: connectorengine.v1.Conformance
+	(*ConnectStart)(nil),              // 33: connectorengine.v1.ConnectStart
+	(*Connector)(nil),                 // 34: connectorengine.v1.Connector
+	(*ConnectorRequest)(nil),          // 35: connectorengine.v1.ConnectorRequest
+	(*ConnectorView)(nil),             // 36: connectorengine.v1.ConnectorView
+	(*ConnectorViews)(nil),            // 37: connectorengine.v1.ConnectorViews
+	(*CreateListingInput)(nil),        // 38: connectorengine.v1.CreateListingInput
+	(*Credential)(nil),                // 39: connectorengine.v1.Credential
+	(*CredentialInput)(nil),           // 40: connectorengine.v1.CredentialInput
+	(*CredentialRequest)(nil),         // 41: connectorengine.v1.CredentialRequest
+	(*Credentials)(nil),               // 42: connectorengine.v1.Credentials
+	(*DecideApprovalRequest)(nil),     // 43: connectorengine.v1.DecideApprovalRequest
+	(*Decision)(nil),                  // 44: connectorengine.v1.Decision
+	(*Descriptor)(nil),                // 45: connectorengine.v1.Descriptor
+	(*Document)(nil),                  // 46: connectorengine.v1.Document
+	(*Effects)(nil),                   // 47: connectorengine.v1.Effects
+	(*Egress)(nil),                    // 48: connectorengine.v1.Egress
+	(*Event)(nil),                     // 49: connectorengine.v1.Event
+	(*EventType)(nil),                 // 50: connectorengine.v1.EventType
+	(*EventTypeRequest)(nil),          // 51: connectorengine.v1.EventTypeRequest
+	(*EventTypes)(nil),                // 52: connectorengine.v1.EventTypes
+	(*ExplainAccessRequest)(nil),      // 53: connectorengine.v1.ExplainAccessRequest
+	(*ExplainVisibilityRequest)(nil),  // 54: connectorengine.v1.ExplainVisibilityRequest
+	(*Exposure)(nil),                  // 55: connectorengine.v1.Exposure
+	(*Finding)(nil),                   // 56: connectorengine.v1.Finding
+	(*Function)(nil),                  // 57: connectorengine.v1.Function
+	(*FunctionDef)(nil),               // 58: connectorengine.v1.FunctionDef
+	(*FunctionRequest)(nil),           // 59: connectorengine.v1.FunctionRequest
+	(*Functions)(nil),                 // 60: connectorengine.v1.Functions
+	(*GRPC)(nil),                      // 61: connectorengine.v1.GRPC
+	(*GRPCFunction)(nil),              // 62: connectorengine.v1.GRPCFunction
+	(*GetListingRequest)(nil),         // 63: connectorengine.v1.GetListingRequest
+	(*Grant)(nil),                     // 64: connectorengine.v1.Grant
+	(*GrantRequest)(nil),              // 65: connectorengine.v1.GrantRequest
+	(*GrantResult)(nil),               // 66: connectorengine.v1.GrantResult
+	(*Grants)(nil),                    // 67: connectorengine.v1.Grants
+	(*GroupMember)(nil),               // 68: connectorengine.v1.GroupMember
+	(*GroupMembers)(nil),              // 69: connectorengine.v1.GroupMembers
+	(*InstallInput)(nil),              // 70: connectorengine.v1.InstallInput
+	(*Level)(nil),                     // 71: connectorengine.v1.Level
+	(*LevelRequest)(nil),              // 72: connectorengine.v1.LevelRequest
+	(*LintListingRequest)(nil),        // 73: connectorengine.v1.LintListingRequest
+	(*LintResult)(nil),                // 74: connectorengine.v1.LintResult
+	(*ListAgentFunctionsRequest)(nil), // 75: connectorengine.v1.ListAgentFunctionsRequest
+	(*ListApprovalsRequest)(nil),      // 76: connectorengine.v1.ListApprovalsRequest
+	(*ListBindingsRequest)(nil),       // 77: connectorengine.v1.ListBindingsRequest
+	(*ListCallsRequest)(nil),          // 78: connectorengine.v1.ListCallsRequest
+	(*ListCredentialsRequest)(nil),    // 79: connectorengine.v1.ListCredentialsRequest
+	(*ListGrantsRequest)(nil),         // 80: connectorengine.v1.ListGrantsRequest
+	(*ListListingsRequest)(nil),       // 81: connectorengine.v1.ListListingsRequest
+	(*ListMembersRequest)(nil),        // 82: connectorengine.v1.ListMembersRequest
+	(*ListRolesRequest)(nil),          // 83: connectorengine.v1.ListRolesRequest
+	(*Listing)(nil),                   // 84: connectorengine.v1.Listing
+	(*ListingRef)(nil),                // 85: connectorengine.v1.ListingRef
+	(*ListingStatusRequest)(nil),      // 86: connectorengine.v1.ListingStatusRequest
+	(*ListingVersion)(nil),            // 87: connectorengine.v1.ListingVersion
+	(*ListingVersions)(nil),           // 88: connectorengine.v1.ListingVersions
+	(*Listings)(nil),                  // 89: connectorengine.v1.Listings
+	(*Manifest)(nil),                  // 90: connectorengine.v1.Manifest
+	(*MetaUI)(nil),                    // 91: connectorengine.v1.MetaUI
+	(*Offer)(nil),                     // 92: connectorengine.v1.Offer
+	(*OfferRequest)(nil),              // 93: connectorengine.v1.OfferRequest
+	(*Offers)(nil),                    // 94: connectorengine.v1.Offers
+	(*Operation)(nil),                 // 95: connectorengine.v1.Operation
+	(*OperationRequest)(nil),          // 96: connectorengine.v1.OperationRequest
+	(*Overlay)(nil),                   // 97: connectorengine.v1.Overlay
+	(*OverlayTargetRequest)(nil),      // 98: connectorengine.v1.OverlayTargetRequest
+	(*OverlayVersionRequest)(nil),     // 99: connectorengine.v1.OverlayVersionRequest
+	(*Overlays)(nil),                  // 100: connectorengine.v1.Overlays
+	(*Pause)(nil),                     // 101: connectorengine.v1.Pause
+	(*PauseRequest)(nil),              // 102: connectorengine.v1.PauseRequest
+	(*Pauses)(nil),                    // 103: connectorengine.v1.Pauses
+	(*PersonRequest)(nil),             // 104: connectorengine.v1.PersonRequest
+	(*ProjectionRequest)(nil),         // 105: connectorengine.v1.ProjectionRequest
+	(*ProposeOverlayRequest)(nil),     // 106: connectorengine.v1.ProposeOverlayRequest
+	(*Publisher)(nil),                 // 107: connectorengine.v1.Publisher
+	(*PutBindingRequest)(nil),         // 108: connectorengine.v1.PutBindingRequest
+	(*PutCatalogPolicyRequest)(nil),   // 109: connectorengine.v1.PutCatalogPolicyRequest
+	(*REST)(nil),                      // 110: connectorengine.v1.REST
+	(*RESTFunction)(nil),              // 111: connectorengine.v1.RESTFunction
+	(*RawDefinition)(nil),             // 112: connectorengine.v1.RawDefinition
+	(*Remote)(nil),                    // 113: connectorengine.v1.Remote
+	(*Review)(nil),                    // 114: connectorengine.v1.Review
+	(*ReviewFunction)(nil),            // 115: connectorengine.v1.ReviewFunction
+	(*ReviewListingRequest)(nil),      // 116: connectorengine.v1.ReviewListingRequest
+	(*RoleAssignment)(nil),            // 117: connectorengine.v1.RoleAssignment
+	(*Roles)(nil),                     // 118: connectorengine.v1.Roles
+	(*RotateKeyRequest)(nil),          // 119: connectorengine.v1.RotateKeyRequest
+	(*Row)(nil),                       // 120: connectorengine.v1.Row
+	(*RuleRequest)(nil),               // 121: connectorengine.v1.RuleRequest
+	(*RuntimeNeeds)(nil),              // 122: connectorengine.v1.RuntimeNeeds
+	(*Sealed)(nil),                    // 123: connectorengine.v1.Sealed
+	(*SessionRequest)(nil),            // 124: connectorengine.v1.SessionRequest
+	(*Signature)(nil),                 // 125: connectorengine.v1.Signature
+	(*SourceInfo)(nil),                // 126: connectorengine.v1.SourceInfo
+	(*SourceRequest)(nil),             // 127: connectorengine.v1.SourceRequest
+	(*SourceStatus)(nil),              // 128: connectorengine.v1.SourceStatus
+	(*SourceSync)(nil),                // 129: connectorengine.v1.SourceSync
+	(*Sources)(nil),                   // 130: connectorengine.v1.Sources
+	(*StarterRequest)(nil),            // 131: connectorengine.v1.StarterRequest
+	(*StatusChange)(nil),              // 132: connectorengine.v1.StatusChange
+	(*Tenant)(nil),                    // 133: connectorengine.v1.Tenant
+	(*TenantRequest)(nil),             // 134: connectorengine.v1.TenantRequest
+	(*UI)(nil),                        // 135: connectorengine.v1.UI
+	(*UpdateConnectorRequest)(nil),    // 136: connectorengine.v1.UpdateConnectorRequest
+	(*UpdateResult)(nil),              // 137: connectorengine.v1.UpdateResult
+	(*VersionRef)(nil),                // 138: connectorengine.v1.VersionRef
+	(*WatchApprovalsRequest)(nil),     // 139: connectorengine.v1.WatchApprovalsRequest
+	(*WorkspaceRequest)(nil),          // 140: connectorengine.v1.WorkspaceRequest
+	nil,                               // 141: connectorengine.v1.AcceptFunctionsRequest.SeenEntry
+	nil,                               // 142: connectorengine.v1.Call.FindingsEntry
+	nil,                               // 143: connectorengine.v1.Connector.ConfigEntry
+	nil,                               // 144: connectorengine.v1.Document.ExtensionsEntry
+	nil,                               // 145: connectorengine.v1.InstallInput.ConfigEntry
+	nil,                               // 146: connectorengine.v1.Operation.CountsEntry
+	nil,                               // 147: connectorengine.v1.Tenant.CountsEntry
+	(*timestamppb.Timestamp)(nil),     // 148: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),           // 149: google.protobuf.Struct
+	(*structpb.Value)(nil),            // 150: google.protobuf.Value
+	(*emptypb.Empty)(nil),             // 151: google.protobuf.Empty
 }
 var file_connectorengine_v1_connectorengine_proto_depIdxs = []int32{
-	132, // 0: connectorengine.v1.AcceptFunctionsRequest.seen:type_name -> connectorengine.v1.AcceptFunctionsRequest.SeenEntry
-	53,  // 1: connectorengine.v1.AcceptResult.function:type_name -> connectorengine.v1.Function
-	60,  // 2: connectorengine.v1.AcceptResult.stale_grant:type_name -> connectorengine.v1.Grant
+	141, // 0: connectorengine.v1.AcceptFunctionsRequest.seen:type_name -> connectorengine.v1.AcceptFunctionsRequest.SeenEntry
+	57,  // 1: connectorengine.v1.AcceptResult.function:type_name -> connectorengine.v1.Function
+	64,  // 2: connectorengine.v1.AcceptResult.stale_grant:type_name -> connectorengine.v1.Grant
 	2,   // 3: connectorengine.v1.AcceptResults.items:type_name -> connectorengine.v1.AcceptResult
 	4,   // 4: connectorengine.v1.AgentFunctions.functions:type_name -> connectorengine.v1.AgentFunction
-	67,  // 5: connectorengine.v1.Answer.tenant:type_name -> connectorengine.v1.Level
-	67,  // 6: connectorengine.v1.Answer.workspace:type_name -> connectorengine.v1.Level
-	67,  // 7: connectorengine.v1.Answer.people:type_name -> connectorengine.v1.Level
-	117, // 8: connectorengine.v1.Approval.arguments:type_name -> connectorengine.v1.Sealed
-	139, // 9: connectorengine.v1.Approval.created_at:type_name -> google.protobuf.Timestamp
-	139, // 10: connectorengine.v1.Approval.expires_at:type_name -> google.protobuf.Timestamp
-	139, // 11: connectorengine.v1.Approval.decided_at:type_name -> google.protobuf.Timestamp
-	139, // 12: connectorengine.v1.Approval.delivered_at:type_name -> google.protobuf.Timestamp
-	139, // 13: connectorengine.v1.Approval.execution_started_at:type_name -> google.protobuf.Timestamp
-	117, // 14: connectorengine.v1.Approval.result_ref:type_name -> connectorengine.v1.Sealed
-	139, // 15: connectorengine.v1.Approval.result_expires_at:type_name -> google.protobuf.Timestamp
-	10,  // 16: connectorengine.v1.ApprovalDetail.approval:type_name -> connectorengine.v1.Approval
-	10,  // 17: connectorengine.v1.Approvals.items:type_name -> connectorengine.v1.Approval
-	140, // 18: connectorengine.v1.AuthSpec.scopes_by_function:type_name -> google.protobuf.Struct
-	17,  // 19: connectorengine.v1.Bindings.items:type_name -> connectorengine.v1.Binding
-	139, // 20: connectorengine.v1.Call.started_at:type_name -> google.protobuf.Timestamp
-	139, // 21: connectorengine.v1.Call.deadline:type_name -> google.protobuf.Timestamp
-	139, // 22: connectorengine.v1.Call.finished_at:type_name -> google.protobuf.Timestamp
-	133, // 23: connectorengine.v1.Call.findings:type_name -> connectorengine.v1.Call.FindingsEntry
-	23,  // 24: connectorengine.v1.CatalogRules.items:type_name -> connectorengine.v1.CatalogRule
-	44,  // 25: connectorengine.v1.Change.effects:type_name -> connectorengine.v1.Effects
-	129, // 26: connectorengine.v1.Connector.listing:type_name -> connectorengine.v1.VersionRef
-	134, // 27: connectorengine.v1.Connector.config:type_name -> connectorengine.v1.Connector.ConfigEntry
-	139, // 28: connectorengine.v1.Connector.last_relist_at:type_name -> google.protobuf.Timestamp
-	139, // 29: connectorengine.v1.Connector.removed_at:type_name -> google.protobuf.Timestamp
-	31,  // 30: connectorengine.v1.ConnectorView.connector:type_name -> connectorengine.v1.Connector
-	53,  // 31: connectorengine.v1.ConnectorView.functions:type_name -> connectorengine.v1.Function
-	33,  // 32: connectorengine.v1.ConnectorViews.items:type_name -> connectorengine.v1.ConnectorView
-	85,  // 33: connectorengine.v1.CreateListingInput.manifest:type_name -> connectorengine.v1.Manifest
-	117, // 34: connectorengine.v1.Credential.secret:type_name -> connectorengine.v1.Sealed
-	139, // 35: connectorengine.v1.Credential.expires_at:type_name -> google.protobuf.Timestamp
-	139, // 36: connectorengine.v1.Credential.refresh_after:type_name -> google.protobuf.Timestamp
-	139, // 37: connectorengine.v1.Credential.created_at:type_name -> google.protobuf.Timestamp
-	139, // 38: connectorengine.v1.Credential.last_used_at:type_name -> google.protobuf.Timestamp
-	139, // 39: connectorengine.v1.Credential.last_refreshed_at:type_name -> google.protobuf.Timestamp
-	139, // 40: connectorengine.v1.CredentialInput.expires_at:type_name -> google.protobuf.Timestamp
-	36,  // 41: connectorengine.v1.Credentials.items:type_name -> connectorengine.v1.Credential
-	135, // 42: connectorengine.v1.Document.extensions:type_name -> connectorengine.v1.Document.ExtensionsEntry
-	114, // 43: connectorengine.v1.Document.adapters:type_name -> connectorengine.v1.Row
-	139, // 44: connectorengine.v1.Event.time:type_name -> google.protobuf.Timestamp
-	140, // 45: connectorengine.v1.Event.data:type_name -> google.protobuf.Struct
-	140, // 46: connectorengine.v1.EventType.schema:type_name -> google.protobuf.Struct
-	47,  // 47: connectorengine.v1.EventTypes.types:type_name -> connectorengine.v1.EventType
-	141, // 48: connectorengine.v1.Function.definition:type_name -> google.protobuf.Value
-	139, // 49: connectorengine.v1.Function.accepted_at:type_name -> google.protobuf.Timestamp
-	141, // 50: connectorengine.v1.FunctionDef.input_schema:type_name -> google.protobuf.Value
-	141, // 51: connectorengine.v1.FunctionDef.output_schema:type_name -> google.protobuf.Value
-	8,   // 52: connectorengine.v1.FunctionDef.annotations:type_name -> connectorengine.v1.Annotations
-	86,  // 53: connectorengine.v1.FunctionDef.meta_ui:type_name -> connectorengine.v1.MetaUI
-	53,  // 54: connectorengine.v1.Functions.items:type_name -> connectorengine.v1.Function
-	42,  // 55: connectorengine.v1.GRPC.descriptor:type_name -> connectorengine.v1.Descriptor
-	58,  // 56: connectorengine.v1.GRPC.methods:type_name -> connectorengine.v1.GRPCFunction
-	141, // 57: connectorengine.v1.GRPCFunction.input_schema:type_name -> google.protobuf.Value
-	141, // 58: connectorengine.v1.GRPCFunction.output_schema:type_name -> google.protobuf.Value
-	80,  // 59: connectorengine.v1.Grant.listing:type_name -> connectorengine.v1.ListingRef
-	139, // 60: connectorengine.v1.Grant.expires_at:type_name -> google.protobuf.Timestamp
-	139, // 61: connectorengine.v1.Grant.created_at:type_name -> google.protobuf.Timestamp
-	60,  // 62: connectorengine.v1.GrantResult.grant:type_name -> connectorengine.v1.Grant
-	60,  // 63: connectorengine.v1.GrantResult.replaced:type_name -> connectorengine.v1.Grant
-	60,  // 64: connectorengine.v1.Grants.items:type_name -> connectorengine.v1.Grant
-	64,  // 65: connectorengine.v1.GroupMembers.items:type_name -> connectorengine.v1.GroupMember
-	80,  // 66: connectorengine.v1.InstallInput.listing:type_name -> connectorengine.v1.ListingRef
-	136, // 67: connectorengine.v1.InstallInput.config:type_name -> connectorengine.v1.InstallInput.ConfigEntry
-	85,  // 68: connectorengine.v1.LintListingRequest.manifest:type_name -> connectorengine.v1.Manifest
-	52,  // 69: connectorengine.v1.LintResult.findings:type_name -> connectorengine.v1.Finding
-	107, // 70: connectorengine.v1.LintResult.definitions:type_name -> connectorengine.v1.RawDefinition
-	80,  // 71: connectorengine.v1.Listing.ref:type_name -> connectorengine.v1.ListingRef
-	129, // 72: connectorengine.v1.ListingVersion.ref:type_name -> connectorengine.v1.VersionRef
-	85,  // 73: connectorengine.v1.ListingVersion.manifest:type_name -> connectorengine.v1.Manifest
-	139, // 74: connectorengine.v1.ListingVersion.imported_at:type_name -> google.protobuf.Timestamp
-	82,  // 75: connectorengine.v1.ListingVersions.items:type_name -> connectorengine.v1.ListingVersion
-	79,  // 76: connectorengine.v1.Listings.items:type_name -> connectorengine.v1.Listing
-	120, // 77: connectorengine.v1.Manifest.source:type_name -> connectorengine.v1.SourceInfo
-	108, // 78: connectorengine.v1.Manifest.remote:type_name -> connectorengine.v1.Remote
-	14,  // 79: connectorengine.v1.Manifest.artifact:type_name -> connectorengine.v1.Artifact
-	105, // 80: connectorengine.v1.Manifest.rest:type_name -> connectorengine.v1.REST
-	57,  // 81: connectorengine.v1.Manifest.grpc:type_name -> connectorengine.v1.GRPC
-	119, // 82: connectorengine.v1.Manifest.signature:type_name -> connectorengine.v1.Signature
-	54,  // 83: connectorengine.v1.Manifest.functions:type_name -> connectorengine.v1.FunctionDef
-	15,  // 84: connectorengine.v1.Manifest.auth:type_name -> connectorengine.v1.AuthSpec
-	28,  // 85: connectorengine.v1.Manifest.config:type_name -> connectorengine.v1.ConfigField
-	45,  // 86: connectorengine.v1.Manifest.egress:type_name -> connectorengine.v1.Egress
-	116, // 87: connectorengine.v1.Manifest.runtime:type_name -> connectorengine.v1.RuntimeNeeds
-	126, // 88: connectorengine.v1.Manifest.ui:type_name -> connectorengine.v1.UI
-	102, // 89: connectorengine.v1.Manifest.publisher:type_name -> connectorengine.v1.Publisher
-	109, // 90: connectorengine.v1.Manifest.review:type_name -> connectorengine.v1.Review
-	87,  // 91: connectorengine.v1.Offers.items:type_name -> connectorengine.v1.Offer
-	137, // 92: connectorengine.v1.Operation.counts:type_name -> connectorengine.v1.Operation.CountsEntry
-	139, // 93: connectorengine.v1.Operation.created_at:type_name -> google.protobuf.Timestamp
-	139, // 94: connectorengine.v1.Operation.updated_at:type_name -> google.protobuf.Timestamp
-	80,  // 95: connectorengine.v1.Overlay.listing:type_name -> connectorengine.v1.ListingRef
-	139, // 96: connectorengine.v1.Overlay.at:type_name -> google.protobuf.Timestamp
-	92,  // 97: connectorengine.v1.Overlays.items:type_name -> connectorengine.v1.Overlay
-	139, // 98: connectorengine.v1.Pause.paused_at:type_name -> google.protobuf.Timestamp
-	139, // 99: connectorengine.v1.Pause.expires_at:type_name -> google.protobuf.Timestamp
-	96,  // 100: connectorengine.v1.Pauses.items:type_name -> connectorengine.v1.Pause
-	106, // 101: connectorengine.v1.REST.functions:type_name -> connectorengine.v1.RESTFunction
-	141, // 102: connectorengine.v1.RESTFunction.input_schema:type_name -> google.protobuf.Value
-	141, // 103: connectorengine.v1.RESTFunction.output_schema:type_name -> google.protobuf.Value
-	141, // 104: connectorengine.v1.RawDefinition.raw:type_name -> google.protobuf.Value
-	139, // 105: connectorengine.v1.Review.at:type_name -> google.protobuf.Timestamp
-	110, // 106: connectorengine.v1.ReviewListingRequest.functions:type_name -> connectorengine.v1.ReviewFunction
-	112, // 107: connectorengine.v1.Roles.items:type_name -> connectorengine.v1.RoleAssignment
-	29,  // 108: connectorengine.v1.Row.conformance:type_name -> connectorengine.v1.Conformance
-	139, // 109: connectorengine.v1.SourceInfo.imported_at:type_name -> google.protobuf.Timestamp
-	79,  // 110: connectorengine.v1.StatusChange.listing:type_name -> connectorengine.v1.Listing
-	90,  // 111: connectorengine.v1.StatusChange.operation:type_name -> connectorengine.v1.Operation
-	139, // 112: connectorengine.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
-	139, // 113: connectorengine.v1.Tenant.removed_at:type_name -> google.protobuf.Timestamp
-	138, // 114: connectorengine.v1.Tenant.counts:type_name -> connectorengine.v1.Tenant.CountsEntry
-	31,  // 115: connectorengine.v1.UpdateResult.connector:type_name -> connectorengine.v1.Connector
-	25,  // 116: connectorengine.v1.UpdateResult.changes:type_name -> connectorengine.v1.Change
-	80,  // 117: connectorengine.v1.VersionRef.listing:type_name -> connectorengine.v1.ListingRef
-	141, // 118: connectorengine.v1.Document.ExtensionsEntry.value:type_name -> google.protobuf.Value
-	76,  // 119: connectorengine.v1.ConnectorEngine.ListListings:input_type -> connectorengine.v1.ListListingsRequest
-	59,  // 120: connectorengine.v1.ConnectorEngine.GetListing:input_type -> connectorengine.v1.GetListingRequest
-	142, // 121: connectorengine.v1.ConnectorEngine.ListOfferedListings:input_type -> google.protobuf.Empty
-	131, // 122: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:input_type -> connectorengine.v1.WorkspaceRequest
-	104, // 123: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:input_type -> connectorengine.v1.PutCatalogPolicyRequest
-	142, // 124: connectorengine.v1.ConnectorEngine.ListCatalogRules:input_type -> google.protobuf.Empty
-	23,  // 125: connectorengine.v1.ConnectorEngine.PutCatalogRule:input_type -> connectorengine.v1.CatalogRule
-	115, // 126: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:input_type -> connectorengine.v1.RuleRequest
-	51,  // 127: connectorengine.v1.ConnectorEngine.ExplainVisibility:input_type -> connectorengine.v1.ExplainVisibilityRequest
-	125, // 128: connectorengine.v1.ConnectorEngine.ListOffers:input_type -> connectorengine.v1.TenantRequest
-	88,  // 129: connectorengine.v1.ConnectorEngine.PutOffer:input_type -> connectorengine.v1.OfferRequest
-	35,  // 130: connectorengine.v1.ConnectorEngine.CreateListing:input_type -> connectorengine.v1.CreateListingInput
-	81,  // 131: connectorengine.v1.ConnectorEngine.QuarantineListing:input_type -> connectorengine.v1.ListingStatusRequest
-	81,  // 132: connectorengine.v1.ConnectorEngine.DeprecateListing:input_type -> connectorengine.v1.ListingStatusRequest
-	81,  // 133: connectorengine.v1.ConnectorEngine.WithdrawListing:input_type -> connectorengine.v1.ListingStatusRequest
-	81,  // 134: connectorengine.v1.ConnectorEngine.RestoreListing:input_type -> connectorengine.v1.ListingStatusRequest
-	122, // 135: connectorengine.v1.ConnectorEngine.SetListingStarter:input_type -> connectorengine.v1.StarterRequest
-	125, // 136: connectorengine.v1.ConnectorEngine.CreateTenant:input_type -> connectorengine.v1.TenantRequest
-	125, // 137: connectorengine.v1.ConnectorEngine.RemoveTenant:input_type -> connectorengine.v1.TenantRequest
-	69,  // 138: connectorengine.v1.ConnectorEngine.LintListing:input_type -> connectorengine.v1.LintListingRequest
-	111, // 139: connectorengine.v1.ConnectorEngine.ReviewListing:input_type -> connectorengine.v1.ReviewListingRequest
-	121, // 140: connectorengine.v1.ConnectorEngine.SyncSource:input_type -> connectorengine.v1.SourceRequest
-	66,  // 141: connectorengine.v1.ConnectorEngine.InstallConnector:input_type -> connectorengine.v1.InstallInput
-	32,  // 142: connectorengine.v1.ConnectorEngine.EnableConnector:input_type -> connectorengine.v1.ConnectorRequest
-	32,  // 143: connectorengine.v1.ConnectorEngine.DisableConnector:input_type -> connectorengine.v1.ConnectorRequest
-	32,  // 144: connectorengine.v1.ConnectorEngine.GetConnector:input_type -> connectorengine.v1.ConnectorRequest
-	131, // 145: connectorengine.v1.ConnectorEngine.ListConnectors:input_type -> connectorengine.v1.WorkspaceRequest
-	127, // 146: connectorengine.v1.ConnectorEngine.UpdateConnector:input_type -> connectorengine.v1.UpdateConnectorRequest
-	68,  // 147: connectorengine.v1.ConnectorEngine.SetConnectorLevel:input_type -> connectorengine.v1.LevelRequest
-	32,  // 148: connectorengine.v1.ConnectorEngine.RemoveConnector:input_type -> connectorengine.v1.ConnectorRequest
-	32,  // 149: connectorengine.v1.ConnectorEngine.ListFunctions:input_type -> connectorengine.v1.ConnectorRequest
-	0,   // 150: connectorengine.v1.ConnectorEngine.AcceptFunction:input_type -> connectorengine.v1.AcceptFunctionRequest
-	1,   // 151: connectorengine.v1.ConnectorEngine.AcceptFunctions:input_type -> connectorengine.v1.AcceptFunctionsRequest
-	32,  // 152: connectorengine.v1.ConnectorEngine.AcceptInstructions:input_type -> connectorengine.v1.ConnectorRequest
-	26,  // 153: connectorengine.v1.ConnectorEngine.ClassifyFunction:input_type -> connectorengine.v1.ClassifyFunctionRequest
-	100, // 154: connectorengine.v1.ConnectorEngine.SetProjection:input_type -> connectorengine.v1.ProjectionRequest
-	55,  // 155: connectorengine.v1.ConnectorEngine.DisableFunction:input_type -> connectorengine.v1.FunctionRequest
-	55,  // 156: connectorengine.v1.ConnectorEngine.EnableFunction:input_type -> connectorengine.v1.FunctionRequest
-	93,  // 157: connectorengine.v1.ConnectorEngine.ListOverlays:input_type -> connectorengine.v1.OverlayTargetRequest
-	93,  // 158: connectorengine.v1.ConnectorEngine.SuggestOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
-	101, // 159: connectorengine.v1.ConnectorEngine.ProposeOverlay:input_type -> connectorengine.v1.ProposeOverlayRequest
-	94,  // 160: connectorengine.v1.ConnectorEngine.AcceptOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
-	94,  // 161: connectorengine.v1.ConnectorEngine.RestoreOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
-	93,  // 162: connectorengine.v1.ConnectorEngine.ClearOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
-	103, // 163: connectorengine.v1.ConnectorEngine.PutBinding:input_type -> connectorengine.v1.PutBindingRequest
-	18,  // 164: connectorengine.v1.ConnectorEngine.DeleteBinding:input_type -> connectorengine.v1.BindingRequest
-	73,  // 165: connectorengine.v1.ConnectorEngine.ListBindings:input_type -> connectorengine.v1.ListBindingsRequest
-	6,   // 166: connectorengine.v1.ConnectorEngine.SetAgentLevel:input_type -> connectorengine.v1.AgentLevelRequest
-	60,  // 167: connectorengine.v1.ConnectorEngine.CreateGrant:input_type -> connectorengine.v1.Grant
-	61,  // 168: connectorengine.v1.ConnectorEngine.DeleteGrant:input_type -> connectorengine.v1.GrantRequest
-	75,  // 169: connectorengine.v1.ConnectorEngine.ListGrants:input_type -> connectorengine.v1.ListGrantsRequest
-	61,  // 170: connectorengine.v1.ConnectorEngine.ConfirmGrant:input_type -> connectorengine.v1.GrantRequest
-	50,  // 171: connectorengine.v1.ConnectorEngine.ExplainAccess:input_type -> connectorengine.v1.ExplainAccessRequest
-	71,  // 172: connectorengine.v1.ConnectorEngine.ListAgentFunctions:input_type -> connectorengine.v1.ListAgentFunctionsRequest
-	72,  // 173: connectorengine.v1.ConnectorEngine.ListApprovals:input_type -> connectorengine.v1.ListApprovalsRequest
-	12,  // 174: connectorengine.v1.ConnectorEngine.GetApproval:input_type -> connectorengine.v1.ApprovalRequest
-	40,  // 175: connectorengine.v1.ConnectorEngine.DecideApproval:input_type -> connectorengine.v1.DecideApprovalRequest
-	12,  // 176: connectorengine.v1.ConnectorEngine.CancelApproval:input_type -> connectorengine.v1.ApprovalRequest
-	142, // 177: connectorengine.v1.ConnectorEngine.ListPauses:input_type -> google.protobuf.Empty
-	97,  // 178: connectorengine.v1.ConnectorEngine.ClearPause:input_type -> connectorengine.v1.PauseRequest
-	130, // 179: connectorengine.v1.ConnectorEngine.WatchApprovals:input_type -> connectorengine.v1.WatchApprovalsRequest
-	21,  // 180: connectorengine.v1.ConnectorEngine.GetCall:input_type -> connectorengine.v1.CallRequest
-	37,  // 181: connectorengine.v1.ConnectorEngine.CreateCredential:input_type -> connectorengine.v1.CredentialInput
-	16,  // 182: connectorengine.v1.ConnectorEngine.BeginConnect:input_type -> connectorengine.v1.BeginConnectRequest
-	27,  // 183: connectorengine.v1.ConnectorEngine.CompleteConnect:input_type -> connectorengine.v1.CompleteConnectRequest
-	74,  // 184: connectorengine.v1.ConnectorEngine.ListCredentials:input_type -> connectorengine.v1.ListCredentialsRequest
-	38,  // 185: connectorengine.v1.ConnectorEngine.RevokeCredential:input_type -> connectorengine.v1.CredentialRequest
-	118, // 186: connectorengine.v1.ConnectorEngine.EndSession:input_type -> connectorengine.v1.SessionRequest
-	7,   // 187: connectorengine.v1.ConnectorEngine.RemoveAgent:input_type -> connectorengine.v1.AgentRequest
-	99,  // 188: connectorengine.v1.ConnectorEngine.RemovePerson:input_type -> connectorengine.v1.PersonRequest
-	99,  // 189: connectorengine.v1.ConnectorEngine.RestorePerson:input_type -> connectorengine.v1.PersonRequest
-	78,  // 190: connectorengine.v1.ConnectorEngine.ListRoles:input_type -> connectorengine.v1.ListRolesRequest
-	112, // 191: connectorengine.v1.ConnectorEngine.PutRole:input_type -> connectorengine.v1.RoleAssignment
-	112, // 192: connectorengine.v1.ConnectorEngine.DeleteRole:input_type -> connectorengine.v1.RoleAssignment
-	77,  // 193: connectorengine.v1.ConnectorEngine.ListGroupMembers:input_type -> connectorengine.v1.ListMembersRequest
-	64,  // 194: connectorengine.v1.ConnectorEngine.PutGroupMember:input_type -> connectorengine.v1.GroupMember
-	64,  // 195: connectorengine.v1.ConnectorEngine.DeleteGroupMember:input_type -> connectorengine.v1.GroupMember
-	91,  // 196: connectorengine.v1.ConnectorEngine.GetOperation:input_type -> connectorengine.v1.OperationRequest
-	142, // 197: connectorengine.v1.ConnectorEngine.ListEventTypes:input_type -> google.protobuf.Empty
-	48,  // 198: connectorengine.v1.ConnectorEngine.GetEventType:input_type -> connectorengine.v1.EventTypeRequest
-	142, // 199: connectorengine.v1.ConnectorEngine.ListAdapters:input_type -> google.protobuf.Empty
-	83,  // 200: connectorengine.v1.ConnectorEngine.ListListings:output_type -> connectorengine.v1.ListingVersions
-	82,  // 201: connectorengine.v1.ConnectorEngine.GetListing:output_type -> connectorengine.v1.ListingVersion
-	84,  // 202: connectorengine.v1.ConnectorEngine.ListOfferedListings:output_type -> connectorengine.v1.Listings
-	22,  // 203: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
-	22,  // 204: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
-	24,  // 205: connectorengine.v1.ConnectorEngine.ListCatalogRules:output_type -> connectorengine.v1.CatalogRules
-	23,  // 206: connectorengine.v1.ConnectorEngine.PutCatalogRule:output_type -> connectorengine.v1.CatalogRule
-	142, // 207: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:output_type -> google.protobuf.Empty
-	9,   // 208: connectorengine.v1.ConnectorEngine.ExplainVisibility:output_type -> connectorengine.v1.Answer
-	89,  // 209: connectorengine.v1.ConnectorEngine.ListOffers:output_type -> connectorengine.v1.Offers
-	90,  // 210: connectorengine.v1.ConnectorEngine.PutOffer:output_type -> connectorengine.v1.Operation
-	82,  // 211: connectorengine.v1.ConnectorEngine.CreateListing:output_type -> connectorengine.v1.ListingVersion
-	123, // 212: connectorengine.v1.ConnectorEngine.QuarantineListing:output_type -> connectorengine.v1.StatusChange
-	123, // 213: connectorengine.v1.ConnectorEngine.DeprecateListing:output_type -> connectorengine.v1.StatusChange
-	123, // 214: connectorengine.v1.ConnectorEngine.WithdrawListing:output_type -> connectorengine.v1.StatusChange
-	123, // 215: connectorengine.v1.ConnectorEngine.RestoreListing:output_type -> connectorengine.v1.StatusChange
-	79,  // 216: connectorengine.v1.ConnectorEngine.SetListingStarter:output_type -> connectorengine.v1.Listing
-	124, // 217: connectorengine.v1.ConnectorEngine.CreateTenant:output_type -> connectorengine.v1.Tenant
-	90,  // 218: connectorengine.v1.ConnectorEngine.RemoveTenant:output_type -> connectorengine.v1.Operation
-	70,  // 219: connectorengine.v1.ConnectorEngine.LintListing:output_type -> connectorengine.v1.LintResult
-	82,  // 220: connectorengine.v1.ConnectorEngine.ReviewListing:output_type -> connectorengine.v1.ListingVersion
-	90,  // 221: connectorengine.v1.ConnectorEngine.SyncSource:output_type -> connectorengine.v1.Operation
-	33,  // 222: connectorengine.v1.ConnectorEngine.InstallConnector:output_type -> connectorengine.v1.ConnectorView
-	31,  // 223: connectorengine.v1.ConnectorEngine.EnableConnector:output_type -> connectorengine.v1.Connector
-	31,  // 224: connectorengine.v1.ConnectorEngine.DisableConnector:output_type -> connectorengine.v1.Connector
-	33,  // 225: connectorengine.v1.ConnectorEngine.GetConnector:output_type -> connectorengine.v1.ConnectorView
-	34,  // 226: connectorengine.v1.ConnectorEngine.ListConnectors:output_type -> connectorengine.v1.ConnectorViews
-	128, // 227: connectorengine.v1.ConnectorEngine.UpdateConnector:output_type -> connectorengine.v1.UpdateResult
-	63,  // 228: connectorengine.v1.ConnectorEngine.SetConnectorLevel:output_type -> connectorengine.v1.Grants
-	142, // 229: connectorengine.v1.ConnectorEngine.RemoveConnector:output_type -> google.protobuf.Empty
-	56,  // 230: connectorengine.v1.ConnectorEngine.ListFunctions:output_type -> connectorengine.v1.Functions
-	2,   // 231: connectorengine.v1.ConnectorEngine.AcceptFunction:output_type -> connectorengine.v1.AcceptResult
-	3,   // 232: connectorengine.v1.ConnectorEngine.AcceptFunctions:output_type -> connectorengine.v1.AcceptResults
-	31,  // 233: connectorengine.v1.ConnectorEngine.AcceptInstructions:output_type -> connectorengine.v1.Connector
-	53,  // 234: connectorengine.v1.ConnectorEngine.ClassifyFunction:output_type -> connectorengine.v1.Function
-	53,  // 235: connectorengine.v1.ConnectorEngine.SetProjection:output_type -> connectorengine.v1.Function
-	53,  // 236: connectorengine.v1.ConnectorEngine.DisableFunction:output_type -> connectorengine.v1.Function
-	53,  // 237: connectorengine.v1.ConnectorEngine.EnableFunction:output_type -> connectorengine.v1.Function
-	95,  // 238: connectorengine.v1.ConnectorEngine.ListOverlays:output_type -> connectorengine.v1.Overlays
-	92,  // 239: connectorengine.v1.ConnectorEngine.SuggestOverlay:output_type -> connectorengine.v1.Overlay
-	92,  // 240: connectorengine.v1.ConnectorEngine.ProposeOverlay:output_type -> connectorengine.v1.Overlay
-	92,  // 241: connectorengine.v1.ConnectorEngine.AcceptOverlay:output_type -> connectorengine.v1.Overlay
-	92,  // 242: connectorengine.v1.ConnectorEngine.RestoreOverlay:output_type -> connectorengine.v1.Overlay
-	142, // 243: connectorengine.v1.ConnectorEngine.ClearOverlay:output_type -> google.protobuf.Empty
-	17,  // 244: connectorengine.v1.ConnectorEngine.PutBinding:output_type -> connectorengine.v1.Binding
-	142, // 245: connectorengine.v1.ConnectorEngine.DeleteBinding:output_type -> google.protobuf.Empty
-	19,  // 246: connectorengine.v1.ConnectorEngine.ListBindings:output_type -> connectorengine.v1.Bindings
-	63,  // 247: connectorengine.v1.ConnectorEngine.SetAgentLevel:output_type -> connectorengine.v1.Grants
-	62,  // 248: connectorengine.v1.ConnectorEngine.CreateGrant:output_type -> connectorengine.v1.GrantResult
-	142, // 249: connectorengine.v1.ConnectorEngine.DeleteGrant:output_type -> google.protobuf.Empty
-	63,  // 250: connectorengine.v1.ConnectorEngine.ListGrants:output_type -> connectorengine.v1.Grants
-	60,  // 251: connectorengine.v1.ConnectorEngine.ConfirmGrant:output_type -> connectorengine.v1.Grant
-	41,  // 252: connectorengine.v1.ConnectorEngine.ExplainAccess:output_type -> connectorengine.v1.Decision
-	5,   // 253: connectorengine.v1.ConnectorEngine.ListAgentFunctions:output_type -> connectorengine.v1.AgentFunctions
-	13,  // 254: connectorengine.v1.ConnectorEngine.ListApprovals:output_type -> connectorengine.v1.Approvals
-	11,  // 255: connectorengine.v1.ConnectorEngine.GetApproval:output_type -> connectorengine.v1.ApprovalDetail
-	10,  // 256: connectorengine.v1.ConnectorEngine.DecideApproval:output_type -> connectorengine.v1.Approval
-	10,  // 257: connectorengine.v1.ConnectorEngine.CancelApproval:output_type -> connectorengine.v1.Approval
-	98,  // 258: connectorengine.v1.ConnectorEngine.ListPauses:output_type -> connectorengine.v1.Pauses
-	142, // 259: connectorengine.v1.ConnectorEngine.ClearPause:output_type -> google.protobuf.Empty
-	46,  // 260: connectorengine.v1.ConnectorEngine.WatchApprovals:output_type -> connectorengine.v1.Event
-	20,  // 261: connectorengine.v1.ConnectorEngine.GetCall:output_type -> connectorengine.v1.Call
-	36,  // 262: connectorengine.v1.ConnectorEngine.CreateCredential:output_type -> connectorengine.v1.Credential
-	30,  // 263: connectorengine.v1.ConnectorEngine.BeginConnect:output_type -> connectorengine.v1.ConnectStart
-	36,  // 264: connectorengine.v1.ConnectorEngine.CompleteConnect:output_type -> connectorengine.v1.Credential
-	39,  // 265: connectorengine.v1.ConnectorEngine.ListCredentials:output_type -> connectorengine.v1.Credentials
-	142, // 266: connectorengine.v1.ConnectorEngine.RevokeCredential:output_type -> google.protobuf.Empty
-	142, // 267: connectorengine.v1.ConnectorEngine.EndSession:output_type -> google.protobuf.Empty
-	142, // 268: connectorengine.v1.ConnectorEngine.RemoveAgent:output_type -> google.protobuf.Empty
-	142, // 269: connectorengine.v1.ConnectorEngine.RemovePerson:output_type -> google.protobuf.Empty
-	142, // 270: connectorengine.v1.ConnectorEngine.RestorePerson:output_type -> google.protobuf.Empty
-	113, // 271: connectorengine.v1.ConnectorEngine.ListRoles:output_type -> connectorengine.v1.Roles
-	112, // 272: connectorengine.v1.ConnectorEngine.PutRole:output_type -> connectorengine.v1.RoleAssignment
-	142, // 273: connectorengine.v1.ConnectorEngine.DeleteRole:output_type -> google.protobuf.Empty
-	65,  // 274: connectorengine.v1.ConnectorEngine.ListGroupMembers:output_type -> connectorengine.v1.GroupMembers
-	64,  // 275: connectorengine.v1.ConnectorEngine.PutGroupMember:output_type -> connectorengine.v1.GroupMember
-	142, // 276: connectorengine.v1.ConnectorEngine.DeleteGroupMember:output_type -> google.protobuf.Empty
-	90,  // 277: connectorengine.v1.ConnectorEngine.GetOperation:output_type -> connectorengine.v1.Operation
-	49,  // 278: connectorengine.v1.ConnectorEngine.ListEventTypes:output_type -> connectorengine.v1.EventTypes
-	47,  // 279: connectorengine.v1.ConnectorEngine.GetEventType:output_type -> connectorengine.v1.EventType
-	43,  // 280: connectorengine.v1.ConnectorEngine.ListAdapters:output_type -> connectorengine.v1.Document
-	200, // [200:281] is the sub-list for method output_type
-	119, // [119:200] is the sub-list for method input_type
-	119, // [119:119] is the sub-list for extension type_name
-	119, // [119:119] is the sub-list for extension extendee
-	0,   // [0:119] is the sub-list for field type_name
+	55,  // 5: connectorengine.v1.AgentFunctions.exposure:type_name -> connectorengine.v1.Exposure
+	71,  // 6: connectorengine.v1.Answer.tenant:type_name -> connectorengine.v1.Level
+	71,  // 7: connectorengine.v1.Answer.workspace:type_name -> connectorengine.v1.Level
+	71,  // 8: connectorengine.v1.Answer.people:type_name -> connectorengine.v1.Level
+	123, // 9: connectorengine.v1.Approval.arguments:type_name -> connectorengine.v1.Sealed
+	148, // 10: connectorengine.v1.Approval.created_at:type_name -> google.protobuf.Timestamp
+	148, // 11: connectorengine.v1.Approval.expires_at:type_name -> google.protobuf.Timestamp
+	148, // 12: connectorengine.v1.Approval.decided_at:type_name -> google.protobuf.Timestamp
+	148, // 13: connectorengine.v1.Approval.delivered_at:type_name -> google.protobuf.Timestamp
+	148, // 14: connectorengine.v1.Approval.execution_started_at:type_name -> google.protobuf.Timestamp
+	123, // 15: connectorengine.v1.Approval.result_ref:type_name -> connectorengine.v1.Sealed
+	148, // 16: connectorengine.v1.Approval.result_expires_at:type_name -> google.protobuf.Timestamp
+	10,  // 17: connectorengine.v1.ApprovalDetail.approval:type_name -> connectorengine.v1.Approval
+	10,  // 18: connectorengine.v1.Approvals.items:type_name -> connectorengine.v1.Approval
+	149, // 19: connectorengine.v1.AuthSpec.scopes_by_function:type_name -> google.protobuf.Struct
+	17,  // 20: connectorengine.v1.Bindings.items:type_name -> connectorengine.v1.Binding
+	148, // 21: connectorengine.v1.Call.started_at:type_name -> google.protobuf.Timestamp
+	148, // 22: connectorengine.v1.Call.deadline:type_name -> google.protobuf.Timestamp
+	148, // 23: connectorengine.v1.Call.finished_at:type_name -> google.protobuf.Timestamp
+	142, // 24: connectorengine.v1.Call.findings:type_name -> connectorengine.v1.Call.FindingsEntry
+	20,  // 25: connectorengine.v1.Calls.items:type_name -> connectorengine.v1.Call
+	24,  // 26: connectorengine.v1.CatalogRules.items:type_name -> connectorengine.v1.CatalogRule
+	47,  // 27: connectorengine.v1.Change.effects:type_name -> connectorengine.v1.Effects
+	123, // 28: connectorengine.v1.ClientRegistration.secret:type_name -> connectorengine.v1.Sealed
+	148, // 29: connectorengine.v1.ClientRegistration.updated_at:type_name -> google.protobuf.Timestamp
+	138, // 30: connectorengine.v1.Connector.listing:type_name -> connectorengine.v1.VersionRef
+	143, // 31: connectorengine.v1.Connector.config:type_name -> connectorengine.v1.Connector.ConfigEntry
+	148, // 32: connectorengine.v1.Connector.last_relist_at:type_name -> google.protobuf.Timestamp
+	148, // 33: connectorengine.v1.Connector.relist_after:type_name -> google.protobuf.Timestamp
+	148, // 34: connectorengine.v1.Connector.removed_at:type_name -> google.protobuf.Timestamp
+	34,  // 35: connectorengine.v1.ConnectorView.connector:type_name -> connectorengine.v1.Connector
+	57,  // 36: connectorengine.v1.ConnectorView.functions:type_name -> connectorengine.v1.Function
+	36,  // 37: connectorengine.v1.ConnectorViews.items:type_name -> connectorengine.v1.ConnectorView
+	90,  // 38: connectorengine.v1.CreateListingInput.manifest:type_name -> connectorengine.v1.Manifest
+	123, // 39: connectorengine.v1.Credential.secret:type_name -> connectorengine.v1.Sealed
+	148, // 40: connectorengine.v1.Credential.expires_at:type_name -> google.protobuf.Timestamp
+	148, // 41: connectorengine.v1.Credential.refresh_after:type_name -> google.protobuf.Timestamp
+	148, // 42: connectorengine.v1.Credential.created_at:type_name -> google.protobuf.Timestamp
+	148, // 43: connectorengine.v1.Credential.last_used_at:type_name -> google.protobuf.Timestamp
+	148, // 44: connectorengine.v1.Credential.last_refreshed_at:type_name -> google.protobuf.Timestamp
+	148, // 45: connectorengine.v1.CredentialInput.expires_at:type_name -> google.protobuf.Timestamp
+	39,  // 46: connectorengine.v1.Credentials.items:type_name -> connectorengine.v1.Credential
+	144, // 47: connectorengine.v1.Document.extensions:type_name -> connectorengine.v1.Document.ExtensionsEntry
+	120, // 48: connectorengine.v1.Document.adapters:type_name -> connectorengine.v1.Row
+	148, // 49: connectorengine.v1.Event.time:type_name -> google.protobuf.Timestamp
+	149, // 50: connectorengine.v1.Event.data:type_name -> google.protobuf.Struct
+	149, // 51: connectorengine.v1.EventType.schema:type_name -> google.protobuf.Struct
+	50,  // 52: connectorengine.v1.EventTypes.types:type_name -> connectorengine.v1.EventType
+	150, // 53: connectorengine.v1.Function.definition:type_name -> google.protobuf.Value
+	148, // 54: connectorengine.v1.Function.accepted_at:type_name -> google.protobuf.Timestamp
+	150, // 55: connectorengine.v1.FunctionDef.input_schema:type_name -> google.protobuf.Value
+	150, // 56: connectorengine.v1.FunctionDef.output_schema:type_name -> google.protobuf.Value
+	8,   // 57: connectorengine.v1.FunctionDef.annotations:type_name -> connectorengine.v1.Annotations
+	91,  // 58: connectorengine.v1.FunctionDef.meta_ui:type_name -> connectorengine.v1.MetaUI
+	57,  // 59: connectorengine.v1.Functions.items:type_name -> connectorengine.v1.Function
+	45,  // 60: connectorengine.v1.GRPC.descriptor:type_name -> connectorengine.v1.Descriptor
+	62,  // 61: connectorengine.v1.GRPC.methods:type_name -> connectorengine.v1.GRPCFunction
+	150, // 62: connectorengine.v1.GRPCFunction.input_schema:type_name -> google.protobuf.Value
+	150, // 63: connectorengine.v1.GRPCFunction.output_schema:type_name -> google.protobuf.Value
+	85,  // 64: connectorengine.v1.Grant.listing:type_name -> connectorengine.v1.ListingRef
+	148, // 65: connectorengine.v1.Grant.expires_at:type_name -> google.protobuf.Timestamp
+	148, // 66: connectorengine.v1.Grant.created_at:type_name -> google.protobuf.Timestamp
+	64,  // 67: connectorengine.v1.GrantResult.grant:type_name -> connectorengine.v1.Grant
+	64,  // 68: connectorengine.v1.GrantResult.replaced:type_name -> connectorengine.v1.Grant
+	64,  // 69: connectorengine.v1.Grants.items:type_name -> connectorengine.v1.Grant
+	68,  // 70: connectorengine.v1.GroupMembers.items:type_name -> connectorengine.v1.GroupMember
+	85,  // 71: connectorengine.v1.InstallInput.listing:type_name -> connectorengine.v1.ListingRef
+	145, // 72: connectorengine.v1.InstallInput.config:type_name -> connectorengine.v1.InstallInput.ConfigEntry
+	90,  // 73: connectorengine.v1.LintListingRequest.manifest:type_name -> connectorengine.v1.Manifest
+	56,  // 74: connectorengine.v1.LintResult.findings:type_name -> connectorengine.v1.Finding
+	112, // 75: connectorengine.v1.LintResult.definitions:type_name -> connectorengine.v1.RawDefinition
+	85,  // 76: connectorengine.v1.Listing.ref:type_name -> connectorengine.v1.ListingRef
+	138, // 77: connectorengine.v1.ListingVersion.ref:type_name -> connectorengine.v1.VersionRef
+	90,  // 78: connectorengine.v1.ListingVersion.manifest:type_name -> connectorengine.v1.Manifest
+	148, // 79: connectorengine.v1.ListingVersion.imported_at:type_name -> google.protobuf.Timestamp
+	87,  // 80: connectorengine.v1.ListingVersions.items:type_name -> connectorengine.v1.ListingVersion
+	84,  // 81: connectorengine.v1.Listings.items:type_name -> connectorengine.v1.Listing
+	126, // 82: connectorengine.v1.Manifest.source:type_name -> connectorengine.v1.SourceInfo
+	113, // 83: connectorengine.v1.Manifest.remote:type_name -> connectorengine.v1.Remote
+	14,  // 84: connectorengine.v1.Manifest.artifact:type_name -> connectorengine.v1.Artifact
+	110, // 85: connectorengine.v1.Manifest.rest:type_name -> connectorengine.v1.REST
+	61,  // 86: connectorengine.v1.Manifest.grpc:type_name -> connectorengine.v1.GRPC
+	125, // 87: connectorengine.v1.Manifest.signature:type_name -> connectorengine.v1.Signature
+	58,  // 88: connectorengine.v1.Manifest.functions:type_name -> connectorengine.v1.FunctionDef
+	15,  // 89: connectorengine.v1.Manifest.auth:type_name -> connectorengine.v1.AuthSpec
+	31,  // 90: connectorengine.v1.Manifest.config:type_name -> connectorengine.v1.ConfigField
+	48,  // 91: connectorengine.v1.Manifest.egress:type_name -> connectorengine.v1.Egress
+	122, // 92: connectorengine.v1.Manifest.runtime:type_name -> connectorengine.v1.RuntimeNeeds
+	135, // 93: connectorengine.v1.Manifest.ui:type_name -> connectorengine.v1.UI
+	107, // 94: connectorengine.v1.Manifest.publisher:type_name -> connectorengine.v1.Publisher
+	114, // 95: connectorengine.v1.Manifest.review:type_name -> connectorengine.v1.Review
+	92,  // 96: connectorengine.v1.Offers.items:type_name -> connectorengine.v1.Offer
+	146, // 97: connectorengine.v1.Operation.counts:type_name -> connectorengine.v1.Operation.CountsEntry
+	148, // 98: connectorengine.v1.Operation.created_at:type_name -> google.protobuf.Timestamp
+	148, // 99: connectorengine.v1.Operation.updated_at:type_name -> google.protobuf.Timestamp
+	85,  // 100: connectorengine.v1.Overlay.listing:type_name -> connectorengine.v1.ListingRef
+	148, // 101: connectorengine.v1.Overlay.at:type_name -> google.protobuf.Timestamp
+	97,  // 102: connectorengine.v1.Overlays.items:type_name -> connectorengine.v1.Overlay
+	148, // 103: connectorengine.v1.Pause.paused_at:type_name -> google.protobuf.Timestamp
+	148, // 104: connectorengine.v1.Pause.expires_at:type_name -> google.protobuf.Timestamp
+	101, // 105: connectorengine.v1.Pauses.items:type_name -> connectorengine.v1.Pause
+	111, // 106: connectorengine.v1.REST.functions:type_name -> connectorengine.v1.RESTFunction
+	150, // 107: connectorengine.v1.RESTFunction.input_schema:type_name -> google.protobuf.Value
+	150, // 108: connectorengine.v1.RESTFunction.output_schema:type_name -> google.protobuf.Value
+	150, // 109: connectorengine.v1.RawDefinition.raw:type_name -> google.protobuf.Value
+	148, // 110: connectorengine.v1.Review.at:type_name -> google.protobuf.Timestamp
+	115, // 111: connectorengine.v1.ReviewListingRequest.functions:type_name -> connectorengine.v1.ReviewFunction
+	117, // 112: connectorengine.v1.Roles.items:type_name -> connectorengine.v1.RoleAssignment
+	32,  // 113: connectorengine.v1.Row.conformance:type_name -> connectorengine.v1.Conformance
+	148, // 114: connectorengine.v1.SourceInfo.imported_at:type_name -> google.protobuf.Timestamp
+	129, // 115: connectorengine.v1.SourceStatus.last_sync:type_name -> connectorengine.v1.SourceSync
+	148, // 116: connectorengine.v1.SourceSync.last_sync:type_name -> google.protobuf.Timestamp
+	128, // 117: connectorengine.v1.Sources.items:type_name -> connectorengine.v1.SourceStatus
+	84,  // 118: connectorengine.v1.StatusChange.listing:type_name -> connectorengine.v1.Listing
+	95,  // 119: connectorengine.v1.StatusChange.operation:type_name -> connectorengine.v1.Operation
+	148, // 120: connectorengine.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
+	148, // 121: connectorengine.v1.Tenant.removed_at:type_name -> google.protobuf.Timestamp
+	147, // 122: connectorengine.v1.Tenant.counts:type_name -> connectorengine.v1.Tenant.CountsEntry
+	34,  // 123: connectorengine.v1.UpdateResult.connector:type_name -> connectorengine.v1.Connector
+	26,  // 124: connectorengine.v1.UpdateResult.changes:type_name -> connectorengine.v1.Change
+	85,  // 125: connectorengine.v1.VersionRef.listing:type_name -> connectorengine.v1.ListingRef
+	150, // 126: connectorengine.v1.Document.ExtensionsEntry.value:type_name -> google.protobuf.Value
+	81,  // 127: connectorengine.v1.ConnectorEngine.ListListings:input_type -> connectorengine.v1.ListListingsRequest
+	63,  // 128: connectorengine.v1.ConnectorEngine.GetListing:input_type -> connectorengine.v1.GetListingRequest
+	151, // 129: connectorengine.v1.ConnectorEngine.ListOfferedListings:input_type -> google.protobuf.Empty
+	140, // 130: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:input_type -> connectorengine.v1.WorkspaceRequest
+	109, // 131: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:input_type -> connectorengine.v1.PutCatalogPolicyRequest
+	151, // 132: connectorengine.v1.ConnectorEngine.ListCatalogRules:input_type -> google.protobuf.Empty
+	24,  // 133: connectorengine.v1.ConnectorEngine.PutCatalogRule:input_type -> connectorengine.v1.CatalogRule
+	121, // 134: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:input_type -> connectorengine.v1.RuleRequest
+	54,  // 135: connectorengine.v1.ConnectorEngine.ExplainVisibility:input_type -> connectorengine.v1.ExplainVisibilityRequest
+	134, // 136: connectorengine.v1.ConnectorEngine.ListOffers:input_type -> connectorengine.v1.TenantRequest
+	93,  // 137: connectorengine.v1.ConnectorEngine.PutOffer:input_type -> connectorengine.v1.OfferRequest
+	38,  // 138: connectorengine.v1.ConnectorEngine.CreateListing:input_type -> connectorengine.v1.CreateListingInput
+	86,  // 139: connectorengine.v1.ConnectorEngine.QuarantineListing:input_type -> connectorengine.v1.ListingStatusRequest
+	86,  // 140: connectorengine.v1.ConnectorEngine.DeprecateListing:input_type -> connectorengine.v1.ListingStatusRequest
+	86,  // 141: connectorengine.v1.ConnectorEngine.WithdrawListing:input_type -> connectorengine.v1.ListingStatusRequest
+	86,  // 142: connectorengine.v1.ConnectorEngine.RestoreListing:input_type -> connectorengine.v1.ListingStatusRequest
+	131, // 143: connectorengine.v1.ConnectorEngine.SetListingStarter:input_type -> connectorengine.v1.StarterRequest
+	134, // 144: connectorengine.v1.ConnectorEngine.CreateTenant:input_type -> connectorengine.v1.TenantRequest
+	134, // 145: connectorengine.v1.ConnectorEngine.RemoveTenant:input_type -> connectorengine.v1.TenantRequest
+	73,  // 146: connectorengine.v1.ConnectorEngine.LintListing:input_type -> connectorengine.v1.LintListingRequest
+	116, // 147: connectorengine.v1.ConnectorEngine.ReviewListing:input_type -> connectorengine.v1.ReviewListingRequest
+	127, // 148: connectorengine.v1.ConnectorEngine.SyncSource:input_type -> connectorengine.v1.SourceRequest
+	70,  // 149: connectorengine.v1.ConnectorEngine.InstallConnector:input_type -> connectorengine.v1.InstallInput
+	35,  // 150: connectorengine.v1.ConnectorEngine.EnableConnector:input_type -> connectorengine.v1.ConnectorRequest
+	35,  // 151: connectorengine.v1.ConnectorEngine.DisableConnector:input_type -> connectorengine.v1.ConnectorRequest
+	35,  // 152: connectorengine.v1.ConnectorEngine.GetConnector:input_type -> connectorengine.v1.ConnectorRequest
+	140, // 153: connectorengine.v1.ConnectorEngine.ListConnectors:input_type -> connectorengine.v1.WorkspaceRequest
+	136, // 154: connectorengine.v1.ConnectorEngine.UpdateConnector:input_type -> connectorengine.v1.UpdateConnectorRequest
+	72,  // 155: connectorengine.v1.ConnectorEngine.SetConnectorLevel:input_type -> connectorengine.v1.LevelRequest
+	35,  // 156: connectorengine.v1.ConnectorEngine.RemoveConnector:input_type -> connectorengine.v1.ConnectorRequest
+	35,  // 157: connectorengine.v1.ConnectorEngine.ListFunctions:input_type -> connectorengine.v1.ConnectorRequest
+	0,   // 158: connectorengine.v1.ConnectorEngine.AcceptFunction:input_type -> connectorengine.v1.AcceptFunctionRequest
+	1,   // 159: connectorengine.v1.ConnectorEngine.AcceptFunctions:input_type -> connectorengine.v1.AcceptFunctionsRequest
+	35,  // 160: connectorengine.v1.ConnectorEngine.AcceptInstructions:input_type -> connectorengine.v1.ConnectorRequest
+	27,  // 161: connectorengine.v1.ConnectorEngine.ClassifyFunction:input_type -> connectorengine.v1.ClassifyFunctionRequest
+	105, // 162: connectorengine.v1.ConnectorEngine.SetProjection:input_type -> connectorengine.v1.ProjectionRequest
+	59,  // 163: connectorengine.v1.ConnectorEngine.DisableFunction:input_type -> connectorengine.v1.FunctionRequest
+	59,  // 164: connectorengine.v1.ConnectorEngine.EnableFunction:input_type -> connectorengine.v1.FunctionRequest
+	98,  // 165: connectorengine.v1.ConnectorEngine.ListOverlays:input_type -> connectorengine.v1.OverlayTargetRequest
+	98,  // 166: connectorengine.v1.ConnectorEngine.SuggestOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
+	106, // 167: connectorengine.v1.ConnectorEngine.ProposeOverlay:input_type -> connectorengine.v1.ProposeOverlayRequest
+	99,  // 168: connectorengine.v1.ConnectorEngine.AcceptOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
+	99,  // 169: connectorengine.v1.ConnectorEngine.RestoreOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
+	98,  // 170: connectorengine.v1.ConnectorEngine.ClearOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
+	108, // 171: connectorengine.v1.ConnectorEngine.PutBinding:input_type -> connectorengine.v1.PutBindingRequest
+	18,  // 172: connectorengine.v1.ConnectorEngine.DeleteBinding:input_type -> connectorengine.v1.BindingRequest
+	77,  // 173: connectorengine.v1.ConnectorEngine.ListBindings:input_type -> connectorengine.v1.ListBindingsRequest
+	6,   // 174: connectorengine.v1.ConnectorEngine.SetAgentLevel:input_type -> connectorengine.v1.AgentLevelRequest
+	64,  // 175: connectorengine.v1.ConnectorEngine.CreateGrant:input_type -> connectorengine.v1.Grant
+	65,  // 176: connectorengine.v1.ConnectorEngine.DeleteGrant:input_type -> connectorengine.v1.GrantRequest
+	80,  // 177: connectorengine.v1.ConnectorEngine.ListGrants:input_type -> connectorengine.v1.ListGrantsRequest
+	65,  // 178: connectorengine.v1.ConnectorEngine.ConfirmGrant:input_type -> connectorengine.v1.GrantRequest
+	53,  // 179: connectorengine.v1.ConnectorEngine.ExplainAccess:input_type -> connectorengine.v1.ExplainAccessRequest
+	75,  // 180: connectorengine.v1.ConnectorEngine.ListAgentFunctions:input_type -> connectorengine.v1.ListAgentFunctionsRequest
+	76,  // 181: connectorengine.v1.ConnectorEngine.ListApprovals:input_type -> connectorengine.v1.ListApprovalsRequest
+	12,  // 182: connectorengine.v1.ConnectorEngine.GetApproval:input_type -> connectorengine.v1.ApprovalRequest
+	43,  // 183: connectorengine.v1.ConnectorEngine.DecideApproval:input_type -> connectorengine.v1.DecideApprovalRequest
+	12,  // 184: connectorengine.v1.ConnectorEngine.CancelApproval:input_type -> connectorengine.v1.ApprovalRequest
+	151, // 185: connectorengine.v1.ConnectorEngine.ListPauses:input_type -> google.protobuf.Empty
+	102, // 186: connectorengine.v1.ConnectorEngine.ClearPause:input_type -> connectorengine.v1.PauseRequest
+	139, // 187: connectorengine.v1.ConnectorEngine.WatchApprovals:input_type -> connectorengine.v1.WatchApprovalsRequest
+	21,  // 188: connectorengine.v1.ConnectorEngine.GetCall:input_type -> connectorengine.v1.CallRequest
+	40,  // 189: connectorengine.v1.ConnectorEngine.CreateCredential:input_type -> connectorengine.v1.CredentialInput
+	16,  // 190: connectorengine.v1.ConnectorEngine.BeginConnect:input_type -> connectorengine.v1.BeginConnectRequest
+	30,  // 191: connectorengine.v1.ConnectorEngine.CompleteConnect:input_type -> connectorengine.v1.CompleteConnectRequest
+	79,  // 192: connectorengine.v1.ConnectorEngine.ListCredentials:input_type -> connectorengine.v1.ListCredentialsRequest
+	41,  // 193: connectorengine.v1.ConnectorEngine.RevokeCredential:input_type -> connectorengine.v1.CredentialRequest
+	29,  // 194: connectorengine.v1.ConnectorEngine.PutClientRegistration:input_type -> connectorengine.v1.ClientRegistrationInput
+	78,  // 195: connectorengine.v1.ConnectorEngine.ListCalls:input_type -> connectorengine.v1.ListCallsRequest
+	151, // 196: connectorengine.v1.ConnectorEngine.ListSources:input_type -> google.protobuf.Empty
+	119, // 197: connectorengine.v1.ConnectorEngine.RotateKey:input_type -> connectorengine.v1.RotateKeyRequest
+	124, // 198: connectorengine.v1.ConnectorEngine.EndSession:input_type -> connectorengine.v1.SessionRequest
+	7,   // 199: connectorengine.v1.ConnectorEngine.RemoveAgent:input_type -> connectorengine.v1.AgentRequest
+	104, // 200: connectorengine.v1.ConnectorEngine.RemovePerson:input_type -> connectorengine.v1.PersonRequest
+	104, // 201: connectorengine.v1.ConnectorEngine.RestorePerson:input_type -> connectorengine.v1.PersonRequest
+	83,  // 202: connectorengine.v1.ConnectorEngine.ListRoles:input_type -> connectorengine.v1.ListRolesRequest
+	117, // 203: connectorengine.v1.ConnectorEngine.PutRole:input_type -> connectorengine.v1.RoleAssignment
+	117, // 204: connectorengine.v1.ConnectorEngine.DeleteRole:input_type -> connectorengine.v1.RoleAssignment
+	82,  // 205: connectorengine.v1.ConnectorEngine.ListGroupMembers:input_type -> connectorengine.v1.ListMembersRequest
+	68,  // 206: connectorengine.v1.ConnectorEngine.PutGroupMember:input_type -> connectorengine.v1.GroupMember
+	68,  // 207: connectorengine.v1.ConnectorEngine.DeleteGroupMember:input_type -> connectorengine.v1.GroupMember
+	96,  // 208: connectorengine.v1.ConnectorEngine.GetOperation:input_type -> connectorengine.v1.OperationRequest
+	151, // 209: connectorengine.v1.ConnectorEngine.ListEventTypes:input_type -> google.protobuf.Empty
+	51,  // 210: connectorengine.v1.ConnectorEngine.GetEventType:input_type -> connectorengine.v1.EventTypeRequest
+	151, // 211: connectorengine.v1.ConnectorEngine.ListAdapters:input_type -> google.protobuf.Empty
+	88,  // 212: connectorengine.v1.ConnectorEngine.ListListings:output_type -> connectorengine.v1.ListingVersions
+	87,  // 213: connectorengine.v1.ConnectorEngine.GetListing:output_type -> connectorengine.v1.ListingVersion
+	89,  // 214: connectorengine.v1.ConnectorEngine.ListOfferedListings:output_type -> connectorengine.v1.Listings
+	23,  // 215: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
+	23,  // 216: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
+	25,  // 217: connectorengine.v1.ConnectorEngine.ListCatalogRules:output_type -> connectorengine.v1.CatalogRules
+	24,  // 218: connectorengine.v1.ConnectorEngine.PutCatalogRule:output_type -> connectorengine.v1.CatalogRule
+	151, // 219: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:output_type -> google.protobuf.Empty
+	9,   // 220: connectorengine.v1.ConnectorEngine.ExplainVisibility:output_type -> connectorengine.v1.Answer
+	94,  // 221: connectorengine.v1.ConnectorEngine.ListOffers:output_type -> connectorengine.v1.Offers
+	95,  // 222: connectorengine.v1.ConnectorEngine.PutOffer:output_type -> connectorengine.v1.Operation
+	87,  // 223: connectorengine.v1.ConnectorEngine.CreateListing:output_type -> connectorengine.v1.ListingVersion
+	132, // 224: connectorengine.v1.ConnectorEngine.QuarantineListing:output_type -> connectorengine.v1.StatusChange
+	132, // 225: connectorengine.v1.ConnectorEngine.DeprecateListing:output_type -> connectorengine.v1.StatusChange
+	132, // 226: connectorengine.v1.ConnectorEngine.WithdrawListing:output_type -> connectorengine.v1.StatusChange
+	132, // 227: connectorengine.v1.ConnectorEngine.RestoreListing:output_type -> connectorengine.v1.StatusChange
+	84,  // 228: connectorengine.v1.ConnectorEngine.SetListingStarter:output_type -> connectorengine.v1.Listing
+	133, // 229: connectorengine.v1.ConnectorEngine.CreateTenant:output_type -> connectorengine.v1.Tenant
+	95,  // 230: connectorengine.v1.ConnectorEngine.RemoveTenant:output_type -> connectorengine.v1.Operation
+	74,  // 231: connectorengine.v1.ConnectorEngine.LintListing:output_type -> connectorengine.v1.LintResult
+	87,  // 232: connectorengine.v1.ConnectorEngine.ReviewListing:output_type -> connectorengine.v1.ListingVersion
+	95,  // 233: connectorengine.v1.ConnectorEngine.SyncSource:output_type -> connectorengine.v1.Operation
+	36,  // 234: connectorengine.v1.ConnectorEngine.InstallConnector:output_type -> connectorengine.v1.ConnectorView
+	34,  // 235: connectorengine.v1.ConnectorEngine.EnableConnector:output_type -> connectorengine.v1.Connector
+	34,  // 236: connectorengine.v1.ConnectorEngine.DisableConnector:output_type -> connectorengine.v1.Connector
+	36,  // 237: connectorengine.v1.ConnectorEngine.GetConnector:output_type -> connectorengine.v1.ConnectorView
+	37,  // 238: connectorengine.v1.ConnectorEngine.ListConnectors:output_type -> connectorengine.v1.ConnectorViews
+	137, // 239: connectorengine.v1.ConnectorEngine.UpdateConnector:output_type -> connectorengine.v1.UpdateResult
+	67,  // 240: connectorengine.v1.ConnectorEngine.SetConnectorLevel:output_type -> connectorengine.v1.Grants
+	151, // 241: connectorengine.v1.ConnectorEngine.RemoveConnector:output_type -> google.protobuf.Empty
+	60,  // 242: connectorengine.v1.ConnectorEngine.ListFunctions:output_type -> connectorengine.v1.Functions
+	2,   // 243: connectorengine.v1.ConnectorEngine.AcceptFunction:output_type -> connectorengine.v1.AcceptResult
+	3,   // 244: connectorengine.v1.ConnectorEngine.AcceptFunctions:output_type -> connectorengine.v1.AcceptResults
+	34,  // 245: connectorengine.v1.ConnectorEngine.AcceptInstructions:output_type -> connectorengine.v1.Connector
+	57,  // 246: connectorengine.v1.ConnectorEngine.ClassifyFunction:output_type -> connectorengine.v1.Function
+	57,  // 247: connectorengine.v1.ConnectorEngine.SetProjection:output_type -> connectorengine.v1.Function
+	57,  // 248: connectorengine.v1.ConnectorEngine.DisableFunction:output_type -> connectorengine.v1.Function
+	57,  // 249: connectorengine.v1.ConnectorEngine.EnableFunction:output_type -> connectorengine.v1.Function
+	100, // 250: connectorengine.v1.ConnectorEngine.ListOverlays:output_type -> connectorengine.v1.Overlays
+	97,  // 251: connectorengine.v1.ConnectorEngine.SuggestOverlay:output_type -> connectorengine.v1.Overlay
+	97,  // 252: connectorengine.v1.ConnectorEngine.ProposeOverlay:output_type -> connectorengine.v1.Overlay
+	97,  // 253: connectorengine.v1.ConnectorEngine.AcceptOverlay:output_type -> connectorengine.v1.Overlay
+	97,  // 254: connectorengine.v1.ConnectorEngine.RestoreOverlay:output_type -> connectorengine.v1.Overlay
+	151, // 255: connectorengine.v1.ConnectorEngine.ClearOverlay:output_type -> google.protobuf.Empty
+	17,  // 256: connectorengine.v1.ConnectorEngine.PutBinding:output_type -> connectorengine.v1.Binding
+	151, // 257: connectorengine.v1.ConnectorEngine.DeleteBinding:output_type -> google.protobuf.Empty
+	19,  // 258: connectorengine.v1.ConnectorEngine.ListBindings:output_type -> connectorengine.v1.Bindings
+	67,  // 259: connectorengine.v1.ConnectorEngine.SetAgentLevel:output_type -> connectorengine.v1.Grants
+	66,  // 260: connectorengine.v1.ConnectorEngine.CreateGrant:output_type -> connectorengine.v1.GrantResult
+	151, // 261: connectorengine.v1.ConnectorEngine.DeleteGrant:output_type -> google.protobuf.Empty
+	67,  // 262: connectorengine.v1.ConnectorEngine.ListGrants:output_type -> connectorengine.v1.Grants
+	64,  // 263: connectorengine.v1.ConnectorEngine.ConfirmGrant:output_type -> connectorengine.v1.Grant
+	44,  // 264: connectorengine.v1.ConnectorEngine.ExplainAccess:output_type -> connectorengine.v1.Decision
+	5,   // 265: connectorengine.v1.ConnectorEngine.ListAgentFunctions:output_type -> connectorengine.v1.AgentFunctions
+	13,  // 266: connectorengine.v1.ConnectorEngine.ListApprovals:output_type -> connectorengine.v1.Approvals
+	11,  // 267: connectorengine.v1.ConnectorEngine.GetApproval:output_type -> connectorengine.v1.ApprovalDetail
+	10,  // 268: connectorengine.v1.ConnectorEngine.DecideApproval:output_type -> connectorengine.v1.Approval
+	10,  // 269: connectorengine.v1.ConnectorEngine.CancelApproval:output_type -> connectorengine.v1.Approval
+	103, // 270: connectorengine.v1.ConnectorEngine.ListPauses:output_type -> connectorengine.v1.Pauses
+	151, // 271: connectorengine.v1.ConnectorEngine.ClearPause:output_type -> google.protobuf.Empty
+	49,  // 272: connectorengine.v1.ConnectorEngine.WatchApprovals:output_type -> connectorengine.v1.Event
+	20,  // 273: connectorengine.v1.ConnectorEngine.GetCall:output_type -> connectorengine.v1.Call
+	39,  // 274: connectorengine.v1.ConnectorEngine.CreateCredential:output_type -> connectorengine.v1.Credential
+	33,  // 275: connectorengine.v1.ConnectorEngine.BeginConnect:output_type -> connectorengine.v1.ConnectStart
+	39,  // 276: connectorengine.v1.ConnectorEngine.CompleteConnect:output_type -> connectorengine.v1.Credential
+	42,  // 277: connectorengine.v1.ConnectorEngine.ListCredentials:output_type -> connectorengine.v1.Credentials
+	151, // 278: connectorengine.v1.ConnectorEngine.RevokeCredential:output_type -> google.protobuf.Empty
+	28,  // 279: connectorengine.v1.ConnectorEngine.PutClientRegistration:output_type -> connectorengine.v1.ClientRegistration
+	22,  // 280: connectorengine.v1.ConnectorEngine.ListCalls:output_type -> connectorengine.v1.Calls
+	130, // 281: connectorengine.v1.ConnectorEngine.ListSources:output_type -> connectorengine.v1.Sources
+	95,  // 282: connectorengine.v1.ConnectorEngine.RotateKey:output_type -> connectorengine.v1.Operation
+	151, // 283: connectorengine.v1.ConnectorEngine.EndSession:output_type -> google.protobuf.Empty
+	151, // 284: connectorengine.v1.ConnectorEngine.RemoveAgent:output_type -> google.protobuf.Empty
+	151, // 285: connectorengine.v1.ConnectorEngine.RemovePerson:output_type -> google.protobuf.Empty
+	151, // 286: connectorengine.v1.ConnectorEngine.RestorePerson:output_type -> google.protobuf.Empty
+	118, // 287: connectorengine.v1.ConnectorEngine.ListRoles:output_type -> connectorengine.v1.Roles
+	117, // 288: connectorengine.v1.ConnectorEngine.PutRole:output_type -> connectorengine.v1.RoleAssignment
+	151, // 289: connectorengine.v1.ConnectorEngine.DeleteRole:output_type -> google.protobuf.Empty
+	69,  // 290: connectorengine.v1.ConnectorEngine.ListGroupMembers:output_type -> connectorengine.v1.GroupMembers
+	68,  // 291: connectorengine.v1.ConnectorEngine.PutGroupMember:output_type -> connectorengine.v1.GroupMember
+	151, // 292: connectorengine.v1.ConnectorEngine.DeleteGroupMember:output_type -> google.protobuf.Empty
+	95,  // 293: connectorengine.v1.ConnectorEngine.GetOperation:output_type -> connectorengine.v1.Operation
+	52,  // 294: connectorengine.v1.ConnectorEngine.ListEventTypes:output_type -> connectorengine.v1.EventTypes
+	50,  // 295: connectorengine.v1.ConnectorEngine.GetEventType:output_type -> connectorengine.v1.EventType
+	46,  // 296: connectorengine.v1.ConnectorEngine.ListAdapters:output_type -> connectorengine.v1.Document
+	212, // [212:297] is the sub-list for method output_type
+	127, // [127:212] is the sub-list for method input_type
+	127, // [127:127] is the sub-list for extension type_name
+	127, // [127:127] is the sub-list for extension extendee
+	0,   // [0:127] is the sub-list for field type_name
 }
 
 func init() { file_connectorengine_v1_connectorengine_proto_init() }
@@ -10781,7 +11469,7 @@ func file_connectorengine_v1_connectorengine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_connectorengine_v1_connectorengine_proto_rawDesc), len(file_connectorengine_v1_connectorengine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   139,
+			NumMessages:   148,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

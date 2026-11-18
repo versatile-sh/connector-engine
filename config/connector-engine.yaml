@@ -105,6 +105,13 @@ sources:
   official:
     enabled: false
     url: https://registry.modelcontextprotocol.io
+    tokenRef: ""
+  bsr:
+    enabled: false
+    url: ""
+    owners: []
+    targets: {}
+    tokenRef: ""
   docker:
     enabled: false
     dir: ""
@@ -141,6 +148,7 @@ runtime:
     - remote
     - declarative
   callTimeout: 1m0s
+  allowPrivateHosts: false
   container:
     cpu: 1
     memory: 2GB

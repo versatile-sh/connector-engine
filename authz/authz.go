@@ -38,6 +38,9 @@ const (
 	AgentRemove         = "agent.remove"
 	PersonRemove        = "person.remove"
 	AuditRead           = "audit.read"
+	SourceRead          = "source.read"
+	ClientRegister      = "client.register"
+	KeyRotate           = "key.rotate"
 	RoleInstallation    = "role.installation"
 	RoleManage          = "role.manage"
 )

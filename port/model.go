@@ -30,6 +30,7 @@ type Connector struct {
 	CallTimeout      time.Duration     `json:"call_timeout,omitempty"`
 	ApprovalTimeout  time.Duration     `json:"approval_timeout,omitempty"`
 	LastRelistAt     time.Time         `json:"last_relist_at,omitzero"`
+	RelistAfter      time.Time         `json:"relist_after,omitzero"`
 	RemovedAt        time.Time         `json:"removed_at,omitzero"`
 	Revision         int64             `json:"revision"`
 }
@@ -121,6 +122,7 @@ type Approval struct {
 	InnerOf            string        `json:"inner_of,omitempty"`
 	Arguments          *Sealed       `json:"arguments,omitempty"`
 	CallHash           Hash          `json:"call_hash"`
+	Fields             []string      `json:"fields,omitempty"`
 	Mode               Mode          `json:"mode"`
 	Approvers          []string      `json:"approvers"`
 	State              ApprovalState `json:"state"`
@@ -244,11 +246,32 @@ type Call struct {
 	LateAnswer  bool           `json:"late_answer,omitempty"`
 }
 
+// ClientRegistration is the OAuth client an admin registered for an issuer of one tenant; the secret is sealed under the tenant key.
+type ClientRegistration struct {
+	Tenant      TenantID  `json:"tenant"`
+	Issuer      string    `json:"issuer"`
+	ClientID    string    `json:"client_id"`
+	Secret      *Sealed   `json:"secret,omitempty"`
+	RedirectURL string    `json:"redirect_url,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// SourceSync is what the last sync of a listing source did.
+type SourceSync struct {
+	Source   string    `json:"source"`
+	LastSync time.Time `json:"last_sync"`
+	Imported int       `json:"imported"`
+	Skipped  int       `json:"skipped"`
+	Error    string    `json:"error,omitempty"`
+}
+
 // Exposure is the trifecta check result of one agent (§15.2).
 type Exposure struct {
 	Tenant  TenantID `json:"tenant"`
 	Agent   AgentID  `json:"agent"`
 	Exposed bool     `json:"exposed"`
+	LegA    []string `json:"leg_a,omitempty"`
+	LegB    []string `json:"leg_b,omitempty"`
 	LegC    []string `json:"leg_c,omitempty"`
 }
 

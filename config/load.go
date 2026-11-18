@@ -26,11 +26,12 @@ const (
 	AckTrustedProxy      = "trusted_proxy"
 	AckManageMutations   = "manage_mcp_mutations"
 	AckPlaintextRootKey  = "plaintext_root_key"
+	AckPrivateEgress     = "private_egress"
 	maxAgentTokenDefault = time.Hour
 )
 
 // Acknowledgements lists every name an adapters file may acknowledge.
-var Acknowledgements = []string{AckLocalIssuer, AckLongLivedTokens, AckTrustedProxy, AckManageMutations, AckPlaintextRootKey}
+var Acknowledgements = []string{AckLocalIssuer, AckLongLivedTokens, AckTrustedProxy, AckManageMutations, AckPlaintextRootKey, AckPrivateEgress}
 
 // Parse reads connector-engine.yaml over the defaults, strictly: an unknown key is an error and a missing key keeps its default.
 func Parse(data []byte) (Config, error) {
@@ -83,8 +84,8 @@ var oneOf = map[string][]string{
 	"outbox.signing":                {"standard-webhooks"},
 	"secrets.adapter":               {"localfile", "memory"},
 	"credentials.fallback":          {"none"},
-	"exposure.onTrifecta":           {"warn"},
-	"apps.appOnlyFunctions":         {"refuse"},
+	"exposure.onTrifecta":           {"warn", "force_ask"},
+	"apps.appOnlyFunctions":         {"refuse", "view_token"},
 	"permission.unclassified":       {"destructive"},
 	"catalog.defaultCeiling":        {"read", "write", "destructive"},
 	"catalog.offerDefault":          {"enabled_sources"},
@@ -142,6 +143,9 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if len(c.Mutations()) > 0 && !acknowledged(AckManageMutations) {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
 	}
+	if c.Runtime.AllowPrivateHosts && !acknowledged(AckPrivateEgress) {
+		add(level, "runtime.allowPrivateHosts", "runtimes and sources may dial loopback, private and metadata addresses; acknowledge %s to allow it", AckPrivateEgress)
+	}
 	if c.Mode == ModeProduction && c.Server.PublicURL == "" && (c.Auth.Audience == "" || c.Auth.ManageAudience == "") {
 		add(adapters.LevelError, "auth.audience", "auth.audience and auth.manageAudience default to server.publicURL, which is empty")
 	}
@@ -154,6 +158,14 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 // Audience returns the audience of the agent endpoint, defaulting to the address of /mcp.
 func (c Config) Audience() string {
 	return orDefault(c.Auth.Audience, strings.TrimRight(c.Server.PublicURL, "/")+"/mcp")
+}
+
+// ResourceMetadataURL is where the agent endpoint publishes its protected-resource metadata (RFC 9728), empty without server.publicURL.
+func (c Config) ResourceMetadataURL() string {
+	if c.Server.PublicURL == "" {
+		return ""
+	}
+	return strings.TrimRight(c.Server.PublicURL, "/") + "/.well-known/oauth-protected-resource"
 }
 
 // ManageAudience returns the audience of the management API, defaulting to the public address.
@@ -180,6 +192,7 @@ func (c Config) Service() service.Config {
 	s.SessionGrantMax, s.AlwaysMax, s.AgentTokenMax = c.Permission.SessionGrantMax, c.Permission.AlwaysMaxDuration, c.Auth.AgentTokenMaxLifetime
 	s.LevelModes = grant.LevelModes{Write: port.Mode(c.Permission.LevelWrite.Write), Destructive: port.Mode(c.Permission.LevelWrite.Destructive)}
 	s.DestructiveMax, s.CallTimeout, s.ListTTL = port.Mode(c.Permission.DestructiveMax), c.Runtime.CallTimeout, c.Gateway.ListTTL
+	s.ForceAsk = c.Exposure.OnTrifecta == "force_ask"
 	s.Separator, s.NameMax = c.Gateway.Separator, c.Gateway.ToolNameMax
 	s.ProjectionDefault, s.ProjectionMaxPaths = c.Projection.Default == "on", c.Projection.MaxPaths
 	s.RequireDigest, s.ScanForToken, s.ChangedWarningDays, s.RefreshMargin = c.Listing.RequireDigest, c.Gateway.ScanArgumentsForToken, c.Approval.ChangedWarningDays, c.Credentials.RefreshMargin

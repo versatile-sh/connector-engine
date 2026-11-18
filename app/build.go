@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"time"
 
 	"github.com/agents-control/plugkit/adapters"
@@ -15,6 +16,7 @@ import (
 	"github.com/agents-control/connector-engine/credential"
 	filterbuiltin "github.com/agents-control/connector-engine/filter/builtin"
 	"github.com/agents-control/connector-engine/index/lexical"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/port"
 	rtdeclarative "github.com/agents-control/connector-engine/runtime/declarative"
 	rtgrpc "github.com/agents-control/connector-engine/runtime/grpc"
@@ -26,6 +28,7 @@ import (
 	sinklog "github.com/agents-control/connector-engine/sink/log"
 	sinkmemory "github.com/agents-control/connector-engine/sink/memory"
 	sinkwebhook "github.com/agents-control/connector-engine/sink/webhook"
+	"github.com/agents-control/connector-engine/source/bsr"
 	"github.com/agents-control/connector-engine/source/docker"
 	"github.com/agents-control/connector-engine/source/files"
 	"github.com/agents-control/connector-engine/source/openapi"
@@ -105,14 +108,41 @@ func (b builder) runtime(store port.Store, secrets port.SecretStore) (port.Conne
 		case u.Tier == adapters.TierMemory:
 			runtimes = append(runtimes, rtmemory.New())
 		case u.Name == "remote":
-			runtimes = append(runtimes, rtremote.New(applier, nil))
+			runtimes = append(runtimes, rtremote.New(applier, nil, b.guard(nil)))
 		case u.Name == "declarative":
-			runtimes = append(runtimes, rtdeclarative.New(applier, nil))
+			runtimes = append(runtimes, rtdeclarative.New(applier, nil, b.guard(nil)))
 		case u.Name == "grpc":
-			runtimes = append(runtimes, rtgrpc.New(rtgrpc.Options{Applier: applier, Insecure: b.cfg.GRPC.Insecure}))
+			runtimes = append(runtimes, rtgrpc.New(rtgrpc.Options{Applier: applier, Insecure: b.cfg.GRPC.Insecure, Guard: b.guard(nil)}))
 		}
 	}
 	return mux.New(runtimes...)
+}
+
+func (b builder) optionalRef(where, ref string) (string, error) {
+	if ref == "" {
+		return "", nil
+	}
+	v, err := resolveRef(b.lookup, ref)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", where, err)
+	}
+	return v, nil
+}
+
+func (b builder) guard(operatorHosts []string) egress.Guard {
+	return egress.Guard{AllowPrivate: b.cfg.Runtime.AllowPrivateHosts, Hosts: operatorHosts}
+}
+
+func hostsOf(addresses ...string) []string {
+	var out []string
+	for _, a := range addresses {
+		if u, err := url.Parse(a); err == nil && u.Host != "" {
+			out = append(out, u.Host)
+		} else {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 func (b builder) sources() (map[string]port.ListingSource, error) {
@@ -127,11 +157,22 @@ func (b builder) sources() (map[string]port.ListingSource, error) {
 		case u.Name == "docker":
 			add(docker.New(b.cfg.Sources.Docker.Dir, b.clock.Now))
 		case u.Name == "official":
-			add(registry.New(registry.Config{BaseURL: b.cfg.Sources.Official.URL, NamespaceVerified: true, Now: b.clock.Now}))
+			token, err := b.optionalRef("sources.official.tokenRef", b.cfg.Sources.Official.TokenRef)
+			if err != nil {
+				return nil, err
+			}
+			add(registry.New(registry.Config{Token: token, BaseURL: b.cfg.Sources.Official.URL, Guard: b.guard(hostsOf(b.cfg.Sources.Official.URL)), NamespaceVerified: true, Now: b.clock.Now}))
+		case u.Name == "bsr":
+			token, err := b.optionalRef("sources.bsr.tokenRef", b.cfg.Sources.BSR.TokenRef)
+			if err != nil {
+				return nil, err
+			}
+			add(bsr.New(bsr.Config{BaseURL: b.cfg.Sources.BSR.URL, Token: token, Owners: b.cfg.Sources.BSR.Owners, Targets: b.cfg.Sources.BSR.Targets,
+				Guard: b.guard(hostsOf(b.cfg.Sources.BSR.URL)), Now: b.clock.Now}))
 		case u.Name == "openapi":
-			add(openapi.New(openapi.Config{Dir: b.cfg.Sources.OpenAPI.Dir, URLs: b.cfg.Sources.OpenAPI.URLs, Now: b.clock.Now}))
+			add(openapi.New(openapi.Config{Dir: b.cfg.Sources.OpenAPI.Dir, URLs: b.cfg.Sources.OpenAPI.URLs, Guard: b.guard(hostsOf(b.cfg.Sources.OpenAPI.URLs...)), Now: b.clock.Now}))
 		case u.Name == "reflection":
-			add(reflection.New(reflection.Config{Targets: b.cfg.Sources.Reflection.Targets, Insecure: b.cfg.Sources.Reflection.Insecure, Now: b.clock.Now}))
+			add(reflection.New(reflection.Config{Targets: b.cfg.Sources.Reflection.Targets, Guard: b.guard(b.cfg.Sources.Reflection.Targets), Insecure: b.cfg.Sources.Reflection.Insecure, Now: b.clock.Now}))
 		}
 	}
 	return out, nil

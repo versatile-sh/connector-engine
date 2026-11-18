@@ -126,13 +126,13 @@ func (s *Service) ExpirePauses(ctx context.Context, tenant port.TenantID) error 
 	})
 }
 
-// RelistDue re-lists every enabled connector of the tenant whose last re-list is older than pinning.relistMax and returns their ids.
+// RelistDue re-lists every enabled connector of the tenant whose upstream ttl, kept within pinning.relistMin and relistMax, has lapsed.
 func (s *Service) RelistDue(ctx context.Context, tenant port.TenantID) ([]port.ConnectorID, error) {
 	var due []port.ConnectorID
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		conns, err := tx.ListConnectors(port.ConnectorFilter{})
 		for _, c := range conns {
-			if c.Enabled && c.RemovedAt.IsZero() && s.now().Sub(c.LastRelistAt) >= s.cfg.RelistMax {
+			if c.Enabled && c.RemovedAt.IsZero() && s.relistDue(c) {
 				due = append(due, c.ID)
 			}
 		}
@@ -264,7 +264,7 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 	if err != nil || plan == nil {
 		return err
 	}
-	inv := s.invoke(ctx, invocation{Conn: h.Conn, Manifest: h.M, Function: h.A.Function, Credential: plan.Credential, Args: json.RawMessage(nonEmpty(h.Args)), Deadline: plan.Call.Deadline})
+	inv := s.invoke(ctx, invocation{Conn: h.Conn, Manifest: h.M, Function: h.A.Function, Credential: plan.Credential, Args: json.RawMessage(nonEmpty(h.Args)), Fields: h.A.Fields, Deadline: plan.Call.Deadline})
 	_, err = s.settle(ctx, plan.Call, inv, &started)
 	return err
 }

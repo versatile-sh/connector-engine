@@ -76,6 +76,10 @@ service ConnectorEngine {
   rpc CompleteConnect(CompleteConnectRequest) returns (Credential);
   rpc ListCredentials(ListCredentialsRequest) returns (Credentials);
   rpc RevokeCredential(CredentialRequest) returns (google.protobuf.Empty);
+  rpc PutClientRegistration(ClientRegistrationInput) returns (ClientRegistration);
+  rpc ListCalls(ListCallsRequest) returns (Calls);
+  rpc ListSources(google.protobuf.Empty) returns (Sources);
+  rpc RotateKey(RotateKeyRequest) returns (Operation);
   rpc EndSession(SessionRequest) returns (google.protobuf.Empty);
   rpc RemoveAgent(AgentRequest) returns (google.protobuf.Empty);
   rpc RemovePerson(PersonRequest) returns (google.protobuf.Empty);
@@ -123,6 +127,7 @@ message AgentFunction {
 message AgentFunctions {
   repeated AgentFunction functions = 1;
   bool approval_tools = 2;
+  Exposure exposure = 3;
 }
 
 message AgentLevelRequest {
@@ -166,22 +171,23 @@ message Approval {
   string inner_of = 11;
   Sealed arguments = 12;
   string call_hash = 13;
-  string mode = 14;
-  repeated string approvers = 15;
-  string state = 16;
-  google.protobuf.Timestamp created_at = 17;
-  google.protobuf.Timestamp expires_at = 18;
-  string decided_by = 19;
-  google.protobuf.Timestamp decided_at = 20;
-  string channel = 21;
-  string decision_note = 22;
-  bool session_grant = 23;
-  string reason = 24;
-  google.protobuf.Timestamp delivered_at = 25;
-  google.protobuf.Timestamp execution_started_at = 26;
-  int64 call_deadline = 27;
-  Sealed result_ref = 28;
-  google.protobuf.Timestamp result_expires_at = 29;
+  repeated string fields = 14;
+  string mode = 15;
+  repeated string approvers = 16;
+  string state = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp expires_at = 19;
+  string decided_by = 20;
+  google.protobuf.Timestamp decided_at = 21;
+  string channel = 22;
+  string decision_note = 23;
+  bool session_grant = 24;
+  string reason = 25;
+  google.protobuf.Timestamp delivered_at = 26;
+  google.protobuf.Timestamp execution_started_at = 27;
+  int64 call_deadline = 28;
+  Sealed result_ref = 29;
+  google.protobuf.Timestamp result_expires_at = 30;
 }
 
 message ApprovalDetail {
@@ -273,6 +279,10 @@ message CallRequest {
   string id = 1;
 }
 
+message Calls {
+  repeated Call items = 1;
+}
+
 message CatalogPolicy {
   string tenant = 1;
   string workspace = 2;
@@ -311,6 +321,22 @@ message ClassifyFunctionRequest {
   string class = 3;
 }
 
+message ClientRegistration {
+  string tenant = 1;
+  string issuer = 2;
+  string client_id = 3;
+  Sealed secret = 4;
+  string redirect_url = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ClientRegistrationInput {
+  string issuer = 1;
+  string client_id = 2;
+  string secret = 3;
+  string redirect_url = 4;
+}
+
 message CompleteConnectRequest {
   string state = 1;
   string code = 2;
@@ -346,8 +372,9 @@ message Connector {
   int64 call_timeout = 9;
   int64 approval_timeout = 10;
   google.protobuf.Timestamp last_relist_at = 11;
-  google.protobuf.Timestamp removed_at = 12;
-  int64 revision = 13;
+  google.protobuf.Timestamp relist_after = 12;
+  google.protobuf.Timestamp removed_at = 13;
+  int64 revision = 14;
 }
 
 message ConnectorRequest {
@@ -425,6 +452,7 @@ message Decision {
   repeated string notes = 4;
   repeated string matched = 5;
   repeated string layers = 6;
+  bool exposed = 7;
 }
 
 message Descriptor {
@@ -495,6 +523,15 @@ message ExplainVisibilityRequest {
   string person = 2;
   string owner = 3;
   string name = 4;
+}
+
+message Exposure {
+  string tenant = 1;
+  string agent = 2;
+  bool exposed = 3;
+  repeated string leg_a = 4;
+  repeated string leg_b = 5;
+  repeated string leg_c = 6;
 }
 
 message Finding {
@@ -669,6 +706,13 @@ message ListBindingsRequest {
   string id = 1;
   string agent = 2;
   string owner = 3;
+}
+
+message ListCallsRequest {
+  string agent = 1;
+  string session = 2;
+  string connector = 3;
+  string state = 4;
 }
 
 message ListCredentialsRequest {
@@ -959,6 +1003,11 @@ message Roles {
   repeated RoleAssignment items = 1;
 }
 
+message RotateKeyRequest {
+  bool root = 1;
+  string tenant = 2;
+}
+
 message Row {
   string kind = 1;
   string port = 2;
@@ -1003,11 +1052,29 @@ message SourceInfo {
   string registry = 1;
   string upstream_name = 2;
   string upstream_version = 3;
-  google.protobuf.Timestamp imported_at = 4;
+  string status = 4;
+  google.protobuf.Timestamp imported_at = 5;
 }
 
 message SourceRequest {
   string source = 1;
+}
+
+message SourceStatus {
+  string name = 1;
+  SourceSync last_sync = 2;
+}
+
+message SourceSync {
+  string source = 1;
+  google.protobuf.Timestamp last_sync = 2;
+  int64 imported = 3;
+  int64 skipped = 4;
+  string error = 5;
+}
+
+message Sources {
+  repeated SourceStatus items = 1;
 }
 
 message StarterRequest {

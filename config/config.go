@@ -239,8 +239,18 @@ type GRPC struct {
 
 // Official is the official registry source.
 type Official struct {
-	Enabled bool   `yaml:"enabled"`
-	URL     string `yaml:"url"`
+	Enabled  bool   `yaml:"enabled"`
+	URL      string `yaml:"url"`
+	TokenRef string `yaml:"tokenRef"`
+}
+
+// BSRSource is the Buf Schema Registry source: the owners to list, the gRPC target of each module and the token reference.
+type BSRSource struct {
+	Enabled  bool              `yaml:"enabled"`
+	URL      string            `yaml:"url"`
+	Owners   []string          `yaml:"owners"`
+	Targets  map[string]string `yaml:"targets"`
+	TokenRef string            `yaml:"tokenRef"`
 }
 
 // Directory is a source read from a directory of files.
@@ -266,6 +276,7 @@ type ReflectionSource struct {
 // Sources is sources.*.
 type Sources struct {
 	Official     Official         `yaml:"official"`
+	BSR          BSRSource        `yaml:"bsr"`
 	Docker       Directory        `yaml:"docker"`
 	Files        Directory        `yaml:"files"`
 	OpenAPI      OpenAPISource    `yaml:"openapi"`
@@ -313,9 +324,10 @@ type Container struct {
 
 // Runtime is runtime.*.
 type Runtime struct {
-	Adapters    []string      `yaml:"adapters"`
-	CallTimeout time.Duration `yaml:"callTimeout"`
-	Container   Container     `yaml:"container"`
+	Adapters          []string      `yaml:"adapters"`
+	CallTimeout       time.Duration `yaml:"callTimeout"`
+	AllowPrivateHosts bool          `yaml:"allowPrivateHosts"`
+	Container         Container     `yaml:"container"`
 }
 
 // Audit is audit.*.
@@ -357,7 +369,7 @@ func Default() Config {
 		CLI:          CLI{DefaultForCodingAgents: true},
 		GRPC:         GRPC{UnaryOnly: true},
 		Sources: Sources{Official: Official{URL: "https://registry.modelcontextprotocol.io"}, OpenAPI: OpenAPISource{URLs: []string{}},
-			Reflection: ReflectionSource{Targets: []string{}}, SyncInterval: 6 * time.Hour},
+			Reflection: ReflectionSource{Targets: []string{}}, BSR: BSRSource{Owners: []string{}, Targets: map[string]string{}}, SyncInterval: 6 * time.Hour},
 		Listing:     Listing{RequireDigest: true},
 		Credentials: Credentials{RefreshMargin: 300 * time.Second, RegistrationOrder: []string{"pre_registered", "cimd", "dcr", "manual"}, Fallback: "none", Clients: []OAuthClient{}},
 		Secrets:     Secrets{Adapter: "localfile", DataKeyCache: 300 * time.Second, Dir: "/var/lib/connector-engine/secrets"},

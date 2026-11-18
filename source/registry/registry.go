@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/fetch"
 	"github.com/agents-control/connector-engine/internal/importer"
 	"github.com/agents-control/connector-engine/port"
@@ -25,7 +26,9 @@ type Config struct {
 	UpdatedSince      time.Time
 	PageSize          int
 	NamespaceVerified bool
+	Token             string
 	HTTP              *http.Client
+	Guard             egress.Guard
 	Now               func() time.Time
 }
 
@@ -41,13 +44,21 @@ func New(cfg Config) *Source {
 		cfg.BaseURL = DefaultURL
 	}
 	if cfg.HTTP == nil {
-		cfg.HTTP = http.DefaultClient
+		cfg.HTTP = cfg.Guard.Client()
 	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
 	cfg.BaseURL = strings.TrimRight(cfg.BaseURL, "/")
 	return &Source{cfg: cfg}
+}
+
+func (s *Source) headers() map[string]string {
+	h := map[string]string{"Accept": "application/json"}
+	if s.cfg.Token != "" {
+		h["Authorization"] = "Bearer " + s.cfg.Token
+	}
+	return h
 }
 
 // Name is the registry name recorded as provenance.
@@ -115,7 +126,9 @@ func (s *Source) manifest(e entry) (port.Manifest, bool) {
 	for _, f := range fields {
 		m.Config = append(m.Config, port.ConfigField{Key: f.Name, Type: "string", Sensitive: f.IsSecret, Required: f.IsRequired})
 	}
-	return importer.Imported(m, s.cfg.Name, s.cfg.Now()), true
+	m = importer.Imported(m, s.cfg.Name, s.cfg.Now())
+	m.Source.Status = e.status()
+	return m, true
 }
 
 // List returns one page of servers; deleted servers and servers with neither a remote nor a package are left out.
@@ -130,7 +143,7 @@ func (s *Source) List(ctx context.Context, cursor string) (port.ListingPage, err
 	if !s.cfg.UpdatedSince.IsZero() {
 		q.Set("updated_since", s.cfg.UpdatedSince.UTC().Format(time.RFC3339))
 	}
-	body, err := fetch.Do(ctx, s.cfg.HTTP, http.MethodGet, s.cfg.BaseURL+"/v0.1/servers?"+q.Encode(), nil, map[string]string{"Accept": "application/json"})
+	body, err := fetch.Do(ctx, s.cfg.HTTP, http.MethodGet, s.cfg.BaseURL+"/v0.1/servers?"+q.Encode(), nil, s.headers())
 	if err != nil {
 		return port.ListingPage{}, err
 	}
@@ -158,7 +171,7 @@ func (s *Source) Fetch(ctx context.Context, name, version string) (port.Manifest
 		version = "latest"
 	}
 	u := s.cfg.BaseURL + "/v0.1/servers/" + url.PathEscape(name) + "/versions/" + url.PathEscape(version)
-	body, err := fetch.Do(ctx, s.cfg.HTTP, http.MethodGet, u, nil, map[string]string{"Accept": "application/json"})
+	body, err := fetch.Do(ctx, s.cfg.HTTP, http.MethodGet, u, nil, s.headers())
 	if err != nil {
 		return port.Manifest{}, err
 	}

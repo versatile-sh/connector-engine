@@ -57,6 +57,14 @@ type ApprovalFilter struct {
 	CallHash  Hash
 }
 
+// CallFilter narrows ListCalls; zero fields match all.
+type CallFilter struct {
+	Agent     AgentID
+	Session   SessionID
+	Connector ConnectorID
+	State     CallState
+}
+
 // CredentialFilter narrows ListCredentials; zero fields match all.
 type CredentialFilter struct {
 	OwnerKind OwnerKind
@@ -140,6 +148,14 @@ type Tx interface {
 	LatestCall(session SessionID, callHash Hash) (Call, bool, error)
 	CreateCall(c Call) error
 	UpdateCall(c Call, from CallState) error
+
+	ListCalls(f CallFilter) ([]Call, error)
+
+	GetClient(issuer string) (ClientRegistration, bool, error)
+	PutClient(c ClientRegistration) error
+
+	ListSourceSyncs() ([]SourceSync, error)
+	PutSourceSync(s SourceSync) error
 
 	GetExposure(agent AgentID) (Exposure, bool, error)
 	PutExposure(e Exposure) error

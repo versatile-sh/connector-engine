@@ -74,6 +74,7 @@ approval:
 resultFilter: {adapter: builtin}
 runtime:
   adapters: [remote, declarative, grpc]
+  allowPrivateHosts: true
 grpc: {insecure: true}
 secrets: {adapter: localfile, dir: %s}
 sources:

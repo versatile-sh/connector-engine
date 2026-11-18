@@ -40,6 +40,7 @@ type Core interface {
 type Config struct {
 	Audience            string
 	ResourceMetadataURL string
+	ViewTokens          bool
 	HoldWindow          time.Duration
 	HoldPoll            time.Duration
 	ThresholdTokens     int
@@ -111,6 +112,8 @@ func (g *Gateway) verify(ctx context.Context, token string, _ *http.Request) (*a
 		return nil, err
 	case p.Kind != port.PrincipalAgent && p.Kind != port.PrincipalView:
 		return nil, fmt.Errorf("%w: the agent endpoint takes an agent or view token", auth.ErrInvalidToken)
+	case p.Kind == port.PrincipalView && !g.cfg.ViewTokens:
+		return nil, fmt.Errorf("%w: view tokens are refused (apps.appOnlyFunctions = refuse)", auth.ErrInvalidToken)
 	}
 	if err := g.core.TenantActive(ctx, p.Claims.Tenant); port.IsCode(err, port.CodeTenantRemoved) {
 		return nil, fmt.Errorf("%w: %w", auth.ErrInvalidToken, err)

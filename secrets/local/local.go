@@ -16,6 +16,7 @@ import (
 
 const (
 	rootFile  = "root.key"
+	nextFile  = "root.key.next"
 	stateFile = "keystore.json"
 )
 
@@ -42,19 +43,51 @@ func Open(dir string) (port.SecretStore, error) {
 	case !errors.Is(err, fs.ErrNotExist):
 		return nil, err
 	}
-	return ring.New(root, state, func(s ring.State, newRoot []byte) error {
-		b, err := json.Marshal(s)
-		if err != nil {
-			return err
-		}
-		if err := writeFile(filepath.Join(dir, stateFile), b); err != nil {
-			return err
-		}
-		if newRoot == nil {
-			return nil
-		}
-		return writeFile(filepath.Join(dir, rootFile), []byte(hex.EncodeToString(newRoot)+"\n"))
-	})
+	if root, err = recoverRotation(dir, root, state); err != nil {
+		return nil, err
+	}
+	return ring.New(root, state, func(s ring.State, newRoot []byte) error { return save(dir, s, newRoot) })
+}
+
+func save(dir string, s ring.State, newRoot []byte) error {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	if newRoot == nil {
+		return writeFile(filepath.Join(dir, stateFile), b)
+	}
+	if err := writeFile(filepath.Join(dir, nextFile), []byte(hex.EncodeToString(newRoot)+"\n")); err != nil {
+		return err
+	}
+	if err := writeFile(filepath.Join(dir, stateFile), b); err != nil {
+		return err
+	}
+	return promote(dir)
+}
+
+func promote(dir string) error {
+	if err := os.Rename(filepath.Join(dir, nextFile), filepath.Join(dir, rootFile)); err != nil {
+		return err
+	}
+	return syncDir(dir)
+}
+
+func recoverRotation(dir string, root []byte, state ring.State) ([]byte, error) {
+	next, err := readRoot(filepath.Join(dir, nextFile))
+	if errors.Is(err, fs.ErrNotExist) {
+		return root, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case ring.Opens(root, state):
+		return root, os.Remove(filepath.Join(dir, nextFile))
+	case ring.Opens(next, state):
+		return next, promote(dir)
+	}
+	return nil, port.Errorf(port.CodeInvalidArgument, "neither %s nor %s opens the key store in %s", rootFile, nextFile, dir)
 }
 
 func readRoot(path string) ([]byte, error) {
@@ -78,8 +111,31 @@ func readRoot(path string) ([]byte, error) {
 
 func writeFile(path string, b []byte) error {
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	_, err = f.Write(b)
+	if err == nil {
+		err = f.Sync()
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	return syncDir(filepath.Dir(path))
+}
+
+func syncDir(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
 }

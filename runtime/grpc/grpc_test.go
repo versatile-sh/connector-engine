@@ -14,6 +14,7 @@ import (
 	"github.com/agents-control/connector-engine/core/pinning"
 	"github.com/agents-control/connector-engine/credential"
 	"github.com/agents-control/connector-engine/internal/digest"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/grpcdesc"
 	"github.com/agents-control/connector-engine/internal/grpctest"
 	"github.com/agents-control/connector-engine/internal/hints"
@@ -24,6 +25,7 @@ import (
 func runtime() *rt.Runtime {
 	return rt.New(rt.Options{
 		Insecure: true,
+		Guard:    egress.Guard{AllowPrivate: true},
 		Applier: credential.Applier{
 			Resolve: func(context.Context, port.SecretsRef) (port.CredentialKind, []byte, error) {
 				return port.CredentialAPIKey, []byte("upstream"), nil

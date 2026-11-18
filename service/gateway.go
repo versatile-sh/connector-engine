@@ -29,6 +29,7 @@ type FunctionList struct {
 	Functions     []ServedFunction
 	ApprovalTools bool
 	TTL           time.Duration
+	Exposure      port.Exposure
 }
 
 // OutcomeStatus is what a call came to.
@@ -186,7 +187,12 @@ func (s *Service) ListAgentFunctions(ctx context.Context, p port.Principal, sub 
 		return FunctionList{}, err
 	}
 	sub.Tenant = p.Claims.Tenant
-	return s.functionsFor(ctx, sub)
+	out, err := s.functionsFor(ctx, sub)
+	if err != nil {
+		return out, err
+	}
+	out.Exposure, err = s.RefreshExposure(ctx, sub.Tenant, sub.Agent)
+	return out, err
 }
 
 func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionList, error) {
@@ -260,7 +266,7 @@ func (s *Service) needRelist(t target, mode port.Mode) bool {
 	if mode != port.ModeAllow {
 		return false
 	}
-	if s.now().Sub(t.Conn.LastRelistAt) >= s.cfg.RelistMax {
+	if s.relistDue(t.Conn) {
 		return true
 	}
 	return s.cfg.RelistBeforeCall == "all" || (s.cfg.RelistBeforeCall == "write" && t.Fn.Class.Effective() != port.ClassRead)

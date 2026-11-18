@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/fetch"
 	"github.com/agents-control/connector-engine/internal/importer"
 	"github.com/agents-control/connector-engine/port"
@@ -32,16 +33,17 @@ var (
 
 // Config names where the documents are; any of the two may be empty.
 type Config struct {
-	Dir  string
-	URLs []string
-	HTTP *http.Client
-	Now  func() time.Time
+	Dir   string
+	URLs  []string
+	HTTP  *http.Client
+	Guard egress.Guard
+	Now   func() time.Time
 }
 
 // New returns a source over the documents of cfg, directory files in name order and then the addresses in order.
 func New(cfg Config) *importer.Static {
 	if cfg.HTTP == nil {
-		cfg.HTTP = http.DefaultClient
+		cfg.HTTP = cfg.Guard.Client()
 	}
 	return &importer.Static{Registry: Registry, Now: cfg.Now, Load: func(ctx context.Context) ([]port.Manifest, error) { return load(ctx, cfg) }}
 }

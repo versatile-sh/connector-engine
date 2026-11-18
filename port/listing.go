@@ -38,6 +38,7 @@ type SourceInfo struct {
 	Registry        string    `json:"registry"`
 	UpstreamName    string    `json:"upstream_name,omitempty"`
 	UpstreamVersion string    `json:"upstream_version,omitempty"`
+	Status          string    `json:"status,omitempty"`
 	ImportedAt      time.Time `json:"imported_at,omitempty"`
 }
 

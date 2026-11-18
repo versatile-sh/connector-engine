@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/agents-control/connector-engine/core/listing"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/sourcetest"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/source/registry"
@@ -45,7 +46,7 @@ func serve(t *testing.T) (*httptest.Server, func() []string) {
 func TestImportsTheRegistryAsUnreviewed(t *testing.T) {
 	srv, seen := serve(t)
 	since := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
-	src := registry.New(registry.Config{Name: "official", BaseURL: srv.URL, UpdatedSince: since, PageSize: 2, NamespaceVerified: true})
+	src := registry.New(registry.Config{Name: "official", BaseURL: srv.URL, UpdatedSince: since, PageSize: 2, NamespaceVerified: true, Guard: egress.Guard{AllowPrivate: true}})
 	got := sourcetest.Import(t, src, "com.example/files")
 
 	if len(got) != 2 {
@@ -70,7 +71,7 @@ func TestImportsTheRegistryAsUnreviewed(t *testing.T) {
 
 func TestFetchAVersion(t *testing.T) {
 	srv, seen := serve(t)
-	src := registry.New(registry.Config{BaseURL: srv.URL})
+	src := registry.New(registry.Config{BaseURL: srv.URL, Guard: egress.Guard{AllowPrivate: true}})
 	m, err := src.Fetch(context.Background(), "io.github.acme/notes", "2.0.1")
 	if err != nil || m.Version != "2.0.1" || m.TrustLevel != port.TrustUnreviewed || m.Publisher.VerifiedBy != "" {
 		t.Fatalf("fetch: %+v %v", m, err)

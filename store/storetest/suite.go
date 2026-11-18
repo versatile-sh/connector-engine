@@ -52,6 +52,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"scope validation":          scopeValidation,
 		"records":                   records,
 		"roles and groups":          rolesAndGroups,
+		"calls clients and syncs":   callsClientsAndSyncs,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -681,6 +682,52 @@ func rolesAndGroups(e *env) {
 	e.must(e.read(scopeB, func(tx port.Tx) error {
 		roles, err := tx.ListRoles(port.RoleFilter{})
 		e.same([]port.RoleAssignment{adminB}, roles)
+		return err
+	}))
+}
+
+func callsClientsAndSyncs(e *env) {
+	call := func(tenant port.TenantID, id, agent string, at time.Duration, state port.CallState) port.Call {
+		return port.Call{ID: port.CallID(id), Tenant: tenant, Agent: port.AgentID(agent), Session: "s1", Connector: "c1", State: state, StartedAt: t0.Add(at)}
+	}
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		return errors.Join(tx.CreateCall(call("ta", "k2", "x", 2*time.Second, port.CallFinished)), tx.CreateCall(call("ta", "k1", "x", time.Second, port.CallStarted)),
+			tx.CreateCall(call("ta", "k3", "y", 3*time.Second, port.CallFinished)),
+			tx.PutClient(port.ClientRegistration{Tenant: "ta", Issuer: "https://idp", ClientID: "a", Secret: &port.Sealed{Ciphertext: []byte("z"), KeyRef: "k"}}))
+	}))
+	e.must(e.write(scopeB, func(tx port.Tx) error {
+		return errors.Join(tx.CreateCall(call("tb", "k9", "x", 0, port.CallFinished)), tx.PutClient(port.ClientRegistration{Tenant: "tb", Issuer: "https://idp", ClientID: "b"}))
+	}))
+	e.must(e.write(inst, func(tx port.Tx) error {
+		return errors.Join(tx.PutSourceSync(port.SourceSync{Source: "z", LastSync: t0, Imported: 1}), tx.PutSourceSync(port.SourceSync{Source: "a", LastSync: t0, Skipped: 2}),
+			tx.PutSourceSync(port.SourceSync{Source: "z", LastSync: t0.Add(time.Hour), Imported: 3}))
+	}))
+	ids := func(cs []port.Call) []string {
+		var out []string
+		for _, c := range cs {
+			out = append(out, string(c.ID))
+		}
+		return out
+	}
+	e.must(e.read(scopeA, func(tx port.Tx) error {
+		all, err1 := tx.ListCalls(port.CallFilter{})
+		byAgent, err2 := tx.ListCalls(port.CallFilter{Agent: "x"})
+		byState, err3 := tx.ListCalls(port.CallFilter{State: port.CallFinished})
+		a, okA, err4 := tx.GetClient("https://idp")
+		_, okMissing, err5 := tx.GetClient("https://other")
+		e.same([]any{[]string{"k1", "k2", "k3"}, []string{"k1", "k2"}, []string{"k2", "k3"}, "a", true, false, "z"},
+			[]any{ids(all), ids(byAgent), ids(byState), a.ClientID, okA, okMissing, string(a.Secret.Ciphertext)})
+		return errors.Join(err1, err2, err3, err4, err5)
+	}))
+	e.must(e.read(scopeB, func(tx port.Tx) error {
+		all, err1 := tx.ListCalls(port.CallFilter{})
+		b, _, err2 := tx.GetClient("https://idp")
+		e.same([]any{[]string{"k9"}, "b"}, []any{ids(all), b.ClientID})
+		return errors.Join(err1, err2)
+	}))
+	e.must(e.read(inst, func(tx port.Tx) error {
+		syncs, err := tx.ListSourceSyncs()
+		e.same([]any{2, "a", "z", 3}, []any{len(syncs), syncs[0].Source, syncs[1].Source, syncs[1].Imported})
 		return err
 	}))
 }

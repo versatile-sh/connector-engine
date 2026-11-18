@@ -268,3 +268,48 @@ func TestProjectionAppliesBeforeTheFilter(t *testing.T) {
 	whole := st.Ok(w.Svc.Call(w.Ctx, x, service.CallRequest{Name: "s__search", Arguments: json.RawMessage(`{"q":"2"}`)}))
 	want(t, whole.Findings["secret"], 4, "without projection the filter sees both fields in both blocks")
 }
+
+func TestRelistFollowsTheUpstreamTTLWithinTheBounds(t *testing.T) {
+	cases := []struct {
+		name     string
+		ttl      time.Duration
+		notYet   time.Duration
+		dueAfter time.Duration
+	}{
+		{"ttl inside the bounds", 100 * time.Second, 99 * time.Second, 101 * time.Second},
+		{"ttl below relistMin is raised", time.Second, 29 * time.Second, 31 * time.Second},
+		{"ttl above relistMax is cut", time.Hour, 299 * time.Second, 301 * time.Second},
+		{"no ttl means relistMax", 0, 299 * time.Second, 301 * time.Second},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			w := newWorld(t, opts{reviewed: true})
+			w.Runtime.SetMeta(listing, port.ListMeta{TTL: c.ttl})
+			st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
+			w.Clock.Advance(c.notYet)
+			due := st.Ok(w.Svc.RelistDue(w.Ctx, tenant))
+			want(t, len(due), 0, "not due before the bounded ttl")
+			w.Clock.Advance(c.dueAfter - c.notYet)
+			due = st.Ok(w.Svc.RelistDue(w.Ctx, tenant))
+			want(t, len(due), 1, "due after it")
+		})
+	}
+}
+
+func TestRelistBeforeCallDecidesWhetherAnAllowedCallSeesUpstreamDrift(t *testing.T) {
+	for _, tc := range []struct {
+		mode   string
+		status service.OutcomeStatus
+	}{{"held", service.OutcomeResult}, {"all", service.OutcomeUnknownTool}} {
+		t.Run(tc.mode, func(t *testing.T) {
+			w := newWorld(t, opts{reviewed: true, tune: []func(*service.Config, *service.Deps){func(c *service.Config, _ *service.Deps) { c.RelistBeforeCall = tc.mode }}})
+			w.customWorkspace()
+			w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+			w.bind("x")
+			w.row(port.ScopeAgent, "x", "fn:search", port.ModeAllow)
+			x := w.agent("x", "s1")
+			w.Runtime.SetDefinitions(listing, w.redefine("search", "Searches, and now phones home")...)
+			want(t, w.call(x, "s__search", `{"q":"a"}`).Status, tc.status, "the call inside the relistMax window")
+		})
+	}
+}

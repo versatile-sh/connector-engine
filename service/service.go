@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"slices"
 	"sync"
 	"time"
 
@@ -67,7 +68,7 @@ func WithIdempotencyKey(ctx context.Context, key string) context.Context {
 
 func (s *Service) write(ctx context.Context, scope port.Scope, op string, fn func(port.Tx) error) error {
 	key, _ := ctx.Value(idemKey{}).(string)
-	return s.d.Store.Write(ctx, scope, func(tx port.Tx) error {
+	err := s.d.Store.Write(ctx, scope, func(tx port.Tx) error {
 		if key != "" {
 			fresh, err := tx.MarkInbox("idem:"+op+":"+key, s.now())
 			if err != nil || !fresh {
@@ -76,6 +77,10 @@ func (s *Service) write(ctx context.Context, scope port.Scope, op string, fn fun
 		}
 		return fn(tx)
 	})
+	if err == nil && scope.Tenant != "" && slices.Contains(exposureOps, op) {
+		s.refreshExposures(ctx, scope.Tenant)
+	}
+	return err
 }
 
 func (s *Service) emit(tx port.Tx, tenant port.TenantID, subject, typ string, payload any) error {
@@ -139,6 +144,13 @@ func (s *Service) TenantActive(ctx context.Context, t port.TenantID) error {
 		return port.Errorf(port.CodeTenantRemoved, "tenant %s is %s", t, state)
 	}
 	return err
+}
+
+func (s *Service) scopeResource(p port.Principal) string {
+	if p.Claims.Tenant == port.Installation {
+		return authz.Installation
+	}
+	return s.tenantResource(p)
 }
 
 func (s *Service) tenantResource(p port.Principal) string {

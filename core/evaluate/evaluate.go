@@ -38,7 +38,8 @@ type Request struct {
 // Decision is the evaluation's answer, with the mode each of the tenant, workspace, agent and user layers gave.
 type Decision struct {
 	port.AccessDecision
-	Layers [4]string `json:"layers"`
+	Layers  [4]string `json:"layers"`
+	Exposed bool      `json:"exposed,omitempty"`
 }
 
 func deny(step int, reason port.Code) Decision {
@@ -147,7 +148,8 @@ func Evaluate(f Facts, r Request) Decision {
 		}
 		d.Notes = append(d.Notes, port.NoteCappedByDestructiveMax)
 	}
-	if f.ForceAsk && f.LegC[fn.Name] && d.Mode.Rank() > port.ModeAsk.Rank() {
+	d.Exposed = f.LegC[fn.Name]
+	if f.ForceAsk && d.Exposed && d.Mode.Rank() > port.ModeAsk.Rank() {
 		d.Mode, d.Step = port.ModeAsk, 13
 		d.Notes = append(d.Notes, port.NoteForcedAsk)
 	}

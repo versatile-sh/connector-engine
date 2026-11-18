@@ -147,7 +147,7 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 		return admission{}, err
 	}
 	a := port.Approval{ID: port.ApprovalID(s.d.NewID()), Tenant: sub.Tenant, Workspace: conn.Workspace, Agent: sub.Agent, Session: sub.Session, OnBehalfOf: sub.OnBehalfOf,
-		Connector: conn.ID, Function: fn.Name, DefinitionHash: fn.DefinitionHash, Class: fn.Class, Arguments: in.Sealed, CallHash: hash, Mode: mode,
+		Connector: conn.ID, Function: fn.Name, DefinitionHash: fn.DefinitionHash, Class: fn.Class, Arguments: in.Sealed, CallHash: hash, Fields: in.Fields, Mode: mode,
 		Approvers: approval.Approvers(bind, sub.OnBehalfOf)}
 	if timeout := cmpOr(bind.ApprovalTimeout, conn.ApprovalTimeout); timeout > 0 {
 		a.ExpiresAt = s.now().Add(timeout)

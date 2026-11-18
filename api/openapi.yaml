@@ -81,6 +81,8 @@ components:
       properties:
         approval_tools:
           type: boolean
+        exposure:
+          $ref: '#/components/schemas/Exposure'
         functions:
           items:
             $ref: '#/components/schemas/AgentFunction'
@@ -88,6 +90,7 @@ components:
       required:
         - functions
         - approval_tools
+        - exposure
       type: object
     AgentLevelRequest:
       properties:
@@ -187,6 +190,10 @@ components:
         expires_at:
           format: date-time
           type: string
+        fields:
+          items:
+            type: string
+          type: array
         function:
           type: string
         id:
@@ -444,6 +451,15 @@ components:
       required:
         - id
       type: object
+    Calls:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Call'
+          type: array
+      required:
+        - items
+      type: object
     CatalogPolicy:
       properties:
         default:
@@ -533,6 +549,41 @@ components:
         - name
         - class
       type: object
+    ClientRegistration:
+      properties:
+        client_id:
+          type: string
+        issuer:
+          type: string
+        redirect_url:
+          type: string
+        secret:
+          $ref: '#/components/schemas/Sealed'
+        tenant:
+          type: string
+        updated_at:
+          format: date-time
+          type: string
+      required:
+        - tenant
+        - issuer
+        - client_id
+        - updated_at
+      type: object
+    ClientRegistrationInput:
+      properties:
+        client_id:
+          type: string
+        issuer:
+          type: string
+        redirect_url:
+          type: string
+        secret:
+          type: string
+      required:
+        - issuer
+        - client_id
+      type: object
     CompleteConnectRequest:
       properties:
         code:
@@ -602,6 +653,9 @@ components:
           type: string
         listing:
           $ref: '#/components/schemas/VersionRef'
+        relist_after:
+          format: date-time
+          type: string
         removed_at:
           format: date-time
           type: string
@@ -619,6 +673,7 @@ components:
         - listing
         - enabled
         - last_relist_at
+        - relist_after
         - removed_at
         - revision
       type: object
@@ -790,6 +845,8 @@ components:
       type: object
     Decision:
       properties:
+        exposed:
+          type: boolean
         layers:
           items:
             type: string
@@ -966,6 +1023,31 @@ components:
       required:
         - workspace
         - name
+      type: object
+    Exposure:
+      properties:
+        agent:
+          type: string
+        exposed:
+          type: boolean
+        leg_a:
+          items:
+            type: string
+          type: array
+        leg_b:
+          items:
+            type: string
+          type: array
+        leg_c:
+          items:
+            type: string
+          type: array
+        tenant:
+          type: string
+      required:
+        - tenant
+        - agent
+        - exposed
       type: object
     Finding:
       properties:
@@ -1343,6 +1425,17 @@ components:
           type: string
       required:
         - id
+      type: object
+    ListCallsRequest:
+      properties:
+        agent:
+          type: string
+        connector:
+          type: string
+        session:
+          type: string
+        state:
+          type: string
       type: object
     ListCredentialsRequest:
       properties:
@@ -1984,6 +2077,13 @@ components:
       required:
         - items
       type: object
+    RotateKeyRequest:
+      properties:
+        root:
+          type: boolean
+        tenant:
+          type: string
+      type: object
     Row:
       properties:
         capabilities:
@@ -2071,6 +2171,8 @@ components:
           type: string
         registry:
           type: string
+        status:
+          type: string
         upstream_name:
           type: string
         upstream_version:
@@ -2084,6 +2186,44 @@ components:
           type: string
       required:
         - source
+      type: object
+    SourceStatus:
+      properties:
+        last_sync:
+          $ref: '#/components/schemas/SourceSync'
+        name:
+          type: string
+      required:
+        - name
+        - last_sync
+      type: object
+    SourceSync:
+      properties:
+        error:
+          type: string
+        imported:
+          type: integer
+        last_sync:
+          format: date-time
+          type: string
+        skipped:
+          type: integer
+        source:
+          type: string
+      required:
+        - source
+        - last_sync
+        - imported
+        - skipped
+      type: object
+    Sources:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/SourceStatus'
+          type: array
+      required:
+        - items
       type: object
     StarterRequest:
       properties:
@@ -2464,6 +2604,41 @@ paths:
             text/event-stream:
               schema:
                 $ref: '#/components/schemas/Event'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/calls:
+    get:
+      operationId: listCalls
+      parameters:
+        - in: query
+          name: agent
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: session
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: connector
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calls'
           description: Success
         default:
           $ref: '#/components/responses/Problem'
@@ -3661,6 +3836,39 @@ paths:
           $ref: '#/components/responses/Problem'
       tags:
         - connector
+  /v1/issuers/client:
+    put:
+      operationId: putClientRegistration
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                client_id:
+                  type: string
+                issuer:
+                  type: string
+                redirect_url:
+                  type: string
+                secret:
+                  type: string
+              required:
+                - issuer
+                - client_id
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRegistration'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
   /v1/listings:
     get:
       operationId: listListings
@@ -4393,6 +4601,32 @@ paths:
           $ref: '#/components/responses/Problem'
       tags:
         - connector
+  /v1/secrets:rotate:
+    post:
+      operationId: rotateKey
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                root:
+                  type: boolean
+                tenant:
+                  type: string
+              type: object
+      responses:
+        "202":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
   /v1/sessions/{id}:end:
     post:
       operationId: endSession
@@ -4405,6 +4639,21 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         "204":
+          description: Success
+        default:
+          $ref: '#/components/responses/Problem'
+      tags:
+        - connector
+  /v1/sources:
+    get:
+      operationId: listSources
+      parameters: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sources'
           description: Success
         default:
           $ref: '#/components/responses/Problem'

@@ -74,6 +74,8 @@ type data struct {
 	credentials table[port.Credential]
 	overlays    table[port.Overlay]
 	calls       table[port.Call]
+	clients     table[port.ClientRegistration]
+	syncs       table[port.SourceSync]
 	exposures   table[port.Exposure]
 	operations  table[port.Operation]
 	fanouts     table[port.FanOut]
@@ -90,6 +92,7 @@ func (d data) clone() data {
 	d.policies, d.rules, d.connectors, d.functions = d.policies.clone(), d.rules.clone(), d.connectors.clone(), d.functions.clone()
 	d.bindings, d.grants, d.approvals, d.pauses = d.bindings.clone(), d.grants.clone(), d.approvals.clone(), d.pauses.clone()
 	d.tombstones, d.credentials, d.overlays, d.calls = d.tombstones.clone(), d.credentials.clone(), d.overlays.clone(), d.calls.clone()
+	d.clients, d.syncs = d.clients.clone(), d.syncs.clone()
 	d.exposures, d.operations, d.fanouts = d.exposures.clone(), d.operations.clone(), d.fanouts.clone()
 	d.roles, d.members = d.roles.clone(), d.members.clone()
 	d.audit, d.events = slices.Clone(d.audit), slices.Clone(d.events)
@@ -113,7 +116,7 @@ func New() *Store {
 		bindings: newTable[port.Binding](tenantRows), grants: newTable[port.Grant](tenantRows),
 		approvals: newTable[port.Approval](tenantRows), pauses: newTable[port.Pause](tenantRows),
 		tombstones: newTable[port.Tombstone](tenantRows), credentials: newTable[port.Credential](tenantRows),
-		overlays: newTable[port.Overlay](tenantRows), calls: newTable[port.Call](tenantRows),
+		overlays: newTable[port.Overlay](tenantRows), calls: newTable[port.Call](tenantRows), clients: newTable[port.ClientRegistration](tenantRows), syncs: newTable[port.SourceSync](sharedRows),
 		exposures: newTable[port.Exposure](tenantRows), operations: newTable[port.Operation](tenantRows),
 		fanouts: newTable[port.FanOut](tenantRows), roles: newTable[port.RoleAssignment](tenantRows),
 		members: newTable[port.GroupMember](tenantRows), streams: map[string]int64{}, inbox: map[string]time.Time{},

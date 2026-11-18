@@ -13,6 +13,7 @@ import (
 
 	"github.com/agents-control/connector-engine/credential"
 	deadlines "github.com/agents-control/connector-engine/internal/deadline"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/handles"
 	"github.com/agents-control/connector-engine/port"
 )
@@ -34,12 +35,13 @@ type instance struct {
 type Runtime struct {
 	applier credential.Applier
 	base    http.RoundTripper
+	guard   egress.Guard
 	started *handles.Registry[*instance]
 }
 
-// New returns a runtime that injects credentials through applier; a nil base uses the default transport.
-func New(applier credential.Applier, base http.RoundTripper) *Runtime {
-	return &Runtime{applier: applier, base: base, started: handles.New[*instance]("remote")}
+// New returns a runtime that injects credentials through applier; a nil base dials through guard.
+func New(applier credential.Applier, base http.RoundTripper, guard egress.Guard) *Runtime {
+	return &Runtime{applier: applier, base: base, guard: guard, started: handles.New[*instance]("remote")}
 }
 
 // Describe states a runtime with no isolation that reaches only the listing's own host.
@@ -59,7 +61,11 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	if t := m.Remote.Transport; t != "" && t != "streamable-http" && t != "streamable_http" {
 		return "", port.Errorf(port.CodeInvalidManifest, "remote transport %q is not Streamable HTTP", t)
 	}
-	capt := &capture{next: credential.Transport{Base: r.base, Applier: r.applier, Ref: secrets, AllowHosts: []string{u.Host}}}
+	base := r.base
+	if base == nil {
+		base = r.guard.Transport(allowedHosts(m)...)
+	}
+	capt := &capture{next: credential.Transport{Base: base, Applier: r.applier, Ref: secrets, AllowHosts: []string{u.Host}}}
 	client := mcp.NewClient(&mcp.Implementation{Name: "connector-engine", Version: "0"}, nil)
 	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
 		Endpoint:             m.Remote.URL,
@@ -162,4 +168,11 @@ func (r *Runtime) Stop(_ context.Context, h port.Handle) error {
 		return port.Errorf(port.CodeNotFound, "no started instance %q", h)
 	}
 	return in.session.Close()
+}
+
+func allowedHosts(m port.Manifest) []string {
+	if m.Egress == nil {
+		return nil
+	}
+	return m.Egress.AllowHosts
 }

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/auth"
+	"github.com/modelcontextprotocol/go-sdk/oauthex"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/agents-control/connector-engine/port"
@@ -49,6 +51,9 @@ func (a *App) Handler() (http.Handler, error) {
 	mux.Handle("/mcp/manage", manage)
 	mux.Handle("/mcp/manage/", manage)
 	if a.agent != nil {
+		meta := auth.ProtectedResourceMetadataHandler(a.resourceMetadata())
+		mux.Handle("GET /.well-known/oauth-protected-resource", meta)
+		mux.Handle("GET /.well-known/oauth-protected-resource/mcp", meta)
 		mux.Handle("/mcp", a.agent)
 		mux.Handle("/mcp/", a.agent)
 	}
@@ -60,6 +65,14 @@ func (a *App) Handler() (http.Handler, error) {
 	return mux, nil
 }
 
+func (a *App) resourceMetadata() *oauthex.ProtectedResourceMetadata {
+	m := &oauthex.ProtectedResourceMetadata{Resource: a.Config.Audience(), BearerMethodsSupported: []string{"header"}, ResourceName: "connector-engine"}
+	for _, i := range a.Config.Auth.Issuers {
+		m.AuthorizationServers = append(m.AuthorizationServers, i.Name)
+	}
+	return m
+}
+
 func (a *App) operatorHandler() (http.Handler, error) {
 	mux := http.NewServeMux()
 	api, err := a.api(a.operatorAuthn())
@@ -67,6 +80,7 @@ func (a *App) operatorHandler() (http.Handler, error) {
 		return nil, err
 	}
 	mux.Handle("/v1/", api)
+	mux.Handle("GET /metrics", a.metrics.Handler())
 	a.probes(mux)
 	return mux, nil
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/agents-control/connector-engine/credential"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/runtime/declarative"
 )
@@ -82,7 +83,7 @@ func start(t *testing.T, m port.Manifest) (*declarative.Runtime, port.Handle) {
 			return port.CredentialAPIKey, []byte("k"), nil
 		},
 		Injector: credential.Injector{},
-	}, nil)
+	}, nil, egress.Guard{AllowPrivate: true})
 	h, err := rt.Start(context.Background(), port.Connector{}, m, port.SecretsRef{Credential: "c"})
 	if err != nil {
 		t.Fatal(err)
@@ -155,7 +156,7 @@ func TestRefusals(t *testing.T) {
 		t.Fatalf("a redirect off the allow-list must fail: %v", err)
 	}
 
-	other := declarative.New(credential.Applier{}, nil)
+	other := declarative.New(credential.Applier{}, nil, egress.Guard{AllowPrivate: true})
 	if _, err := other.Start(context.Background(), port.Connector{}, manifestFor(srv.URL, "elsewhere.example"), port.SecretsRef{}); !port.IsCode(err, port.CodeInvalidManifest) {
 		t.Fatalf("base url outside egress: %v", err)
 	}

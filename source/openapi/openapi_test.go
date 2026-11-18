@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/agents-control/connector-engine/core/listing"
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/sourcetest"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/source/openapi"
@@ -75,11 +76,11 @@ func TestImportsFromAnAddress(t *testing.T) {
 		w.Write(doc)
 	}))
 	defer srv.Close()
-	got := sourcetest.Import(t, openapi.New(openapi.Config{URLs: []string{srv.URL + "/spec.yaml"}}))
+	got := sourcetest.Import(t, openapi.New(openapi.Config{Guard: egress.Guard{AllowPrivate: true}, URLs: []string{srv.URL + "/spec.yaml"}}))
 	if len(got) != 1 {
 		t.Fatalf("imported %d", len(got))
 	}
-	if _, err := openapi.New(openapi.Config{URLs: []string{srv.URL + "/missing"}}).List(t.Context(), ""); !port.IsCode(err, port.CodeNotFound) {
+	if _, err := openapi.New(openapi.Config{Guard: egress.Guard{AllowPrivate: true}, URLs: []string{srv.URL + "/missing"}}).List(t.Context(), ""); !port.IsCode(err, port.CodeNotFound) {
 		t.Fatalf("missing document: %v", err)
 	}
 }

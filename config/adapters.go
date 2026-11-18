@@ -37,7 +37,7 @@ func (c Config) runtimeDefault() []string { return use(adapters.TierBuiltin, c.R
 func (c Config) sourceDefault() []string {
 	var out []string
 	for name, on := range map[string]bool{"files": c.Sources.Files.Enabled, "official": c.Sources.Official.Enabled, "docker": c.Sources.Docker.Enabled,
-		"openapi": c.Sources.OpenAPI.Enabled, "reflection": c.Sources.Reflection.Enabled} {
+		"openapi": c.Sources.OpenAPI.Enabled, "reflection": c.Sources.Reflection.Enabled, "bsr": c.Sources.BSR.Enabled} {
 		if on {
 			out = append(out, adapters.TierBuiltin+":"+name)
 		}
@@ -71,7 +71,7 @@ func (c Config) AdaptersSpec() adapters.Spec {
 			Capabilities: map[string][]string{"builtin:localfile": {"secrets.envelope", "secrets.crypto_shredding"}, "memory": {"secrets.volatile"}}},
 		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Builtins: []string{"jwks", "local"}, Sensitive: true, Weak: []string{"builtin:local"}},
 		PortRuntime: {Default: c.runtimeDefault(), Builtins: []string{"remote", "declarative", "grpc"}, Memory: true, Multi: true},
-		PortSource:  {Default: c.sourceDefault(), Builtins: []string{"files", "official", "docker", "openapi", "reflection"}, Memory: true, Multi: true},
+		PortSource:  {Default: c.sourceDefault(), Builtins: []string{"files", "official", "docker", "openapi", "reflection", "bsr"}, Memory: true, Multi: true},
 		PortSink: {Default: use(adapters.TierBuiltin, "log"), Builtins: []string{"log", "webhook"}, Memory: true,
 			BuiltinConfig: map[string]map[string]adapters.ConfigKind{"builtin:webhook": {"url": adapters.ConfigString, "secretRef": adapters.ConfigRef, "timeout": adapters.ConfigString}}},
 		PortFilter: {Default: c.filterDefault(), Builtins: []string{"builtin"}},

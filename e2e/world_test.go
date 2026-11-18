@@ -287,7 +287,9 @@ func (b bearer) RoundTrip(r *http.Request) (*http.Response, error) {
 
 type agentSession struct {
 	*mcp.ClientSession
-	token string
+	token          string
+	kit            *kit
+	agent, session string
 }
 
 func (k *kit) agent(t *testing.T, agent, session string) agentSession {
@@ -299,12 +301,14 @@ func (k *kit) agent(t *testing.T, agent, session string) agentSession {
 		t.Fatalf("agent %s connect: %v", agent, err)
 	}
 	t.Cleanup(func() { _ = cs.Close() })
-	return agentSession{ClientSession: cs, token: tok}
+	return agentSession{ClientSession: cs, token: tok, kit: k, agent: agent, session: session}
 }
+
+func (a agentSession) fresh(t *testing.T) agentSession { return a.kit.agent(t, a.agent, a.session) }
 
 func (a agentSession) names(t *testing.T) []string {
 	t.Helper()
-	res, err := a.ListTools(context.Background(), nil)
+	res, err := a.fresh(t).ListTools(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +321,7 @@ func (a agentSession) names(t *testing.T) []string {
 
 func (a agentSession) tools(t *testing.T) map[string]*mcp.Tool {
 	t.Helper()
-	res, err := a.ListTools(context.Background(), nil)
+	res, err := a.fresh(t).ListTools(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

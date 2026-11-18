@@ -186,9 +186,7 @@ func (t *tx) GetConnector(id port.ConnectorID) (port.Connector, error) {
 }
 
 func (t *tx) ListConnectors(f port.ConnectorFilter) ([]port.Connector, error) {
-	return list(t, t.d.connectors, func(c port.Connector) bool {
-		return (f.Workspace == "" || c.Workspace == f.Workspace) && (f.Listing == nil || c.Listing.Listing == *f.Listing)
-	})
+	return list(t, t.d.connectors, f.Match)
 }
 
 func (t *tx) PutConnector(c port.Connector, expect int64) (port.Connector, error) {
@@ -215,9 +213,7 @@ func (t *tx) GetBinding(connector port.ConnectorID, agent port.AgentID) (port.Bi
 }
 
 func (t *tx) ListBindings(f port.BindingFilter) ([]port.Binding, error) {
-	return list(t, t.d.bindings, func(b port.Binding) bool {
-		return (f.Connector == "" || b.Connector == f.Connector) && (f.Agent == "" || b.Agent == f.Agent) && (f.Owner == "" || b.AgentOwner == f.Owner)
-	})
+	return list(t, t.d.bindings, f.Match)
 }
 
 func (t *tx) PutBinding(b port.Binding) error {
@@ -235,11 +231,7 @@ func (t *tx) GetGrant(id port.GrantID) (port.Grant, error) {
 }
 
 func (t *tx) ListGrants(f port.GrantFilter) ([]port.Grant, error) {
-	return list(t, t.d.grants, func(g port.Grant) bool {
-		return (f.ScopeKind == "" || g.ScopeKind == f.ScopeKind) && (f.ScopeID == "" || g.ScopeID == f.ScopeID) &&
-			(f.Agent == "" || g.Agent == f.Agent) && (f.Connector == "" || g.Connector == f.Connector) &&
-			(f.Listing == nil || (g.Listing != nil && *g.Listing == *f.Listing))
-	})
+	return list(t, t.d.grants, f.Match)
 }
 
 func (t *tx) PutGrant(g port.Grant) error {
@@ -284,10 +276,7 @@ func (t *tx) GetApproval(id port.ApprovalID) (port.Approval, error) {
 }
 
 func (t *tx) ListApprovals(f port.ApprovalFilter) ([]port.Approval, error) {
-	out, err := list(t, t.d.approvals, func(a port.Approval) bool {
-		return (len(f.States) == 0 || slices.Contains(f.States, a.State)) && (f.Session == "" || a.Session == f.Session) &&
-			(f.Agent == "" || a.Agent == f.Agent) && (f.Connector == "" || a.Connector == f.Connector) && (f.CallHash == "" || a.CallHash == f.CallHash)
-	})
+	out, err := list(t, t.d.approvals, f.Match)
 	slices.SortStableFunc(out, func(a, b port.Approval) int { return a.CreatedAt.Compare(b.CreatedAt) })
 	return out, err
 }
@@ -381,9 +370,7 @@ func (t *tx) GetCredential(id port.CredentialID) (port.Credential, error) {
 }
 
 func (t *tx) ListCredentials(f port.CredentialFilter) ([]port.Credential, error) {
-	return list(t, t.d.credentials, func(c port.Credential) bool {
-		return (f.OwnerKind == "" || c.OwnerKind == f.OwnerKind) && (f.OwnerID == "" || c.OwnerID == f.OwnerID) && (f.Connector == "" || c.Connector == f.Connector)
-	})
+	return list(t, t.d.credentials, f.Match)
 }
 
 func (t *tx) PutCredential(c port.Credential, expect int64) (port.Credential, error) {
@@ -401,9 +388,7 @@ func overlayKey(o port.Overlay) string {
 }
 
 func (t *tx) ListOverlays(connector port.ConnectorID, listing *port.ListingRef, function string) ([]port.Overlay, error) {
-	out, err := list(t, t.d.overlays, func(o port.Overlay) bool {
-		return o.Function == function && o.Connector == connector && ((listing == nil && o.Listing == nil) || (listing != nil && o.Listing != nil && *o.Listing == *listing))
-	})
+	out, err := list(t, t.d.overlays, func(o port.Overlay) bool { return o.Targets(connector, listing, function) })
 	slices.SortFunc(out, func(a, b port.Overlay) int { return cmp.Compare(a.Version, b.Version) })
 	return out, err
 }

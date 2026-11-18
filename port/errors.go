@@ -88,6 +88,14 @@ type Error struct {
 
 func (e *Error) Error() string { return fmt.Sprintf("%s: %s", e.Code, e.Detail) }
 
+// Rejection is what an EventSink returns for an event its subscriber refuses for good; the relay gives that event up and goes on.
+type Rejection struct {
+	Event  string
+	Detail string
+}
+
+func (r *Rejection) Error() string { return "event " + r.Event + " rejected: " + r.Detail }
+
 // Errorf builds a coded error.
 func Errorf(code Code, format string, args ...any) error {
 	return &Error{Code: code, Detail: fmt.Sprintf(format, args...)}

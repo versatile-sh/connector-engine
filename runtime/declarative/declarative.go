@@ -16,6 +16,7 @@ import (
 	"github.com/agents-control/connector-engine/credential"
 	deadlines "github.com/agents-control/connector-engine/internal/deadline"
 	"github.com/agents-control/connector-engine/internal/handles"
+	"github.com/agents-control/connector-engine/internal/hints"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -82,7 +83,7 @@ func (r *Runtime) ListFunctions(_ context.Context, h port.Handle) ([]port.RawDef
 	}
 	defs := make([]port.RawDefinition, len(in.order))
 	for i, f := range in.order {
-		def := map[string]any{"name": f.Name, "inputSchema": schemaOr(f.InputSchema)}
+		def := map[string]any{"name": f.Name, "inputSchema": schemaOr(f.InputSchema), "_meta": hints.Meta("", f.Method)}
 		if f.Description != "" {
 			def["description"] = f.Description
 		}

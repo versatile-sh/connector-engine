@@ -105,7 +105,7 @@ func TestExecutesDeclaredFunctions(t *testing.T) {
 	rt, h := start(t, manifestFor(srv.URL, u.Host))
 
 	defs, _, err := rt.ListFunctions(context.Background(), h)
-	if err != nil || len(defs) != 6 || defs[0].Name != "get_item" || !strings.Contains(string(defs[0].Raw), `"description":"Reads one item."`) {
+	if err != nil || len(defs) != 6 || defs[0].Name != "get_item" || !strings.Contains(string(defs[0].Raw), `"description":"Reads one item."`) || !strings.Contains(string(defs[0].Raw), `"http_method":"GET"`) {
 		t.Fatalf("definitions: %v %s", err, defs)
 	}
 

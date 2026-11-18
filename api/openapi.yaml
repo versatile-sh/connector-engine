@@ -2171,6 +2171,8 @@ components:
           type: string
         registry:
           type: string
+        status:
+          type: string
         upstream_name:
           type: string
         upstream_version:

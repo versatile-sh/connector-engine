@@ -130,7 +130,11 @@ func (s *Service) importManifest(tx port.Tx, source string, m port.Manifest) (bo
 	if err := tx.PutListing(l); err != nil {
 		return false, err
 	}
-	if err := tx.PutVersion(port.ListingVersion{Ref: vref, Manifest: m, Status: port.ListingActive, ImportedAt: s.now()}); err != nil {
+	status := port.ListingActive
+	if m.Source.Status == "deprecated" {
+		status = port.ListingDeprecated
+	}
+	if err := tx.PutVersion(port.ListingVersion{Ref: vref, Manifest: m, Status: status, ImportedAt: s.now()}); err != nil {
 		return false, err
 	}
 	return true, s.record(tx, port.Installation, "system", ref.String()+"@"+m.Version, evListingImported,

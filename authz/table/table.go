@@ -93,7 +93,7 @@ var actionRoles = map[string][]Role{
 	authz.ListingStarter: operatorOnly, authz.OfferPut: operatorOnly, authz.TenantCreate: operatorOnly, authz.TenantRemove: operatorOnly,
 	authz.ListingReview:     {Reviewer, Operator, TenantAdmin},
 	authz.ListingCreatePriv: {TenantAdmin}, authz.ListingStatusPriv: {TenantAdmin}, authz.CatalogRead: {TenantAdmin}, authz.CatalogWrite: {TenantAdmin},
-	authz.GrantTenant: {TenantAdmin}, authz.SourceRead: {TenantAdmin}, authz.ClientRegister: {TenantAdmin},
+	authz.GrantTenant: {TenantAdmin}, authz.SourceRead: {TenantAdmin, Operator}, authz.ClientRegister: {TenantAdmin},
 	authz.ConnectorInstall: wsAdmin, authz.ConnectorManage: wsAdmin, authz.FunctionManage: wsAdmin, authz.OverlayManage: wsAdmin,
 	authz.CredentialWorkspace: wsAdmin, authz.PauseClear: append([]Role{Approver}, wsAdmin...), authz.GrantWorkspace: wsAdmin,
 	authz.BindingWrite: append([]Role{AgentConfigurer}, wsAdmin...), authz.GrantAgent: append([]Role{AgentConfigurer}, wsAdmin...),

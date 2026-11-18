@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/agents-control/connector-engine/app"
 	"github.com/agents-control/connector-engine/config"
+	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/store/storetest"
 )
 
@@ -246,5 +248,37 @@ func TestAgentEndpointPublishesItsProtectedResourceMetadata(t *testing.T) {
 	res.Body.Close()
 	if got := res.Header.Get("WWW-Authenticate"); res.StatusCode != http.StatusUnauthorized || !strings.Contains(got, "resource_metadata=\"http://engine.test/.well-known/oauth-protected-resource\"") {
 		t.Fatalf("challenge %d %q", res.StatusCode, got)
+	}
+}
+
+func TestOfficialSourceUsesItsTokenRefAndImportsDeprecatedVersionsAsDeprecated(t *testing.T) {
+	var auth string
+	registry := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth = r.Header.Get("Authorization")
+		fmt.Fprint(w, `{"servers":[{"server":{"name":"io.github.acme/notes","version":"1.0.0","remotes":[{"type":"streamable-http","url":"https://notes.acme.example/mcp"}]},
+			"_meta":{"io.modelcontextprotocol.registry/official":{"status":"deprecated"}}}],"metadata":{}}`)
+	}))
+	defer registry.Close()
+	cfg := devConfig(t)
+	cfg.Sources.Official = config.Official{Enabled: true, URL: registry.URL, TokenRef: "env:CN_REGISTRY_TOKEN"}
+	e := boot(t, cfg, fmt.Sprintf(localAdapters, "", "memory", "")+"  source: {use: [builtin:official]}\n", map[string]string{"CN_OPERATOR_TOKEN": "op-secret", "CN_REGISTRY_TOKEN": "reg-secret"})
+	if code, out := e.call(http.MethodPost, e.operator+"/v1/sources/mcp-registry:sync", "op-secret", nil); code != http.StatusAccepted {
+		t.Fatalf("sync: %d %v", code, out)
+	}
+	if auth != "Bearer reg-secret" {
+		t.Fatalf("the registry saw %q", auth)
+	}
+	code, out := e.call(http.MethodGet, e.operator+"/v1/sources", "op-secret", nil)
+	rows, _ := out["items"].([]any)
+	if code != http.StatusOK || len(rows) != 1 {
+		t.Fatalf("sources: %d %v", code, out)
+	}
+	var v port.ListingVersion
+	err := e.app.Store.Read(context.Background(), port.Scope{Installation: true}, func(tx port.Tx) (err error) {
+		v, err = tx.GetVersion(port.VersionRef{Listing: port.ListingRef{Name: "io.github.acme/notes"}, Version: "1.0.0"})
+		return err
+	})
+	if err != nil || v.Status != port.ListingDeprecated {
+		t.Fatalf("version status %q: %v", v.Status, err)
 	}
 }

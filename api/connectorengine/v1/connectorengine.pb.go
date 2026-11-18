@@ -9157,7 +9157,8 @@ type SourceInfo struct {
 	Registry        string                 `protobuf:"bytes,1,opt,name=registry,proto3" json:"registry,omitempty"`
 	UpstreamName    string                 `protobuf:"bytes,2,opt,name=upstream_name,json=upstreamName,proto3" json:"upstream_name,omitempty"`
 	UpstreamVersion string                 `protobuf:"bytes,3,opt,name=upstream_version,json=upstreamVersion,proto3" json:"upstream_version,omitempty"`
-	ImportedAt      *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=imported_at,json=importedAt,proto3" json:"imported_at,omitempty"`
+	Status          string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	ImportedAt      *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=imported_at,json=importedAt,proto3" json:"imported_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -9209,6 +9210,13 @@ func (x *SourceInfo) GetUpstreamName() string {
 func (x *SourceInfo) GetUpstreamVersion() string {
 	if x != nil {
 		return x.UpstreamVersion
+	}
+	return ""
+}
+
+func (x *SourceInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
 	}
 	return ""
 }
@@ -10816,13 +10824,14 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\tSignature\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1a\n" +
 	"\bidentity\x18\x02 \x01(\tR\bidentity\x12\x16\n" +
-	"\x06issuer\x18\x03 \x01(\tR\x06issuer\"\xb5\x01\n" +
+	"\x06issuer\x18\x03 \x01(\tR\x06issuer\"\xcd\x01\n" +
 	"\n" +
 	"SourceInfo\x12\x1a\n" +
 	"\bregistry\x18\x01 \x01(\tR\bregistry\x12#\n" +
 	"\rupstream_name\x18\x02 \x01(\tR\fupstreamName\x12)\n" +
-	"\x10upstream_version\x18\x03 \x01(\tR\x0fupstreamVersion\x12;\n" +
-	"\vimported_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\x10upstream_version\x18\x03 \x01(\tR\x0fupstreamVersion\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12;\n" +
+	"\vimported_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"importedAt\"'\n" +
 	"\rSourceRequest\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\"_\n" +

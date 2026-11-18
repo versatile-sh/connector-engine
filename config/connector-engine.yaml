@@ -104,6 +104,13 @@ sources:
   official:
     enabled: false
     url: https://registry.modelcontextprotocol.io
+    tokenRef: ""
+  bsr:
+    enabled: false
+    url: ""
+    owners: []
+    targets: {}
+    tokenRef: ""
   docker:
     enabled: false
     dir: ""

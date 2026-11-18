@@ -1052,7 +1052,8 @@ message SourceInfo {
   string registry = 1;
   string upstream_name = 2;
   string upstream_version = 3;
-  google.protobuf.Timestamp imported_at = 4;
+  string status = 4;
+  google.protobuf.Timestamp imported_at = 5;
 }
 
 message SourceRequest {

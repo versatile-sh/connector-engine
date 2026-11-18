@@ -66,6 +66,19 @@ func New(root []byte, state State, save Save) (*Ring, error) {
 	return &Ring{root: root, state: state, save: save}, nil
 }
 
+// Opens reports whether root unwraps every key-encryption key of state; a state without keys is opened by any root.
+func Opens(root []byte, state State) bool {
+	r := &Ring{root: root, state: State{RootVersion: max(state.RootVersion, 1)}}
+	for tenant, tk := range state.Tenants {
+		for _, kv := range tk.Keys {
+			if _, err := r.unwrap(tenant, kv); err != nil {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // NewRootKey returns a random root key.
 func NewRootKey() ([]byte, error) {
 	k := make([]byte, keySize)

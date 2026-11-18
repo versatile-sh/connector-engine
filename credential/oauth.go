@@ -14,6 +14,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/agents-control/connector-engine/internal/egress"
 	"github.com/agents-control/connector-engine/internal/fetch"
 	"github.com/agents-control/connector-engine/port"
 )
@@ -25,9 +26,12 @@ type metadata struct {
 }
 
 // Broker is the OAuthBroker for pre-registered clients: PKCE S256, a bound state, single-flight refresh and revocation.
+// Issuer requests go through HTTP, or a zero egress guard when nil, and never follow a redirect.
 type Broker struct {
 	HTTP *http.Client
 
+	once    sync.Once
+	http    *http.Client
 	mu      sync.Mutex
 	found   map[string]metadata
 	refresh singleflight.Group
@@ -37,10 +41,15 @@ type Broker struct {
 func NewVerifier() string { return oauth2.GenerateVerifier() }
 
 func (b *Broker) client() *http.Client {
-	if b.HTTP != nil {
-		return b.HTTP
-	}
-	return http.DefaultClient
+	b.once.Do(func() {
+		c := egress.Guard{}.Client()
+		if b.HTTP != nil {
+			c = new(*b.HTTP)
+		}
+		c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+		b.http = c
+	})
+	return b.http
 }
 
 func (b *Broker) discover(ctx context.Context, issuer string) (metadata, error) {
@@ -55,11 +64,11 @@ func (b *Broker) discover(ctx context.Context, issuer string) (metadata, error) 
 	for _, path := range []string{"/.well-known/oauth-authorization-server", "/.well-known/openid-configuration"} {
 		body, err := fetch.Do(ctx, b.client(), http.MethodGet, base+path, nil, nil)
 		if err != nil {
-			lastErr = err
+			lastErr = port.Errorf(port.CodeOf(err), "issuer metadata is unreachable")
 			continue
 		}
-		if err := json.Unmarshal(body, &m); err != nil || m.TokenEndpoint == "" {
-			lastErr = port.Errorf(port.CodeInvalidArgument, "issuer %s metadata has no token endpoint", issuer)
+		if err := json.Unmarshal(body, &m); err != nil || !secure(m.TokenEndpoint) || (m.RevocationEndpoint != "" && !secure(m.RevocationEndpoint)) {
+			lastErr = port.Errorf(port.CodeInvalidArgument, "issuer metadata has no https token endpoint")
 			continue
 		}
 		b.mu.Lock()
@@ -161,9 +170,16 @@ func (b *Broker) Revoke(ctx context.Context, c port.OAuthClient, token []byte) e
 	if len(c.ClientSecret) > 0 {
 		form.Set("client_secret", string(c.ClientSecret))
 	}
-	_, err = fetch.Do(ctx, b.client(), http.MethodPost, m.RevocationEndpoint, strings.NewReader(form.Encode()),
-		map[string]string{"Content-Type": "application/x-www-form-urlencoded"})
-	return err
+	if _, err := fetch.Do(ctx, b.client(), http.MethodPost, m.RevocationEndpoint, strings.NewReader(form.Encode()),
+		map[string]string{"Content-Type": "application/x-www-form-urlencoded"}); err != nil {
+		return port.Errorf(port.CodeOf(err), "revocation endpoint refused the request")
+	}
+	return nil
+}
+
+func secure(endpoint string) bool {
+	u, err := url.Parse(endpoint)
+	return err == nil && u.Scheme == "https" && u.Host != "" && u.User == nil
 }
 
 func tokenSet(t *oauth2.Token, previousRefresh []byte) port.TokenSet {
@@ -182,5 +198,5 @@ func mapTokenError(err error) error {
 	if errors.As(err, &re) && re.ErrorCode == "invalid_grant" {
 		return port.Errorf(port.CodeCredentialRequired, "invalid_grant: the refresh token or the code is no longer valid")
 	}
-	return port.Errorf(port.CodeUnavailable, "token endpoint: %v", err)
+	return port.Errorf(port.CodeUnavailable, "token endpoint refused the request")
 }

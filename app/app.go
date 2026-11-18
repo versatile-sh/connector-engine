@@ -132,7 +132,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	a.Service, err = service.New(service.Deps{
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
 		Authorizer: table.New(store, a.Clock, table.Settings{DestructiveMax: svcCfg.DestructiveMax, ForceAsk: svcCfg.ForceAsk}),
-		Broker:     &credential.Broker{}, Registrar: credential.NewRegistrar(clients...).WithStore(store, secrets),
+		Broker:     &credential.Broker{HTTP: b.guard(b.issuerHosts()).Client()}, Registrar: credential.NewRegistrar(clients...).WithStore(store, secrets),
 	}, svcCfg)
 	if err != nil {
 		return err

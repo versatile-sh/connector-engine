@@ -100,6 +100,14 @@ func (b builder) clients() ([]credential.Registered, error) {
 	return out, nil
 }
 
+func (b builder) issuerHosts() []string {
+	var issuers []string
+	for _, c := range b.cfg.Credentials.Clients {
+		issuers = append(issuers, c.Issuer)
+	}
+	return hostsOf(issuers...)
+}
+
 func (b builder) runtime(store port.Store, secrets port.SecretStore) (port.ConnectorRuntime, error) {
 	applier := credential.Applier{Resolve: credential.NewResolver(store, secrets), Injector: credential.Injector{}}
 	var runtimes []port.ConnectorRuntime

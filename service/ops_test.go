@@ -69,6 +69,11 @@ func TestClientRegistrationIsSealedAndFeedsTheRegistrar(t *testing.T) {
 	w := newWorld(t, opts{})
 	got := st.Ok(w.Svc.PutClientRegistration(w.Ctx, w.admin, service.ClientRegistrationInput{Issuer: "https://idp.example", ClientID: "cid", Secret: "s3cret", RedirectURL: "https://engine/cb"}))
 	want(t, got.Secret == nil && got.ClientID == "cid", true, "the answer carries no secret")
+	for _, bad := range []string{"http://insecure", "https://", "https://user@idp.example", "https://idp.example?x=1"} {
+		if _, err := w.Svc.PutClientRegistration(w.Ctx, w.admin, service.ClientRegistrationInput{Issuer: bad, ClientID: "c"}); !port.IsCode(err, port.CodeInvalidArgument) {
+			t.Fatalf("issuer %q: %v", bad, err)
+		}
+	}
 	_, err := w.Svc.PutClientRegistration(w.Ctx, w.admin, service.ClientRegistrationInput{Issuer: "http://insecure", ClientID: "c"})
 	want(t, port.IsCode(err, port.CodeInvalidArgument), true, "an https issuer is required")
 	_, err = w.Svc.PutClientRegistration(w.Ctx, w.alice, service.ClientRegistrationInput{Issuer: "https://idp.example", ClientID: "c"})

@@ -244,6 +244,25 @@ type Call struct {
 	LateAnswer  bool           `json:"late_answer,omitempty"`
 }
 
+// ClientRegistration is the OAuth client an admin registered for an issuer of one tenant; the secret is sealed under the tenant key.
+type ClientRegistration struct {
+	Tenant      TenantID  `json:"tenant"`
+	Issuer      string    `json:"issuer"`
+	ClientID    string    `json:"client_id"`
+	Secret      *Sealed   `json:"secret,omitempty"`
+	RedirectURL string    `json:"redirect_url,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// SourceSync is what the last sync of a listing source did.
+type SourceSync struct {
+	Source   string    `json:"source"`
+	LastSync time.Time `json:"last_sync"`
+	Imported int       `json:"imported"`
+	Skipped  int       `json:"skipped"`
+	Error    string    `json:"error,omitempty"`
+}
+
 // Exposure is the trifecta check result of one agent (§15.2).
 type Exposure struct {
 	Tenant  TenantID `json:"tenant"`

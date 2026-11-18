@@ -26,6 +26,12 @@ func (f ApprovalFilter) Match(a Approval) bool {
 }
 
 // Match reports whether c passes the filter.
+func (f CallFilter) Match(c Call) bool {
+	return (f.Agent == "" || c.Agent == f.Agent) && (f.Session == "" || c.Session == f.Session) &&
+		(f.Connector == "" || c.Connector == f.Connector) && (f.State == "" || c.State == f.State)
+}
+
+// Match reports whether c passes the filter.
 func (f CredentialFilter) Match(c Credential) bool {
 	return (f.OwnerKind == "" || c.OwnerKind == f.OwnerKind) && (f.OwnerID == "" || c.OwnerID == f.OwnerID) && (f.Connector == "" || c.Connector == f.Connector)
 }

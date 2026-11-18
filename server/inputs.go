@@ -324,6 +324,20 @@ type CredentialRequest struct {
 	ID port.CredentialID `json:"id"`
 }
 
+// ListCallsRequest filters the audit rows of calls.
+type ListCallsRequest struct {
+	Agent     port.AgentID     `json:"agent,omitempty"`
+	Session   port.SessionID   `json:"session,omitempty"`
+	Connector port.ConnectorID `json:"connector,omitempty"`
+	State     port.CallState   `json:"state,omitempty"`
+}
+
+// RotateKeyRequest names what to rotate: the root key, or the key of one tenant.
+type RotateKeyRequest struct {
+	Root   bool          `json:"root,omitempty"`
+	Tenant port.TenantID `json:"tenant,omitempty"`
+}
+
 // ListCredentialsRequest filters credential metadata.
 type ListCredentialsRequest struct {
 	OwnerKind port.OwnerKind   `json:"owner_kind,omitempty"`

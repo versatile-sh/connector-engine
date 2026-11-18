@@ -30,6 +30,8 @@ const (
 	kindOverlay    = "overlay"
 	kindCall       = "call"
 	kindExposure   = "exposure"
+	kindClient     = "client"
+	kindSourceSync = "source_sync"
 	kindOperation  = "operation"
 	kindFanOut     = "fanout"
 	kindRole       = "role"
@@ -422,6 +424,27 @@ func (t *tx) CreateCall(c port.Call) error { return t.insert(kindCall, string(c.
 
 func (t *tx) UpdateCall(c port.Call, from port.CallState) error {
 	return t.update(kindCall, string(c.ID), c.Tenant, nil, c, string(from))
+}
+
+func (t *tx) ListCalls(f port.CallFilter) ([]port.Call, error) {
+	return list[port.Call](t, kindCall, want("agent", string(f.Agent), "session", string(f.Session), "connector", string(f.Connector), "state", string(f.State)),
+		"(doc->>'started_at')::timestamptz, k", nil)
+}
+
+func (t *tx) GetClient(issuer string) (port.ClientRegistration, bool, error) {
+	return maybe[port.ClientRegistration](t, kindClient, key(string(t.scope.Tenant), issuer))
+}
+
+func (t *tx) PutClient(c port.ClientRegistration) error {
+	return t.set(kindClient, key(string(c.Tenant), c.Issuer), c.Tenant, c)
+}
+
+func (t *tx) ListSourceSyncs() ([]port.SourceSync, error) {
+	return list[port.SourceSync](t, kindSourceSync, nil, "k", nil)
+}
+
+func (t *tx) PutSourceSync(s port.SourceSync) error {
+	return t.set(kindSourceSync, s.Source, port.Installation, s)
 }
 
 func (t *tx) GetExposure(agent port.AgentID) (port.Exposure, bool, error) {

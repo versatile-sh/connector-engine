@@ -76,6 +76,10 @@ service ConnectorEngine {
   rpc CompleteConnect(CompleteConnectRequest) returns (Credential);
   rpc ListCredentials(ListCredentialsRequest) returns (Credentials);
   rpc RevokeCredential(CredentialRequest) returns (google.protobuf.Empty);
+  rpc PutClientRegistration(ClientRegistrationInput) returns (ClientRegistration);
+  rpc ListCalls(ListCallsRequest) returns (Calls);
+  rpc ListSources(google.protobuf.Empty) returns (Sources);
+  rpc RotateKey(RotateKeyRequest) returns (Operation);
   rpc EndSession(SessionRequest) returns (google.protobuf.Empty);
   rpc RemoveAgent(AgentRequest) returns (google.protobuf.Empty);
   rpc RemovePerson(PersonRequest) returns (google.protobuf.Empty);
@@ -274,6 +278,10 @@ message CallRequest {
   string id = 1;
 }
 
+message Calls {
+  repeated Call items = 1;
+}
+
 message CatalogPolicy {
   string tenant = 1;
   string workspace = 2;
@@ -310,6 +318,22 @@ message ClassifyFunctionRequest {
   string id = 1;
   string name = 2;
   string class = 3;
+}
+
+message ClientRegistration {
+  string tenant = 1;
+  string issuer = 2;
+  string client_id = 3;
+  Sealed secret = 4;
+  string redirect_url = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ClientRegistrationInput {
+  string issuer = 1;
+  string client_id = 2;
+  string secret = 3;
+  string redirect_url = 4;
 }
 
 message CompleteConnectRequest {
@@ -682,6 +706,13 @@ message ListBindingsRequest {
   string owner = 3;
 }
 
+message ListCallsRequest {
+  string agent = 1;
+  string session = 2;
+  string connector = 3;
+  string state = 4;
+}
+
 message ListCredentialsRequest {
   string owner_kind = 1;
   string owner_id = 2;
@@ -970,6 +1001,11 @@ message Roles {
   repeated RoleAssignment items = 1;
 }
 
+message RotateKeyRequest {
+  bool root = 1;
+  string tenant = 2;
+}
+
 message Row {
   string kind = 1;
   string port = 2;
@@ -1019,6 +1055,23 @@ message SourceInfo {
 
 message SourceRequest {
   string source = 1;
+}
+
+message SourceStatus {
+  string name = 1;
+  SourceSync last_sync = 2;
+}
+
+message SourceSync {
+  string source = 1;
+  google.protobuf.Timestamp last_sync = 2;
+  int64 imported = 3;
+  int64 skipped = 4;
+  string error = 5;
+}
+
+message Sources {
+  repeated SourceStatus items = 1;
 }
 
 message StarterRequest {

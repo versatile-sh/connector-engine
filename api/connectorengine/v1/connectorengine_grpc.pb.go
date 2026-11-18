@@ -20,87 +20,91 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConnectorEngine_ListListings_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ListListings"
-	ConnectorEngine_GetListing_FullMethodName          = "/connectorengine.v1.ConnectorEngine/GetListing"
-	ConnectorEngine_ListOfferedListings_FullMethodName = "/connectorengine.v1.ConnectorEngine/ListOfferedListings"
-	ConnectorEngine_GetCatalogPolicy_FullMethodName    = "/connectorengine.v1.ConnectorEngine/GetCatalogPolicy"
-	ConnectorEngine_PutCatalogPolicy_FullMethodName    = "/connectorengine.v1.ConnectorEngine/PutCatalogPolicy"
-	ConnectorEngine_ListCatalogRules_FullMethodName    = "/connectorengine.v1.ConnectorEngine/ListCatalogRules"
-	ConnectorEngine_PutCatalogRule_FullMethodName      = "/connectorengine.v1.ConnectorEngine/PutCatalogRule"
-	ConnectorEngine_DeleteCatalogRule_FullMethodName   = "/connectorengine.v1.ConnectorEngine/DeleteCatalogRule"
-	ConnectorEngine_ExplainVisibility_FullMethodName   = "/connectorengine.v1.ConnectorEngine/ExplainVisibility"
-	ConnectorEngine_ListOffers_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ListOffers"
-	ConnectorEngine_PutOffer_FullMethodName            = "/connectorengine.v1.ConnectorEngine/PutOffer"
-	ConnectorEngine_CreateListing_FullMethodName       = "/connectorengine.v1.ConnectorEngine/CreateListing"
-	ConnectorEngine_QuarantineListing_FullMethodName   = "/connectorengine.v1.ConnectorEngine/QuarantineListing"
-	ConnectorEngine_DeprecateListing_FullMethodName    = "/connectorengine.v1.ConnectorEngine/DeprecateListing"
-	ConnectorEngine_WithdrawListing_FullMethodName     = "/connectorengine.v1.ConnectorEngine/WithdrawListing"
-	ConnectorEngine_RestoreListing_FullMethodName      = "/connectorengine.v1.ConnectorEngine/RestoreListing"
-	ConnectorEngine_SetListingStarter_FullMethodName   = "/connectorengine.v1.ConnectorEngine/SetListingStarter"
-	ConnectorEngine_CreateTenant_FullMethodName        = "/connectorengine.v1.ConnectorEngine/CreateTenant"
-	ConnectorEngine_RemoveTenant_FullMethodName        = "/connectorengine.v1.ConnectorEngine/RemoveTenant"
-	ConnectorEngine_LintListing_FullMethodName         = "/connectorengine.v1.ConnectorEngine/LintListing"
-	ConnectorEngine_ReviewListing_FullMethodName       = "/connectorengine.v1.ConnectorEngine/ReviewListing"
-	ConnectorEngine_SyncSource_FullMethodName          = "/connectorengine.v1.ConnectorEngine/SyncSource"
-	ConnectorEngine_InstallConnector_FullMethodName    = "/connectorengine.v1.ConnectorEngine/InstallConnector"
-	ConnectorEngine_EnableConnector_FullMethodName     = "/connectorengine.v1.ConnectorEngine/EnableConnector"
-	ConnectorEngine_DisableConnector_FullMethodName    = "/connectorengine.v1.ConnectorEngine/DisableConnector"
-	ConnectorEngine_GetConnector_FullMethodName        = "/connectorengine.v1.ConnectorEngine/GetConnector"
-	ConnectorEngine_ListConnectors_FullMethodName      = "/connectorengine.v1.ConnectorEngine/ListConnectors"
-	ConnectorEngine_UpdateConnector_FullMethodName     = "/connectorengine.v1.ConnectorEngine/UpdateConnector"
-	ConnectorEngine_SetConnectorLevel_FullMethodName   = "/connectorengine.v1.ConnectorEngine/SetConnectorLevel"
-	ConnectorEngine_RemoveConnector_FullMethodName     = "/connectorengine.v1.ConnectorEngine/RemoveConnector"
-	ConnectorEngine_ListFunctions_FullMethodName       = "/connectorengine.v1.ConnectorEngine/ListFunctions"
-	ConnectorEngine_AcceptFunction_FullMethodName      = "/connectorengine.v1.ConnectorEngine/AcceptFunction"
-	ConnectorEngine_AcceptFunctions_FullMethodName     = "/connectorengine.v1.ConnectorEngine/AcceptFunctions"
-	ConnectorEngine_AcceptInstructions_FullMethodName  = "/connectorengine.v1.ConnectorEngine/AcceptInstructions"
-	ConnectorEngine_ClassifyFunction_FullMethodName    = "/connectorengine.v1.ConnectorEngine/ClassifyFunction"
-	ConnectorEngine_SetProjection_FullMethodName       = "/connectorengine.v1.ConnectorEngine/SetProjection"
-	ConnectorEngine_DisableFunction_FullMethodName     = "/connectorengine.v1.ConnectorEngine/DisableFunction"
-	ConnectorEngine_EnableFunction_FullMethodName      = "/connectorengine.v1.ConnectorEngine/EnableFunction"
-	ConnectorEngine_ListOverlays_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ListOverlays"
-	ConnectorEngine_SuggestOverlay_FullMethodName      = "/connectorengine.v1.ConnectorEngine/SuggestOverlay"
-	ConnectorEngine_ProposeOverlay_FullMethodName      = "/connectorengine.v1.ConnectorEngine/ProposeOverlay"
-	ConnectorEngine_AcceptOverlay_FullMethodName       = "/connectorengine.v1.ConnectorEngine/AcceptOverlay"
-	ConnectorEngine_RestoreOverlay_FullMethodName      = "/connectorengine.v1.ConnectorEngine/RestoreOverlay"
-	ConnectorEngine_ClearOverlay_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ClearOverlay"
-	ConnectorEngine_PutBinding_FullMethodName          = "/connectorengine.v1.ConnectorEngine/PutBinding"
-	ConnectorEngine_DeleteBinding_FullMethodName       = "/connectorengine.v1.ConnectorEngine/DeleteBinding"
-	ConnectorEngine_ListBindings_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ListBindings"
-	ConnectorEngine_SetAgentLevel_FullMethodName       = "/connectorengine.v1.ConnectorEngine/SetAgentLevel"
-	ConnectorEngine_CreateGrant_FullMethodName         = "/connectorengine.v1.ConnectorEngine/CreateGrant"
-	ConnectorEngine_DeleteGrant_FullMethodName         = "/connectorengine.v1.ConnectorEngine/DeleteGrant"
-	ConnectorEngine_ListGrants_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ListGrants"
-	ConnectorEngine_ConfirmGrant_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ConfirmGrant"
-	ConnectorEngine_ExplainAccess_FullMethodName       = "/connectorengine.v1.ConnectorEngine/ExplainAccess"
-	ConnectorEngine_ListAgentFunctions_FullMethodName  = "/connectorengine.v1.ConnectorEngine/ListAgentFunctions"
-	ConnectorEngine_ListApprovals_FullMethodName       = "/connectorengine.v1.ConnectorEngine/ListApprovals"
-	ConnectorEngine_GetApproval_FullMethodName         = "/connectorengine.v1.ConnectorEngine/GetApproval"
-	ConnectorEngine_DecideApproval_FullMethodName      = "/connectorengine.v1.ConnectorEngine/DecideApproval"
-	ConnectorEngine_CancelApproval_FullMethodName      = "/connectorengine.v1.ConnectorEngine/CancelApproval"
-	ConnectorEngine_ListPauses_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ListPauses"
-	ConnectorEngine_ClearPause_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ClearPause"
-	ConnectorEngine_WatchApprovals_FullMethodName      = "/connectorengine.v1.ConnectorEngine/WatchApprovals"
-	ConnectorEngine_GetCall_FullMethodName             = "/connectorengine.v1.ConnectorEngine/GetCall"
-	ConnectorEngine_CreateCredential_FullMethodName    = "/connectorengine.v1.ConnectorEngine/CreateCredential"
-	ConnectorEngine_BeginConnect_FullMethodName        = "/connectorengine.v1.ConnectorEngine/BeginConnect"
-	ConnectorEngine_CompleteConnect_FullMethodName     = "/connectorengine.v1.ConnectorEngine/CompleteConnect"
-	ConnectorEngine_ListCredentials_FullMethodName     = "/connectorengine.v1.ConnectorEngine/ListCredentials"
-	ConnectorEngine_RevokeCredential_FullMethodName    = "/connectorengine.v1.ConnectorEngine/RevokeCredential"
-	ConnectorEngine_EndSession_FullMethodName          = "/connectorengine.v1.ConnectorEngine/EndSession"
-	ConnectorEngine_RemoveAgent_FullMethodName         = "/connectorengine.v1.ConnectorEngine/RemoveAgent"
-	ConnectorEngine_RemovePerson_FullMethodName        = "/connectorengine.v1.ConnectorEngine/RemovePerson"
-	ConnectorEngine_RestorePerson_FullMethodName       = "/connectorengine.v1.ConnectorEngine/RestorePerson"
-	ConnectorEngine_ListRoles_FullMethodName           = "/connectorengine.v1.ConnectorEngine/ListRoles"
-	ConnectorEngine_PutRole_FullMethodName             = "/connectorengine.v1.ConnectorEngine/PutRole"
-	ConnectorEngine_DeleteRole_FullMethodName          = "/connectorengine.v1.ConnectorEngine/DeleteRole"
-	ConnectorEngine_ListGroupMembers_FullMethodName    = "/connectorengine.v1.ConnectorEngine/ListGroupMembers"
-	ConnectorEngine_PutGroupMember_FullMethodName      = "/connectorengine.v1.ConnectorEngine/PutGroupMember"
-	ConnectorEngine_DeleteGroupMember_FullMethodName   = "/connectorengine.v1.ConnectorEngine/DeleteGroupMember"
-	ConnectorEngine_GetOperation_FullMethodName        = "/connectorengine.v1.ConnectorEngine/GetOperation"
-	ConnectorEngine_ListEventTypes_FullMethodName      = "/connectorengine.v1.ConnectorEngine/ListEventTypes"
-	ConnectorEngine_GetEventType_FullMethodName        = "/connectorengine.v1.ConnectorEngine/GetEventType"
-	ConnectorEngine_ListAdapters_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ListAdapters"
+	ConnectorEngine_ListListings_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ListListings"
+	ConnectorEngine_GetListing_FullMethodName            = "/connectorengine.v1.ConnectorEngine/GetListing"
+	ConnectorEngine_ListOfferedListings_FullMethodName   = "/connectorengine.v1.ConnectorEngine/ListOfferedListings"
+	ConnectorEngine_GetCatalogPolicy_FullMethodName      = "/connectorengine.v1.ConnectorEngine/GetCatalogPolicy"
+	ConnectorEngine_PutCatalogPolicy_FullMethodName      = "/connectorengine.v1.ConnectorEngine/PutCatalogPolicy"
+	ConnectorEngine_ListCatalogRules_FullMethodName      = "/connectorengine.v1.ConnectorEngine/ListCatalogRules"
+	ConnectorEngine_PutCatalogRule_FullMethodName        = "/connectorengine.v1.ConnectorEngine/PutCatalogRule"
+	ConnectorEngine_DeleteCatalogRule_FullMethodName     = "/connectorengine.v1.ConnectorEngine/DeleteCatalogRule"
+	ConnectorEngine_ExplainVisibility_FullMethodName     = "/connectorengine.v1.ConnectorEngine/ExplainVisibility"
+	ConnectorEngine_ListOffers_FullMethodName            = "/connectorengine.v1.ConnectorEngine/ListOffers"
+	ConnectorEngine_PutOffer_FullMethodName              = "/connectorengine.v1.ConnectorEngine/PutOffer"
+	ConnectorEngine_CreateListing_FullMethodName         = "/connectorengine.v1.ConnectorEngine/CreateListing"
+	ConnectorEngine_QuarantineListing_FullMethodName     = "/connectorengine.v1.ConnectorEngine/QuarantineListing"
+	ConnectorEngine_DeprecateListing_FullMethodName      = "/connectorengine.v1.ConnectorEngine/DeprecateListing"
+	ConnectorEngine_WithdrawListing_FullMethodName       = "/connectorengine.v1.ConnectorEngine/WithdrawListing"
+	ConnectorEngine_RestoreListing_FullMethodName        = "/connectorengine.v1.ConnectorEngine/RestoreListing"
+	ConnectorEngine_SetListingStarter_FullMethodName     = "/connectorengine.v1.ConnectorEngine/SetListingStarter"
+	ConnectorEngine_CreateTenant_FullMethodName          = "/connectorengine.v1.ConnectorEngine/CreateTenant"
+	ConnectorEngine_RemoveTenant_FullMethodName          = "/connectorengine.v1.ConnectorEngine/RemoveTenant"
+	ConnectorEngine_LintListing_FullMethodName           = "/connectorengine.v1.ConnectorEngine/LintListing"
+	ConnectorEngine_ReviewListing_FullMethodName         = "/connectorengine.v1.ConnectorEngine/ReviewListing"
+	ConnectorEngine_SyncSource_FullMethodName            = "/connectorengine.v1.ConnectorEngine/SyncSource"
+	ConnectorEngine_InstallConnector_FullMethodName      = "/connectorengine.v1.ConnectorEngine/InstallConnector"
+	ConnectorEngine_EnableConnector_FullMethodName       = "/connectorengine.v1.ConnectorEngine/EnableConnector"
+	ConnectorEngine_DisableConnector_FullMethodName      = "/connectorengine.v1.ConnectorEngine/DisableConnector"
+	ConnectorEngine_GetConnector_FullMethodName          = "/connectorengine.v1.ConnectorEngine/GetConnector"
+	ConnectorEngine_ListConnectors_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ListConnectors"
+	ConnectorEngine_UpdateConnector_FullMethodName       = "/connectorengine.v1.ConnectorEngine/UpdateConnector"
+	ConnectorEngine_SetConnectorLevel_FullMethodName     = "/connectorengine.v1.ConnectorEngine/SetConnectorLevel"
+	ConnectorEngine_RemoveConnector_FullMethodName       = "/connectorengine.v1.ConnectorEngine/RemoveConnector"
+	ConnectorEngine_ListFunctions_FullMethodName         = "/connectorengine.v1.ConnectorEngine/ListFunctions"
+	ConnectorEngine_AcceptFunction_FullMethodName        = "/connectorengine.v1.ConnectorEngine/AcceptFunction"
+	ConnectorEngine_AcceptFunctions_FullMethodName       = "/connectorengine.v1.ConnectorEngine/AcceptFunctions"
+	ConnectorEngine_AcceptInstructions_FullMethodName    = "/connectorengine.v1.ConnectorEngine/AcceptInstructions"
+	ConnectorEngine_ClassifyFunction_FullMethodName      = "/connectorengine.v1.ConnectorEngine/ClassifyFunction"
+	ConnectorEngine_SetProjection_FullMethodName         = "/connectorengine.v1.ConnectorEngine/SetProjection"
+	ConnectorEngine_DisableFunction_FullMethodName       = "/connectorengine.v1.ConnectorEngine/DisableFunction"
+	ConnectorEngine_EnableFunction_FullMethodName        = "/connectorengine.v1.ConnectorEngine/EnableFunction"
+	ConnectorEngine_ListOverlays_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ListOverlays"
+	ConnectorEngine_SuggestOverlay_FullMethodName        = "/connectorengine.v1.ConnectorEngine/SuggestOverlay"
+	ConnectorEngine_ProposeOverlay_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ProposeOverlay"
+	ConnectorEngine_AcceptOverlay_FullMethodName         = "/connectorengine.v1.ConnectorEngine/AcceptOverlay"
+	ConnectorEngine_RestoreOverlay_FullMethodName        = "/connectorengine.v1.ConnectorEngine/RestoreOverlay"
+	ConnectorEngine_ClearOverlay_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ClearOverlay"
+	ConnectorEngine_PutBinding_FullMethodName            = "/connectorengine.v1.ConnectorEngine/PutBinding"
+	ConnectorEngine_DeleteBinding_FullMethodName         = "/connectorengine.v1.ConnectorEngine/DeleteBinding"
+	ConnectorEngine_ListBindings_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ListBindings"
+	ConnectorEngine_SetAgentLevel_FullMethodName         = "/connectorengine.v1.ConnectorEngine/SetAgentLevel"
+	ConnectorEngine_CreateGrant_FullMethodName           = "/connectorengine.v1.ConnectorEngine/CreateGrant"
+	ConnectorEngine_DeleteGrant_FullMethodName           = "/connectorengine.v1.ConnectorEngine/DeleteGrant"
+	ConnectorEngine_ListGrants_FullMethodName            = "/connectorengine.v1.ConnectorEngine/ListGrants"
+	ConnectorEngine_ConfirmGrant_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ConfirmGrant"
+	ConnectorEngine_ExplainAccess_FullMethodName         = "/connectorengine.v1.ConnectorEngine/ExplainAccess"
+	ConnectorEngine_ListAgentFunctions_FullMethodName    = "/connectorengine.v1.ConnectorEngine/ListAgentFunctions"
+	ConnectorEngine_ListApprovals_FullMethodName         = "/connectorengine.v1.ConnectorEngine/ListApprovals"
+	ConnectorEngine_GetApproval_FullMethodName           = "/connectorengine.v1.ConnectorEngine/GetApproval"
+	ConnectorEngine_DecideApproval_FullMethodName        = "/connectorengine.v1.ConnectorEngine/DecideApproval"
+	ConnectorEngine_CancelApproval_FullMethodName        = "/connectorengine.v1.ConnectorEngine/CancelApproval"
+	ConnectorEngine_ListPauses_FullMethodName            = "/connectorengine.v1.ConnectorEngine/ListPauses"
+	ConnectorEngine_ClearPause_FullMethodName            = "/connectorengine.v1.ConnectorEngine/ClearPause"
+	ConnectorEngine_WatchApprovals_FullMethodName        = "/connectorengine.v1.ConnectorEngine/WatchApprovals"
+	ConnectorEngine_GetCall_FullMethodName               = "/connectorengine.v1.ConnectorEngine/GetCall"
+	ConnectorEngine_CreateCredential_FullMethodName      = "/connectorengine.v1.ConnectorEngine/CreateCredential"
+	ConnectorEngine_BeginConnect_FullMethodName          = "/connectorengine.v1.ConnectorEngine/BeginConnect"
+	ConnectorEngine_CompleteConnect_FullMethodName       = "/connectorengine.v1.ConnectorEngine/CompleteConnect"
+	ConnectorEngine_ListCredentials_FullMethodName       = "/connectorengine.v1.ConnectorEngine/ListCredentials"
+	ConnectorEngine_RevokeCredential_FullMethodName      = "/connectorengine.v1.ConnectorEngine/RevokeCredential"
+	ConnectorEngine_PutClientRegistration_FullMethodName = "/connectorengine.v1.ConnectorEngine/PutClientRegistration"
+	ConnectorEngine_ListCalls_FullMethodName             = "/connectorengine.v1.ConnectorEngine/ListCalls"
+	ConnectorEngine_ListSources_FullMethodName           = "/connectorengine.v1.ConnectorEngine/ListSources"
+	ConnectorEngine_RotateKey_FullMethodName             = "/connectorengine.v1.ConnectorEngine/RotateKey"
+	ConnectorEngine_EndSession_FullMethodName            = "/connectorengine.v1.ConnectorEngine/EndSession"
+	ConnectorEngine_RemoveAgent_FullMethodName           = "/connectorengine.v1.ConnectorEngine/RemoveAgent"
+	ConnectorEngine_RemovePerson_FullMethodName          = "/connectorengine.v1.ConnectorEngine/RemovePerson"
+	ConnectorEngine_RestorePerson_FullMethodName         = "/connectorengine.v1.ConnectorEngine/RestorePerson"
+	ConnectorEngine_ListRoles_FullMethodName             = "/connectorengine.v1.ConnectorEngine/ListRoles"
+	ConnectorEngine_PutRole_FullMethodName               = "/connectorengine.v1.ConnectorEngine/PutRole"
+	ConnectorEngine_DeleteRole_FullMethodName            = "/connectorengine.v1.ConnectorEngine/DeleteRole"
+	ConnectorEngine_ListGroupMembers_FullMethodName      = "/connectorengine.v1.ConnectorEngine/ListGroupMembers"
+	ConnectorEngine_PutGroupMember_FullMethodName        = "/connectorengine.v1.ConnectorEngine/PutGroupMember"
+	ConnectorEngine_DeleteGroupMember_FullMethodName     = "/connectorengine.v1.ConnectorEngine/DeleteGroupMember"
+	ConnectorEngine_GetOperation_FullMethodName          = "/connectorengine.v1.ConnectorEngine/GetOperation"
+	ConnectorEngine_ListEventTypes_FullMethodName        = "/connectorengine.v1.ConnectorEngine/ListEventTypes"
+	ConnectorEngine_GetEventType_FullMethodName          = "/connectorengine.v1.ConnectorEngine/GetEventType"
+	ConnectorEngine_ListAdapters_FullMethodName          = "/connectorengine.v1.ConnectorEngine/ListAdapters"
 )
 
 // ConnectorEngineClient is the client API for ConnectorEngine service.
@@ -174,6 +178,10 @@ type ConnectorEngineClient interface {
 	CompleteConnect(ctx context.Context, in *CompleteConnectRequest, opts ...grpc.CallOption) (*Credential, error)
 	ListCredentials(ctx context.Context, in *ListCredentialsRequest, opts ...grpc.CallOption) (*Credentials, error)
 	RevokeCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	PutClientRegistration(ctx context.Context, in *ClientRegistrationInput, opts ...grpc.CallOption) (*ClientRegistration, error)
+	ListCalls(ctx context.Context, in *ListCallsRequest, opts ...grpc.CallOption) (*Calls, error)
+	ListSources(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Sources, error)
+	RotateKey(ctx context.Context, in *RotateKeyRequest, opts ...grpc.CallOption) (*Operation, error)
 	EndSession(ctx context.Context, in *SessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	RemoveAgent(ctx context.Context, in *AgentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	RemovePerson(ctx context.Context, in *PersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -877,6 +885,46 @@ func (c *connectorEngineClient) RevokeCredential(ctx context.Context, in *Creden
 	return out, nil
 }
 
+func (c *connectorEngineClient) PutClientRegistration(ctx context.Context, in *ClientRegistrationInput, opts ...grpc.CallOption) (*ClientRegistration, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClientRegistration)
+	err := c.cc.Invoke(ctx, ConnectorEngine_PutClientRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectorEngineClient) ListCalls(ctx context.Context, in *ListCallsRequest, opts ...grpc.CallOption) (*Calls, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Calls)
+	err := c.cc.Invoke(ctx, ConnectorEngine_ListCalls_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectorEngineClient) ListSources(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Sources, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Sources)
+	err := c.cc.Invoke(ctx, ConnectorEngine_ListSources_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectorEngineClient) RotateKey(ctx context.Context, in *RotateKeyRequest, opts ...grpc.CallOption) (*Operation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Operation)
+	err := c.cc.Invoke(ctx, ConnectorEngine_RotateKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *connectorEngineClient) EndSession(ctx context.Context, in *SessionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -1088,6 +1136,10 @@ type ConnectorEngineServer interface {
 	CompleteConnect(context.Context, *CompleteConnectRequest) (*Credential, error)
 	ListCredentials(context.Context, *ListCredentialsRequest) (*Credentials, error)
 	RevokeCredential(context.Context, *CredentialRequest) (*emptypb.Empty, error)
+	PutClientRegistration(context.Context, *ClientRegistrationInput) (*ClientRegistration, error)
+	ListCalls(context.Context, *ListCallsRequest) (*Calls, error)
+	ListSources(context.Context, *emptypb.Empty) (*Sources, error)
+	RotateKey(context.Context, *RotateKeyRequest) (*Operation, error)
 	EndSession(context.Context, *SessionRequest) (*emptypb.Empty, error)
 	RemoveAgent(context.Context, *AgentRequest) (*emptypb.Empty, error)
 	RemovePerson(context.Context, *PersonRequest) (*emptypb.Empty, error)
@@ -1312,6 +1364,18 @@ func (UnimplementedConnectorEngineServer) ListCredentials(context.Context, *List
 }
 func (UnimplementedConnectorEngineServer) RevokeCredential(context.Context, *CredentialRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeCredential not implemented")
+}
+func (UnimplementedConnectorEngineServer) PutClientRegistration(context.Context, *ClientRegistrationInput) (*ClientRegistration, error) {
+	return nil, status.Error(codes.Unimplemented, "method PutClientRegistration not implemented")
+}
+func (UnimplementedConnectorEngineServer) ListCalls(context.Context, *ListCallsRequest) (*Calls, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCalls not implemented")
+}
+func (UnimplementedConnectorEngineServer) ListSources(context.Context, *emptypb.Empty) (*Sources, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSources not implemented")
+}
+func (UnimplementedConnectorEngineServer) RotateKey(context.Context, *RotateKeyRequest) (*Operation, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateKey not implemented")
 }
 func (UnimplementedConnectorEngineServer) EndSession(context.Context, *SessionRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method EndSession not implemented")
@@ -2575,6 +2639,78 @@ func _ConnectorEngine_RevokeCredential_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConnectorEngine_PutClientRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClientRegistrationInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectorEngineServer).PutClientRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectorEngine_PutClientRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectorEngineServer).PutClientRegistration(ctx, req.(*ClientRegistrationInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectorEngine_ListCalls_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCallsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectorEngineServer).ListCalls(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectorEngine_ListCalls_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectorEngineServer).ListCalls(ctx, req.(*ListCallsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectorEngine_ListSources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectorEngineServer).ListSources(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectorEngine_ListSources_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectorEngineServer).ListSources(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectorEngine_RotateKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectorEngineServer).RotateKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectorEngine_RotateKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectorEngineServer).RotateKey(ctx, req.(*RotateKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ConnectorEngine_EndSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SessionRequest)
 	if err := dec(in); err != nil {
@@ -3097,6 +3233,22 @@ var ConnectorEngine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeCredential",
 			Handler:    _ConnectorEngine_RevokeCredential_Handler,
+		},
+		{
+			MethodName: "PutClientRegistration",
+			Handler:    _ConnectorEngine_PutClientRegistration_Handler,
+		},
+		{
+			MethodName: "ListCalls",
+			Handler:    _ConnectorEngine_ListCalls_Handler,
+		},
+		{
+			MethodName: "ListSources",
+			Handler:    _ConnectorEngine_ListSources_Handler,
+		},
+		{
+			MethodName: "RotateKey",
+			Handler:    _ConnectorEngine_RotateKey_Handler,
 		},
 		{
 			MethodName: "EndSession",

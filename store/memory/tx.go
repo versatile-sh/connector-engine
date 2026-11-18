@@ -431,6 +431,36 @@ func (t *tx) UpdateCall(c port.Call, from port.CallState) error {
 	return err
 }
 
+func (t *tx) ListCalls(f port.CallFilter) ([]port.Call, error) {
+	out, err := list(t, t.d.calls, f.Match)
+	slices.SortStableFunc(out, func(a, b port.Call) int { return a.StartedAt.Compare(b.StartedAt) })
+	return out, err
+}
+
+func (t *tx) GetClient(issuer string) (port.ClientRegistration, bool, error) {
+	v, _, err := get(t, t.d.clients, key(string(t.scope.Tenant), issuer))
+	if port.IsCode(err, port.CodeNotFound) {
+		return v, false, nil
+	}
+	return v, err == nil, err
+}
+
+func (t *tx) PutClient(c port.ClientRegistration) error {
+	_, err := put(t, t.d.clients, key(string(c.Tenant), c.Issuer), c.Tenant, c, port.AnyRevision)
+	return err
+}
+
+func (t *tx) ListSourceSyncs() ([]port.SourceSync, error) {
+	out, err := list(t, t.d.syncs, nil)
+	slices.SortFunc(out, func(a, b port.SourceSync) int { return cmp.Compare(a.Source, b.Source) })
+	return out, err
+}
+
+func (t *tx) PutSourceSync(s port.SourceSync) error {
+	_, err := put(t, t.d.syncs, s.Source, port.Installation, s, port.AnyRevision)
+	return err
+}
+
 func (t *tx) GetExposure(agent port.AgentID) (port.Exposure, bool, error) {
 	v, _, err := get(t, t.d.exposures, key(string(t.scope.Tenant), string(agent)))
 	if port.IsCode(err, port.CodeNotFound) {

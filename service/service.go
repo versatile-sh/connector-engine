@@ -146,6 +146,13 @@ func (s *Service) TenantActive(ctx context.Context, t port.TenantID) error {
 	return err
 }
 
+func (s *Service) scopeResource(p port.Principal) string {
+	if p.Claims.Tenant == port.Installation {
+		return authz.Installation
+	}
+	return s.tenantResource(p)
+}
+
 func (s *Service) tenantResource(p port.Principal) string {
 	return authz.Tenant(string(p.Claims.Tenant))
 }

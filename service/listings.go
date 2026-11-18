@@ -39,11 +39,7 @@ func (s *Service) LintListing(ctx context.Context, p port.Principal, m port.Mani
 	if capture == nil {
 		return res, nil
 	}
-	resource := authz.Installation
-	if t := p.Claims.Tenant; t != port.Installation {
-		resource = authz.Tenant(string(t))
-	}
-	if err := s.authorize(ctx, p, authz.ListingReview, resource); err != nil {
+	if err := s.authorize(ctx, p, authz.ListingReview, s.scopeResource(p)); err != nil {
 		return res, err
 	}
 	if len(res.Findings) > 0 {
@@ -99,6 +95,9 @@ func (s *Service) SyncSource(ctx context.Context, p port.Principal, source strin
 			} else {
 				op.Counts["skipped"]++
 			}
+		}
+		if err := tx.PutSourceSync(port.SourceSync{Source: source, LastSync: s.now(), Imported: op.Counts["imported"], Skipped: op.Counts["skipped"]}); err != nil {
+			return err
 		}
 		return tx.PutOperation(op)
 	})

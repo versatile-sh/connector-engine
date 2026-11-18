@@ -131,3 +131,13 @@ func ServiceNames(methods []Method) []string {
 	slices.Sort(out)
 	return out
 }
+
+// Declare builds the grpc block of a manifest from the unary methods of every service; it reports false when there are none.
+func Declare(target string, d port.Descriptor, files *protoregistry.Files) (port.GRPC, bool) {
+	methods := Methods(files, nil)
+	g := port.GRPC{Target: target, Descriptor: d, Services: ServiceNames(methods)}
+	for _, m := range methods {
+		g.Methods = append(g.Methods, m.Function)
+	}
+	return g, len(methods) > 0
+}

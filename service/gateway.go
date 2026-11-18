@@ -2,12 +2,14 @@ package service
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"slices"
 	"time"
 
 	"github.com/agents-control/connector-engine/authz"
+	"github.com/agents-control/connector-engine/core/evaluate"
 	"github.com/agents-control/connector-engine/core/names"
 	"github.com/agents-control/connector-engine/core/projection"
 	"github.com/agents-control/connector-engine/internal/tokenscan"
@@ -243,18 +245,8 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 		}
 		return nil
 	})
-	slices.SortFunc(out.Functions, func(a, b ServedFunction) int { return compare(a.Name, b.Name) })
+	slices.SortFunc(out.Functions, func(a, b ServedFunction) int { return cmp.Compare(a.Name, b.Name) })
 	return out, err
-}
-
-func compare(a, b string) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	}
-	return 0
 }
 
 func schemaOf(f port.Function, key string) json.RawMessage {
@@ -348,7 +340,7 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 		}
 		in.Sealed = &sealed
 	}
-	if in.Groups, err = s.groups(ctx, sub.Tenant, evaluatePeople(sub)...); err != nil {
+	if in.Groups, err = s.groups(ctx, sub.Tenant, evaluate.People(sub)...); err != nil {
 		return Outcome{}, err
 	}
 	var adm admission
@@ -368,18 +360,21 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 }
 
 func (s *Service) checkArguments(p port.Principal, t target, req CallRequest, args json.RawMessage) *Outcome {
-	var out Outcome
-	switch {
-	case s.cfg.ScanForToken && tokenscan.Contains(args, p.Token):
-		out = toolError(port.CodeTokenInArguments, "the arguments carry the bearer token of this request")
-	case schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), args) != nil:
-		out = toolError(port.CodeInvalidArgument, "%v", schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), args))
-	case len(req.Fields) > 0 && !(t.Fn.Projection || s.cfg.ProjectionDefault):
-		out = toolError(port.CodeInvalidPath, "projection is off for %s", t.Fn.Name)
-	case len(req.Fields) > 0 && projection.Validate(schemaOf(t.Fn, "outputSchema"), req.Fields, s.cfg.ProjectionMaxPaths) != nil:
-		out = toolError(port.CodeInvalidPath, "%v", projection.Validate(schemaOf(t.Fn, "outputSchema"), req.Fields, s.cfg.ProjectionMaxPaths))
-	default:
+	fail := func(o Outcome) *Outcome { return &o }
+	if s.cfg.ScanForToken && tokenscan.Contains(args, p.Token) {
+		return fail(toolError(port.CodeTokenInArguments, "the arguments carry the bearer token of this request"))
+	}
+	if err := schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), args); err != nil {
+		return fail(toolError(port.CodeInvalidArgument, "%v", err))
+	}
+	if len(req.Fields) == 0 {
 		return nil
 	}
-	return &out
+	if !t.Fn.Projection && !s.cfg.ProjectionDefault {
+		return fail(toolError(port.CodeInvalidPath, "projection is off for %s", t.Fn.Name))
+	}
+	if err := projection.Validate(schemaOf(t.Fn, "outputSchema"), req.Fields, s.cfg.ProjectionMaxPaths); err != nil {
+		return fail(toolError(port.CodeInvalidPath, "%v", err))
+	}
+	return nil
 }

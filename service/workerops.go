@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 
@@ -238,19 +239,23 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 		if err != nil {
 			return err
 		}
-		timeout := cmpOr(h.Conn.CallTimeout, s.cfg.CallTimeout)
+		timeout := cmp.Or(h.Conn.CallTimeout, s.cfg.CallTimeout)
 		next, err := approval.Start(cur, refused, timeout, s.cfg.Approval, s.now())
 		if err != nil {
 			return err
+		}
+		if next.State == port.ApprovalExecuting {
+			if err := tx.ReserveGrants(reserved); port.IsCode(err, port.CodeGrantExhausted) {
+				next, _ = approval.Start(cur, port.CodeGrantExhausted, timeout, s.cfg.Approval, s.now())
+			} else if err != nil {
+				return err
+			}
 		}
 		if next.State == port.ApprovalCancelled {
 			if err := tx.UpdateApproval(next, port.ApprovalApproved); err != nil {
 				return err
 			}
 			return s.record(tx, tenant, "worker", string(id), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(id), Reason: next.Reason})
-		}
-		if err := tx.ReserveGrants(reserved); err != nil {
-			return err
 		}
 		fn, err := tx.GetFunction(cur.Connector, cur.Function)
 		if err != nil {
@@ -298,15 +303,6 @@ func (s *Service) recheck(tx port.Tx, h heldRun, cur port.Approval, ext port.Acc
 		return "", nil, nil, err
 	case res.Code != "":
 		return port.CodeCredentialRequired, nil, nil, nil
-	}
-	for _, id := range d.Matched {
-		g, err := tx.GetGrant(id)
-		if err != nil {
-			return "", nil, nil, err
-		}
-		if g.MaxUses > 0 && g.Uses >= g.MaxUses {
-			return port.CodeGrantExhausted, nil, nil, nil
-		}
 	}
 	return "", res.Credential, d.Matched, nil
 }

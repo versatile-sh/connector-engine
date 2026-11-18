@@ -418,3 +418,21 @@ func TestAnUpstreamChangeKeepsOrSupersedesTheOverlayAtAcceptance(t *testing.T) {
 	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, h3))
 	want(t, desc(), "Find things", "an older version is restored against the current upstream hash")
 }
+
+func TestASpentUseLimitedRowRunsOneApprovedRecord(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	once := port.Grant{ScopeKind: port.ScopeAgent, ScopeID: "x", Connector: w.conn.ID, Selector: "fn:search", Mode: port.ModeAskOnce, DefinitionHash: w.hashes["search"], MaxUses: 1}
+	st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, once))
+	x := w.agent("x", "s1")
+	first, second := w.call(x, "s__search", `{"q":"1"}`), w.call(x, "s__search", `{"q":"2"}`)
+	w.decide(first.Approval.ID, port.DecisionApprove)
+	w.decide(second.Approval.ID, port.DecisionApprove)
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 1, "a use-limited row runs once")
+	codes := []port.Code{st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, first.Approval.ID)).Code, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, second.Approval.ID)).Code}
+	spent := slices.Contains(codes, port.ReasonNoAgentGrant) || slices.Contains(codes, port.CodeGrantExhausted)
+	want(t, spent, true, "the other record is cancelled: the spent row no longer matches, or its reservation fails")
+}

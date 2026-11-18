@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,8 +15,6 @@ import (
 	"github.com/agents-control/connector-engine/core/projection"
 	"github.com/agents-control/connector-engine/port"
 )
-
-func evaluatePeople(s port.Subject) []port.PersonID { return evaluate.People(s) }
 
 func catalogDenied(sub port.Subject, connector port.ConnectorID, function string, reason port.Code) catalog.CallDenied {
 	return catalog.CallDenied{Agent: string(sub.Agent), Connector: string(connector), Function: function, Reason: string(reason)}
@@ -150,7 +149,7 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 	a := port.Approval{ID: port.ApprovalID(s.d.NewID()), Tenant: sub.Tenant, Workspace: conn.Workspace, Agent: sub.Agent, Session: sub.Session, OnBehalfOf: sub.OnBehalfOf,
 		Connector: conn.ID, Function: fn.Name, DefinitionHash: fn.DefinitionHash, Class: fn.Class, Arguments: in.Sealed, CallHash: hash, Fields: in.Fields, Mode: mode,
 		Approvers: approval.Approvers(bind, sub.OnBehalfOf), TokenExpiresAt: in.Exp}
-	if timeout := cmpOr(bind.ApprovalTimeout, conn.ApprovalTimeout); timeout > 0 {
+	if timeout := cmp.Or(bind.ApprovalTimeout, conn.ApprovalTimeout); timeout > 0 {
 		a.ExpiresAt = s.now().Add(timeout)
 	}
 	open, err := tx.ListApprovals(port.ApprovalFilter{States: []port.ApprovalState{port.ApprovalPending}, Session: sub.Session, Agent: sub.Agent, Connector: conn.ID})
@@ -176,13 +175,6 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 	err = s.record(tx, sub.Tenant, string(sub.Agent), string(a.ID), evApprovalRequested, catalog.ApprovalRequested{Approval: string(a.ID), Approvers: a.Approvers, Connector: string(conn.ID),
 		Function: fn.Name, Class: string(fn.Class), Agent: string(sub.Agent), Session: string(sub.Session), ExpiresAt: a.ExpiresAt, CallHash: string(hash)})
 	return admission{Out: s.pending(a)}, err
-}
-
-func cmpOr(a, b time.Duration) time.Duration {
-	if a != 0 {
-		return a
-	}
-	return b
 }
 
 type invocation struct {

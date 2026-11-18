@@ -44,10 +44,16 @@ The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the op
 | 6 | Grant table, levels, row rules G1 to G10 | Run | owner cases; level `write` and agent level `read` in iii; the rule matrix is in `core/grant` |
 | 7 | Evaluation, truth table of §7.2 | Built | `TestTruthTable` in `core/evaluate/evaluate_test.go`; the owner cases above are the end-to-end subset |
 | 8 | Approval record, decide, hold window, status, cancel | Run | owner cases ii, iv, viii, the restart case and `cnctl_tools_*` |
-| 8.3 | Expiry, the denial brake, repeat rules R1 to R4, `outcome_unknown` | Built | `service/lifecycle_test.go`, `core/approval`; no e2e case waits for a timer |
+| 8.2 | A14 `delivered_at` set only after the gateway wrote the answer | Built | `gateway/deliver.go`; `TestAskEachTimeHoldsThenAnswers` (both eras), `TestAnUndeliveredAnswerIsRepeatedNotForwardedAgain` |
+| 8.2 | A8 on a bounded pool, failed items back off, a failed re-list leaves the record approved until stale (A9) | Built | `service/worker`; `TestAFailingItemBacksOffAndDoesNotStarveTimers`, `TestAFailedRelistLeavesTheApprovedRecordForTheNextSweep` |
+| 8.3 | Session row ends at the agent token's `exp` (G5) | Built | `TestTheSessionRowEndsWithTheAgentToken` |
+| 8.5 | A removed person neither decides nor lists an approval | Built | `TestARemovedApproverNeitherDecidesNorSeesTheApproval`; approvers still share one namespace for people and groups |
+| 8.3 | Expiry, the denial brake, repeat rules R1 to R4, `outcome_unknown` | Built | `service/lifecycle_test.go`, `core/approval`; no e2e case waits for a timer. A cancelled request or a failure after the send is `outcome_unknown` (`internal/outcome`) |
 | 9 | Pinning, quarantine, `confirmGrant` | Run | owner cases vi and vii |
-| 9 | Re-list on a timer, instructions drift | Built | `service`, `service/worker`; the e2e cases force the re-list with `updateConnector` |
+| 9 | Re-list on a timer, instructions drift | Built | `service`, `service/worker`; the e2e cases force the re-list with `updateConnector`. One re-list per connector at a time, a lost revision race runs again (`TestARelistThatLostARaceRunsAgain`); gRPC reloads its descriptors on every re-list (`TestListFunctionsSeesUpstreamDrift`); a live `tools/list` response that was not captured is an error |
+| 9 | Connector handles | Built | started per key outside the service lock, restarted after `unavailable`, stopped after 15 minutes idle (`service/handles_test.go`) |
 | 9.1 | Description overlays | Run | `idea_overlay_accept_and_restore_change_the_served_description` (propose, accept, restore, clear); `suggestOverlay` has no built-in model adapter |
+| 9.1 | Keep an overlay at acceptance, restore against the current upstream hash | Built | `acceptFunction` with `keep_overlay`; `TestAnUpstreamChangeKeepsOrSupersedesTheOverlayAtAcceptance` |
 | 10 | Gateway: list, call, names, denial as unknown | Run | every case; both MCP eras are only tested in `gateway/gateway_test.go` |
 | 10 | `find` and `call` | Run | `find` through `cnctl tools search`; the collapse above the thresholds is only unit-tested (`gateway`) |
 | 10.5 | Response projection | Run | `idea_projection_trims_and_result_filter_masks_cpf` and the CLI case, including `invalid_path` |
@@ -58,8 +64,9 @@ The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the op
 | 13.1 | gRPC operations, the OpenAPI document | Built | `server/parity_test.go` proves each operation has every form; the e2e config does not open the gRPC listener |
 | 13.2 | Management MCP `/mcp/manage` | Built | `server/mcpapi`: read-only by default, `decideApproval` never; not called in e2e |
 | 14 | Configuration | Run | the e2e files override the keys of approvals, sources, runtime and filter; every key and default is in `config/connector-engine.yaml`, covered by `config/config_test.go` |
-| 15 | Controls for the threat table | Built | token never forwarded or returned (`gateway`), denial looks unknown (Run, case i) |
-| 15.2 | The exposure check (`exposure.onTrifecta`) | Not built | the key and the event type exist; nothing evaluates the lethal trifecta |
+| 14 | Inert keys: `gateway.relayInstructions`, `gateway.denyAs`, `audit.arguments`, `audit.hashChain`, `pinning.hashIcons`, `approval.inChat.classes`, `listing.requireSignature`, `secrets.dataKeyCache`, `credentials.registrationOrder`, `runtime.container.*`, `grpc.unaryOnly` | Not built | validated, never read; any value but the default is refused at boot (`TestKeysThisBuildDoesNotActOnAcceptOnlyTheirDefault`) |
+| 15 | Controls for the threat table | Built | token never forwarded or returned, found in decoded JSON strings and scrubbed from error details (`internal/tokenscan`, `gateway`), denial looks unknown (Run, case i) |
+| 15.2 | The exposure check (`exposure.onTrifecta`) | Built | `core/exposure`, `service/exposure.go`: warn and `force_ask`; a re-list refreshes it in the background; event 13 when it turns true or false (`service/exposure_test.go`) |
 | 3 | `ApprovalChannel` other than events, client registration by CIMD and DCR, shared reviewed catalog, ACI.dev converter, Presidio, container runtime, Cedar, OpenBao | Not built | out of scope in `docs/PLAN.md` §1 |
 
 ## Measurements (§17)

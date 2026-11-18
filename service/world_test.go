@@ -47,6 +47,7 @@ func definitions(search, issue string) (map[string]port.RawDefinition, map[strin
 type opts struct {
 	ceiling  port.Ceiling
 	reviewed bool
+	auth     bool
 	tune     []func(*service.Config, *service.Deps)
 }
 
@@ -62,6 +63,9 @@ func newWorld(t *testing.T, o opts) *world {
 	op := w.Operator()
 	st.Ok(w.Svc.CreateTenant(w.Ctx, op, tenant))
 	m := st.Manifest(listing, "1.0.0")
+	if o.auth {
+		m.Auth = []port.AuthSpec{{Kind: port.CredentialAPIKey, OwnerKindsAllowed: []port.OwnerKind{port.OwnerUser}}}
+	}
 	st.Ok(w.Svc.CreateListing(w.Ctx, op, service.CreateListingInput{Manifest: m}))
 	if o.reviewed {
 		in := service.ReviewInput{Functions: []service.ReviewFunction{

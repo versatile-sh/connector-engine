@@ -8,6 +8,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 	st "github.com/agents-control/connector-engine/service/servicetest"
+	"github.com/agents-control/connector-engine/service/worker"
 )
 
 type fixture struct {
@@ -106,5 +107,31 @@ func TestSweepDestroysResultsAfterRetention(t *testing.T) {
 	detail := st.Ok(f.Svc.GetApproval(f.Ctx, alice, held.Approval.ID))
 	if detail.Arguments != nil || detail.Approval.State != port.ApprovalExecuted {
 		t.Fatalf("sealed arguments are destroyed, the state stays: %+v", detail)
+	}
+}
+
+func TestAFailingItemBacksOffAndDoesNotStarveTimers(t *testing.T) {
+	f := newFixture(t)
+	st.Ok(f.Svc.SetConnectorLevel(f.Ctx, f.admin, f.conn.ID, port.LevelCustom))
+	st.Ok(f.Svc.CreateGrant(f.Ctx, f.admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: "w1", Connector: f.conn.ID, Selector: "*", Mode: port.ModeAllow}))
+	st.Ok(f.Svc.PutBinding(f.Ctx, f.admin, port.Binding{Connector: f.conn.ID, Agent: "x", AskRequester: true}))
+	st.Ok(f.Svc.CreateGrant(f.Ctx, f.admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: "x", Connector: f.conn.ID, Selector: "*", Mode: port.ModeAsk}))
+	x := f.AgentClaims(port.Claims{Tenant: "t1", Workspace: "w1", Agent: "x", Session: "s1", OnBehalfOf: "alice"})
+	held := st.Ok(f.Svc.Call(f.Ctx, x, service.CallRequest{Name: "s__search", Arguments: []byte(`{"q":"a"}`)}))
+	st.Ok(f.Svc.DecideApproval(f.Ctx, f.Person("t1", "alice"), held.Approval.ID, port.DecisionApprove, "", "test"))
+	g := st.Ok(f.Svc.CreateGrant(f.Ctx, f.admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: "y", Connector: f.conn.ID, Selector: "class:read", Mode: port.ModeAllow,
+		ExpiresAt: st.Epoch.Add(time.Second)})).Grant
+	f.Clock.Advance(2 * time.Second)
+	f.Runtime.OnList = func() error { return port.Errorf(port.CodeUnavailable, "upstream down") }
+	w := worker.New(f.Svc, f.Store, f.Clock, worker.Config{Batch: 1})
+	for range 3 {
+		_, _ = w.Sweep(f.Ctx)
+	}
+	rows := st.Ok(f.Svc.ListGrants(f.Ctx, f.admin, port.GrantFilter{ScopeKind: port.ScopeAgent}))
+	if slices.ContainsFunc(rows, func(r port.Grant) bool { return r.ID == g.ID }) {
+		t.Fatal("a failing approved record must not starve the grant timer behind it")
+	}
+	if f.Runtime.CallsTo("search") != 0 {
+		t.Fatal("the record whose re-list fails is not forwarded")
 	}
 }

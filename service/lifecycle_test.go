@@ -347,7 +347,10 @@ func TestAFailedRelistLeavesTheApprovedRecordForTheNextSweep(t *testing.T) {
 	want(t, st.Ok(w.Svc.GetApproval(w.Ctx, w.alice, held.Approval.ID)).Approval.State, port.ApprovalApproved, "the record stays approved")
 	w.Runtime.OnList = nil
 	w.sweep()
-	want(t, w.Runtime.CallsTo("search"), 1, "the next sweep runs it")
+	want(t, w.Runtime.CallsTo("search"), 0, "a failed item backs off")
+	w.Clock.Advance(6 * time.Second)
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 1, "the sweep after the backoff runs it")
 
 	stale := w.call(x, "s__search", `{"q":"2"}`)
 	w.decide(stale.Approval.ID, port.DecisionApprove)

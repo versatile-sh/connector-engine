@@ -11,7 +11,7 @@ import (
 
 var exposureOps = []string{"PutBinding", "DeleteBinding", "SetAgentLevel", "SetConnectorLevel", "CreateGrant", "DeleteGrant", "ConfirmGrant", "InstallConnector",
 	"RemoveConnector", "SetConnectorEnabled", "AcceptFunction", "AcceptFunctions", "ClassifyFunction", "SetFunctionDisabled", "PutCatalogRule", "DeleteCatalogRule",
-	"PutCatalogPolicy", "Reconcile"}
+	"PutCatalogPolicy", "UpdateConnector"}
 
 func (s *Service) exposureEntries(ctx context.Context, tenant port.TenantID, agent port.AgentID) ([]exposure.Entry, error) {
 	var conns []port.Connector
@@ -47,7 +47,7 @@ func (s *Service) exposureEntries(ctx context.Context, tenant port.TenantID, age
 	return entries, nil
 }
 
-// RefreshExposure computes the trifecta check of an agent, stores it and emits the warning when the agent became exposed or its legs changed (§15.2).
+// RefreshExposure computes the trifecta check of an agent, stores it and emits event 13 when it is or was exposed and changed (§12, §15.2).
 func (s *Service) RefreshExposure(ctx context.Context, tenant port.TenantID, agent port.AgentID) (port.Exposure, error) {
 	entries, err := s.exposureEntries(ctx, tenant, agent)
 	if err != nil {
@@ -67,10 +67,10 @@ func (s *Service) RefreshExposure(ctx context.Context, tenant port.TenantID, age
 		if err := tx.PutExposure(next); err != nil {
 			return err
 		}
-		if !next.Exposed {
+		if !next.Exposed && !prev.Exposed {
 			return nil
 		}
-		return s.emit(tx, tenant, string(agent), evExposureWarning, catalog.ExposureWarning{Agent: string(agent), Exposed: true, LegA: next.LegA, LegB: next.LegB, LegC: next.LegC})
+		return s.emit(tx, tenant, string(agent), evExposureWarning, catalog.ExposureWarning{Agent: string(agent), Exposed: next.Exposed, LegA: next.LegA, LegB: next.LegB, LegC: next.LegC})
 	})
 	return next, err
 }
@@ -92,4 +92,11 @@ func (s *Service) refreshExposures(ctx context.Context, tenant port.TenantID) {
 	for _, a := range agents {
 		_, _ = s.RefreshExposure(ctx, tenant, a)
 	}
+}
+
+func (s *Service) refreshLater(tenant port.TenantID) {
+	s.flights.DoChan("exposure|"+string(tenant), func() (any, error) {
+		s.refreshExposures(context.Background(), tenant)
+		return nil, nil
+	})
 }

@@ -184,7 +184,7 @@ func (s *Service) UpdateConnector(ctx context.Context, p port.Principal, id port
 
 // Relist captures the connector's pinned version again and quarantines drift; concurrent re-lists of a connector share one run (§9).
 func (s *Service) Relist(ctx context.Context, tenant port.TenantID, id port.ConnectorID) (UpdateResult, error) {
-	v, err, _ := s.relists.Do(string(tenant)+"|"+string(id), func() (any, error) {
+	v, err, _ := s.flights.Do("relist|"+string(tenant)+"|"+string(id), func() (any, error) {
 		for attempt := 1; ; attempt++ {
 			res, err := s.reconcile(ctx, tenant, id, "", "worker")
 			if !port.IsCode(err, port.CodeRevisionMismatch) || attempt == 3 {
@@ -229,7 +229,11 @@ func (s *Service) reconcile(ctx context.Context, tenant port.TenantID, id port.C
 	}
 	merged, changes := pinning.Reconcile(pinned, captured)
 	merged, changes = s.refreshFunctions(merged, changes, captured, pinned, m)
-	err = s.write(ctx, port.Scope{Tenant: tenant}, "Reconcile", func(tx port.Tx) error {
+	op := "Relist"
+	if explicit {
+		op = "UpdateConnector"
+	}
+	err = s.write(ctx, port.Scope{Tenant: tenant}, op, func(tx port.Tx) error {
 		cur, err := tx.GetConnector(id)
 		if err != nil {
 			return err
@@ -262,6 +266,9 @@ func (s *Service) reconcile(ctx context.Context, tenant port.TenantID, id port.C
 		res.Changes = changes
 		return s.finishReconcile(tx, &cur, &res, m, meta, explicit, by, byName)
 	})
+	if err == nil && !explicit && len(changes) > 0 {
+		s.refreshLater(tenant)
+	}
 	return res, err
 }
 

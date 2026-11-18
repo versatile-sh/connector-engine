@@ -39,7 +39,7 @@ type Service struct {
 	cfg     Config
 	mu      sync.Mutex
 	handles map[string]*started
-	relists singleflight.Group
+	flights singleflight.Group
 	connect map[string]pendingConnect
 }
 

@@ -72,7 +72,7 @@ func run(args, environ []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
-	fmt.Fprintf(stdout, "connector-engine %s mode=%s http=%s grpc=%s\n", version, cfg.Mode, addr(l.HTTP), addr(l.GRPC))
+	fmt.Fprintf(stdout, "connector-engine %s mode=%s http=%s grpc=%s operator=%s\n", version, cfg.Mode, addr(l.HTTP), addr(l.GRPC), addr(l.Operator))
 	if err := a.Run(ctx, l); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1

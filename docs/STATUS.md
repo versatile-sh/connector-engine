@@ -79,3 +79,7 @@ M14 to M17 are out of scope for this build. M18 is done. No latency or load figu
 |---|---|
 | The gRPC runtime could not dial a plaintext upstream: `app` never set `Insecure` | key `grpc.insecure` (default false), read by `app/build.go` |
 | `createGrant` for an agent row accepted a connector that does not exist, or belongs to another tenant, and stored an orphan row | `service/bindings.go` refuses unless the connector lookup was a permission failure; `service/grantconnector_test.go` |
+
+## Known flake
+
+`runtime/grpc` failed once in a full `go test -race ./...` run on 2026-11-18 (and `internal/grpcdesc` once with "reflection: EOF" while another `go test` process ran). It did not reproduce in 5 isolated runs, 3 loaded runs, 2 more full runs and `-count=30` of both packages. Suspected: a reflection stream closed by a test server shutting down under load. Not fixed.

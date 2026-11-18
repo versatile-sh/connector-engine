@@ -100,6 +100,7 @@ cli:
   defaultForCodingAgents: true
 grpc:
   unaryOnly: true
+  insecure: false
 sources:
   official:
     enabled: false

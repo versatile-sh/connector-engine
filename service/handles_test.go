@@ -61,3 +61,31 @@ func TestAnUnavailableOrIdleHandleIsStartedAgain(t *testing.T) {
 		t.Fatal("an idle handle is stopped")
 	}
 }
+
+func TestARelistThatLostARaceRunsAgain(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.acceptAll()
+	first := true
+	w.Runtime.OnList = func() {
+		if first {
+			first = false
+			st.Ok(w.Svc.SetConnectorEnabled(w.Ctx, w.admin, w.conn.ID, true))
+		}
+	}
+	if _, err := w.Svc.Relist(w.Ctx, tenant, w.conn.ID); err != nil {
+		t.Fatalf("a re-list that lost a race to another write must run again: %v", err)
+	}
+	w.Runtime.OnList = nil
+	errs := make(chan error, 8)
+	for range 8 {
+		go func() {
+			_, err := w.Svc.Relist(w.Ctx, tenant, w.conn.ID)
+			errs <- err
+		}()
+	}
+	for range 8 {
+		if err := <-errs; err != nil {
+			t.Fatalf("concurrent re-lists: %v", err)
+		}
+	}
+}

@@ -182,9 +182,18 @@ func (s *Service) UpdateConnector(ctx context.Context, p port.Principal, id port
 	return s.reconcile(ctx, c.Tenant, id, version, actor(p))
 }
 
-// Relist captures the connector's pinned version again and quarantines drift; the worker and A8 call it (§9).
+// Relist captures the connector's pinned version again and quarantines drift; concurrent re-lists of a connector share one run (§9).
 func (s *Service) Relist(ctx context.Context, tenant port.TenantID, id port.ConnectorID) (UpdateResult, error) {
-	return s.reconcile(ctx, tenant, id, "", "worker")
+	v, err, _ := s.relists.Do(string(tenant)+"|"+string(id), func() (any, error) {
+		for attempt := 1; ; attempt++ {
+			res, err := s.reconcile(ctx, tenant, id, "", "worker")
+			if !port.IsCode(err, port.CodeRevisionMismatch) || attempt == 3 {
+				return res, err
+			}
+		}
+	})
+	res, _ := v.(UpdateResult)
+	return res, err
 }
 
 func (s *Service) reconcile(ctx context.Context, tenant port.TenantID, id port.ConnectorID, version, by string) (UpdateResult, error) {

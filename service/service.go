@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/singleflight"
+
 	"github.com/agents-control/connector-engine/authz"
 	"github.com/agents-control/connector-engine/port"
 )
@@ -37,6 +39,7 @@ type Service struct {
 	cfg     Config
 	mu      sync.Mutex
 	handles map[string]*started
+	relists singleflight.Group
 	connect map[string]pendingConnect
 }
 

@@ -126,6 +126,14 @@ func (v *Verifier) principal(token, audience string, w wire.Claims) (port.Princi
 		return port.Principal{}, unauthenticated("a token carries a tenant")
 	}
 	kind := port.KindOf(c)
+	person := ""
+	if kind == port.PrincipalPerson {
+		person = c.Subject
+	}
+	if err := port.CheckIDs("tenant", string(c.Tenant), "workspace", string(c.Workspace), "agent", string(c.Agent), "agent_owner", string(c.AgentOwner),
+		"session", string(c.Session), "on_behalf_of", string(c.OnBehalfOf), "subject", person); err != nil {
+		return port.Principal{}, unauthenticated("token refused: %v", err)
+	}
 	if kind != port.PrincipalPerson {
 		switch {
 		case c.Workspace == "" || c.Session == "":
@@ -135,9 +143,7 @@ func (v *Verifier) principal(token, audience string, w wire.Claims) (port.Princi
 		}
 	}
 	p := port.Principal{Kind: kind, Claims: c, Token: token}
-	if kind == port.PrincipalPerson {
-		p.Person = port.PersonID(c.Subject)
-	}
+	p.Person = port.PersonID(person)
 	return p, nil
 }
 

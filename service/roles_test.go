@@ -6,6 +6,7 @@ import (
 	"github.com/agents-control/connector-engine/authz"
 	"github.com/agents-control/connector-engine/authz/table"
 	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/service"
 	st "github.com/agents-control/connector-engine/service/servicetest"
 )
 
@@ -56,4 +57,25 @@ func TestOperatorNamesOperatorsAndGroupsFollowTheTenant(t *testing.T) {
 	want(t, len(groups) == 1 && groups[0] == "ops", true, "membership read back")
 	want(t, len(st.Ok(e.Svc.ListGroupMembers(e.Ctx, admin, port.MemberFilter{Group: "ops"}))), 1, "listed")
 	want(t, e.Svc.DeleteGroupMember(e.Ctx, admin, port.GroupMember{Person: "bia", Group: "ops"}), nil, "removed")
+}
+
+func TestIDsOutsideTheCharacterSetAreRefused(t *testing.T) {
+	e := st.New(t)
+	admin := e.TenantAdmin("t1")
+	refused := func(what string, err error) {
+		t.Helper()
+		want(t, port.IsCode(err, port.CodeInvalidArgument), true, what)
+	}
+	for _, id := range []port.TenantID{"installation", "a/b", "t 1"} {
+		_, err := e.Svc.CreateTenant(e.Ctx, e.Operator(), id)
+		refused("tenant "+string(id), err)
+	}
+	_, err := e.Svc.PutRole(e.Ctx, admin, port.RoleAssignment{Tenant: "t1", Person: "bia/p/x", Role: string(table.Approver), Scope: authz.Tenant("t1")})
+	refused("role person", err)
+	_, err = e.Svc.PutGroupMember(e.Ctx, admin, port.GroupMember{Person: "bia", Group: "ops/x"})
+	refused("group", err)
+	_, err = e.Svc.InstallConnector(e.Ctx, admin, service.InstallInput{Workspace: "w1/x", Alias: "notes"})
+	refused("workspace", err)
+	_, err = e.Svc.PutBinding(e.Ctx, admin, port.Binding{Connector: "c", Agent: "a/b"})
+	refused("agent", err)
 }

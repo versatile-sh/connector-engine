@@ -62,6 +62,9 @@ func (s *Service) connectorOf(ctx context.Context, p port.Principal, id port.Con
 func (s *Service) InstallConnector(ctx context.Context, p port.Principal, in InstallInput) (ConnectorView, error) {
 	var out ConnectorView
 	tenant := p.Claims.Tenant
+	if err := port.CheckIDs("workspace", string(in.Workspace)); err != nil {
+		return out, err
+	}
 	if err := s.authorize(ctx, p, authz.ConnectorInstall, wsResource(p, in.Workspace)); err != nil {
 		return out, err
 	}

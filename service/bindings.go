@@ -30,6 +30,9 @@ func defaultPolicy(m port.Manifest) port.CredentialPolicy {
 
 // PutBinding gives an agent a connector; a binding for an agent whose owner may not see the listing is not found (§6.3).
 func (s *Service) PutBinding(ctx context.Context, p port.Principal, b port.Binding) (port.Binding, error) {
+	if err := port.CheckIDs("agent", string(b.Agent), "agent_owner", string(b.AgentOwner)); err != nil {
+		return b, err
+	}
 	c, err := s.connectorOf(ctx, p, b.Connector, authz.BindingWrite)
 	if err != nil {
 		return b, err
@@ -165,6 +168,9 @@ func (s *Service) CreateGrant(ctx context.Context, p port.Principal, g port.Gran
 	g.Tenant, g.Origin, g.Uses = p.Claims.Tenant, port.OriginSettings, 0
 	if g.ScopeKind == port.ScopeTenant && g.ScopeID == "" {
 		g.ScopeID = string(g.Tenant)
+	}
+	if err := port.CheckIDs("scope", g.ScopeID, "agent", string(g.Agent)); err != nil {
+		return out, err
 	}
 	if err := s.grantAuth(ctx, p, g); err != nil {
 		return out, err

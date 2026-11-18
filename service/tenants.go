@@ -22,6 +22,9 @@ func (s *Service) CreateTenant(ctx context.Context, p port.Principal, tenant por
 	if tenant == port.Installation {
 		return out, port.Errorf(port.CodeInvalidArgument, "a tenant has an id")
 	}
+	if err := port.CheckIDs("tenant", string(tenant)); err != nil {
+		return out, err
+	}
 	sealed, err := s.d.Secrets.Seal(ctx, tenant, []byte("tenant-key"))
 	if err != nil {
 		return out, err

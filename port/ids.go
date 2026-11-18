@@ -1,6 +1,20 @@
 // Package port holds the neutral model, the port interfaces and the error codes of connector-engine.
 package port
 
+import "regexp"
+
+var idPattern = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
+
+// CheckIDs takes kind, id pairs and refuses a non-empty id outside [A-Za-z0-9._-]{1,128} or equal to the reserved "installation".
+func CheckIDs(pairs ...string) error {
+	for i := 0; i+1 < len(pairs); i += 2 {
+		if id := pairs[i+1]; id != "" && (!idPattern.MatchString(id) || id == "installation") {
+			return Errorf(CodeInvalidArgument, "%s id %q is not [A-Za-z0-9._-]{1,128} or is reserved", pairs[i], id)
+		}
+	}
+	return nil
+}
+
 // TenantID names a company: the isolation boundary and the row-level security key.
 type TenantID string
 

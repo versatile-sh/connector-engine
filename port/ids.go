@@ -3,13 +3,23 @@ package port
 
 import "regexp"
 
-var idPattern = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
+var (
+	idPattern      = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
+	subjectPattern = regexp.MustCompile(`^[!-.0-~]{1,255}$`)
+	subjectKinds   = map[string]bool{"person": true, "agent_owner": true, "on_behalf_of": true, "subject": true}
+)
 
-// CheckIDs takes kind, id pairs and refuses a non-empty id outside [A-Za-z0-9._-]{1,128} or equal to the reserved "installation".
+// CheckIDs takes kind, id pairs and refuses a malformed non-empty id or the reserved "installation".
+// People are issuer subjects (printable ASCII without "/" or space, at most 255); every other id is [A-Za-z0-9._-]{1,128}.
 func CheckIDs(pairs ...string) error {
 	for i := 0; i+1 < len(pairs); i += 2 {
-		if id := pairs[i+1]; id != "" && (!idPattern.MatchString(id) || id == "installation") {
-			return Errorf(CodeInvalidArgument, "%s id %q is not [A-Za-z0-9._-]{1,128} or is reserved", pairs[i], id)
+		kind, id := pairs[i], pairs[i+1]
+		pattern := idPattern
+		if subjectKinds[kind] {
+			pattern = subjectPattern
+		}
+		if id != "" && (!pattern.MatchString(id) || id == "installation") {
+			return Errorf(CodeInvalidArgument, "%s id %q is malformed or reserved", kind, id)
 		}
 	}
 	return nil

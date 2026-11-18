@@ -190,14 +190,14 @@ func TestOverlayChangesServedDescription(t *testing.T) {
 	want(t, desc(), "Searches", "upstream text")
 	o1 := st.Ok(w.Svc.ProposeOverlay(w.Ctx, w.admin, target, "search", "", "Find things", h))
 	want(t, desc(), "Searches", "a proposal is not served")
-	st.Ok(w.Svc.AcceptOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
 	want(t, desc(), "Find things", "accepted text is served")
 	o2 := st.Ok(w.Svc.ProposeOverlay(w.Ctx, w.admin, target, "search", "", "Look things up", h))
-	st.Ok(w.Svc.AcceptOverlay(w.Ctx, w.admin, target, "search", o2.Version, h))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o2.Version, h))
 	want(t, desc(), "Look things up", "second version")
-	st.Ok(w.Svc.RestoreOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, h))
 	want(t, desc(), "Find things", "restore")
-	_, err := w.Svc.AcceptOverlay(w.Ctx, w.admin, target, "search", o2.Version, "stale-hash")
+	_, err := w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o2.Version, "stale-hash")
 	want(t, port.IsCode(err, port.CodeDefinitionChanged), true, "acceptance names the hash seen")
 	if err := w.Svc.ClearOverlay(w.Ctx, w.admin, target, "search"); err != nil {
 		t.Fatal(err)
@@ -220,7 +220,7 @@ func TestProjectionThenFilter(t *testing.T) {
 	}
 	w.Runtime.SetDefinitions(listing, list...)
 	st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
-	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h))
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h, false))
 	st.Ok(w.Svc.ClassifyFunction(w.Ctx, w.admin, w.conn.ID, "search", port.ClassRead))
 	st.Ok(w.Svc.SetProjection(w.Ctx, w.admin, w.conn.ID, "search", true))
 	w.allowAll("x")
@@ -253,7 +253,7 @@ func TestProjectionAppliesBeforeTheFilter(t *testing.T) {
 	}
 	w.Runtime.SetDefinitions(listing, list...)
 	st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
-	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h))
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h, false))
 	st.Ok(w.Svc.ClassifyFunction(w.Ctx, w.admin, w.conn.ID, "search", port.ClassRead))
 	st.Ok(w.Svc.SetProjection(w.Ctx, w.admin, w.conn.ID, "search", true))
 	w.allowAll("x")
@@ -385,4 +385,36 @@ func TestTheSessionRowEndsWithTheAgentToken(t *testing.T) {
 	if len(rows) != 1 || !rows[0].ExpiresAt.Equal(exp) {
 		t.Fatalf("the session row ends with the token (G5): %+v", rows)
 	}
+}
+
+func TestAnUpstreamChangeKeepsOrSupersedesTheOverlayAtAcceptance(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	desc := func() string {
+		for _, f := range st.Ok(w.Svc.ListFunctions(w.Ctx, x)).Functions {
+			if f.Name == "s__search" {
+				var d struct{ Description string }
+				json.Unmarshal(f.Definition, &d)
+				return d.Description
+			}
+		}
+		return ""
+	}
+	target := service.OverlayTarget{Connector: w.conn.ID}
+	o1 := st.Ok(w.Svc.ProposeOverlay(w.Ctx, w.admin, target, "search", "", "Find things", w.hashes["search"]))
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, w.hashes["search"]))
+	redefine := func(text string) port.Hash {
+		w.Runtime.SetDefinitions(listing, w.redefine("search", text)...)
+		res := st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
+		return res.Changes[0].NewHash
+	}
+	h2 := redefine("Searches v2")
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h2, true))
+	want(t, desc(), "Find things", "a kept overlay is carried to the new upstream hash")
+	h3 := redefine("Searches v3")
+	st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", h3, false))
+	want(t, desc(), "Searches v3", "an overlay not kept is superseded")
+	st.Ok(w.Svc.ActivateOverlay(w.Ctx, w.admin, target, "search", o1.Version, h3))
+	want(t, desc(), "Find things", "an older version is restored against the current upstream hash")
 }

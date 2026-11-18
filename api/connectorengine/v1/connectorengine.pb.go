@@ -29,6 +29,7 @@ type AcceptFunctionRequest struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Seen          string                 `protobuf:"bytes,3,opt,name=seen,proto3" json:"seen,omitempty"`
+	KeepOverlay   bool                   `protobuf:"varint,4,opt,name=keep_overlay,json=keepOverlay,proto3" json:"keep_overlay,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -82,6 +83,13 @@ func (x *AcceptFunctionRequest) GetSeen() string {
 		return x.Seen
 	}
 	return ""
+}
+
+func (x *AcceptFunctionRequest) GetKeepOverlay() bool {
+	if x != nil {
+		return x.KeepOverlay
+	}
+	return false
 }
 
 type AcceptFunctionsRequest struct {
@@ -10024,11 +10032,12 @@ var File_connectorengine_v1_connectorengine_proto protoreflect.FileDescriptor
 
 const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\n" +
-	"(connectorengine/v1/connectorengine.proto\x12\x12connectorengine.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"O\n" +
+	"(connectorengine/v1/connectorengine.proto\x12\x12connectorengine.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"r\n" +
 	"\x15AcceptFunctionRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
-	"\x04seen\x18\x03 \x01(\tR\x04seen\"\xab\x01\n" +
+	"\x04seen\x18\x03 \x01(\tR\x04seen\x12!\n" +
+	"\fkeep_overlay\x18\x04 \x01(\bR\vkeepOverlay\"\xab\x01\n" +
 	"\x16AcceptFunctionsRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12H\n" +
 	"\x04seen\x18\x02 \x03(\v24.connectorengine.v1.AcceptFunctionsRequest.SeenEntryR\x04seen\x1a7\n" +

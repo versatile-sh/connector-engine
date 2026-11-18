@@ -18,6 +18,8 @@ components:
       properties:
         id:
           type: string
+        keep_overlay:
+          type: boolean
         name:
           type: string
         seen:
@@ -3228,6 +3230,8 @@ paths:
           application/json:
             schema:
               properties:
+                keep_overlay:
+                  type: boolean
                 seen:
                   type: string
               required:

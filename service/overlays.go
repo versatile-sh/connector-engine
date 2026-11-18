@@ -132,9 +132,11 @@ func (s *Service) ProposeOverlay(ctx context.Context, p port.Principal, t Overla
 	return out, err
 }
 
-func (s *Service) activate(ctx context.Context, p port.Principal, t OverlayTarget, function string, version int, upstreamSeen port.Hash, op string) (port.Overlay, error) {
+// ActivateOverlay is acceptOverlay and restoreOverlay: a version becomes the served text, pinned to the upstream hash the admin saw,
+// which for a connector is its current one (§9.1).
+func (s *Service) ActivateOverlay(ctx context.Context, p port.Principal, t OverlayTarget, function string, version int, upstreamSeen port.Hash) (port.Overlay, error) {
 	var out port.Overlay
-	err := s.overlayTx(ctx, p, t, op, func(tx port.Tx) error {
+	err := s.overlayTx(ctx, p, t, "ActivateOverlay", func(tx port.Tx) error {
 		cur, _, err := s.upstreamOf(tx, t, function)
 		if err != nil {
 			return err
@@ -147,8 +149,8 @@ func (s *Service) activate(ctx context.Context, p port.Principal, t OverlayTarge
 		switch {
 		case i < 0:
 			return port.Errorf(port.CodeNotFound, "overlay version %d not found", version)
-		case upstreamSeen != all[i].UpstreamHash || (t.Listing == nil && cur != all[i].UpstreamHash):
-			return port.Errorf(port.CodeDefinitionChanged, "overlay %d was written against another upstream definition", version)
+		case t.Listing == nil && upstreamSeen != cur, t.Listing != nil && upstreamSeen != all[i].UpstreamHash:
+			return port.Errorf(port.CodeDefinitionChanged, "the upstream definition is at another hash than the one seen for overlay %d", version)
 		}
 		for _, o := range all {
 			if o.State == port.OverlayActive && o.Version != version {
@@ -159,23 +161,13 @@ func (s *Service) activate(ctx context.Context, p port.Principal, t OverlayTarge
 			}
 		}
 		out = all[i]
-		out.State, out.OverlayHash = port.OverlayActive, pinning.OverlayHash(out.Title, out.Description)
+		out.State, out.OverlayHash, out.UpstreamHash = port.OverlayActive, pinning.OverlayHash(out.Title, out.Description), upstreamSeen
 		if err := tx.PutOverlay(out); err != nil {
 			return err
 		}
 		return s.overlayEvent(tx, p.Claims.Tenant, out, actor(p))
 	})
 	return out, err
-}
-
-// AcceptOverlay makes a version the served text; the admin names the upstream hash they saw (§9.1).
-func (s *Service) AcceptOverlay(ctx context.Context, p port.Principal, t OverlayTarget, function string, version int, upstreamSeen port.Hash) (port.Overlay, error) {
-	return s.activate(ctx, p, t, function, version, upstreamSeen, "AcceptOverlay")
-}
-
-// RestoreOverlay makes an earlier version the served text again, through the same acceptance (§9.1).
-func (s *Service) RestoreOverlay(ctx context.Context, p port.Principal, t OverlayTarget, function string, version int, upstreamSeen port.Hash) (port.Overlay, error) {
-	return s.activate(ctx, p, t, function, version, upstreamSeen, "RestoreOverlay")
 }
 
 // ClearOverlay returns a function to the upstream text.
@@ -215,4 +207,29 @@ func (s *Service) servedOverlay(tx port.Tx, c port.Connector, f port.Function) (
 		}
 	}
 	return nil, nil
+}
+
+func (s *Service) carryOverlay(tx port.Tx, f port.Function, keep bool, by string) error {
+	all, err := tx.ListOverlays(f.Connector, nil, f.Name)
+	if err != nil {
+		return err
+	}
+	for _, o := range all {
+		if o.State != port.OverlayActive || o.UpstreamHash == f.DefinitionHash {
+			continue
+		}
+		if o.UpstreamHash, o.State = f.DefinitionHash, port.OverlaySuperseded; keep {
+			o.State = port.OverlayActive
+		}
+		if err := tx.PutOverlay(o); err != nil {
+			return err
+		}
+		if !keep {
+			o.Version = 0
+		}
+		if err := s.overlayEvent(tx, f.Tenant, o, by); err != nil {
+			return err
+		}
+	}
+	return nil
 }

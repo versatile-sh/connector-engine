@@ -319,7 +319,9 @@ func rawPost(t *testing.T, url, token, body string, headers map[string]string) *
 }
 
 func TestRefusedTokens(t *testing.T) {
-	w := newWorld(t, options{cfg: func(c *gateway.Config) { c.ResourceMetadataURL = "https://engine.test/.well-known/oauth-protected-resource" }})
+	w := newWorld(t, options{cfg: func(c *gateway.Config) {
+		c.ResourceMetadataURL = "https://engine.test/.well-known/oauth-protected-resource"
+	}})
 	body := listBody
 	hdr := map[string]string{"MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "tools/list"}
 

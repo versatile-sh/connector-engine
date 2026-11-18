@@ -48,10 +48,6 @@ func View(tx port.Tx, tenant port.TenantID, workspaces []port.WorkspaceID, group
 	return v, nil
 }
 
-func live(t port.Tombstone, now time.Time) bool {
-	return t.ExpiresAt.IsZero() || now.Before(t.ExpiresAt)
-}
-
 // LoadFacts reads everything §7.4 lists for one agent on one connector; an absent connector yields facts that deny at step 1.
 func LoadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.ConnectorID, groups map[port.PersonID][]port.GroupID, set Settings) (evaluate.Facts, error) {
 	c, err := tx.GetConnector(connector)
@@ -87,7 +83,7 @@ func LoadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.Connect
 	if err != nil {
 		return f, err
 	}
-	f.Paused = ok && p.Paused && live(port.Tombstone{ExpiresAt: p.ExpiresAt}, now)
+	f.Paused = ok && p.Paused && (p.ExpiresAt.IsZero() || now.Before(p.ExpiresAt))
 	if f.Grants, err = tx.ListGrants(port.GrantFilter{}); err != nil {
 		return f, err
 	}
@@ -112,7 +108,7 @@ func tombstoned(tx port.Tx, now time.Time, s port.Subject, c port.Connector, rem
 		return false, removed, err
 	}
 	for _, t := range sessions {
-		ended = ended || (t.Subject == string(s.Session) && live(t, now))
+		ended = ended || (t.Subject == string(s.Session) && t.Live(now))
 	}
 	people, err := tx.ListTombstones(port.TombstonePerson)
 	if err != nil {
@@ -120,7 +116,7 @@ func tombstoned(tx port.Tx, now time.Time, s port.Subject, c port.Connector, rem
 	}
 	for _, t := range people {
 		for _, p := range evaluate.People(s) {
-			removed = removed || (t.Subject == string(p) && (t.Workspace == "" || t.Workspace == c.Workspace) && live(t, now))
+			removed = removed || (t.Subject == string(p) && (t.Workspace == "" || t.Workspace == c.Workspace) && t.Live(now))
 		}
 	}
 	return ended, removed, nil

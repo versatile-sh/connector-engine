@@ -38,6 +38,8 @@ const (
 	AgentRemove         = "agent.remove"
 	PersonRemove        = "person.remove"
 	AuditRead           = "audit.read"
+	RoleInstallation    = "role.installation"
+	RoleManage          = "role.manage"
 )
 
 // Installation is the resource of installation-wide acts.

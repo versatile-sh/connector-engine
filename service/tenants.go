@@ -261,6 +261,24 @@ func (s *Service) purge(ctx context.Context, tenant port.TenantID, counts map[st
 				return err
 			}
 		}
+		roles, err := tx.ListRoles(port.RoleFilter{})
+		if err != nil {
+			return err
+		}
+		for _, r := range roles {
+			if err := tx.DeleteRole(r); err != nil {
+				return err
+			}
+		}
+		members, err := tx.ListMembers(port.MemberFilter{})
+		if err != nil {
+			return err
+		}
+		for _, m := range members {
+			if err := tx.DeleteMember(m); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 }

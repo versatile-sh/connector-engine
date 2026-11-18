@@ -99,7 +99,7 @@ var actionRoles = map[string][]Role{
 	authz.BindingWrite: append([]Role{AgentConfigurer}, wsAdmin...), authz.GrantAgent: append([]Role{AgentConfigurer}, wsAdmin...),
 	authz.ApprovalCancel: append([]Role{Approver}, wsAdmin...), authz.ApprovalRead: append([]Role{Approver, Auditor}, wsAdmin...),
 	authz.SessionEnd: wsAdmin, authz.AgentRemove: wsAdmin, authz.PersonRemove: wsAdmin, authz.AuditRead: append([]Role{Auditor}, wsAdmin...),
-	authz.GrantUser: {TenantAdmin}, authz.CredentialOwn: {TenantAdmin},
+	authz.GrantUser: {TenantAdmin}, authz.CredentialOwn: {TenantAdmin}, authz.RoleInstallation: operatorOnly, authz.RoleManage: {TenantAdmin},
 }
 
 var selfActions = []string{authz.GrantUser, authz.CredentialOwn}

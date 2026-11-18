@@ -160,7 +160,7 @@ func (s *Service) DecideApproval(ctx context.Context, p port.Principal, id port.
 }
 
 func (s *Service) writeSessionRow(tx port.Tx, a port.Approval) error {
-	row := grant.SessionRow(a, s.now(), time.Time{}, s.cfg.SessionGrantMax)
+	row := grant.SessionRow(a, s.now(), a.TokenExpiresAt, s.cfg.SessionGrantMax)
 	existing, err := tx.ListGrants(port.GrantFilter{ScopeKind: port.ScopeSession, ScopeID: string(a.Session)})
 	if err != nil {
 		return err

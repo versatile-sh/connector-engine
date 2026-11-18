@@ -23,6 +23,7 @@ func catalogDenied(sub port.Subject, connector port.ConnectorID, function string
 
 type admitInput struct {
 	Sub    port.Subject
+	Exp    time.Time
 	T      target
 	Args   json.RawMessage
 	Fields []string
@@ -148,7 +149,7 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 	}
 	a := port.Approval{ID: port.ApprovalID(s.d.NewID()), Tenant: sub.Tenant, Workspace: conn.Workspace, Agent: sub.Agent, Session: sub.Session, OnBehalfOf: sub.OnBehalfOf,
 		Connector: conn.ID, Function: fn.Name, DefinitionHash: fn.DefinitionHash, Class: fn.Class, Arguments: in.Sealed, CallHash: hash, Fields: in.Fields, Mode: mode,
-		Approvers: approval.Approvers(bind, sub.OnBehalfOf)}
+		Approvers: approval.Approvers(bind, sub.OnBehalfOf), TokenExpiresAt: in.Exp}
 	if timeout := cmpOr(bind.ApprovalTimeout, conn.ApprovalTimeout); timeout > 0 {
 		a.ExpiresAt = s.now().Add(timeout)
 	}

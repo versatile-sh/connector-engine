@@ -139,6 +139,7 @@ type Approval struct {
 	CallDeadline       time.Duration `json:"call_deadline,omitempty"`
 	ResultRef          *Sealed       `json:"result_ref,omitempty"`
 	ResultExpiresAt    time.Time     `json:"result_expires_at,omitzero"`
+	TokenExpiresAt     time.Time     `json:"token_expires_at,omitzero"`
 }
 
 // Sealed is a record sealed by the SecretStore: the database never holds plaintext.

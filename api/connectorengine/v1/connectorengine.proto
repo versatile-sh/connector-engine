@@ -188,6 +188,7 @@ message Approval {
   int64 call_deadline = 28;
   Sealed result_ref = 29;
   google.protobuf.Timestamp result_expires_at = 30;
+  google.protobuf.Timestamp token_expires_at = 31;
 }
 
 message ApprovalDetail {

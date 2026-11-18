@@ -337,7 +337,7 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 		s.denied(ctx, sub, t.Conn.ID, t.Fn.Name, bad.Code)
 		return *bad, nil
 	}
-	in := admitInput{Sub: sub, T: t, Args: args, Fields: req.Fields, Dec: dec}
+	in := admitInput{Sub: sub, Exp: p.Claims.ExpiresAt, T: t, Args: args, Fields: req.Fields, Dec: dec}
 	if dec.Mode != port.ModeAllow || slices.Contains(dec.Notes, port.NoteSessionGrant) {
 		sealed, err := s.d.Secrets.Seal(ctx, sub.Tenant, args)
 		if err != nil {

@@ -370,3 +370,19 @@ func TestACancelledOrPostSendFailureIsOutcomeUnknown(t *testing.T) {
 		want(t, w.call(x, "s__search", `{}`).Code, service.CodeOutcomeUnknown, err.Error())
 	}
 }
+
+func TestTheSessionRowEndsWithTheAgentToken(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "fn:create_issue", port.ModeAskOnce)
+	exp := st.Epoch.Add(10 * time.Minute)
+	x := w.AgentClaims(port.Claims{Tenant: tenant, Workspace: workspace, Agent: "x", Session: "s1", OnBehalfOf: "alice", ExpiresAt: exp})
+	held := w.call(x, "s__create_issue", `{"q":"1"}`)
+	w.decide(held.Approval.ID, port.DecisionApproveForSession)
+	rows := st.Ok(w.Svc.ListGrants(w.Ctx, w.admin, port.GrantFilter{ScopeKind: port.ScopeSession, ScopeID: "s1"}))
+	if len(rows) != 1 || !rows[0].ExpiresAt.Equal(exp) {
+		t.Fatalf("the session row ends with the token (G5): %+v", rows)
+	}
+}

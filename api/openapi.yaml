@@ -219,6 +219,9 @@ components:
           type: string
         tenant:
           type: string
+        token_expires_at:
+          format: date-time
+          type: string
         workspace:
           type: string
       required:
@@ -240,6 +243,7 @@ components:
         - delivered_at
         - execution_started_at
         - result_expires_at
+        - token_expires_at
       type: object
     ApprovalDetail:
       properties:

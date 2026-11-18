@@ -144,13 +144,6 @@ func (s *Service) tenantResource(p port.Principal) string {
 	return authz.Tenant(string(p.Claims.Tenant))
 }
 
-func (s *Service) tenantScope(p port.Principal) (port.Scope, error) {
-	if p.Claims.Tenant == port.Installation {
-		return port.Scope{}, port.Errorf(port.CodeInvalidArgument, "the request carries no tenant")
-	}
-	return port.Scope{Tenant: p.Claims.Tenant}, nil
-}
-
 func (s *Service) groups(ctx context.Context, tenant port.TenantID, people ...port.PersonID) (map[port.PersonID][]port.GroupID, error) {
 	out := map[port.PersonID][]port.GroupID{}
 	for _, p := range people {

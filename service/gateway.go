@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/agents-control/connector-engine/authz"
 	"github.com/agents-control/connector-engine/core/names"
 	"github.com/agents-control/connector-engine/core/projection"
 	"github.com/agents-control/connector-engine/port"
@@ -172,11 +173,24 @@ func served(name string, f port.Function, o *port.Overlay) json.RawMessage {
 
 // ListFunctions is tools/list L3 and L4: Authorizer.Search for each bound connector, then the stored definitions of every function that is not denied.
 func (s *Service) ListFunctions(ctx context.Context, p port.Principal) (FunctionList, error) {
-	out := FunctionList{TTL: s.cfg.ListTTL}
 	sub, err := s.agentSubject(ctx, p)
 	if err != nil {
-		return out, err
+		return FunctionList{}, err
 	}
+	return s.functionsFor(ctx, sub)
+}
+
+// ListAgentFunctions is what an agent would be listed, for an agent configurer to read (§13.1 listAgentFunctions).
+func (s *Service) ListAgentFunctions(ctx context.Context, p port.Principal, sub port.Subject) (FunctionList, error) {
+	if err := s.authorize(ctx, p, authz.BindingWrite, s.tenantResource(p)); err != nil {
+		return FunctionList{}, err
+	}
+	sub.Tenant = p.Claims.Tenant
+	return s.functionsFor(ctx, sub)
+}
+
+func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionList, error) {
+	out := FunctionList{TTL: s.cfg.ListTTL}
 	var conns []port.Connector
 	if err := s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) (err error) {
 		conns, err = s.boundConnectors(tx, sub)
@@ -197,7 +211,7 @@ func (s *Service) ListFunctions(ctx context.Context, p port.Principal) (Function
 			}
 		}
 	}
-	err = s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) error {
+	err := s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) error {
 		for _, c := range conns {
 			for fn, mode := range modes[c.ID] {
 				f, err := tx.GetFunction(c.ID, fn)

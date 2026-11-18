@@ -166,10 +166,10 @@ func (s *Service) CreateGrant(ctx context.Context, p port.Principal, g port.Gran
 	if g.ScopeKind == port.ScopeTenant && g.ScopeID == "" {
 		g.ScopeID = string(g.Tenant)
 	}
-	if err := grant.Validate(g, grant.Policy{Now: s.now(), AlwaysMax: s.cfg.AlwaysMax}); err != nil {
+	if err := s.grantAuth(ctx, p, g); err != nil {
 		return out, err
 	}
-	if err := s.grantAuth(ctx, p, g); err != nil {
+	if err := grant.Validate(g, grant.Policy{Now: s.now(), AlwaysMax: s.cfg.AlwaysMax}); err != nil {
 		return out, err
 	}
 	err := s.write(ctx, port.Scope{Tenant: g.Tenant}, "CreateGrant", func(tx port.Tx) error {

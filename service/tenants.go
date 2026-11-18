@@ -83,6 +83,13 @@ func (s *Service) RemoveTenant(ctx context.Context, p port.Principal, tenant por
 // GetOperation returns the progress of an operation of the caller's tenant, or of the installation for the operator.
 func (s *Service) GetOperation(ctx context.Context, p port.Principal, id port.OperationID) (port.Operation, error) {
 	var out port.Operation
+	action, resource := authz.ConnectorRead, s.tenantResource(p)
+	if p.Kind == port.PrincipalSystem {
+		action, resource = authz.TenantCreate, authz.Installation
+	}
+	if err := s.authorize(ctx, p, action, resource); err != nil {
+		return out, err
+	}
 	scope := port.Scope{Tenant: p.Claims.Tenant, Installation: p.Kind == port.PrincipalSystem}
 	err := s.d.Store.Read(ctx, scope, func(tx port.Tx) (err error) {
 		out, err = tx.GetOperation(id)

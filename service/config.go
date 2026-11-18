@@ -35,7 +35,6 @@ type Config struct {
 	RequireDigest      bool
 	ScanForToken       bool
 	ChangedWarningDays int
-	RelayInstructions  string
 	KeyOutcome         string
 	RefreshMargin      time.Duration
 }
@@ -47,6 +46,6 @@ func DefaultConfig() Config {
 		RelistBeforeCall: "held", AutoAcceptReviewed: "none", TenantDefault: "none", DefaultCeiling: port.CeilingWrite, PrivateListings: true,
 		SessionGrantMax: 28800 * time.Second, AlwaysMax: 90 * 24 * time.Hour, AgentTokenMax: time.Hour, LevelModes: grant.DefaultLevelModes,
 		DestructiveMax: port.ModeAskOnce, CallTimeout: 60 * time.Second, ListTTL: 60 * time.Second, Separator: names.Separator, NameMax: names.MaxLength,
-		ProjectionMaxPaths: 20, RequireDigest: true, ScanForToken: true, ChangedWarningDays: 7, RelayInstructions: "never", KeyOutcome: "wrapped_key_deleted", RefreshMargin: 300 * time.Second,
+		ProjectionMaxPaths: 20, RequireDigest: true, ScanForToken: true, ChangedWarningDays: 7, KeyOutcome: "wrapped_key_deleted", RefreshMargin: 300 * time.Second,
 	}
 }

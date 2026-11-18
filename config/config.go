@@ -234,6 +234,7 @@ type CLI struct {
 // GRPC is grpc.*.
 type GRPC struct {
 	UnaryOnly bool `yaml:"unaryOnly"`
+	Insecure  bool `yaml:"insecure"`
 }
 
 // Official is the official registry source.

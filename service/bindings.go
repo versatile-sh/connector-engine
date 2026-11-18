@@ -150,7 +150,7 @@ func (s *Service) grantAuth(ctx context.Context, p port.Principal, g port.Grant)
 		return s.authorize(ctx, p, authz.GrantUser, authz.Person(tenant, g.ScopeID))
 	}
 	c, err := s.connectorOf(ctx, p, g.Connector, authz.GrantWorkspace)
-	if err == nil || g.ScopeKind != port.ScopeAgent {
+	if err == nil || g.ScopeKind != port.ScopeAgent || !port.IsCode(err, port.CodePermissionDenied) {
 		return err
 	}
 	return s.authorize(ctx, p, authz.GrantAgent, authz.Agent(tenant, string(c.Workspace), g.ScopeID))

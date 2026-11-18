@@ -109,7 +109,7 @@ func (b builder) runtime(store port.Store, secrets port.SecretStore) (port.Conne
 		case u.Name == "declarative":
 			runtimes = append(runtimes, rtdeclarative.New(applier, nil))
 		case u.Name == "grpc":
-			runtimes = append(runtimes, rtgrpc.New(rtgrpc.Options{Applier: applier}))
+			runtimes = append(runtimes, rtgrpc.New(rtgrpc.Options{Applier: applier, Insecure: b.cfg.GRPC.Insecure}))
 		}
 	}
 	return mux.New(runtimes...)

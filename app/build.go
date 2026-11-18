@@ -229,7 +229,7 @@ func (t localTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 const localIssuerHost = "local-issuer.invalid"
 
 func (b builder) verifier(local http.Handler, localName string) (port.PrincipalVerifier, error) {
-	c := jwks.Config{MaxLifetime: b.cfg.Auth.AgentTokenMaxLifetime, AllowLongLived: b.file.Acknowledged(config.AckLongLivedTokens), Now: b.clock.Now}
+	c := jwks.Config{MaxLifetime: b.cfg.Auth.AgentTokenMaxLifetime, Now: b.clock.Now}
 	for _, i := range b.cfg.Auth.Issuers {
 		c.Issuers = append(c.Issuers, jwks.Issuer{Name: i.Name, URL: i.URL})
 	}

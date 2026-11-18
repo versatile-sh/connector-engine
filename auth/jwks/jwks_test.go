@@ -137,13 +137,15 @@ func TestVerifyRefusesBadTokens(t *testing.T) {
 	}
 }
 
-func TestLongLivedAgentTokensNeedTheAcknowledgement(t *testing.T) {
+func TestAgentTokenLifetimeIsAlwaysCapped(t *testing.T) {
 	f := newFixture(t)
 	long := agent()
 	long.ExpiresAt = now.Add(48 * time.Hour)
-	if _, err := f.verifier(t, func(c *jwks.Config) { c.AllowLongLived = true }).Verify(ctx, f.token(t, long), aud); err != nil {
+	if _, err := f.verifier(t, func(c *jwks.Config) { c.MaxLifetime = 48 * time.Hour }).Verify(ctx, f.token(t, long), aud); err != nil {
 		t.Fatal(err)
 	}
+	long.ExpiresAt = now.Add(49 * time.Hour)
+	refused(t, f.verifier(t, func(c *jwks.Config) { c.MaxLifetime = 48 * time.Hour }), f.token(t, long), aud, port.CodeUnauthenticated)
 	refused(t, f.verifier(t, func(c *jwks.Config) { c.MaxLifetime = time.Minute }), f.token(t, agent()), aud, port.CodeUnauthenticated)
 }
 

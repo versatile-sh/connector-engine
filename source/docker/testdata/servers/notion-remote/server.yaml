@@ -1,0 +1,8 @@
+name: notion-remote
+type: remote
+about:
+  title: Notion
+  description: Notion hosted MCP
+remote:
+  transport_type: streamable-http
+  url: https://mcp.notion.example/mcp

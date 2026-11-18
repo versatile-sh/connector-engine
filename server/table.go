@@ -58,7 +58,7 @@ func orNotFound(err error, format string, args ...any) error {
 
 func agentFunctions(ctx context.Context, e *Env, p port.Principal, in ListAgentFunctionsRequest) (AgentFunctions, error) {
 	list, err := e.Svc.ListAgentFunctions(ctx, p, in.subject(p))
-	out := AgentFunctions{Functions: make([]AgentFunction, len(list.Functions)), ApprovalTools: list.ApprovalTools}
+	out := AgentFunctions{Functions: make([]AgentFunction, len(list.Functions)), ApprovalTools: list.ApprovalTools, Exposure: list.Exposure}
 	for i, f := range list.Functions {
 		out.Functions[i] = AgentFunction{Name: f.Name, Connector: f.Connector, Function: f.Function, Mode: f.Mode, OverlayHash: f.OverlayHash}
 	}

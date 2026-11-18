@@ -123,6 +123,7 @@ message AgentFunction {
 message AgentFunctions {
   repeated AgentFunction functions = 1;
   bool approval_tools = 2;
+  Exposure exposure = 3;
 }
 
 message AgentLevelRequest {
@@ -425,6 +426,7 @@ message Decision {
   repeated string notes = 4;
   repeated string matched = 5;
   repeated string layers = 6;
+  bool exposed = 7;
 }
 
 message Descriptor {
@@ -495,6 +497,15 @@ message ExplainVisibilityRequest {
   string person = 2;
   string owner = 3;
   string name = 4;
+}
+
+message Exposure {
+  string tenant = 1;
+  string agent = 2;
+  bool exposed = 3;
+  repeated string leg_a = 4;
+  repeated string leg_b = 5;
+  repeated string leg_c = 6;
 }
 
 message Finding {

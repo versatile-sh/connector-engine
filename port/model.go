@@ -249,6 +249,8 @@ type Exposure struct {
 	Tenant  TenantID `json:"tenant"`
 	Agent   AgentID  `json:"agent"`
 	Exposed bool     `json:"exposed"`
+	LegA    []string `json:"leg_a,omitempty"`
+	LegB    []string `json:"leg_b,omitempty"`
 	LegC    []string `json:"leg_c,omitempty"`
 }
 

@@ -84,7 +84,7 @@ var oneOf = map[string][]string{
 	"outbox.signing":                {"standard-webhooks"},
 	"secrets.adapter":               {"localfile", "memory"},
 	"credentials.fallback":          {"none"},
-	"exposure.onTrifecta":           {"warn"},
+	"exposure.onTrifecta":           {"warn", "force_ask"},
 	"apps.appOnlyFunctions":         {"refuse"},
 	"permission.unclassified":       {"destructive"},
 	"catalog.defaultCeiling":        {"read", "write", "destructive"},
@@ -184,6 +184,7 @@ func (c Config) Service() service.Config {
 	s.SessionGrantMax, s.AlwaysMax, s.AgentTokenMax = c.Permission.SessionGrantMax, c.Permission.AlwaysMaxDuration, c.Auth.AgentTokenMaxLifetime
 	s.LevelModes = grant.LevelModes{Write: port.Mode(c.Permission.LevelWrite.Write), Destructive: port.Mode(c.Permission.LevelWrite.Destructive)}
 	s.DestructiveMax, s.CallTimeout, s.ListTTL = port.Mode(c.Permission.DestructiveMax), c.Runtime.CallTimeout, c.Gateway.ListTTL
+	s.ForceAsk = c.Exposure.OnTrifecta == "force_ask"
 	s.Separator, s.NameMax = c.Gateway.Separator, c.Gateway.ToolNameMax
 	s.ProjectionDefault, s.ProjectionMaxPaths = c.Projection.Default == "on", c.Projection.MaxPaths
 	s.RequireDigest, s.ScanForToken, s.ChangedWarningDays, s.RefreshMargin = c.Listing.RequireDigest, c.Gateway.ScanArgumentsForToken, c.Approval.ChangedWarningDays, c.Credentials.RefreshMargin

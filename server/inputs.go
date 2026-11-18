@@ -264,6 +264,7 @@ type AgentFunction struct {
 type AgentFunctions struct {
 	Functions     []AgentFunction `json:"functions"`
 	ApprovalTools bool            `json:"approval_tools"`
+	Exposure      port.Exposure   `json:"exposure"`
 }
 
 // ListApprovalsRequest filters approvals.

@@ -81,6 +81,8 @@ components:
       properties:
         approval_tools:
           type: boolean
+        exposure:
+          $ref: '#/components/schemas/Exposure'
         functions:
           items:
             $ref: '#/components/schemas/AgentFunction'
@@ -88,6 +90,7 @@ components:
       required:
         - functions
         - approval_tools
+        - exposure
       type: object
     AgentLevelRequest:
       properties:
@@ -790,6 +793,8 @@ components:
       type: object
     Decision:
       properties:
+        exposed:
+          type: boolean
         layers:
           items:
             type: string
@@ -966,6 +971,31 @@ components:
       required:
         - workspace
         - name
+      type: object
+    Exposure:
+      properties:
+        agent:
+          type: string
+        exposed:
+          type: boolean
+        leg_a:
+          items:
+            type: string
+          type: array
+        leg_b:
+          items:
+            type: string
+          type: array
+        leg_c:
+          items:
+            type: string
+          type: array
+        tenant:
+          type: string
+      required:
+        - tenant
+        - agent
+        - exposed
       type: object
     Finding:
       properties:

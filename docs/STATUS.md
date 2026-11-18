@@ -73,6 +73,8 @@ The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the op
 
 M14 to M17 are out of scope for this build. M18 is done. No latency or load figure was measured by the e2e suite.
 
+A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCode ./e2e` drives Claude Code 2.1.327 (`claude -p`, model `haiku`, `--strict-mcp-config`) against `/mcp` with a per-run agent token. Run 5 times on 2026-11-18, the last 3 with assertions on the tool calls Claude made (`stream-json`): all green. It lists only the granted functions; a read is forwarded once; a write in mode `ask` answers `pending_approval`, Claude polls `approval_status` while a person decides 5 s later, and the upstream runs exactly once; an ungranted function is not available and never reaches the upstream. The first two runs failed only on assertions over Claude's free text, never on engine behaviour. Not covered: Codex and other agent programs, the stateless MCP era from a real client, latency.
+
 ## Findings of the e2e wave
 
 | Finding | Fix |

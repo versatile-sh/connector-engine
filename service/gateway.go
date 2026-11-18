@@ -335,7 +335,9 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 		return unknown(dec.Reason), nil
 	}
 	if bad := s.checkArguments(p, t, req, args); bad != nil {
-		s.denied(ctx, sub, t.Conn.ID, t.Fn.Name, bad.Code)
+		if bad.Code == port.CodeTokenInArguments {
+			s.denied(ctx, sub, t.Conn.ID, t.Fn.Name, bad.Code)
+		}
 		return *bad, nil
 	}
 	in := admitInput{Sub: sub, Exp: p.Claims.ExpiresAt, T: t, Args: args, Fields: req.Fields, Dec: dec}

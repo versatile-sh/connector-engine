@@ -56,7 +56,7 @@ func (s *Service) admit(tx port.Tx, in admitInput) (admission, error) {
 	}
 	d := evaluate.Evaluate(f, evaluate.Request{Subject: sub, Function: in.T.Fn.Name, Now: s.now(), Arguments: in.Args, Call: true})
 	if d.Mode == port.ModeDeny {
-		return admission{Out: unknown(d.Reason)}, nil
+		return admission{Out: unknown(d.Reason)}, s.record(tx, sub.Tenant, string(sub.Agent), in.T.Fn.Name, evCallDenied, catalogDenied(sub, in.T.Conn.ID, in.T.Fn.Name, d.Reason))
 	}
 	conn, fn := *f.Connector, f.Functions[in.T.Fn.Name]
 	mode := d.Mode.Stricter(in.Dec.Mode)
@@ -163,7 +163,9 @@ func (s *Service) admitHold(tx port.Tx, in admitInput, conn port.Connector, fn p
 		if err := s.record(tx, sub.Tenant, string(sub.Agent), fn.Name, evCallDenied, catalogDenied(sub, conn.ID, fn.Name, code)); err != nil {
 			return admission{}, err
 		}
-		return admission{Out: toolError(code, "%v", err.(*port.Error).Detail)}, nil
+		var pe *port.Error
+		errors.As(err, &pe)
+		return admission{Out: toolError(code, "%v", pe.Detail)}, nil
 	}
 	if err != nil {
 		return admission{}, err
@@ -410,7 +412,7 @@ func (s *Service) ApprovalCancelByAgent(ctx context.Context, p port.Principal, i
 		if err != nil {
 			return err
 		}
-		a, err = s.cancelOne(tx, cur, reasonCancelledAgent)
+		a, err = s.cancelOne(tx, cur, reasonCancelledAgent, string(cur.Agent))
 		return err
 	})
 	if err != nil && !port.IsCode(err, port.CodeInvalidTransition) {

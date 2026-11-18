@@ -240,13 +240,13 @@ func (s *Service) CancelApproval(ctx context.Context, p port.Principal, id port.
 		if !s.named(keys, tombs, p, a) && s.authorize(ctx, p, authz.ApprovalCancel, authz.Workspace(string(a.Tenant), string(a.Workspace))) != nil {
 			return port.Errorf(port.CodeNotAnApprover, "%s is not an approver of %s", actor(p), id)
 		}
-		out, err = s.cancelOne(tx, a, reasonCancelledByApprover)
+		out, err = s.cancelOne(tx, a, reasonCancelledByApprover, actor(p))
 		return err
 	})
 	return out, err
 }
 
-func (s *Service) cancelOne(tx port.Tx, a port.Approval, reason port.Code) (port.Approval, error) {
+func (s *Service) cancelOne(tx port.Tx, a port.Approval, reason port.Code, by string) (port.Approval, error) {
 	c, err := approval.Cancel(a, reason)
 	if err != nil {
 		return a, err
@@ -254,7 +254,7 @@ func (s *Service) cancelOne(tx port.Tx, a port.Approval, reason port.Code) (port
 	if err := tx.UpdateApproval(c, port.ApprovalPending); err != nil {
 		return a, err
 	}
-	return c, s.emit(tx, a.Tenant, string(a.ID), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(a.ID), Reason: string(reason)})
+	return c, s.record(tx, a.Tenant, by, string(a.ID), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(a.ID), Reason: string(reason)})
 }
 
 // WatchApprovals returns the approval events of the caller's tenant after a sequence number; a surface turns it into a stream.

@@ -24,7 +24,7 @@ func (s *Service) ExpireApproval(ctx context.Context, tenant port.TenantID, id p
 		if err := tx.UpdateApproval(exp, port.ApprovalPending); err != nil {
 			return err
 		}
-		return s.emit(tx, tenant, string(id), evApprovalExpired, catalog.ApprovalRef{Approval: string(id)})
+		return s.record(tx, tenant, "worker", string(id), evApprovalExpired, catalog.ApprovalRef{Approval: string(id)})
 	})
 }
 
@@ -247,7 +247,7 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 			if err := tx.UpdateApproval(next, port.ApprovalApproved); err != nil {
 				return err
 			}
-			return s.emit(tx, tenant, string(id), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(id), Reason: next.Reason})
+			return s.record(tx, tenant, "worker", string(id), evApprovalCancelled, catalog.ApprovalCancelled{Approval: string(id), Reason: next.Reason})
 		}
 		if err := tx.ReserveGrants(reserved); err != nil {
 			return err

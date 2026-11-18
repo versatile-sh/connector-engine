@@ -146,6 +146,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		return fmt.Errorf("gateway: %w", err)
 	}
 	a.agent = agent.Handler()
+	a.sink = listChanged{next: a.sink, notify: agent.ToolsChanged}
 	return a.bootstrap(ctx)
 }
 

@@ -160,6 +160,14 @@ func (c Config) Audience() string {
 	return orDefault(c.Auth.Audience, strings.TrimRight(c.Server.PublicURL, "/")+"/mcp")
 }
 
+// ResourceMetadataURL is where the agent endpoint publishes its protected-resource metadata (RFC 9728), empty without server.publicURL.
+func (c Config) ResourceMetadataURL() string {
+	if c.Server.PublicURL == "" {
+		return ""
+	}
+	return strings.TrimRight(c.Server.PublicURL, "/") + "/.well-known/oauth-protected-resource"
+}
+
 // ManageAudience returns the audience of the management API, defaulting to the public address.
 func (c Config) ManageAudience() string {
 	return orDefault(c.Auth.ManageAudience, strings.TrimRight(c.Server.PublicURL, "/"))

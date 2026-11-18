@@ -218,3 +218,33 @@ func TestProductionRefusesToBootWithoutIssuersAndWithTheLocalIssuerUnacknowledge
 		t.Fatalf("an acknowledged local issuer was refused: %v", err)
 	}
 }
+
+func TestAgentEndpointPublishesItsProtectedResourceMetadata(t *testing.T) {
+	cfg := devConfig(t)
+	cfg.Auth.Issuers = []config.Issuer{{Name: "https://idp.example", URL: "https://idp.example/jwks"}}
+	e := boot(t, cfg, fmt.Sprintf(localAdapters, "", "memory", ""), map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
+	defer e.shutdown()
+	for _, path := range []string{"/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"} {
+		res, err := http.Get(e.http + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var meta struct {
+			Resource string   `json:"resource"`
+			Servers  []string `json:"authorization_servers"`
+		}
+		err = json.NewDecoder(res.Body).Decode(&meta)
+		res.Body.Close()
+		if err != nil || res.StatusCode != http.StatusOK || meta.Resource != "http://engine.test/mcp" || len(meta.Servers) != 1 || meta.Servers[0] != "https://idp.example" {
+			t.Fatalf("%s: %d %+v %v", path, res.StatusCode, meta, err)
+		}
+	}
+	res, err := http.Get(e.http + "/mcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if got := res.Header.Get("WWW-Authenticate"); res.StatusCode != http.StatusUnauthorized || !strings.Contains(got, "resource_metadata=\"http://engine.test/.well-known/oauth-protected-resource\"") {
+		t.Fatalf("challenge %d %q", res.StatusCode, got)
+	}
+}

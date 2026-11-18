@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"slices"
 	"time"
 
@@ -136,8 +137,10 @@ func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector 
 	if err != nil {
 		return out, err
 	}
+	now := s.now()
 	s.mu.Lock()
-	s.connect[req.State] = pendingConnect{Tenant: c.Tenant, Person: p.Person, Connector: connector, Owner: owner, OwnerID: ownerID, Request: req, Expires: s.now().Add(10 * time.Minute)}
+	maps.DeleteFunc(s.connect, func(_ string, v pendingConnect) bool { return now.After(v.Expires) })
+	s.connect[req.State] = pendingConnect{Tenant: c.Tenant, Person: p.Person, Connector: connector, Owner: owner, OwnerID: ownerID, Request: req, Expires: now.Add(10 * time.Minute)}
 	s.mu.Unlock()
 	return ConnectStart{State: req.State, URL: url}, nil
 }

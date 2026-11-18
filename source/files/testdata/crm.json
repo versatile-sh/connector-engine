@@ -1,0 +1,8 @@
+{
+  "name": "com.example/crm",
+  "version": "3",
+  "kind": "rest_declarative",
+  "publisher": {"name": "Example Inc"},
+  "egress": {"allow_hosts": ["api.example.com"]},
+  "rest": {"base_url": "https://api.example.com", "functions": [{"name": "get_contact", "method": "GET", "path": "/contacts/{id}"}]}
+}

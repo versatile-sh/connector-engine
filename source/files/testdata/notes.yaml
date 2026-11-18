@@ -1,0 +1,18 @@
+name: com.example/notes
+version: "1.2.0"
+title: Notes
+kind: mcp_remote
+remote:
+  url: https://mcp.example.com/mcp
+  transport: streamable-http
+publisher:
+  name: Example Inc
+trust_level: first_party
+review:
+  by: someone
+  at: "2026-01-01T00:00:00Z"
+  definition_hashes: ["abc"]
+functions:
+  - name: read_note
+    class: read
+    class_source: reviewed

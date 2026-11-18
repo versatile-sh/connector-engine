@@ -3,7 +3,6 @@ package fetch
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -13,7 +12,7 @@ import (
 // MaxBody is the largest response body Do reads.
 const MaxBody = 32 << 20
 
-// Do sends one request and returns the body of a 2xx answer; any other status is an unavailable error.
+// Do sends one request and returns the body of a 2xx answer; 404 is a not_found error and any other status an unavailable one.
 func Do(ctx context.Context, c *http.Client, method, url string, body io.Reader, headers map[string]string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
@@ -34,8 +33,11 @@ func Do(ctx context.Context, c *http.Client, method, url string, body io.Reader,
 	if len(data) > MaxBody {
 		return nil, port.Errorf(port.CodeUnavailable, "%s %s: the body exceeds %d bytes", method, url, MaxBody)
 	}
-	if resp.StatusCode/100 != 2 {
-		return nil, port.Errorf(port.CodeUnavailable, "%s %s: %s", method, url, fmt.Sprint(resp.Status))
+	switch {
+	case resp.StatusCode == http.StatusNotFound:
+		return nil, port.Errorf(port.CodeNotFound, "%s %s: %s", method, url, resp.Status)
+	case resp.StatusCode/100 != 2:
+		return nil, port.Errorf(port.CodeUnavailable, "%s %s: %s", method, url, resp.Status)
 	}
 	return data, nil
 }

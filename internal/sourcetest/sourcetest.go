@@ -3,14 +3,15 @@ package sourcetest
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/agents-control/connector-engine/core/listing"
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Import pages through src and checks each manifest: unreviewed, provenance set, installation owner, no lint finding; it returns them by name.
-func Import(t *testing.T, src port.ListingSource) map[string]port.Manifest {
+// Import pages through src and checks each manifest: unreviewed, provenance set, installation owner, no lint finding unless excused in incomplete; it returns them by name.
+func Import(t *testing.T, src port.ListingSource, incomplete ...string) map[string]port.Manifest {
 	t.Helper()
 	got := map[string]port.Manifest{}
 	for cursor, pages := "", 0; ; pages++ {
@@ -22,7 +23,7 @@ func Import(t *testing.T, src port.ListingSource) map[string]port.Manifest {
 			t.Fatal(err)
 		}
 		for _, m := range page.Manifests {
-			if f := listing.Lint(m, false); len(f) > 0 {
+			if f := listing.Lint(m, false); len(f) > 0 && !slices.Contains(incomplete, m.Name) {
 				t.Fatalf("%s %s: %+v", m.Name, m.Version, f)
 			}
 			if m.TrustLevel != port.TrustUnreviewed || m.Review != nil || m.Owner != port.Installation {

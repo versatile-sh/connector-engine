@@ -149,3 +149,8 @@ type Tx interface {
 	SeenInbox(id string) (bool, error)
 	MarkInbox(id string, at time.Time) (bool, error)
 }
+
+// TenantPurger is an optional capability of a Store: it deletes every row of a removed tenant and returns the counts (§4.4 step 4).
+type TenantPurger interface {
+	PurgeTenant(ctx context.Context, tenant TenantID) (map[string]int, error)
+}

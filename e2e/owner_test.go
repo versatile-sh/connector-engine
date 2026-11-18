@@ -24,7 +24,9 @@ var scenarios = []scenario{
 	{"owner_enable_all", ownerEnableAll},
 }
 
-func isUnknownTool(err error) bool { return err != nil && strings.Contains(err.Error(), "unknown tool") }
+func isUnknownTool(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "unknown tool")
+}
 
 func expectUnknown(t *testing.T, a agentSession, name string) {
 	t.Helper()

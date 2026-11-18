@@ -137,7 +137,7 @@ func (w *world) syncAll(t *testing.T) {
 	}
 }
 
-var tenantNames = []string{"ti", "tii", "tiii", "tiv", "tv", "tvi", "tvii", "tviii", "tall", "thidden", "tiso1", "tiso2", "tpriv", "tgrpc", "trest", "tfiles", "toverlay", "tproj", "tevents", "tcli", "trestart"}
+var tenantNames = []string{"ti", "tii", "tiii", "tiv", "tv", "tvi", "tvii", "tviii", "tall", "thidden", "tiso1", "tiso1x", "tiso2", "tiso3", "tpriv", "tgrpc", "trest", "tfiles", "toverlay", "tproj", "tevents", "tcli", "trestart"}
 
 func TestE2E(t *testing.T) {
 	if testing.Short() {

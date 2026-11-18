@@ -56,3 +56,10 @@ func (c caller) refused(t *testing.T, op string, body any, pos ...string) string
 	}
 	return stderr
 }
+
+func (c caller) refusedWith(t *testing.T, status string, op string, body any, pos ...string) {
+	t.Helper()
+	if msg := c.refused(t, op, body, pos...); !strings.HasPrefix(msg, status) {
+		t.Fatalf("%s %v answered %q, want %s", op, pos, msg, status)
+	}
+}

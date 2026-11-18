@@ -181,6 +181,9 @@ type Tombstone struct {
 	ExpiresAt time.Time     `json:"expires_at"`
 }
 
+// Live reports whether the tombstone still refuses at now.
+func (t Tombstone) Live(now time.Time) bool { return t.ExpiresAt.IsZero() || now.Before(t.ExpiresAt) }
+
 // Credential is one sealed upstream credential (§11.1).
 type Credential struct {
 	ID                 CredentialID     `json:"id"`

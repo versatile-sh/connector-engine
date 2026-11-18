@@ -27,19 +27,22 @@ func Forbidden(ip netip.Addr) bool {
 	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() || carrierGrade.Contains(ip)
 }
 
-func (g Guard) allows(addr string, extra []string) bool {
+func listed(hosts []string, addr string) bool {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		host = addr
 	}
-	return g.AllowPrivate || slices.Contains(g.Hosts, host) || slices.Contains(g.Hosts, addr) || slices.Contains(extra, host) || slices.Contains(extra, addr)
+	return slices.Contains(hosts, host) || slices.Contains(hosts, addr)
 }
 
-// DialContext dials addr after resolving it and checking every address; extra lists hosts allowed for this dial only.
+// DialContext dials addr after resolving it and checking every address; a non-empty extra narrows the dial to the hosts it lists.
 func (g Guard) DialContext(extra ...string) func(ctx context.Context, network, addr string) (net.Conn, error) {
 	var d net.Dialer
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
-		if g.allows(addr, extra) {
+		if len(extra) > 0 && !listed(extra, addr) {
+			return nil, port.Errorf(port.CodePermissionDenied, "egress to %s is refused: it is not in egress.allow_hosts", addr)
+		}
+		if g.AllowPrivate || listed(g.Hosts, addr) {
 			return d.DialContext(ctx, network, addr)
 		}
 		host, portNum, err := net.SplitHostPort(addr)

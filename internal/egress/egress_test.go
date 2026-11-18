@@ -34,7 +34,9 @@ func TestGuardRefusesLoopbackUnlessAllowed(t *testing.T) {
 	}{
 		{"refused by default", egress.Guard{}, nil, false},
 		{"allowed by host list", egress.Guard{Hosts: []string{host}}, nil, true},
-		{"allowed per dial", egress.Guard{}, []string{host}, true},
+		{"manifest-allowed private host refused", egress.Guard{}, []string{host}, false},
+		{"operator-listed host passes", egress.Guard{Hosts: []string{host}}, []string{host}, true},
+		{"host outside the narrowed list refused", egress.Guard{AllowPrivate: true}, []string{"example.com"}, false},
 		{"allowed by flag", egress.Guard{AllowPrivate: true}, nil, true},
 	}
 	for _, c := range cases {

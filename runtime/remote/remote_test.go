@@ -160,9 +160,10 @@ func TestStartRefusesNonPublicAddressesUnlessAllowed(t *testing.T) {
 	}
 	host := strings.TrimPrefix(up.URL, "http://")
 	m.Egress = &port.Egress{AllowHosts: []string{host}}
-	h, err := remote.New(credential.Applier{}, nil, egress.Guard{}).Start(ctx, port.Connector{}, m, port.SecretsRef{})
-	if err != nil {
-		t.Fatalf("a host named in egress.allow_hosts is dialled: %v", err)
+	if _, err := remote.New(credential.Applier{}, nil, egress.Guard{}).Start(ctx, port.Connector{}, m, port.SecretsRef{}); !port.IsCode(err, port.CodeUnavailable) {
+		t.Fatalf("a private host named only in egress.allow_hosts must be refused: %v", err)
 	}
-	_ = h
+	if _, err := remote.New(credential.Applier{}, nil, egress.Guard{Hosts: []string{"127.0.0.1"}}).Start(ctx, port.Connector{}, m, port.SecretsRef{}); err != nil {
+		t.Fatalf("an operator-listed host is dialled: %v", err)
+	}
 }

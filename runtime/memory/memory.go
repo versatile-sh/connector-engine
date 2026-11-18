@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	deadlines "github.com/agents-control/connector-engine/internal/deadline"
 	"github.com/agents-control/connector-engine/internal/handles"
 	"github.com/agents-control/connector-engine/port"
 )
@@ -119,11 +120,8 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if s.Handler == nil {
 		return port.Result{}, port.Errorf(port.CodeUnavailable, "the script of %q has no handler", in.connector)
 	}
-	if !deadline.IsZero() {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(ctx, deadline)
-		defer cancel()
-	}
+	ctx, cancel := deadlines.Apply(ctx, deadline)
+	defer cancel()
 	return s.Handler(ctx, function, arguments)
 }
 

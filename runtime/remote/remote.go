@@ -12,6 +12,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/agents-control/connector-engine/credential"
+	deadlines "github.com/agents-control/connector-engine/internal/deadline"
 	"github.com/agents-control/connector-engine/internal/handles"
 	"github.com/agents-control/connector-engine/port"
 )
@@ -130,11 +131,8 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if err != nil {
 		return port.Result{}, err
 	}
-	if !deadline.IsZero() {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(ctx, deadline)
-		defer cancel()
-	}
+	ctx, cancel := deadlines.Apply(ctx, deadline)
+	defer cancel()
 	if len(arguments) == 0 {
 		arguments = json.RawMessage(`{}`)
 	}

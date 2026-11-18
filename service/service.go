@@ -129,17 +129,17 @@ func (s *Service) authorize(ctx context.Context, p port.Principal, action, resou
 	return nil
 }
 
-// TenantActive refuses a tenant that is removing or removed; the agent endpoint asks it on every request (§10.2 L1).
+// TenantActive refuses a tenant that was never created, is removing or is removed; the agent endpoint asks it on every request (§10.2 L1).
 func (s *Service) TenantActive(ctx context.Context, t port.TenantID) error {
 	var state port.TenantState
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: t}, func(tx port.Tx) error {
 		row, err := tx.GetTenant(t)
-		if port.IsCode(err, port.CodeNotFound) {
-			return nil
-		}
 		state = row.State
 		return err
 	})
+	if port.IsCode(err, port.CodeNotFound) {
+		return port.Errorf(port.CodeTenantRemoved, "tenant %s is not registered", t)
+	}
 	if err == nil && (state == port.TenantRemoving || state == port.TenantRemoved) {
 		return port.Errorf(port.CodeTenantRemoved, "tenant %s is %s", t, state)
 	}

@@ -79,3 +79,13 @@ func TestIDsOutsideTheCharacterSetAreRefused(t *testing.T) {
 	_, err = e.Svc.PutBinding(e.Ctx, admin, port.Binding{Connector: "c", Agent: "a/b"})
 	refused("agent", err)
 }
+
+func TestATenantThatWasNeverCreatedIsNotActive(t *testing.T) {
+	e := st.New(t)
+	want(t, port.IsCode(e.Svc.TenantActive(e.Ctx, "ghost"), port.CodeTenantRemoved), true, "unknown tenant")
+	ghost := port.Principal{Kind: port.PrincipalPerson, Person: "admin", Claims: port.Claims{Tenant: "ghost", Subject: "admin"}}
+	_, err := e.Svc.ListRoles(e.Ctx, ghost, "ghost", port.RoleFilter{})
+	want(t, port.IsCode(err, port.CodeTenantRemoved), true, "a person of an unknown tenant")
+	e.Tenant("t1")
+	want(t, e.Svc.TenantActive(e.Ctx, "t1"), nil, "registered tenant")
+}

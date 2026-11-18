@@ -138,6 +138,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	a.worker = worker.New(a.Service, store, a.Clock, worker.Config{Interval: a.Config.Approval.SweepInterval})
 	a.env = &server.Env{Svc: a.Service, Adapters: a.document}
 	gcfg := gateway.DefaultConfig(a.Config.Audience())
+	gcfg.ViewTokens = a.Config.Apps.AppOnlyFunctions == "view_token"
 	gcfg.ResourceMetadataURL = a.Config.ResourceMetadataURL()
 	gcfg.HoldWindow, gcfg.Logger = a.Config.Approval.HoldWindow, a.log
 	gcfg.ThresholdTokens, gcfg.ThresholdFunctions, gcfg.SearchResultMax = a.Config.Search.ThresholdTokens, a.Config.Search.ThresholdFunctions, a.Config.Search.ResultMax

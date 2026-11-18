@@ -85,7 +85,7 @@ var oneOf = map[string][]string{
 	"secrets.adapter":               {"localfile", "memory"},
 	"credentials.fallback":          {"none"},
 	"exposure.onTrifecta":           {"warn", "force_ask"},
-	"apps.appOnlyFunctions":         {"refuse"},
+	"apps.appOnlyFunctions":         {"refuse", "view_token"},
 	"permission.unclassified":       {"destructive"},
 	"catalog.defaultCeiling":        {"read", "write", "destructive"},
 	"catalog.offerDefault":          {"enabled_sources"},

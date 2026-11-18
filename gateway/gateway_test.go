@@ -357,8 +357,22 @@ func TestRefusedTokens(t *testing.T) {
 	}
 }
 
-func TestViewTokenIsServed(t *testing.T) {
+func TestViewTokenIsRefusedUnlessConfigured(t *testing.T) {
 	w := newWorld(t, options{})
+	w.bind("x")
+	c := w.claims("x", "s1")
+	c.Caller = port.CallerView
+	resp := rawPost(t, w.srv.URL, w.token(c), listBody, map[string]string{"MCP-Protocol-Version": "2026-07-28", "Mcp-Method": "tools/list"})
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("a view token under apps.appOnlyFunctions = refuse: %d", resp.StatusCode)
+	}
+	if _, err := w.connect(w.token(c), "2026-07-28"); err == nil {
+		t.Fatal("a view token opens no session by default")
+	}
+}
+
+func TestViewTokenIsServed(t *testing.T) {
+	w := newWorld(t, options{cfg: func(c *gateway.Config) { c.ViewTokens = true }})
 	w.bind("x")
 	w.row(port.ScopeAgent, "x", "fn:search", port.ModeAllow)
 	c := w.claims("x", "s1")

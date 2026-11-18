@@ -212,14 +212,16 @@ func (s *Service) loadHeld(ctx context.Context, tenant port.TenantID, id port.Ap
 	return h, true, err
 }
 
-// ExecuteApproved is A8 and A9 for one approved record: the re-check of §7.1 and the guards run in one transaction, then the stored arguments
-// are forwarded once; a failed guard cancels the record with its reason.
+// ExecuteApproved is A8 and A9 for one approved record: re-list, re-check and guards, then one forward; a failed re-list leaves it approved
+// for the next sweep until it is stale (A9), a failed guard cancels it.
 func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	h, ok, err := s.loadHeld(ctx, tenant, id)
 	if err != nil || !ok {
 		return err
 	}
-	_, _ = s.Relist(ctx, tenant, h.A.Connector)
+	if _, err := s.Relist(ctx, tenant, h.A.Connector); err != nil && s.now().Sub(h.A.DecidedAt) <= s.cfg.Approval.ExecuteWithin {
+		return err
+	}
 	ext, err := s.d.Authorizer.Evaluate(ctx, port.Query{Tenant: tenant, Workspace: h.A.Workspace, Agent: h.A.Agent, AgentOwner: h.Sub.AgentOwner, OnBehalfOf: h.A.OnBehalfOf,
 		Caller: port.CallerModel, Session: h.A.Session, Connector: h.A.Connector, Function: h.A.Function, Class: h.A.Class, Arguments: nonEmpty(h.Args)})
 	if err != nil {

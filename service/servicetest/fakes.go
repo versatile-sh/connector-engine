@@ -109,7 +109,7 @@ type Runtime struct {
 	Starts   int
 	Stops    int
 	OnStart  func(port.Connector) error
-	OnList   func()
+	OnList   func() error
 }
 
 type startInfo struct {
@@ -179,7 +179,9 @@ func (r *Runtime) Start(_ context.Context, c port.Connector, m port.Manifest, s 
 // ListFunctions runs OnList, then returns the scripted definitions of the handle's listing.
 func (r *Runtime) ListFunctions(_ context.Context, h port.Handle) ([]port.RawDefinition, port.ListMeta, error) {
 	if r.OnList != nil {
-		r.OnList()
+		if err := r.OnList(); err != nil {
+			return nil, port.ListMeta{}, err
+		}
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()

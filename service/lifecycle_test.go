@@ -334,3 +334,25 @@ func TestAnUndeliveredAnswerIsRepeatedNotForwardedAgain(t *testing.T) {
 	w.call(x, "s__create_issue", `{"q":"1"}`)
 	want(t, w.Runtime.CallsTo("create_issue"), 2, "after delivery the session row forwards the repeat")
 }
+
+func TestAFailedRelistLeavesTheApprovedRecordForTheNextSweep(t *testing.T) {
+	w, x := askWorld(t)
+	held := w.call(x, "s__search", `{}`)
+	w.decide(held.Approval.ID, port.DecisionApprove)
+	w.Runtime.OnList = func() error { return port.Errorf(port.CodeUnavailable, "upstream down") }
+	if _, err := w.Worker.Sweep(w.Ctx); err == nil {
+		t.Fatal("the failed re-list is reported")
+	}
+	want(t, w.Runtime.CallsTo("search"), 0, "nothing is forwarded on a definition that could not be re-listed")
+	want(t, st.Ok(w.Svc.GetApproval(w.Ctx, w.alice, held.Approval.ID)).Approval.State, port.ApprovalApproved, "the record stays approved")
+	w.Runtime.OnList = nil
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 1, "the next sweep runs it")
+
+	stale := w.call(x, "s__search", `{"q":"2"}`)
+	w.decide(stale.Approval.ID, port.DecisionApprove)
+	w.Runtime.OnList = func() error { return port.Errorf(port.CodeUnavailable, "upstream down") }
+	w.Clock.Advance(61 * time.Second)
+	_, _ = w.Worker.Sweep(w.Ctx)
+	want(t, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, stale.Approval.ID)).Code, port.CodeStaleApproval, "a record whose re-list keeps failing goes stale (A9)")
+}

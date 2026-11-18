@@ -66,11 +66,12 @@ func TestARelistThatLostARaceRunsAgain(t *testing.T) {
 	w := newWorld(t, opts{reviewed: true})
 	w.acceptAll()
 	first := true
-	w.Runtime.OnList = func() {
+	w.Runtime.OnList = func() error {
 		if first {
 			first = false
 			st.Ok(w.Svc.SetConnectorEnabled(w.Ctx, w.admin, w.conn.ID, true))
 		}
+		return nil
 	}
 	if _, err := w.Svc.Relist(w.Ctx, tenant, w.conn.ID); err != nil {
 		t.Fatalf("a re-list that lost a race to another write must run again: %v", err)

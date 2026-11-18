@@ -2,6 +2,7 @@ package port
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -87,6 +88,15 @@ type Grant struct {
 	CreatedAt      time.Time   `json:"created_at"`
 	Reason         string      `json:"reason,omitempty"`
 	Origin         Origin      `json:"origin"`
+}
+
+// Key is the uniqueness key of a row: writing a row with an existing key replaces it (§6.4 G1).
+func (g Grant) Key() string {
+	target := string(g.Connector)
+	if g.Listing != nil {
+		target = "listing:" + g.Listing.String()
+	}
+	return strings.Join([]string{string(g.Tenant), string(g.ScopeKind), g.ScopeID, string(g.Agent), target, g.Selector}, "\x00")
 }
 
 // Selectors of §6.1; a function selector is SelectorFunction followed by the name.

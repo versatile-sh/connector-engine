@@ -357,7 +357,7 @@ func (w *World) PutGrant(g *Grant) error {
 		return ErrRowRefused
 	}
 	for i, old := range w.Grants {
-		if grant.Key(old.port(w.tenant())) == grant.Key(p) {
+		if old.port(w.tenant()).Key() == p.Key() {
 			w.Grants[i] = g
 			return nil
 		}
@@ -387,9 +387,9 @@ func (w *World) SetLevel(scope Scope, scopeID, connector string, level Level) {
 	removed, added := grant.SetLevel(layer, base.port(w.tenant()), level, grant.DefaultLevelModes)
 	gone := map[string]bool{}
 	for _, g := range removed {
-		gone[grant.Key(g)] = true
+		gone[g.Key()] = true
 	}
-	w.drop(func(g *Grant) bool { return !gone[grant.Key(g.port(w.tenant()))] })
+	w.drop(func(g *Grant) bool { return !gone[g.port(w.tenant()).Key()] })
 	for _, p := range added {
 		if err := w.PutGrant(&Grant{Scope: p.ScopeKind, ScopeID: p.ScopeID, Connector: string(p.Connector), Selector: p.Selector, Mode: p.Mode, Origin: p.Origin}); err != nil {
 			panic(err)

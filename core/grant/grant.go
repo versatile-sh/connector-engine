@@ -24,15 +24,6 @@ func Covers(selector string, f port.Function) bool {
 	return selector == port.SelectorAll || selector == port.SelectorClass+string(f.Class.Effective()) || selector == port.SelectorFunction+f.Name
 }
 
-// Key is the uniqueness key of a row: writing a row with an existing key replaces it (§6.4 G1).
-func Key(g port.Grant) string {
-	target := string(g.Connector)
-	if g.Listing != nil {
-		target = "listing:" + g.Listing.String()
-	}
-	return strings.Join([]string{string(g.Tenant), string(g.ScopeKind), g.ScopeID, string(g.Agent), target, g.Selector}, "\x00")
-}
-
 // Policy bounds settings-made allow rows of the agent and user scopes; a zero AlwaysMax skips the bound (§6.1).
 type Policy struct {
 	Now       time.Time
@@ -130,10 +121,10 @@ func SetLevel(layer []port.Grant, base port.Grant, level port.Level, m LevelMode
 	added = Expand(base, level, m)
 	keys := map[string]bool{}
 	for _, g := range added {
-		keys[Key(g)] = true
+		keys[g.Key()] = true
 	}
 	for _, g := range layer {
-		if g.Origin == port.OriginLevel || keys[Key(g)] {
+		if g.Origin == port.OriginLevel || keys[g.Key()] {
 			removed = append(removed, g)
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -54,14 +55,14 @@ func newIssuer(t *testing.T) *issuer {
 		r.ParseForm()
 		i.revoked.Store(r.PostForm.Get("token"))
 	})
-	i.srv = httptest.NewServer(mux)
+	i.srv = httptest.NewTLSServer(mux)
 	t.Cleanup(i.srv.Close)
 	return i
 }
 
 func TestBrokerAuthorizationRefreshAndRevoke(t *testing.T) {
 	iss := newIssuer(t)
-	b := &credential.Broker{}
+	b := &credential.Broker{HTTP: iss.srv.Client()}
 	client := port.OAuthClient{Issuer: iss.srv.URL, ClientID: "cid", ClientSecret: []byte("sec"), RedirectURL: "https://engine.example/callback"}
 	req := port.AuthorizationRequest{Client: client, Resource: "https://mcp.example", Scopes: []string{"read"}, State: "st", Verifier: credential.NewVerifier()}
 	ctx := context.Background()
@@ -151,4 +152,32 @@ func mustQuery(t *testing.T, addr string) url.Values {
 		t.Fatal(err)
 	}
 	return u.Query()
+}
+
+func TestBrokerRefusesRedirectsPrivateIssuersAndPlainEndpoints(t *testing.T) {
+	iss := newIssuer(t)
+	hop := httptest.NewTLSServer(http.RedirectHandler(iss.srv.URL+"/.well-known/oauth-authorization-server", http.StatusFound))
+	t.Cleanup(hop.Close)
+	plain := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		json.NewEncoder(w).Encode(map[string]string{"token_endpoint": "http://plain.example/token"})
+	}))
+	t.Cleanup(plain.Close)
+	req := port.AuthorizationRequest{State: "st", Verifier: credential.NewVerifier()}
+	for name, c := range map[string]struct {
+		broker *credential.Broker
+		issuer string
+	}{
+		"redirect":       {&credential.Broker{HTTP: hop.Client()}, hop.URL},
+		"private issuer": {&credential.Broker{}, iss.srv.URL},
+		"plain endpoint": {&credential.Broker{HTTP: plain.Client()}, plain.URL},
+	} {
+		req.Client = port.OAuthClient{Issuer: c.issuer, ClientID: "cid"}
+		_, err := c.broker.Begin(context.Background(), req)
+		if err == nil {
+			t.Fatalf("%s: the broker followed it", name)
+		}
+		if strings.Contains(err.Error(), "127.0.0.1") || strings.Contains(err.Error(), "302") {
+			t.Fatalf("%s: the error echoes upstream details: %v", name, err)
+		}
+	}
 }

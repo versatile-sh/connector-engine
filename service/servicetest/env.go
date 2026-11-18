@@ -57,8 +57,26 @@ func (e *Env) id() string {
 // Operator is the system principal of the installation.
 func (e *Env) Operator() port.Principal { return port.Principal{Kind: port.PrincipalSystem} }
 
-// Person is a person principal of a tenant with the given role assignments (role, scope).
+// Tenant registers tenant as active unless a row exists; the principals of an Env belong to registered tenants.
+func (e *Env) Tenant(tenant port.TenantID) {
+	e.T.Helper()
+	if tenant == port.Installation {
+		return
+	}
+	err := e.Store.Write(e.Ctx, port.Scope{Tenant: tenant, Installation: true}, func(tx port.Tx) error {
+		if _, err := tx.GetTenant(tenant); !port.IsCode(err, port.CodeNotFound) {
+			return err
+		}
+		return tx.PutTenant(port.Tenant{ID: tenant, State: port.TenantActive, CreatedAt: e.Clock.Now()})
+	})
+	if err != nil {
+		e.T.Fatal(err)
+	}
+}
+
+// Person is a person principal of a registered tenant with the given role assignments (role, scope).
 func (e *Env) Person(tenant port.TenantID, id string, grants ...[2]string) port.Principal {
+	e.Tenant(tenant)
 	for _, g := range grants {
 		e.Write(tenant, func(tx port.Tx) error {
 			return tx.PutRole(port.RoleAssignment{Tenant: tenant, Person: port.PersonID(id), Role: g[0], Scope: g[1]})
@@ -72,8 +90,9 @@ func (e *Env) TenantAdmin(tenant port.TenantID) port.Principal {
 	return e.Person(tenant, "admin", [2]string{string(table.TenantAdmin), authz.Tenant(string(tenant))})
 }
 
-// AgentClaims builds the principal of one run of an agent.
+// AgentClaims builds the principal of one run of an agent of a registered tenant.
 func (e *Env) AgentClaims(c port.Claims) port.Principal {
+	e.Tenant(c.Tenant)
 	e.n++
 	return port.Principal{Kind: port.KindOf(c), Claims: c, Token: fmt.Sprintf("bearer-token-%d", e.n)}
 }

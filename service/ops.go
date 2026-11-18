@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"net/url"
 	"slices"
-	"strings"
 
 	"github.com/agents-control/connector-engine/authz"
 	"github.com/agents-control/connector-engine/port"
@@ -101,7 +101,7 @@ func (s *Service) PutClientRegistration(ctx context.Context, p port.Principal, i
 	if err := s.authorize(ctx, p, authz.ClientRegister, s.tenantResource(p)); err != nil {
 		return port.ClientRegistration{}, err
 	}
-	if !strings.HasPrefix(in.Issuer, "https://") || in.ClientID == "" {
+	if u, err := url.Parse(in.Issuer); err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || in.ClientID == "" {
 		return port.ClientRegistration{}, port.Errorf(port.CodeInvalidArgument, "a client registration names an https issuer and a client id")
 	}
 	reg := port.ClientRegistration{Tenant: tenant, Issuer: in.Issuer, ClientID: in.ClientID, RedirectURL: in.RedirectURL, UpdatedAt: s.now()}

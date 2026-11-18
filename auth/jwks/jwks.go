@@ -27,10 +27,8 @@ type Issuer struct {
 // Config configures a Verifier; zero durations take the defaults noted per field.
 type Config struct {
 	Issuers []Issuer
-	// MaxLifetime bounds exp - iat of an agent token; 3600 s by default.
+	// MaxLifetime bounds exp - iat of every agent token; 3600 s by default.
 	MaxLifetime time.Duration
-	// AllowLongLived is the acknowledgement of auth.agentTokenMaxLifetime: longer agent tokens pass.
-	AllowLongLived bool
 	// Leeway is the clock skew tolerated on exp and nbf; 30 s by default.
 	Leeway time.Duration
 	// CacheTTL is how long a fetched key set is trusted; 5 min by default.
@@ -128,18 +126,24 @@ func (v *Verifier) principal(token, audience string, w wire.Claims) (port.Princi
 		return port.Principal{}, unauthenticated("a token carries a tenant")
 	}
 	kind := port.KindOf(c)
+	person := ""
+	if kind == port.PrincipalPerson {
+		person = c.Subject
+	}
+	if err := port.CheckIDs("tenant", string(c.Tenant), "workspace", string(c.Workspace), "agent", string(c.Agent), "agent_owner", string(c.AgentOwner),
+		"session", string(c.Session), "on_behalf_of", string(c.OnBehalfOf), "subject", person); err != nil {
+		return port.Principal{}, unauthenticated("token refused: %v", err)
+	}
 	if kind != port.PrincipalPerson {
 		switch {
 		case c.Workspace == "" || c.Session == "":
 			return port.Principal{}, unauthenticated("an agent token carries workspace and session")
-		case !v.cfg.AllowLongLived && c.ExpiresAt.Sub(c.IssuedAt) > v.cfg.MaxLifetime:
+		case c.ExpiresAt.Sub(c.IssuedAt) > v.cfg.MaxLifetime:
 			return port.Principal{}, unauthenticated("token lives longer than %s", v.cfg.MaxLifetime)
 		}
 	}
 	p := port.Principal{Kind: kind, Claims: c, Token: token}
-	if kind == port.PrincipalPerson {
-		p.Person = port.PersonID(c.Subject)
-	}
+	p.Person = port.PersonID(person)
 	return p, nil
 }
 

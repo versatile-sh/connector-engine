@@ -994,9 +994,10 @@ message ReviewListingRequest {
 
 message RoleAssignment {
   string tenant = 1;
-  string person = 2;
-  string role = 3;
-  string scope = 4;
+  string issuer = 2;
+  string person = 3;
+  string role = 4;
+  string scope = 5;
 }
 
 message Roles {

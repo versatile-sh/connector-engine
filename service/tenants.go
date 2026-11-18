@@ -22,6 +22,9 @@ func (s *Service) CreateTenant(ctx context.Context, p port.Principal, tenant por
 	if tenant == port.Installation {
 		return out, port.Errorf(port.CodeInvalidArgument, "a tenant has an id")
 	}
+	if err := port.CheckIDs("tenant", string(tenant)); err != nil {
+		return out, err
+	}
 	sealed, err := s.d.Secrets.Seal(ctx, tenant, []byte("tenant-key"))
 	if err != nil {
 		return out, err
@@ -190,7 +193,7 @@ func (s *Service) RemoveTenantData(ctx context.Context, f port.FanOut) error {
 		return err
 	}
 	s.stopHandles(ctx, tenant)
-	if err := s.purge(ctx, tenant, counts); err != nil {
+	if err := s.purge(ctx, tenant); err != nil {
 		return err
 	}
 	return s.write(ctx, port.Scope{Installation: true}, "RemoveTenantDone:"+string(f.ID), func(tx port.Tx) error {
@@ -219,66 +222,11 @@ func (s *Service) RemoveTenantData(ctx context.Context, f port.FanOut) error {
 	})
 }
 
-func (s *Service) purge(ctx context.Context, tenant port.TenantID, counts map[string]int) error {
-	if purger, ok := s.d.Store.(port.TenantPurger); ok {
-		_, err := purger.PurgeTenant(ctx, tenant)
-		return err
+func (s *Service) purge(ctx context.Context, tenant port.TenantID) error {
+	purger, ok := s.d.Store.(port.TenantPurger)
+	if !ok {
+		return port.Errorf(port.CodeInternal, "the store cannot purge a removed tenant")
 	}
-	return s.write(ctx, port.Scope{Tenant: tenant}, "PurgeTenantRows", func(tx port.Tx) error {
-		rules, err := tx.ListRules()
-		if err != nil {
-			return err
-		}
-		for _, r := range rules {
-			if err := tx.DeleteRule(r.ID); err != nil {
-				return err
-			}
-		}
-		binds, err := tx.ListBindings(port.BindingFilter{})
-		if err != nil {
-			return err
-		}
-		for _, b := range binds {
-			if err := tx.DeleteBinding(b.Connector, b.Agent); err != nil {
-				return err
-			}
-		}
-		grants, err := tx.ListGrants(port.GrantFilter{})
-		if err != nil {
-			return err
-		}
-		for _, g := range grants {
-			if err := tx.DeleteGrant(g.ID); err != nil {
-				return err
-			}
-		}
-		creds, err := tx.ListCredentials(port.CredentialFilter{})
-		if err != nil {
-			return err
-		}
-		for _, c := range creds {
-			if err := tx.DeleteCredential(c.ID); err != nil {
-				return err
-			}
-		}
-		roles, err := tx.ListRoles(port.RoleFilter{})
-		if err != nil {
-			return err
-		}
-		for _, r := range roles {
-			if err := tx.DeleteRole(r); err != nil {
-				return err
-			}
-		}
-		members, err := tx.ListMembers(port.MemberFilter{})
-		if err != nil {
-			return err
-		}
-		for _, m := range members {
-			if err := tx.DeleteMember(m); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	_, err := purger.PurgeTenant(ctx, tenant)
+	return err
 }

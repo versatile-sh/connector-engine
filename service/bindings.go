@@ -30,6 +30,9 @@ func defaultPolicy(m port.Manifest) port.CredentialPolicy {
 
 // PutBinding gives an agent a connector; a binding for an agent whose owner may not see the listing is not found (§6.3).
 func (s *Service) PutBinding(ctx context.Context, p port.Principal, b port.Binding) (port.Binding, error) {
+	if err := port.CheckIDs("agent", string(b.Agent), "agent_owner", string(b.AgentOwner)); err != nil {
+		return b, err
+	}
 	c, err := s.connectorOf(ctx, p, b.Connector, authz.BindingWrite)
 	if err != nil {
 		return b, err
@@ -165,6 +168,9 @@ func (s *Service) CreateGrant(ctx context.Context, p port.Principal, g port.Gran
 	g.Tenant, g.Origin, g.Uses = p.Claims.Tenant, port.OriginSettings, 0
 	if g.ScopeKind == port.ScopeTenant && g.ScopeID == "" {
 		g.ScopeID = string(g.Tenant)
+	}
+	if err := port.CheckIDs("scope", g.ScopeID, "agent", string(g.Agent)); err != nil {
+		return out, err
 	}
 	if err := s.grantAuth(ctx, p, g); err != nil {
 		return out, err
@@ -378,7 +384,7 @@ func (s *Service) RemoveAgent(ctx context.Context, p port.Principal, agent port.
 	})
 }
 
-// RemovePerson revokes a person's rows and credentials in a workspace, or in every workspace when empty, and tombstones the person (§12.2).
+// RemovePerson revokes a person's rows, roles and credentials in a workspace, or everywhere with the groups when empty, and tombstones the person (§12.2).
 func (s *Service) RemovePerson(ctx context.Context, p port.Principal, person port.PersonID, workspace port.WorkspaceID) error {
 	if err := s.authorize(ctx, p, authz.PersonRemove, s.tenantResource(p)); err != nil {
 		return err
@@ -399,11 +405,41 @@ func (s *Service) RemovePerson(ctx context.Context, p port.Principal, person por
 		if err := s.forgetPerson(tx, person, inScope, actor(p)); err != nil {
 			return err
 		}
+		if err := dropRoles(tx, tenant, person, workspace); err != nil {
+			return err
+		}
 		_, err = s.cancelPending(tx, port.ApprovalFilter{}, port.ReasonPersonRemoved, func(a port.Approval) bool {
 			return inScope[a.Connector] && (a.OnBehalfOf == person || slices.Equal(a.Approvers, []string{string(person)}))
 		})
 		return err
 	})
+}
+
+func dropRoles(tx port.Tx, tenant port.TenantID, person port.PersonID, workspace port.WorkspaceID) error {
+	roles, err := tx.ListRoles(port.RoleFilter{Person: person})
+	if err != nil {
+		return err
+	}
+	for _, r := range roles {
+		if r.Tenant == tenant && (workspace == "" || authz.Covers(authz.Workspace(string(tenant), string(workspace)), r.Scope)) {
+			if err := tx.DeleteRole(r); err != nil {
+				return err
+			}
+		}
+	}
+	if workspace != "" {
+		return nil
+	}
+	members, err := tx.ListMembers(port.MemberFilter{Person: person})
+	if err != nil {
+		return err
+	}
+	for _, m := range members {
+		if err := tx.DeleteMember(m); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) forgetPerson(tx port.Tx, person port.PersonID, inScope map[port.ConnectorID]bool, by string) error {

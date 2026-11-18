@@ -19,6 +19,9 @@ func (s *Service) roleGate(ctx context.Context, p port.Principal, tenant port.Te
 }
 
 func validRole(r port.RoleAssignment) error {
+	if err := port.CheckIDs("person", string(r.Person)); err != nil {
+		return err
+	}
 	switch {
 	case r.Person == "" || r.Scope == "":
 		return port.Errorf(port.CodeInvalidArgument, "a role names a person and a scope")
@@ -30,6 +33,8 @@ func validRole(r port.RoleAssignment) error {
 		return port.Errorf(port.CodeInvalidArgument, "scope %q is outside tenant %s", r.Scope, r.Tenant)
 	case r.Tenant == port.Installation && r.Scope != authz.Installation:
 		return port.Errorf(port.CodeInvalidArgument, "an installation role covers the installation")
+	case r.Tenant == port.Installation && r.Issuer == "":
+		return port.Errorf(port.CodeInvalidArgument, "an installation role names the issuer of its person")
 	}
 	return nil
 }
@@ -88,6 +93,9 @@ func (s *Service) PutGroupMember(ctx context.Context, p port.Principal, m port.G
 	}
 	if m.Person == "" || m.Group == "" {
 		return m, port.Errorf(port.CodeInvalidArgument, "a membership names a person and a group")
+	}
+	if err := port.CheckIDs("person", string(m.Person), "group", string(m.Group)); err != nil {
+		return m, err
 	}
 	return m, s.write(ctx, scope, "PutGroupMember", func(tx port.Tx) error { return tx.PutMember(m) })
 }

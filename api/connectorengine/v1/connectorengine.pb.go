@@ -8599,9 +8599,10 @@ func (x *ReviewListingRequest) GetNote() string {
 type RoleAssignment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Tenant        string                 `protobuf:"bytes,1,opt,name=tenant,proto3" json:"tenant,omitempty"`
-	Person        string                 `protobuf:"bytes,2,opt,name=person,proto3" json:"person,omitempty"`
-	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
-	Scope         string                 `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`
+	Issuer        string                 `protobuf:"bytes,2,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	Person        string                 `protobuf:"bytes,3,opt,name=person,proto3" json:"person,omitempty"`
+	Role          string                 `protobuf:"bytes,4,opt,name=role,proto3" json:"role,omitempty"`
+	Scope         string                 `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8639,6 +8640,13 @@ func (*RoleAssignment) Descriptor() ([]byte, []int) {
 func (x *RoleAssignment) GetTenant() string {
 	if x != nil {
 		return x.Tenant
+	}
+	return ""
+}
+
+func (x *RoleAssignment) GetIssuer() string {
+	if x != nil {
+		return x.Issuer
 	}
 	return ""
 }
@@ -10782,12 +10790,13 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x12@\n" +
 	"\tfunctions\x18\x04 \x03(\v2\".connectorengine.v1.ReviewFunctionR\tfunctions\x12\x12\n" +
-	"\x04note\x18\x05 \x01(\tR\x04note\"j\n" +
+	"\x04note\x18\x05 \x01(\tR\x04note\"\x82\x01\n" +
 	"\x0eRoleAssignment\x12\x16\n" +
 	"\x06tenant\x18\x01 \x01(\tR\x06tenant\x12\x16\n" +
-	"\x06person\x18\x02 \x01(\tR\x06person\x12\x12\n" +
-	"\x04role\x18\x03 \x01(\tR\x04role\x12\x14\n" +
-	"\x05scope\x18\x04 \x01(\tR\x05scope\"A\n" +
+	"\x06issuer\x18\x02 \x01(\tR\x06issuer\x12\x16\n" +
+	"\x06person\x18\x03 \x01(\tR\x06person\x12\x12\n" +
+	"\x04role\x18\x04 \x01(\tR\x04role\x12\x14\n" +
+	"\x05scope\x18\x05 \x01(\tR\x05scope\"A\n" +
 	"\x05Roles\x128\n" +
 	"\x05items\x18\x01 \x03(\v2\".connectorengine.v1.RoleAssignmentR\x05items\">\n" +
 	"\x10RotateKeyRequest\x12\x12\n" +

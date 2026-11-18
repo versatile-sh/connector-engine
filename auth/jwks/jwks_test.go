@@ -121,6 +121,11 @@ func TestVerifyRefusesBadTokens(t *testing.T) {
 	noSession.Session = ""
 	future := agent()
 	future.IssuedAt, future.ExpiresAt = now.Add(time.Hour), now.Add(2*time.Hour)
+	nested := agent()
+	nested.Workspace = "w1/x"
+	reserved := agent()
+	reserved.Tenant = "installation"
+	slashed := port.Claims{Audience: []string{aud}, ExpiresAt: now.Add(time.Hour), Tenant: "ta", Subject: "u7/p/x"}
 	for name, tc := range map[string]struct {
 		token, audience string
 	}{
@@ -130,6 +135,9 @@ func TestVerifyRefusesBadTokens(t *testing.T) {
 		"no tenant":      {f.token(t, noTenant), aud},
 		"no session":     {f.token(t, noSession), aud},
 		"issued ahead":   {f.token(t, future), aud},
+		"nested id":      {f.token(t, nested), aud},
+		"reserved id":    {f.token(t, reserved), aud},
+		"slashed sub":    {f.token(t, slashed), aud},
 		"garbage":        {"not.a.token", aud},
 		"empty":          {"", aud},
 	} {
@@ -137,13 +145,15 @@ func TestVerifyRefusesBadTokens(t *testing.T) {
 	}
 }
 
-func TestLongLivedAgentTokensNeedTheAcknowledgement(t *testing.T) {
+func TestAgentTokenLifetimeIsAlwaysCapped(t *testing.T) {
 	f := newFixture(t)
 	long := agent()
 	long.ExpiresAt = now.Add(48 * time.Hour)
-	if _, err := f.verifier(t, func(c *jwks.Config) { c.AllowLongLived = true }).Verify(ctx, f.token(t, long), aud); err != nil {
+	if _, err := f.verifier(t, func(c *jwks.Config) { c.MaxLifetime = 48 * time.Hour }).Verify(ctx, f.token(t, long), aud); err != nil {
 		t.Fatal(err)
 	}
+	long.ExpiresAt = now.Add(49 * time.Hour)
+	refused(t, f.verifier(t, func(c *jwks.Config) { c.MaxLifetime = 48 * time.Hour }), f.token(t, long), aud, port.CodeUnauthenticated)
 	refused(t, f.verifier(t, func(c *jwks.Config) { c.MaxLifetime = time.Minute }), f.token(t, agent()), aud, port.CodeUnauthenticated)
 }
 

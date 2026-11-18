@@ -100,6 +100,14 @@ func (b builder) clients() ([]credential.Registered, error) {
 	return out, nil
 }
 
+func (b builder) issuerHosts() []string {
+	var issuers []string
+	for _, c := range b.cfg.Credentials.Clients {
+		issuers = append(issuers, c.Issuer)
+	}
+	return hostsOf(issuers...)
+}
+
 func (b builder) runtime(store port.Store, secrets port.SecretStore) (port.ConnectorRuntime, error) {
 	applier := credential.Applier{Resolve: credential.NewResolver(store, secrets), Injector: credential.Injector{}}
 	var runtimes []port.ConnectorRuntime
@@ -221,7 +229,7 @@ func (t localTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 const localIssuerHost = "local-issuer.invalid"
 
 func (b builder) verifier(local http.Handler, localName string) (port.PrincipalVerifier, error) {
-	c := jwks.Config{MaxLifetime: b.cfg.Auth.AgentTokenMaxLifetime, AllowLongLived: b.file.Acknowledged(config.AckLongLivedTokens), Now: b.clock.Now}
+	c := jwks.Config{MaxLifetime: b.cfg.Auth.AgentTokenMaxLifetime, Now: b.clock.Now}
 	for _, i := range b.cfg.Auth.Issuers {
 		c.Issuers = append(c.Issuers, jwks.Issuer{Name: i.Name, URL: i.URL})
 	}

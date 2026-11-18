@@ -522,11 +522,11 @@ func (t *tx) ListRoles(f port.RoleFilter) ([]port.RoleAssignment, error) {
 }
 
 func (t *tx) PutRole(r port.RoleAssignment) error {
-	return t.set(kindRole, key(string(r.Tenant), string(r.Person), r.Role, r.Scope), r.Tenant, r)
+	return t.set(kindRole, key(string(r.Tenant), string(r.Person), r.Role, r.Scope, r.Issuer), r.Tenant, r)
 }
 
 func (t *tx) DeleteRole(r port.RoleAssignment) error {
-	return t.del(kindRole, key(string(r.Tenant), string(r.Person), r.Role, r.Scope))
+	return t.del(kindRole, key(string(r.Tenant), string(r.Person), r.Role, r.Scope, r.Issuer))
 }
 
 func (t *tx) ListMembers(f port.MemberFilter) ([]port.GroupMember, error) {

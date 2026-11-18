@@ -2,7 +2,10 @@ package memory
 
 import (
 	"context"
+	"maps"
 	"slices"
+	"strings"
+	"time"
 
 	"github.com/agents-control/connector-engine/port"
 )
@@ -18,7 +21,7 @@ func purge[V any](tb table[V], tenant port.TenantID) int {
 	return n
 }
 
-// PurgeTenant deletes the rows of a tenant, its audit rows and its delivered events, and keeps the registry row.
+// PurgeTenant deletes the rows of a tenant, its audit and inbox rows and its delivered events, and keeps the registry row.
 func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[string]int, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, port.Errorf(port.CodeUnavailable, "%v", err)
@@ -35,7 +38,7 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 		"approvals": purge(d.approvals, tenant), "pauses": purge(d.pauses, tenant), "tombstones": purge(d.tombstones, tenant),
 		"credentials": purge(d.credentials, tenant), "overlays": purge(d.overlays, tenant), "calls": purge(d.calls, tenant),
 		"exposures": purge(d.exposures, tenant), "clients": purge(d.clients, tenant), "operations": purge(d.operations, tenant),
-		"roles": purge(d.roles, tenant), "members": purge(d.members, tenant),
+		"roles": purge(d.roles, tenant), "members": purge(d.members, tenant), "source_syncs": purge(d.syncs, tenant), "fanouts": purge(d.fanouts, tenant),
 		"listings": purge(d.listings, tenant), "versions": purge(d.versions, tenant), "offers": purge(d.offers, tenant),
 	}
 	before := len(d.audit)
@@ -44,6 +47,8 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 	before = len(d.events)
 	d.events = slices.DeleteFunc(d.events, func(e event) bool { return e.delivered && e.e.Tenant == tenant })
 	counts["events"] = before - len(d.events)
+	prefix := key(string(tenant), "")
+	maps.DeleteFunc(d.inbox, func(k string, _ time.Time) bool { return strings.HasPrefix(k, prefix) })
 	return counts, nil
 }
 

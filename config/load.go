@@ -143,6 +143,9 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if len(c.Mutations()) > 0 && !acknowledged(AckManageMutations) {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
 	}
+	if !acknowledged(AckPlaintextRootKey) {
+		add(level, "secrets.adapter", "%s keeps the root key in plaintext; acknowledge %s to run with it", c.Secrets.Adapter, AckPlaintextRootKey)
+	}
 	if c.Runtime.AllowPrivateHosts && !acknowledged(AckPrivateEgress) {
 		add(level, "runtime.allowPrivateHosts", "runtimes and sources may dial loopback, private and metadata addresses; acknowledge %s to allow it", AckPrivateEgress)
 	}

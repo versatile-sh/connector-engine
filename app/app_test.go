@@ -216,7 +216,10 @@ func TestProductionRefusesToBootWithoutIssuersAndWithTheLocalIssuerUnacknowledge
 	if _, err := cfg.LoadAdapters([]byte(fmt.Sprintf(local, "")), nil); err == nil || !strings.Contains(err.Error(), config.AckLocalIssuer) {
 		t.Fatalf("an unacknowledged local issuer booted: %v", err)
 	}
-	if _, err := cfg.LoadAdapters([]byte(fmt.Sprintf(local, "acknowledge: ["+config.AckLocalIssuer+"]\n")), nil); err != nil {
+	if _, err := cfg.LoadAdapters([]byte(fmt.Sprintf(local, "acknowledge: ["+config.AckLocalIssuer+"]\n")), nil); err == nil || !strings.Contains(err.Error(), config.AckPlaintextRootKey) {
+		t.Fatalf("an unacknowledged plaintext root key booted: %v", err)
+	}
+	if _, err := cfg.LoadAdapters([]byte(fmt.Sprintf(local, "acknowledge: ["+config.AckLocalIssuer+", "+config.AckPlaintextRootKey+"]\n")), nil); err != nil {
 		t.Fatalf("an acknowledged local issuer was refused: %v", err)
 	}
 }

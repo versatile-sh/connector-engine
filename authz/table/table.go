@@ -131,9 +131,13 @@ func (a *Authorizer) Allowed(ctx context.Context, p port.Permission) (bool, erro
 		return err
 	})
 	for _, g := range held {
-		if slices.Contains(roles, Role(g.Role)) && authz.Covers(g.Scope, p.Resource) {
+		if slices.Contains(roles, Role(g.Role)) && authz.Covers(g.Scope, p.Resource) && sameIssuer(g, p.Principal.Claims.Issuer) {
 			return true, err
 		}
 	}
 	return false, err
+}
+
+func sameIssuer(g port.RoleAssignment, issuer string) bool {
+	return g.Issuer == issuer || (g.Issuer == "" && g.Tenant != port.Installation)
 }

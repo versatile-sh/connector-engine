@@ -355,9 +355,11 @@ func SourceOf(t TenantID) string {
 	return SourcePrefix + string(t)
 }
 
-// RoleAssignment gives a person a role over a resource scope (§4.2); an empty Tenant is an installation role.
+// RoleAssignment gives the person of an issuer a role over a resource scope (§4.2); an empty Tenant is an installation role.
+// An installation role names its issuer; a tenant role without one matches the person of any issuer.
 type RoleAssignment struct {
 	Tenant TenantID `json:"tenant,omitempty"`
+	Issuer string   `json:"issuer,omitempty"`
 	Person PersonID `json:"person"`
 	Role   string   `json:"role"`
 	Scope  string   `json:"scope"`

@@ -41,9 +41,11 @@ func TestTenantAdminDelegatesRolesWithinItsTenantOnly(t *testing.T) {
 
 func TestOperatorNamesOperatorsAndGroupsFollowTheTenant(t *testing.T) {
 	e := st.New(t)
-	op := port.RoleAssignment{Person: "boss", Role: string(table.Operator), Scope: authz.Installation}
+	op := port.RoleAssignment{Issuer: "corp", Person: "boss", Role: string(table.Operator), Scope: authz.Installation}
+	_, err := e.Svc.PutRole(e.Ctx, e.Operator(), port.RoleAssignment{Person: "boss", Role: string(table.Operator), Scope: authz.Installation})
+	want(t, port.IsCode(err, port.CodeInvalidArgument), true, "an installation role names its issuer")
 	st.Ok(e.Svc.PutRole(e.Ctx, e.Operator(), op))
-	_, err := e.Svc.PutRole(e.Ctx, e.TenantAdmin("t1"), op)
+	_, err = e.Svc.PutRole(e.Ctx, e.TenantAdmin("t1"), op)
 	want(t, port.IsCode(err, port.CodePermissionDenied), true, "a tenant admin writes no installation role")
 	_, err = e.Svc.PutRole(e.Ctx, e.Operator(), port.RoleAssignment{Tenant: "t1", Person: "x", Role: string(table.Approver), Scope: authz.Tenant("t1")})
 	want(t, port.IsCode(err, port.CodeNotFound), true, "the operator writes no tenant role")

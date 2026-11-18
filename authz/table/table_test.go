@@ -59,15 +59,33 @@ func TestGroupsAreTheJoinedOnes(t *testing.T) {
 func TestAnInstallationRoleRowCoversEveryTenantAndAnotherTenantsRowDoesNot(t *testing.T) {
 	e := st.New(t)
 	e.Write("", func(tx port.Tx) error {
-		return tx.PutRole(port.RoleAssignment{Person: "boss", Role: string(table.Operator), Scope: authz.Installation})
+		return tx.PutRole(port.RoleAssignment{Issuer: "corp", Person: "boss", Role: string(table.Operator), Scope: authz.Installation})
 	})
 	e.Write("t2", func(tx port.Tx) error {
 		return tx.PutRole(port.RoleAssignment{Tenant: "t2", Person: "boss", Role: string(table.TenantAdmin), Scope: authz.Tenant("t2")})
 	})
-	boss := port.Principal{Kind: port.PrincipalPerson, Person: "boss", Claims: port.Claims{Tenant: "t1", Subject: "boss"}}
+	boss := port.Principal{Kind: port.PrincipalPerson, Person: "boss", Claims: port.Claims{Issuer: "corp", Tenant: "t1", Subject: "boss"}}
 	for action, want := range map[string]bool{authz.TenantCreate: true, authz.CatalogWrite: false} {
 		if got, err := e.Auth.Allowed(e.Ctx, port.Permission{Principal: boss, Action: action, Resource: authz.Tenant("t2")}); err != nil || got != want {
 			t.Errorf("%s: %v %v, want %v", action, got, err, want)
+		}
+	}
+}
+
+func TestTheSameSubjectOfAnotherIssuerHoldsNoRole(t *testing.T) {
+	e := st.New(t)
+	e.Write("", func(tx port.Tx) error {
+		return tx.PutRole(port.RoleAssignment{Issuer: "corp", Person: "boss", Role: string(table.Operator), Scope: authz.Installation})
+	})
+	e.Write("t2", func(tx port.Tx) error {
+		return tx.PutRole(port.RoleAssignment{Tenant: "t2", Issuer: "corp", Person: "boss", Role: string(table.TenantAdmin), Scope: authz.Tenant("t2")})
+	})
+	for _, tenant := range []port.TenantID{"t1", "t2"} {
+		other := port.Principal{Kind: port.PrincipalPerson, Person: "boss", Claims: port.Claims{Issuer: "tenant-idp", Tenant: tenant, Subject: "boss"}}
+		for _, action := range []string{authz.TenantCreate, authz.CatalogWrite} {
+			if got, err := e.Auth.Allowed(e.Ctx, port.Permission{Principal: other, Action: action, Resource: authz.Tenant("t2")}); err != nil || got {
+				t.Errorf("%s from %s: %v %v", action, tenant, got, err)
+			}
 		}
 	}
 }

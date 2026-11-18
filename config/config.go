@@ -88,6 +88,7 @@ type Auth struct {
 // RoleRow is a role written at boot, the way an installation names its first operator and tenant admins.
 type RoleRow struct {
 	Tenant string `yaml:"tenant"`
+	Issuer string `yaml:"issuer"`
 	Person string `yaml:"person"`
 	Role   string `yaml:"role"`
 	Scope  string `yaml:"scope"`

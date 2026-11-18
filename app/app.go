@@ -156,7 +156,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 
 func (a *App) bootstrap(ctx context.Context) error {
 	for _, r := range a.Config.Bootstrap.Roles {
-		row := port.RoleAssignment{Tenant: port.TenantID(r.Tenant), Person: port.PersonID(r.Person), Role: r.Role, Scope: r.Scope}
+		row := port.RoleAssignment{Tenant: port.TenantID(r.Tenant), Issuer: r.Issuer, Person: port.PersonID(r.Person), Role: r.Role, Scope: r.Scope}
 		scope := port.Scope{Tenant: row.Tenant, Installation: row.Tenant == port.Installation}
 		if err := a.Store.Write(ctx, scope, func(tx port.Tx) error { return tx.PutRole(row) }); err != nil {
 			return fmt.Errorf("bootstrap.roles: %w", err)

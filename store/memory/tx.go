@@ -621,7 +621,7 @@ func (t *tx) MarkInbox(id string, at time.Time) (bool, error) {
 }
 
 func roleKey(r port.RoleAssignment) string {
-	return key(string(r.Tenant), string(r.Person), r.Role, r.Scope)
+	return key(string(r.Tenant), string(r.Person), r.Role, r.Scope, r.Issuer)
 }
 
 func (t *tx) ListRoles(f port.RoleFilter) ([]port.RoleAssignment, error) {

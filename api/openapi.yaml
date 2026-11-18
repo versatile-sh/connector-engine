@@ -2055,6 +2055,8 @@ components:
       type: object
     RoleAssignment:
       properties:
+        issuer:
+          type: string
         person:
           type: string
         role:
@@ -4522,6 +4524,11 @@ paths:
           schema:
             type: string
         - in: query
+          name: issuer
+          required: false
+          schema:
+            type: string
+        - in: query
           name: person
           required: false
           schema:
@@ -4577,6 +4584,8 @@ paths:
           application/json:
             schema:
               properties:
+                issuer:
+                  type: string
                 person:
                   type: string
                 role:

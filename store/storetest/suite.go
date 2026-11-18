@@ -659,7 +659,7 @@ func records(e *env) {
 }
 
 func rolesAndGroups(e *env) {
-	opRole := port.RoleAssignment{Person: "op", Role: "operator", Scope: "installation"}
+	opRole := port.RoleAssignment{Issuer: "corp", Person: "op", Role: "operator", Scope: "installation"}
 	adminA := port.RoleAssignment{Tenant: "ta", Person: "ana", Role: "tenant_admin", Scope: "t/ta"}
 	adminB := port.RoleAssignment{Tenant: "tb", Person: "ana", Role: "tenant_admin", Scope: "t/tb"}
 	member := port.GroupMember{Tenant: "ta", Person: "ana", Group: "ops"}

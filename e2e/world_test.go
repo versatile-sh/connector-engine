@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -29,11 +30,12 @@ type items[T any] struct {
 }
 
 type cloudEvent struct {
-	ID      string          `json:"id"`
-	Type    string          `json:"type"`
-	Subject string          `json:"subject"`
-	Tenant  string          `json:"tenant"`
-	Data    json.RawMessage `json:"data"`
+	ID          string          `json:"id"`
+	SpecVersion string          `json:"specversion"`
+	Type        string          `json:"type"`
+	Subject     string          `json:"subject"`
+	Tenant      string          `json:"tenant"`
+	Data        json.RawMessage `json:"data"`
 }
 
 type sinkReceiver struct {
@@ -72,16 +74,22 @@ func newSink(t *testing.T) *sinkReceiver {
 	return s
 }
 
-func (s *sinkReceiver) typesFor(tenant string) []string {
+func (s *sinkReceiver) eventsFor(tenant string) []cloudEvent {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var out []string
+	var out []cloudEvent
 	for _, e := range s.events {
 		if e.Tenant == tenant {
-			out = append(out, e.Type)
+			out = append(out, e)
 		}
 	}
 	return out
+}
+
+func (s *sinkReceiver) failures() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.rejected)
 }
 
 type world struct {

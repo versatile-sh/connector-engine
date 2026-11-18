@@ -41,8 +41,16 @@ const (
 type Server struct {
 	Target string
 
-	mu   sync.Mutex
-	auth []string
+	mu    sync.Mutex
+	auth  []string
+	calls int
+}
+
+// Calls returns how many unary calls the server received.
+func (s *Server) Calls() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.calls
 }
 
 // Authorizations returns the authorization metadata of every unary call received.
@@ -70,6 +78,7 @@ func Start(t testing.TB, mode Reflection) *Server {
 	gs := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, h grpc.UnaryHandler) (any, error) {
 		md, _ := metadata.FromIncomingContext(ctx)
 		srv.mu.Lock()
+		srv.calls++
 		srv.auth = append(srv.auth, md.Get("authorization")...)
 		srv.mu.Unlock()
 		return h(ctx, req)

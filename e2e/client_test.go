@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -63,3 +64,5 @@ func (c caller) refusedWith(t *testing.T, status string, op string, body any, po
 		t.Fatalf("%s %v answered %q, want %s", op, pos, msg, status)
 	}
 }
+
+func itoa(n int) string { return strconv.Itoa(n) }

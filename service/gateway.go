@@ -357,7 +357,7 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 	}
 	switch {
 	case adm.Deliver != nil:
-		return s.answerAndDeliver(ctx, *adm.Deliver)
+		return s.answer(ctx, *adm.Deliver)
 	case adm.Forward != nil:
 		return s.forwardDirect(ctx, in, *adm.Forward)
 	}

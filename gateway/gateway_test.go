@@ -113,6 +113,13 @@ func TestAskEachTimeHoldsThenAnswers(t *testing.T) {
 		if err != nil || status.IsError {
 			t.Fatalf("status: %v %v", status, err)
 		}
+		deadline := time.Now().Add(2 * time.Second)
+		for st.Ok(w.Svc.GetApproval(w.Ctx, w.alice, id)).Approval.DeliveredAt.IsZero() {
+			if time.Now().After(deadline) {
+				t.Fatal("the answer written to the agent marks the record delivered")
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
 		if again, err := callTool(cs, "approval_status", map[string]any{"approval_id": string(id)}); err != nil || again.IsError {
 			t.Fatalf("a delivered answer stays readable: %v %v", again, err)
 		}

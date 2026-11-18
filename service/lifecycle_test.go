@@ -313,3 +313,24 @@ func TestRelistBeforeCallDecidesWhetherAnAllowedCallSeesUpstreamDrift(t *testing
 		})
 	}
 }
+
+func TestAnUndeliveredAnswerIsRepeatedNotForwardedAgain(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "fn:create_issue", port.ModeAskOnce)
+	x := w.agent("x", "s1")
+	held := w.call(x, "s__create_issue", `{"q":"1"}`)
+	w.decide(held.Approval.ID, port.DecisionApproveForSession)
+	w.sweep()
+	want(t, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, held.Approval.ID)).Status, service.OutcomeResult, "the status answers the result")
+	again := w.call(x, "s__create_issue", `{"q":"1"}`)
+	want(t, again.Status, service.OutcomeResult, "the repeat gets the stored answer")
+	want(t, w.Runtime.CallsTo("create_issue"), 1, "an answer the agent may not have received is never forwarded again")
+	if err := w.Svc.MarkDelivered(w.Ctx, x, held.Approval.ID); err != nil {
+		t.Fatal(err)
+	}
+	w.call(x, "s__create_issue", `{"q":"1"}`)
+	want(t, w.Runtime.CallsTo("create_issue"), 2, "after delivery the session row forwards the repeat")
+}

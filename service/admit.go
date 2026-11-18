@@ -350,25 +350,6 @@ func (s *Service) answer(ctx context.Context, a port.Approval) (Outcome, error) 
 	return Outcome{Status: OutcomeError, Code: port.Code(a.Reason), Detail: "the approval was cancelled", Approval: &a}, nil
 }
 
-func (s *Service) answerAndDeliver(ctx context.Context, a port.Approval) (Outcome, error) {
-	out, err := s.answer(ctx, a)
-	if err != nil || !a.State.Terminal() {
-		return out, err
-	}
-	err = s.write(ctx, port.Scope{Tenant: a.Tenant}, "Deliver", func(tx port.Tx) error {
-		cur, err := tx.GetApproval(a.ID)
-		if err != nil {
-			return err
-		}
-		delivered, err := approval.Deliver(cur, s.now())
-		if err != nil {
-			return nil
-		}
-		return tx.UpdateApproval(delivered, cur.State)
-	})
-	return out, err
-}
-
 func (s *Service) ownApproval(ctx context.Context, p port.Principal, id port.ApprovalID) (port.Approval, error) {
 	sub, err := s.agentSubject(ctx, p)
 	if err != nil {
@@ -385,13 +366,32 @@ func (s *Service) ownApproval(ctx context.Context, p port.Principal, id port.App
 	return a, err
 }
 
-// ApprovalStatus is approval_status: the answer of one record of the calling agent and session; a terminal answer is marked delivered (A14).
+// ApprovalStatus is approval_status: the answer of one record of the calling agent and session; it does not mark the record delivered.
 func (s *Service) ApprovalStatus(ctx context.Context, p port.Principal, id port.ApprovalID) (Outcome, error) {
 	a, err := s.ownApproval(ctx, p, id)
 	if err != nil {
 		return Outcome{}, err
 	}
-	return s.answerAndDeliver(ctx, a)
+	return s.answer(ctx, a)
+}
+
+// MarkDelivered is A14: the surface calls it once the terminal answer of a record of the calling agent and session reached the agent.
+func (s *Service) MarkDelivered(ctx context.Context, p port.Principal, id port.ApprovalID) error {
+	a, err := s.ownApproval(ctx, p, id)
+	if err != nil {
+		return err
+	}
+	return s.write(ctx, port.Scope{Tenant: a.Tenant}, "Deliver", func(tx port.Tx) error {
+		cur, err := tx.GetApproval(id)
+		if err != nil {
+			return err
+		}
+		delivered, err := approval.Deliver(cur, s.now())
+		if err != nil {
+			return nil
+		}
+		return tx.UpdateApproval(delivered, cur.State)
+	})
 }
 
 // ApprovalCancelByAgent is approval_cancel: A7 for a pending record of the calling agent and session.
@@ -408,10 +408,7 @@ func (s *Service) ApprovalCancelByAgent(ctx context.Context, p port.Principal, i
 		a, err = s.cancelOne(tx, cur, reasonCancelledAgent)
 		return err
 	})
-	if port.IsCode(err, port.CodeInvalidTransition) {
-		return s.answerAndDeliver(ctx, a)
-	}
-	if err != nil {
+	if err != nil && !port.IsCode(err, port.CodeInvalidTransition) {
 		return Outcome{}, err
 	}
 	return s.answer(ctx, a)

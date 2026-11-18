@@ -80,7 +80,7 @@ func (s *Service) agentSubject(ctx context.Context, p port.Principal) (port.Subj
 	if (p.Kind != port.PrincipalAgent && p.Kind != port.PrincipalView) || p.Claims.Agent == "" {
 		return port.Subject{}, port.Errorf(port.CodePermissionDenied, "the agent endpoint takes an agent principal")
 	}
-	return subjectOf(p.Claims), s.activeTenant(ctx, p.Claims.Tenant)
+	return subjectOf(p.Claims), s.TenantActive(ctx, p.Claims.Tenant)
 }
 
 type target struct {

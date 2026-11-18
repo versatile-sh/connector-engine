@@ -110,7 +110,7 @@ func (s *Service) authorize(ctx context.Context, p port.Principal, action, resou
 		return port.Errorf(port.CodeAgentPrincipalRefused, "an agent principal is refused on every management operation")
 	}
 	if t := p.Claims.Tenant; t != port.Installation {
-		if err := s.activeTenant(ctx, t); err != nil {
+		if err := s.TenantActive(ctx, t); err != nil {
 			return err
 		}
 	}
@@ -124,7 +124,8 @@ func (s *Service) authorize(ctx context.Context, p port.Principal, action, resou
 	return nil
 }
 
-func (s *Service) activeTenant(ctx context.Context, t port.TenantID) error {
+// TenantActive refuses a tenant that is removing or removed; the agent endpoint asks it on every request (§10.2 L1).
+func (s *Service) TenantActive(ctx context.Context, t port.TenantID) error {
 	var state port.TenantState
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: t}, func(tx port.Tx) error {
 		row, err := tx.GetTenant(t)

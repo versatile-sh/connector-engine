@@ -87,6 +87,8 @@ func TestParseKeepsDefaultsAndRefusesUnknownKeys(t *testing.T) {
 
 func none(string) bool { return false }
 
+func plaintext(a string) bool { return a == config.AckPlaintextRootKey }
+
 func has(fs adapters.Findings, where, level string) bool {
 	for _, f := range fs {
 		if f.Where == where && f.Level == level {
@@ -100,7 +102,7 @@ func TestProductionRefusesWhatSection14Lists(t *testing.T) {
 	base := config.Default()
 	base.Server.PublicURL = "https://engine.test"
 	base.Auth.Issuers = []config.Issuer{{Name: "idp", URL: "https://idp.test/jwks"}}
-	if err := base.Check(none).Err(); err != nil {
+	if err := base.Check(plaintext).Err(); err != nil {
 		t.Fatalf("a sound production configuration is refused: %v", err)
 	}
 	for name, c := range map[string]struct {
@@ -108,20 +110,21 @@ func TestProductionRefusesWhatSection14Lists(t *testing.T) {
 		where string
 		ack   string
 	}{
-		"empty issuer list": {func(c *config.Config) { c.Auth.Issuers = nil }, "auth.issuers", ""},
-		"local issuer":      {func(c *config.Config) { c.Auth.Issuers, c.Auth.LocalIssuer.Enabled = nil, true }, "auth.localIssuer.enabled", config.AckLocalIssuer},
-		"private egress":    {func(c *config.Config) { c.Runtime.AllowPrivateHosts = true }, "runtime.allowPrivateHosts", config.AckPrivateEgress},
-		"long agent tokens": {func(c *config.Config) { c.Auth.AgentTokenMaxLifetime = 48 * time.Hour }, "auth.agentTokenMaxLifetime", config.AckLongLivedTokens},
-		"trusted proxy":     {func(c *config.Config) { c.Auth.TrustedProxy.Listen = ":8081" }, "auth.trustedProxy.listen", config.AckTrustedProxy},
-		"manage mutation":   {func(c *config.Config) { c.Manage.MCP.Operations = []string{"read_only", "putRole"} }, "manage.mcp.operations", config.AckManageMutations},
-		"no public address": {func(c *config.Config) { c.Server.PublicURL = "" }, "auth.audience", ""},
+		"empty issuer list":  {func(c *config.Config) { c.Auth.Issuers = nil }, "auth.issuers", ""},
+		"local issuer":       {func(c *config.Config) { c.Auth.Issuers, c.Auth.LocalIssuer.Enabled = nil, true }, "auth.localIssuer.enabled", config.AckLocalIssuer},
+		"private egress":     {func(c *config.Config) { c.Runtime.AllowPrivateHosts = true }, "runtime.allowPrivateHosts", config.AckPrivateEgress},
+		"long agent tokens":  {func(c *config.Config) { c.Auth.AgentTokenMaxLifetime = 48 * time.Hour }, "auth.agentTokenMaxLifetime", config.AckLongLivedTokens},
+		"trusted proxy":      {func(c *config.Config) { c.Auth.TrustedProxy.Listen = ":8081" }, "auth.trustedProxy.listen", config.AckTrustedProxy},
+		"manage mutation":    {func(c *config.Config) { c.Manage.MCP.Operations = []string{"read_only", "putRole"} }, "manage.mcp.operations", config.AckManageMutations},
+		"no public address":  {func(c *config.Config) { c.Server.PublicURL = "" }, "auth.audience", ""},
+		"plaintext root key": {func(*config.Config) {}, "secrets.adapter", config.AckPlaintextRootKey},
 	} {
 		cfg := base
 		c.edit(&cfg)
 		if !has(cfg.Check(none), c.where, adapters.LevelError) {
 			t.Errorf("%s: production accepted it", name)
 		}
-		if c.ack != "" && cfg.Check(func(a string) bool { return a == c.ack }).Err() != nil && name != "empty issuer list" {
+		if c.ack != "" && cfg.Check(func(a string) bool { return a == c.ack || a == config.AckPlaintextRootKey }).Err() != nil && name != "empty issuer list" {
 			t.Errorf("%s: the acknowledgement %s does not lift it", name, c.ack)
 		}
 		cfg.Mode = config.ModeDev
@@ -157,7 +160,7 @@ func TestAdaptersFileFollowsTheDefaultsAndTheAcknowledgements(t *testing.T) {
 	if _, err := c.LoadAdapters([]byte(prod), nil); err == nil || !strings.Contains(err.Error(), config.AckLocalIssuer) {
 		t.Fatalf("production accepted the local issuer unacknowledged: %v", err)
 	}
-	ack := strings.Replace(prod, "ports:", "acknowledge: ["+config.AckLocalIssuer+"]\nports:", 1)
+	ack := strings.Replace(prod, "ports:", "acknowledge: ["+config.AckLocalIssuer+", "+config.AckPlaintextRootKey+"]\nports:", 1)
 	if _, err := c.LoadAdapters([]byte(ack), nil); err != nil {
 		t.Fatalf("acknowledged local issuer: %v", err)
 	}

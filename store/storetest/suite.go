@@ -53,6 +53,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"records":                   records,
 		"roles and groups":          rolesAndGroups,
 		"calls clients and syncs":   callsClientsAndSyncs,
+		"purge tenant":              purgeTenant,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -730,4 +731,42 @@ func callsClientsAndSyncs(e *env) {
 		e.same([]any{2, "a", "z", 3}, []any{len(syncs), syncs[0].Source, syncs[1].Source, syncs[1].Imported})
 		return err
 	}))
+}
+
+func purgeTenant(e *env) {
+	purger, ok := e.s.(port.TenantPurger)
+	if !ok {
+		e.t.Fatal("the store does not purge tenants")
+	}
+	fill := func(scope port.Scope) {
+		tenant := scope.Tenant
+		e.must(e.write(inst, func(tx port.Tx) error {
+			return errors.Join(tx.PutTenant(port.Tenant{ID: tenant}), tx.PutOffer(port.Offer{Tenant: tenant, TargetKind: "listing", Target: "x"}))
+		}))
+		e.must(e.write(scope, func(tx port.Tx) error {
+			_, err := tx.PutConnector(connector(tenant, "c-"+string(tenant)), port.AnyRevision)
+			_, err2 := tx.MarkInbox("m", t0)
+			return errors.Join(err, err2, tx.Audit(port.AuditRow{Tenant: tenant, Actor: "a", Action: "x", Subject: "s"}),
+				tx.PutRole(port.RoleAssignment{Tenant: tenant, Person: "p", Role: "approver", Scope: "t/" + string(tenant)}),
+				tx.PutListing(port.Listing{Ref: port.ListingRef{Owner: tenant, Name: "io.x/own"}}))
+		}))
+	}
+	fill(scopeA)
+	fill(scopeB)
+	counts, err := purger.PurgeTenant(ctx, "ta")
+	e.must(err)
+	e.same([]int{1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"]})
+	for scope, want := range map[port.Scope]int{scopeA: 0, scopeB: 1} {
+		e.must(e.read(port.Scope{Tenant: scope.Tenant, Installation: true}, func(tx port.Tx) error {
+			conns, err1 := tx.ListConnectors(port.ConnectorFilter{})
+			roles, err2 := tx.ListRoles(port.RoleFilter{Person: "p"})
+			audit, err3 := tx.ListAudit("s")
+			seen, err4 := tx.SeenInbox("m")
+			_, err5 := tx.GetTenant(scope.Tenant)
+			e.same([]any{want, want, want, want == 1}, []any{len(conns), len(roles), len(audit), seen})
+			return errors.Join(err1, err2, err3, err4, err5)
+		}))
+	}
+	_, err = purger.PurgeTenant(ctx, port.Installation)
+	e.code(err, port.CodeInvalidArgument)
 }

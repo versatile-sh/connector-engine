@@ -111,7 +111,7 @@ func (s *Service) InstallConnector(ctx context.Context, p port.Principal, in Ins
 		return out, err
 	}
 	c.InstructionsHash = pinning.InstructionsHash(meta.Instructions)
-	c.LastRelistAt = s.now()
+	c.LastRelistAt, c.RelistAfter = s.now(), s.nextRelist(meta.TTL)
 	level := listing.InstallLevel(lv.Manifest.TrustLevel)
 	err = s.write(ctx, port.Scope{Tenant: tenant}, "InstallConnector", func(tx port.Tx) error {
 		saved, err := tx.PutConnector(c, 0)
@@ -256,9 +256,24 @@ func (s *Service) reconcile(ctx context.Context, tenant port.TenantID, id port.C
 	return res, err
 }
 
+func (s *Service) nextRelist(ttl time.Duration) time.Time {
+	if ttl <= 0 {
+		ttl = s.cfg.RelistMax
+	}
+	return s.now().Add(min(max(ttl, s.cfg.RelistMin), s.cfg.RelistMax))
+}
+
+func (s *Service) relistDue(c port.Connector) bool {
+	due := c.RelistAfter
+	if due.IsZero() {
+		due = c.LastRelistAt.Add(s.cfg.RelistMax)
+	}
+	return !s.now().Before(due)
+}
+
 func (s *Service) finishReconcile(tx port.Tx, cur *port.Connector, res *UpdateResult, m port.Manifest, meta port.ListMeta, explicit bool, by string, fns map[string]port.Function) error {
 	from := cur.Listing.Version
-	cur.Listing.Version, cur.LastRelistAt = m.Version, s.now()
+	cur.Listing.Version, cur.LastRelistAt, cur.RelistAfter = m.Version, s.now(), s.nextRelist(meta.TTL)
 	if h := pinning.InstructionsHash(meta.Instructions); h != cur.InstructionsHash {
 		if err := s.emit(tx, cur.Tenant, string(cur.ID), evInstructions, catalog.InstructionsChanged{Connector: string(cur.ID), OldHash: string(cur.InstructionsHash), NewHash: string(h)}); err != nil {
 			return err

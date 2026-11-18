@@ -649,6 +649,9 @@ components:
           type: string
         listing:
           $ref: '#/components/schemas/VersionRef'
+        relist_after:
+          format: date-time
+          type: string
         removed_at:
           format: date-time
           type: string
@@ -666,6 +669,7 @@ components:
         - listing
         - enabled
         - last_relist_at
+        - relist_after
         - removed_at
         - revision
       type: object

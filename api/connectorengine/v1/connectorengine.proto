@@ -371,8 +371,9 @@ message Connector {
   int64 call_timeout = 9;
   int64 approval_timeout = 10;
   google.protobuf.Timestamp last_relist_at = 11;
-  google.protobuf.Timestamp removed_at = 12;
-  int64 revision = 13;
+  google.protobuf.Timestamp relist_after = 12;
+  google.protobuf.Timestamp removed_at = 13;
+  int64 revision = 14;
 }
 
 message ConnectorRequest {

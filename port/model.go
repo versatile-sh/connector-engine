@@ -30,6 +30,7 @@ type Connector struct {
 	CallTimeout      time.Duration     `json:"call_timeout,omitempty"`
 	ApprovalTimeout  time.Duration     `json:"approval_timeout,omitempty"`
 	LastRelistAt     time.Time         `json:"last_relist_at,omitzero"`
+	RelistAfter      time.Time         `json:"relist_after,omitzero"`
 	RemovedAt        time.Time         `json:"removed_at,omitzero"`
 	Revision         int64             `json:"revision"`
 }

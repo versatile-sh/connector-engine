@@ -266,7 +266,7 @@ func (s *Service) needRelist(t target, mode port.Mode) bool {
 	if mode != port.ModeAllow {
 		return false
 	}
-	if s.now().Sub(t.Conn.LastRelistAt) >= s.cfg.RelistMax {
+	if s.relistDue(t.Conn) {
 		return true
 	}
 	return s.cfg.RelistBeforeCall == "all" || (s.cfg.RelistBeforeCall == "write" && t.Fn.Class.Effective() != port.ClassRead)

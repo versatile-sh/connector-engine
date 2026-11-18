@@ -36,15 +36,15 @@ func (s *Service) credentialAuth(ctx context.Context, p port.Principal, kind por
 
 // CredentialInput is a credential to store: the secret is sealed before it reaches the store.
 type CredentialInput struct {
-	Connector port.ConnectorID
-	OwnerKind port.OwnerKind
-	OwnerID   string
-	Kind      port.CredentialKind
-	Issuer    string
-	Resource  string
-	Secret    []byte
-	Scopes    []string
-	ExpiresAt time.Time
+	Connector port.ConnectorID    `json:"connector"`
+	OwnerKind port.OwnerKind      `json:"owner_kind"`
+	OwnerID   string              `json:"owner_id"`
+	Kind      port.CredentialKind `json:"kind"`
+	Issuer    string              `json:"issuer"`
+	Resource  string              `json:"resource"`
+	Secret    []byte              `json:"secret,omitempty"`
+	Scopes    []string            `json:"scopes,omitempty"`
+	ExpiresAt time.Time           `json:"expires_at"`
 }
 
 func (s *Service) storeCredential(ctx context.Context, by string, c port.Connector, in CredentialInput, reg port.Registration) (port.Credential, error) {
@@ -88,8 +88,8 @@ func (s *Service) CreateCredential(ctx context.Context, p port.Principal, in Cre
 
 // ConnectStart is the address of the provider's authorization and the single-use state that binds it to the person.
 type ConnectStart struct {
-	State string
-	URL   string
+	State string `json:"state"`
+	URL   string `json:"url"`
 }
 
 // BeginConnect starts an authorization for the signed-in person; CompleteConnect refuses any other person (§11.3).

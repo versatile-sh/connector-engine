@@ -14,8 +14,8 @@ import (
 
 // AcceptResult is an accepted function and the fn: rows its new hash left stale (§9 "Clearing").
 type AcceptResult struct {
-	Function   port.Function
-	StaleGrant []port.Grant
+	Function   port.Function `json:"function"`
+	StaleGrant []port.Grant  `json:"stale_grant,omitempty"`
 }
 
 // ListFunctionsOf returns the stored functions of a connector (§13.1 listFunctions).

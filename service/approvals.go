@@ -18,13 +18,13 @@ const reasonCancelledByApprover port.Code = "cancelled_by_approver"
 
 // ApprovalDetail is a record with its arguments opened for the reader and the warnings of §8.5.
 type ApprovalDetail struct {
-	Approval       port.Approval
-	Arguments      []byte
-	ChangedRecent  bool
-	MayHaveRun     bool
-	TrustLevel     port.TrustLevel
-	Publisher      string
-	ReachesOutside bool
+	Approval       port.Approval   `json:"approval"`
+	Arguments      []byte          `json:"arguments,omitempty"`
+	ChangedRecent  bool            `json:"changed_recent"`
+	MayHaveRun     bool            `json:"may_have_run"`
+	TrustLevel     port.TrustLevel `json:"trust_level"`
+	Publisher      string          `json:"publisher"`
+	ReachesOutside bool            `json:"reaches_outside"`
 }
 
 func (s *Service) approverKeys(ctx context.Context, p port.Principal) ([]string, error) {

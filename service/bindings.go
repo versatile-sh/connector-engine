@@ -136,9 +136,9 @@ func (s *Service) SetAgentLevel(ctx context.Context, p port.Principal, connector
 
 // GrantResult is a written row, the functions the destructive cap applies to today and the row it replaced (§6.2, §6.4 G1).
 type GrantResult struct {
-	Grant    port.Grant
-	Capped   []string
-	Replaced *port.Grant
+	Grant    port.Grant  `json:"grant"`
+	Capped   []string    `json:"capped,omitempty"`
+	Replaced *port.Grant `json:"replaced,omitempty"`
 }
 
 func (s *Service) grantAuth(ctx context.Context, p port.Principal, g port.Grant) error {

@@ -38,7 +38,7 @@ type Request struct {
 // Decision is the evaluation's answer, with the mode each of the tenant, workspace, agent and user layers gave.
 type Decision struct {
 	port.AccessDecision
-	Layers [4]string
+	Layers [4]string `json:"layers"`
 }
 
 func deny(step int, reason port.Code) Decision {

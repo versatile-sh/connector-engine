@@ -82,12 +82,12 @@ func (v View) Newest(ref port.ListingRef) (string, bool) {
 
 // Level is the answer of one level of §5.5, with the rules that gave it.
 type Level struct {
-	Answered bool
-	Show     bool
-	Install  bool
-	Ceiling  port.Ceiling
-	Named    bool
-	Rules    []port.RuleID
+	Answered bool          `json:"answered"`
+	Show     bool          `json:"show"`
+	Install  bool          `json:"install"`
+	Ceiling  port.Ceiling  `json:"ceiling"`
+	Named    bool          `json:"named"`
+	Rules    []port.RuleID `json:"rules,omitempty"`
 }
 
 // Shows reports whether the level answered and shows.
@@ -142,13 +142,13 @@ func (v View) level(subjects map[port.SubjectKind][]string, ref port.ListingRef,
 
 // Answer is the resolution of one listing for a workspace and the people considered (§5.5 V6).
 type Answer struct {
-	Visible     bool
-	Installable bool
-	Ceiling     port.Ceiling
-	Version     string
-	Tenant      Level
-	Workspace   Level
-	People      []Level
+	Visible     bool         `json:"visible"`
+	Installable bool         `json:"installable"`
+	Ceiling     port.Ceiling `json:"ceiling"`
+	Version     string       `json:"version"`
+	Tenant      Level        `json:"tenant"`
+	Workspace   Level        `json:"workspace"`
+	People      []Level      `json:"people,omitempty"`
 }
 
 // Resolve applies V1 to V8 to one listing for a workspace and the people considered (owner of the agent, person acted for, or the caller).

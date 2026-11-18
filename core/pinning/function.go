@@ -10,8 +10,8 @@ import (
 
 // Effects is what a function transition asks the use case to do in the same transaction.
 type Effects struct {
-	DropSessionRows bool
-	Cancel          port.Code
+	DropSessionRows bool      `json:"drop_session_rows"`
+	Cancel          port.Code `json:"cancel"`
 }
 
 // ChangeKind names what a re-list or an update found for one function (§9).
@@ -27,11 +27,11 @@ const (
 
 // Change is one difference between the pinned functions and a capture.
 type Change struct {
-	Function string
-	Kind     ChangeKind
-	OldHash  port.Hash
-	NewHash  port.Hash
-	Effects  Effects
+	Function string     `json:"function"`
+	Kind     ChangeKind `json:"kind"`
+	OldHash  port.Hash  `json:"old_hash"`
+	NewHash  port.Hash  `json:"new_hash"`
+	Effects  Effects    `json:"effects"`
 }
 
 // Captured sets the state of a function captured at install: active for a reviewed or first_party listing, else quarantined (§5.3).

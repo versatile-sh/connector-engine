@@ -26,7 +26,7 @@ A neutral Go engine that lets a tenant plug tool servers (MCP, REST, gRPC) into 
 ```
 go build -o /tmp/ce/connector-engine ./cmd/connector-engine
 go build -o /tmp/ce/cnctl ./cmd/cnctl
-CN_OPERATOR_TOKEN=dev /tmp/ce/connector-engine --config config/connector-engine.yaml --adapters adapters.yaml
+CN_OPERATOR_TOKEN=dev /tmp/ce/connector-engine --config config/connector-engine.yaml --adapters /path/to/adapters.yaml
 ```
 
 `scripts/smoke.sh` writes a working pair of files (dev mode, memory store, the local token issuer) and drives the binary with `curl` and `cnctl`; copy its heredocs as a starting point. The engine prints `http=... grpc=... operator=...` once it listens. The operator listener takes the `CN_OPERATOR_TOKEN` bearer; the public listener takes person and agent tokens, which the local issuer mints at `POST /local/token`.

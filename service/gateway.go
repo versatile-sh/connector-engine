@@ -10,6 +10,7 @@ import (
 	"github.com/agents-control/connector-engine/authz"
 	"github.com/agents-control/connector-engine/core/names"
 	"github.com/agents-control/connector-engine/core/projection"
+	"github.com/agents-control/connector-engine/internal/tokenscan"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service/internal/schemacheck"
 )
@@ -367,7 +368,7 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 func (s *Service) checkArguments(p port.Principal, t target, req CallRequest, args json.RawMessage) *Outcome {
 	var out Outcome
 	switch {
-	case s.cfg.ScanForToken && p.Token != "" && bytes.Contains(args, []byte(p.Token)):
+	case s.cfg.ScanForToken && tokenscan.Contains(args, p.Token):
 		out = toolError(port.CodeTokenInArguments, "the arguments carry the bearer token of this request")
 	case schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), args) != nil:
 		out = toolError(port.CodeInvalidArgument, "%v", schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), args))

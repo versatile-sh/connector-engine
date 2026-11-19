@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -83,6 +84,18 @@ func (s *Sessions) End(w http.ResponseWriter, r *http.Request) {
 // Guard refuses a request whose Host is not one of the console's own addresses (DNS rebinding) and a mutating request whose Origin is not the console (CSRF), and sets the security headers.
 type Guard struct {
 	Hosts []string
+}
+
+// LoopbackHosts is the Host allowlist of a console reached at public: its own host and 127.0.0.1, localhost and [::1], all at public's port.
+func LoopbackHosts(public *url.URL) []string {
+	port := public.Port()
+	hosts := []string{strings.ToLower(public.Host)}
+	for _, h := range []string{"127.0.0.1", "localhost", "[::1]"} {
+		if h+":"+port != hosts[0] {
+			hosts = append(hosts, h+":"+port)
+		}
+	}
+	return hosts
 }
 
 func (g Guard) hostOK(host string) bool {

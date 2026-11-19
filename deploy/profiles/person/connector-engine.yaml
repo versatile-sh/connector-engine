@@ -3,8 +3,10 @@ server:
   listen: 0.0.0.0:8080
   grpcListen: ""
   operatorListen: 0.0.0.0:8081
-  publicURL: http://127.0.0.1:7465
+  publicURL: ""
 auth:
+  audience: urn:connector-engine:local:mcp
+  manageAudience: urn:connector-engine:local
   localIssuer: {enabled: true}
   agentTokenMaxLifetime: 720h
   operator: {tokenRef: "file:/run/connector-engine/operator-token"}

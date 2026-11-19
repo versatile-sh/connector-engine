@@ -4,7 +4,9 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 compose=(docker compose -f deploy/compose.yaml -f deploy/compose.check.yaml --profile person)
-base="http://127.0.0.1:7465"
+port="${CONSOLE_PORT:-7465}"
+export CONSOLE_PORT="$port"
+base="http://127.0.0.1:$port"
 work="$(mktemp -d)"
 jar="$work/cookies"
 keep="${CHECK_KEEP:-0}"
@@ -34,7 +36,7 @@ step "published ports bind 127.0.0.1 only"
 ports="$(docker ps --filter label=com.docker.compose.project=connector-engine --format '{{.Names}} {{.Ports}}')"
 echo "$ports"
 if echo "$ports" | grep -E '0\.0\.0\.0:[0-9]+->|\[::\]:[0-9]+->' >/dev/null; then fail "a port is published beyond loopback"; fi
-echo "$ports" | grep -q '127.0.0.1:7465->7465' || fail "the console port is not on 127.0.0.1:7465"
+echo "$ports" | grep -q "127.0.0.1:$port->$port" || fail "the console port is not on 127.0.0.1:$port"
 
 api() {
   local method="$1" path="$2" body="${3:-}"
@@ -70,7 +72,7 @@ r="$(api POST /api/login '{"username":"owner","password":"correct horse battery"
 csrf="$(body "$r" | jq -r .csrf)"
 
 step "guards"
-[ "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: evil.example:7465' "$base/api/session")" = 421 ] || fail "a foreign Host was served"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -H "Host: evil.example:$port" "$base/api/session")" = 421 ] || fail "a foreign Host was served"
 [ "$(curl -s -o /dev/null -w '%{http_code}' -b "$jar" -X POST -H 'Content-Type: application/json' -H "X-CSRF-Token: $csrf" --data '{"name":"x"}' "$base/api/agents")" = 403 ] || fail "a POST without Origin was accepted"
 [ "$(curl -s -o /dev/null -w '%{http_code}' -b "$jar" -X POST -H "Origin: $base" -H 'Content-Type: application/json' -H 'X-CSRF-Token: wrong' --data '{"name":"x"}' "$base/api/agents")" = 403 ] || fail "a wrong CSRF token was accepted"
 [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Origin: $base" -H 'Content-Type: application/json' --data '{"sub":"owner","tenant":"local"}' "$base/local/token")" != 200 ] || fail "the local issuer is reachable"

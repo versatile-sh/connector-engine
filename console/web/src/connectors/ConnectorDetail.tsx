@@ -99,7 +99,7 @@ function Functions({ connector }: { connector: Connector }) {
               <AccessPicker
                 name={fn.name}
                 value={setAccess.isPending && setAccess.variables.name === fn.name ? setAccess.variables.access : fn.access}
-                disabled={setAccess.isPending}
+                disabled={setAccess.isPending && setAccess.variables.name === fn.name}
                 onChange={(access) => setAccess.mutate({ name: fn.name, access })}
               />
             </FunctionRow>
@@ -180,7 +180,7 @@ export function ConnectorDetail({ id }: { id: string }) {
       <Back />
       <header className="mb-8 flex flex-wrap items-start gap-5">
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-48 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-4xl leading-[1.05] font-bold tracking-[-0.04em] break-words">{connector.title}</h1>
             {connector.blocked ? <Bubble tone="amber">{connector.blocked}</Bubble> : null}

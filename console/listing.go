@@ -57,7 +57,27 @@ func FetchManifest(ctx context.Context, rawURL string) (port.Manifest, error) {
 		return port.Manifest{}, err
 	}
 	m, err := ParseManifest(body)
-	return Untrusted(m), err
+	if err != nil {
+		return port.Manifest{}, err
+	}
+	m.Icon = ResolveIcon(rawURL, m.Icon)
+	return Untrusted(m), nil
+}
+
+// ResolveIcon makes a relative icon reference absolute against the listing URL it came from; absolute and data URIs pass unchanged.
+func ResolveIcon(listingURL, icon string) string {
+	if icon == "" || strings.HasPrefix(icon, "data:") {
+		return icon
+	}
+	ref, err := url.Parse(icon)
+	if err != nil || ref.IsAbs() {
+		return icon
+	}
+	base, err := url.Parse(listingURL)
+	if err != nil {
+		return icon
+	}
+	return base.ResolveReference(ref).String()
 }
 
 // Slug lowers s to [a-z0-9-] with no leading, trailing or doubled dash.

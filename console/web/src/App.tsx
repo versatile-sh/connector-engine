@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Agents } from "./Agents";
+import { AccessPage } from "./access/AccessPage";
 import { api, errorText, setCsrf, type Session } from "./api";
-import { Approvals } from "./Approvals";
+import { ApprovalsPage } from "./approvals/ApprovalsPage";
 import { Auth, waitingLinkHost } from "./Auth";
 import { Mark } from "./Brand";
 import { ConnectorDetail } from "./connectors/ConnectorDetail";
@@ -63,7 +63,7 @@ export function App() {
   const detail = path.startsWith("/connectors/") ? decodeURIComponent(path.slice("/connectors/".length)) : undefined;
   return (
     <Shell section={section} endpoint={mcp_url}>
-      {section === "access" ? <Agents /> : section === "approvals" ? <Approvals /> : detail ? <ConnectorDetail id={detail} /> : <ConnectorsPage />}
+      {section === "access" ? <AccessPage /> : section === "approvals" ? <ApprovalsPage /> : detail ? <ConnectorDetail id={detail} /> : <ConnectorsPage />}
     </Shell>
   );
 }

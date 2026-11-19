@@ -101,7 +101,7 @@ export function ImportLanding({ source }: { source: ImportSource }) {
                 <p role="alert" className="min-h-5 text-sm text-amber">
                   {install.isError ? errorText(install.error) : ""}
                 </p>
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <button type="button" className={button({ variant: "quiet" })} onClick={() => navigate("/")}>
                     {t("common.cancel")}
                   </button>

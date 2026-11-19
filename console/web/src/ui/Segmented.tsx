@@ -17,7 +17,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
     0,
   );
   return (
-    <div role="group" aria-label={label} className={`bubble-word relative grid shrink-0 auto-cols-fr grid-flow-col border border-line-strong p-1 ${SIZE[size].frame} ${disabled ? "opacity-60" : ""} ${className}`}>
+    <div role="group" aria-label={label} className={`bubble-word relative grid shrink-0 auto-cols-fr grid-flow-col border border-line-strong p-1 transition-opacity duration-300 ${SIZE[size].frame} ${disabled ? "opacity-60" : ""} ${className}`}>
       <span
         aria-hidden="true"
         style={{ width: `calc((100% - 0.5rem) / ${options.length})`, translate: `${at * 100}% 0` }}

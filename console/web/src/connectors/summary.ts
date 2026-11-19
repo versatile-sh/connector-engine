@@ -7,14 +7,17 @@ export const accessCounts = (connector: Connector): Record<Access, number> => {
   return counts;
 };
 
-/** What a connector still needs to be called: nothing declared, a stored credential, an API key or header, or a sign-in. */
+/** Whether a stored credential, written `kind:status`, is the one that works. */
+export const isActive = (credential: string) => credential.endsWith(":active");
+
+/** What a connector still needs to be called: nothing declared, nothing more (an active credential), an API key or header, or a sign-in. */
 export type AuthState = "none" | "set" | "key" | "signIn";
 
-/** Reads the auth state from what the listing declares and what is stored. */
+/** Reads the auth state from what the listing declares and what is stored; a credential that needs re-auth, failed or was revoked counts as missing. */
 export const authState = (connector: Connector): AuthState => {
   const declared = connector.auth ?? [];
   if (declared.length === 0) return "none";
-  if ((connector.credentials ?? []).length > 0) return "set";
+  if ((connector.credentials ?? []).some(isActive)) return "set";
   return declared.includes("oauth2_user") ? "signIn" : "key";
 };
 

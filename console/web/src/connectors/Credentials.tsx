@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { Bubble } from "../ui/Bubble";
 import { Field } from "../ui/Field";
 import { SURFACE, button } from "../ui/styles";
+import { isActive } from "./summary";
 
 /** What a connector's calls carry: the stored credentials, a secret header to seal, or a sign-in with the provider. */
 export function Credentials({ connector, onSaved }: { connector: Connector; onSaved(): void }) {
@@ -44,7 +45,7 @@ export function Credentials({ connector, onSaved }: { connector: Connector; onSa
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <span className="text-sm text-muted">{t("creds.stored")}</span>
           {stored.map((credential) => (
-            <Bubble key={credential} tone="outline">
+            <Bubble key={credential} tone={isActive(credential) ? "outline" : "amber"}>
               {credential}
             </Bubble>
           ))}

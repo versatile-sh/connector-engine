@@ -8,7 +8,7 @@ A neutral Go engine that lets a tenant plug tool servers (MCP, REST, gRPC) into 
 make up                      # or: make up CONSOLE_PORT=9123
 ```
 
-This builds one image (engine, `cnctl`, console) and starts the `person` profile of `deploy/compose.yaml`: Postgres, the engine and the console. Open `http://127.0.0.1:7465` (or your port), create the owner account, import an MCP server by URL, choose off, read, write or ask per function, and mint a token under "agents". Agents reach every connector at `http://127.0.0.1:<port>/mcp`. Only that port is published, on 127.0.0.1; the engine's listeners stay inside the compose network.
+This builds one image (engine, `cnctl`, console) and starts the `person` profile of `deploy/compose.yaml`: Postgres, the engine and the console. Open `http://127.0.0.1:7465` (or your port), create the owner account, import an MCP server by URL, choose off, read, write or ask per function, and create an access key under "Access". Any MCP client (Claude Code, Codex, Cursor, VS Code, your own code) reaches every connector at `http://127.0.0.1:<port>/mcp` with that key; the console shows the exact command or config for each one. Only that port is published, on 127.0.0.1; the engine's listeners stay inside the compose network.
 
 | Command | What it does |
 |---|---|

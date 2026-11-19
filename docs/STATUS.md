@@ -90,6 +90,6 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 
 | Item | Level | Notes |
 |---|---|---|
-| `connector-console` (owner account, sessions, Host/Origin/CSRF guards, import by MCP URL or listing link, per-function choice, agent tokens, approvals, `/mcp` proxy) | Run | `console/console_test.go` drives it in process against the engine on the memory store; `scripts/console-check.sh` drives the `person` compose profile on Postgres with `cnctl tools` through `/mcp` |
+| `connector-console` (owner account, sessions, Host/Origin/CSRF guards, import by MCP URL or listing link, per-function choice, access keys for MCP clients, approvals, `/mcp` proxy) | Run | `console/console_test.go` drives it in process against the engine on the memory store; `scripts/console-check.sh` drives the `person` compose profile on Postgres with `cnctl tools` through `/mcp` |
 | Credentials from the console (header secret, OAuth with a pre-registered client) | Built | calls `createCredential`, `putClientRegistration`, `beginConnect`, `completeConnect`; no run against a real provider |
 | `headless` profile | Built | `adapters check` only; it needs a real JWKS issuer to run |

@@ -1,0 +1,15 @@
+mode: production
+server:
+  listen: 0.0.0.0:8080
+  grpcListen: ""
+  operatorListen: 0.0.0.0:8081
+  publicURL: http://127.0.0.1:8080
+auth:
+  issuers:
+    - {name: "https://issuer.example.com", url: "https://issuer.example.com/.well-known/jwks.json"}
+  operator: {tokenRef: "file:/run/connector-engine/operator-token"}
+bootstrap:
+  roles: []
+secrets:
+  adapter: localfile
+  dir: /var/lib/connector-engine/secrets

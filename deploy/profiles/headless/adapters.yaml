@@ -1,0 +1,9 @@
+apiVersion: acplug/v1
+kind: Adapters
+engine: connector-engine
+mode: production
+acknowledge: [plaintext_root_key]
+ports:
+  store: {use: builtin:postgres, config: {databaseUrlRef: "file:/run/connector-engine/database-url"}}
+  secrets: {use: builtin:localfile}
+  auth: {use: builtin:jwks}

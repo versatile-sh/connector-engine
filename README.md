@@ -2,6 +2,29 @@
 
 A neutral Go engine that lets a tenant plug tool servers (MCP, REST, gRPC) into its agents and decide, per agent and per function, what each one may call. It imports listings from a catalog, pins every function by hash, evaluates a four-layer grant table, holds a call for a person's approval when the rule says ask, and publishes CloudEvents. The specification is `adaptable-research-engine/studies/connector-engine/03-engine.md`; the build plan is [docs/PLAN.md](docs/PLAN.md) and what runs today is [docs/STATUS.md](docs/STATUS.md).
 
+## Quick start (Docker)
+
+```
+make up                      # or: make up CONSOLE_PORT=9123
+```
+
+This builds one image (engine, `cnctl`, console) and starts the `person` profile of `deploy/compose.yaml`: Postgres, the engine and the console. Open `http://127.0.0.1:7465` (or your port), create the owner account, import an MCP server by URL, choose off, read, write or ask per function, and mint a token under "agents". Agents reach every connector at `http://127.0.0.1:<port>/mcp`. Only that port is published, on 127.0.0.1; the engine's listeners stay inside the compose network.
+
+| Command | What it does |
+|---|---|
+| `make up` / `make down` / `make logs` | start, stop, follow the `person` profile; `PROFILE=headless` runs the engine alone |
+| `make cli ARGS="tools list"` | `cnctl` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
+| `make admin ARGS="tenants create t2"` | `cnctl admin` against the operator listener with the generated operator token |
+| `make test` | Go tests, the console typecheck and `adapters check` of both profiles |
+| `make check` | the scripted end-to-end check in `scripts/console-check.sh` (builds, runs, cleans up) |
+
+- `CONSOLE_PORT` is the only port setting. It sets the published port, the Host allowlist (`127.0.0.1`, `localhost` and `[::1]` at that port) and the OAuth redirect `http://127.0.0.1:<port>/oauth/callback`. Put it in `deploy/.env` to keep it.
+- Outside Docker: `connector-console --listen 127.0.0.1:<port> --engine http://127.0.0.1:8080 --engine-operator http://127.0.0.1:8081 --operator-token-file <file> --state <file>`; the allowlist follows the port of `--listen`.
+- Install links: `http://127.0.0.1:<port>/import?listing=<https URL of a listing in the Manifest format>` or `?mcp=<https MCP URL>` open a confirm screen (after sign-in) with the origin, title, icon, publisher and each function's proposed choice. Nothing is installed before the click.
+- First boot writes a random operator token and the Postgres passwords into the `secrets` volume. The console keeps the owner account (PBKDF2-SHA256) in the `console-data` volume.
+- The `headless` profile is how a product embeds the engine: no console, tokens from an external OIDC/JWKS issuer (edit `deploy/profiles/headless/connector-engine.yaml`), the engine published on `127.0.0.1:8080` and `:8081`.
+- While `github.com/agents-control/plugkit` is private, `make up` vendors the modules with the host's `go` so the image builds without credentials.
+
 ## Layout
 
 | Path | What it holds |
@@ -18,6 +41,8 @@ A neutral Go engine that lets a tenant plug tool servers (MCP, REST, gRPC) into 
 | `filter/`, `index/`, `sink/`, `relay/` | result filter, tool index, event sinks, the outbox relay |
 | `app/`, `config/` | the composition root and `connector-engine.yaml` with `adapters.yaml` |
 | `cmd/connector-engine`, `cmd/cnctl` | the server and the command line |
+| `cmd/connector-console`, `console/` | the local web console of the `person` profile; it talks to the engine over HTTP only, frontend in `console/web` |
+| `deploy/`, `Dockerfile`, `Makefile` | the image, `compose.yaml` with the `person` and `headless` profiles, their configuration files |
 | `e2e/` | real runs of the built binaries on Postgres against live upstreams |
 | `scripts/` | `smoke.sh` (one binary, memory store) and `e2e.sh` (the full suite) |
 

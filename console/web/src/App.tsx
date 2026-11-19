@@ -1,30 +1,40 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Agents } from "./Agents";
 import { api, errorText, setCsrf, type Session } from "./api";
-import { Approvals, useApprovals } from "./Approvals";
-import { Auth } from "./Auth";
-import { Wordmark } from "./Brand";
+import { Approvals } from "./Approvals";
+import { Auth, waitingLinkHost } from "./Auth";
+import { Mark } from "./Brand";
 import { Connectors } from "./Connectors";
+import { useT } from "./i18n/I18nProvider";
 import { ImportPage } from "./ImportPage";
-import { navigate, useLocation } from "./router";
+import { useLocation } from "./router";
+import { Shell, type Section } from "./Shell";
+import { button } from "./ui/styles";
 
-const NAV = [
-  { path: "/", label: "connectors" },
-  { path: "/import", label: "import" },
-  { path: "/agents", label: "agents" },
-  { path: "/approvals", label: "approvals" },
-] as const;
+const sectionOf = (path: string): Section => (path === "/access" || path === "/agents" ? "access" : path === "/approvals" ? "approvals" : "connectors");
 
-const OAUTH_RESULT: Record<string, string> = {
-  connected: "The account is connected.",
-  refused: "The provider refused the connection.",
-  unknown_state: "That connection link expired; start it again.",
-  issuer_mismatch: "The answer came from another issuer than the one asked; nothing was stored.",
-  failed: "The engine could not finish the connection.",
-};
+function Splash({ failure, onRetry }: { failure?: string; onRetry?: () => void }) {
+  const t = useT();
+  return (
+    <main className="grid min-h-dvh place-items-center px-6">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <Mark className={`size-12 ${failure ? "" : "pulse"}`} />
+        <p role={failure ? "alert" : "status"} className={failure ? "text-amber" : "text-muted"}>
+          {failure ? `${t("app.failed")} ${failure}` : t("app.loading")}
+        </p>
+        {onRetry ? (
+          <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={onRetry}>
+            {t("common.retry")}
+          </button>
+        ) : null}
+      </div>
+    </main>
+  );
+}
 
-/** The console shell: the session decides between setup, sign-in and the pages. */
+/** The console: the session decides between setup, sign-in and the pages, and the path picks the page. */
 export function App() {
+  const { path, query } = useLocation();
   const session = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
@@ -33,64 +43,15 @@ export function App() {
       return s;
     },
   });
-  if (session.isPending) return null;
-  if (session.isError) return <p className="error pad">{errorText(session.error)}</p>;
-  if (!session.data.owner_exists) return <Auth mode="setup" />;
-  if (!session.data.signed_in) return <Auth mode="login" />;
-  return <Shell />;
-}
-
-function Shell() {
-  const { path, query } = useLocation();
-  const queryClient = useQueryClient();
-  const approvals = useApprovals();
-  const waiting = approvals.data?.approvals.length ?? 0;
-  const logout = useMutation({
-    mutationFn: () => api("POST", "/api/logout"),
-    onSettled: () => {
-      setCsrf(undefined);
-      queryClient.clear();
-    },
-  });
-  const oauth = query.get("oauth");
+  if (session.isPending) return <Splash />;
+  if (session.isError) return <Splash failure={errorText(session.error)} onRetry={() => void session.refetch()} />;
+  const { owner_exists, signed_in, mcp_url } = session.data;
+  if (!owner_exists) return <Auth mode="setup" endpoint={mcp_url} />;
+  if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} />;
+  const section = sectionOf(path);
   return (
-    <div className="shell">
-      <header className="topbar">
-        <a
-          href="/"
-          className="brand-link"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate("/");
-          }}
-        >
-          <Wordmark />
-          <span className="product">connectors</span>
-        </a>
-        <nav aria-label="console">
-          {NAV.map((item) => (
-            <a
-              key={item.path}
-              href={item.path}
-              aria-current={path === item.path ? "page" : undefined}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate(item.path);
-              }}
-            >
-              {item.label}
-              {item.path === "/approvals" && waiting > 0 && <span className="badge">{waiting}</span>}
-            </a>
-          ))}
-        </nav>
-        <button className="button quiet small" onClick={() => logout.mutate()}>
-          sign out
-        </button>
-      </header>
-      <main className="content" key={path}>
-        {oauth && <p className="surface notice rise">{OAUTH_RESULT[oauth] ?? oauth}</p>}
-        {path === "/import" ? <ImportPage /> : path === "/agents" ? <Agents /> : path === "/approvals" ? <Approvals /> : <Connectors />}
-      </main>
-    </div>
+    <Shell section={section} endpoint={mcp_url}>
+      {path === "/import" ? <ImportPage /> : section === "access" ? <Agents /> : section === "approvals" ? <Approvals /> : <Connectors />}
+    </Shell>
   );
 }

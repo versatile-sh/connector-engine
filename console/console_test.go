@@ -10,6 +10,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -324,8 +325,44 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 		t.Fatalf("the approved call did not run")
 	}
 
+	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/search", map[string]string{"access": "write"}, nil)
+	for _, n := range []string{"search", "create"} {
+		before := up.count(n)
+		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{}})
+		if err != nil || res.IsError || up.count(n) != before+1 {
+			t.Fatalf("%s after a class raise with a bound agent: %v %v", n, res, err)
+		}
+	}
+
+	raw, err := os.ReadFile("../source/files/testdata/notes.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := console.ParseManifest(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m = console.Untrusted(m)
+	m.Remote.URL = up.URL + "/mcp"
+	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessRead})
+	if err != nil {
+		t.Fatalf("install from a listing manifest: %v", err)
+	}
+	b.ok("GET", "/api/connectors", nil, &list)
+	for _, cv := range list.Connectors {
+		if cv.ID != second {
+			continue
+		}
+		for _, f := range cv.Functions {
+			if want := map[string]console.Access{"search": "read"}[f.Name]; want != "" && f.Access != want || want == "" && f.Access != console.AccessAsk {
+				t.Errorf("listing install %s: %s", f.Name, f.Access)
+			}
+		}
+	}
+
 	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/create", map[string]string{"access": "off"}, nil)
-	if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + "create", Arguments: map[string]any{}}); err == nil || up.count("create") != 1 {
+	created := up.count("create")
+	if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + "create", Arguments: map[string]any{}}); err == nil || up.count("create") != created {
 		t.Fatalf("a function set off still runs: %v, upstream %d", err, up.count("create"))
 	}
 }
@@ -352,12 +389,30 @@ func TestARedirectToAPrivateAddressIsRefused(t *testing.T) {
 		http.Redirect(w, r, "https://127.0.0.1:9/secret", http.StatusFound)
 	}))
 	defer srv.Close()
-	r := console.Reach{}
-	client := r.Client()
-	client.Transport.(*http.Transport).TLSClientConfig = srv.Client().Transport.(*http.Transport).TLSClientConfig
+	tr := console.Reach{}.Transport()
+	tr.TLSClientConfig = srv.Client().Transport.(*http.Transport).TLSClientConfig
+	client := &http.Client{Transport: tr}
 	_, err := client.Get(srv.URL)
 	if err == nil || !strings.Contains(err.Error(), "non-public") {
 		t.Fatalf("got %v", err)
+	}
+}
+
+func TestAThirdPartyListingLosesWhatOnlyAReviewGives(t *testing.T) {
+	raw, err := os.ReadFile("../source/files/testdata/notes.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := console.ParseManifest(raw)
+	if err != nil || m.Name != "com.example/notes" || m.Review == nil || m.Functions[0].Class != "read" {
+		t.Fatalf("parse: %+v %v", m, err)
+	}
+	u := console.Untrusted(m)
+	if u.Review != nil || u.TrustLevel != "" || u.Functions[0].Class != "" || u.Functions[0].ClassSource != "" || u.Functions[0].Name != "read_note" || u.Remote == nil {
+		t.Fatalf("untrusted: %+v", u)
+	}
+	if _, err := console.ParseManifest([]byte("name: a.b/c\nkind: mcp_remote\nsurprise: 1\n")); err == nil {
+		t.Fatal("an unknown key was accepted")
 	}
 }
 

@@ -39,13 +39,25 @@ func ParseManifest(data []byte) (port.Manifest, error) {
 	return m, nil
 }
 
+// Untrusted keeps what a third-party listing may say about itself and drops what only a review gives: trust level, review, signature, provenance and declared function classes and hashes.
+func Untrusted(m port.Manifest) port.Manifest {
+	m.Owner, m.Source, m.Review, m.Signature, m.TrustLevel, m.InstructionsHash = "", nil, nil, nil, "", ""
+	fns := make([]port.FunctionDef, len(m.Functions))
+	for i, f := range m.Functions {
+		fns[i] = port.FunctionDef{Name: f.Name, Title: f.Title, Description: f.Description, InputSchema: f.InputSchema, OutputSchema: f.OutputSchema, Annotations: f.Annotations, MetaUI: f.MetaUI}
+	}
+	m.Functions = fns
+	return m
+}
+
 // FetchManifest downloads a listing over public https only; a deep link never reaches a local address.
 func FetchManifest(ctx context.Context, rawURL string) (port.Manifest, error) {
 	body, _, err := Reach{}.Get(ctx, rawURL, maxListingBytes, "application/yaml, application/json, text/plain")
 	if err != nil {
 		return port.Manifest{}, err
 	}
-	return ParseManifest(body)
+	m, err := ParseManifest(body)
+	return Untrusted(m), err
 }
 
 // Slug lowers s to [a-z0-9-] with no leading, trailing or doubled dash.

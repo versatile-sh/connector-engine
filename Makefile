@@ -2,6 +2,7 @@ COMPOSE  ?= docker compose -f deploy/compose.yaml
 PROFILE  ?= person
 IMAGE    ?= connector-engine:local
 ARGS     ?= --help
+-include deploy/.env
 CONSOLE_PORT ?= 7465
 export CONSOLE_PORT
 ENGINE   := $(if $(filter headless,$(PROFILE)),engine-headless,engine)

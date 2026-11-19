@@ -165,7 +165,7 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function: it classes the function, then replaces its workspace row (none for off).
+// SetAccess writes the owner's choice for one function: it accepts a quarantined definition the owner now sees, classes the function, then replaces its workspace row (none for off).
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
 	if !a.Valid() {
 		return fmt.Errorf("access %q is not off, read, write or ask", a)
@@ -173,6 +173,14 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 	f, err := c.function(ctx, conn, name)
 	if err != nil {
 		return err
+	}
+	if f.State == port.FunctionQuarantined && a != AccessOff {
+		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors/"+esc(conn)+"/functions/"+esc(name)+":accept", map[string]any{"seen": f.DefinitionHash}, nil); err != nil {
+			return err
+		}
+		if f, err = c.function(ctx, conn, name); err != nil {
+			return err
+		}
 	}
 	class := f.Class
 	switch {

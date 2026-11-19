@@ -84,7 +84,11 @@ function ConnectorCard({ connector }: { connector: Connector }) {
             <div className="function-name">
               <code>{f.name}</code>
               <span className="chip">{f.class || "unclassified"}</span>
-              {f.state !== "active" && <span className="chip warn">{f.state}</span>}
+              {f.state !== "active" && (
+                <span className="chip warn" title={f.state === "quarantined" ? "the definition changed; choosing read, write or ask accepts the current one" : undefined}>
+                  {f.state}
+                </span>
+              )}
               {f.description && <p className="muted clip">{f.description}</p>}
             </div>
             <AccessPicker
@@ -148,7 +152,7 @@ function Credentials({ connector, onSaved }: { connector: Connector; onSaved: ()
   if (auth.length === 0) {
     return (
       <p className="muted pad-top">
-        This listing declares no credential, so the engine calls it without one. Import it again with "calls need a secret header" if the server asks for a key.
+        This listing declares no credential, so the engine calls it without one. If calls (not the tool list) need a key, import it again with "calls need a secret header". A server that needs a key to list its tools cannot be installed yet.
       </p>
     );
   }

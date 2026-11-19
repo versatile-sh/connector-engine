@@ -26,7 +26,6 @@ export const es: Record<MessageKey, string> = {
   "nav.approvals": "Aprobaciones",
   "nav.waiting": "{count} en espera",
   "shell.signOut": "Salir",
-  "shell.endpoint": "Endpoint",
   "shell.copyEndpoint": "Copiar el endpoint {url}",
   "shell.setup": "Configuración {done}/{total}",
 

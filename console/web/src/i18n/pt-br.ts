@@ -26,7 +26,6 @@ export const ptBR: Record<MessageKey, string> = {
   "nav.approvals": "Aprovações",
   "nav.waiting": "{count} aguardando",
   "shell.signOut": "Sair",
-  "shell.endpoint": "Endpoint",
   "shell.copyEndpoint": "Copiar o endpoint {url}",
   "shell.setup": "Configuração {done}/{total}",
 

@@ -104,20 +104,12 @@ func initSecrets(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func hostsOf(public *url.URL) []string {
-	port := public.Port()
-	hosts := []string{strings.ToLower(public.Host)}
-	for _, h := range []string{"127.0.0.1", "localhost", "[::1]"} {
-		hosts = append(hosts, h+":"+port)
-	}
-	return hosts
-}
-
 func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	fs := flag.NewFlagSet("connector-console", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	listen := fs.String("listen", or(getenv, "CONSOLE_LISTEN", "127.0.0.1:7465"), "address the console listens on")
-	publicURL := fs.String("public-url", or(getenv, "CONSOLE_PUBLIC_URL", "http://127.0.0.1:7465"), "address the browser and agents use to reach the console")
+	port := or(getenv, "CONSOLE_PORT", "7465")
+	listen := fs.String("listen", or(getenv, "CONSOLE_LISTEN", "127.0.0.1:"+port), "address the console listens on")
+	publicURL := fs.String("public-url", getenv("CONSOLE_PUBLIC_URL"), "address the browser and agents use; empty takes http://127.0.0.1 at the port of --listen")
 	engineURL := fs.String("engine", or(getenv, "CONSOLE_ENGINE_URL", "http://127.0.0.1:8080"), "the engine's public listener")
 	operatorURL := fs.String("engine-operator", or(getenv, "CONSOLE_ENGINE_OPERATOR_URL", "http://127.0.0.1:8081"), "the engine's operator listener")
 	tokenFile := fs.String("operator-token-file", or(getenv, "CONSOLE_OPERATOR_TOKEN_FILE", "/run/connector-engine/operator-token"), "file holding the operator token")
@@ -130,6 +122,14 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		return 2
 	}
 	log := slog.New(slog.NewJSONHandler(stderr, nil))
+	if *publicURL == "" {
+		_, p, err := net.SplitHostPort(*listen)
+		if err != nil {
+			fmt.Fprintln(stderr, "--listen is host:port")
+			return 2
+		}
+		*publicURL = "http://127.0.0.1:" + p
+	}
 	public, err := url.Parse(strings.TrimRight(*publicURL, "/"))
 	if err != nil || public.Host == "" || public.Port() == "" {
 		fmt.Fprintln(stderr, "--public-url is an absolute URL with a port")
@@ -146,7 +146,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		return 1
 	}
 	eng := &console.Engine{PublicURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)), Tenant: *tenant, Workspace: *workspace, Person: *person}
-	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(), Guard: console.Guard{Hosts: hostsOf(public)}, Web: web.App(),
+	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(),
 		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

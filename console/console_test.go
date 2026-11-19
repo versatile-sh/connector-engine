@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"slices"
 	"strings"
 	"sync"
@@ -406,5 +407,30 @@ func TestTheOwnerSignsInWithThePasswordOnly(t *testing.T) {
 		if ok, err := s.CheckLogin(c.user, c.pass); err != nil || ok != c.want {
 			t.Errorf("%s/%s: %v %v", c.user, c.pass, ok, err)
 		}
+	}
+}
+
+func TestTheHostAllowlistFollowsTheConsolePort(t *testing.T) {
+	public, _ := url.Parse("http://127.0.0.1:9123")
+	g := console.Guard{Hosts: console.LoopbackHosts(public)}
+	h := g.Wrap(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	for host, want := range map[string]int{
+		"127.0.0.1:9123": http.StatusNoContent, "localhost:9123": http.StatusNoContent, "[::1]:9123": http.StatusNoContent,
+		"127.0.0.1:7465": http.StatusMisdirectedRequest, "evil.example:9123": http.StatusMisdirectedRequest, "127.0.0.1": http.StatusMisdirectedRequest,
+	} {
+		req := httptest.NewRequest("GET", "/api/session", nil)
+		req.Host = host
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != want {
+			t.Errorf("Host %s: %d, want %d", host, rec.Code, want)
+		}
+	}
+	post := httptest.NewRequest("POST", "/api/agents", nil)
+	post.Host, post.Header["Origin"] = "localhost:9123", []string{"http://127.0.0.1:9123"}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, post)
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("a same-console Origin at the custom port: %d", rec.Code)
 	}
 }

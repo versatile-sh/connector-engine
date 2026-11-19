@@ -4,12 +4,21 @@ import { api, errorText, setCsrf, type Session } from "./api";
 import { Approvals } from "./Approvals";
 import { Auth, waitingLinkHost } from "./Auth";
 import { Mark } from "./Brand";
-import { Connectors } from "./Connectors";
+import { ConnectorDetail } from "./connectors/ConnectorDetail";
+import { ConnectorsPage } from "./connectors/ConnectorsPage";
 import { useT } from "./i18n/I18nProvider";
-import { ImportPage } from "./ImportPage";
+import { ImportLanding } from "./import/ImportLanding";
 import { useLocation } from "./router";
+import type { ImportSource } from "./api";
 import { Shell, type Section } from "./Shell";
 import { button } from "./ui/styles";
+
+const linkedSource = (path: string, query: URLSearchParams): ImportSource | undefined => {
+  if (path !== "/import") return undefined;
+  const listing = query.get("listing");
+  const mcp = query.get("mcp");
+  return listing ? { listing } : mcp ? { mcp } : undefined;
+};
 
 const sectionOf = (path: string): Section => (path === "/access" || path === "/agents" ? "access" : path === "/approvals" ? "approvals" : "connectors");
 
@@ -48,10 +57,13 @@ export function App() {
   const { owner_exists, signed_in, mcp_url } = session.data;
   if (!owner_exists) return <Auth mode="setup" endpoint={mcp_url} />;
   if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} />;
+  const linked = linkedSource(path, query);
+  if (linked) return <ImportLanding key={JSON.stringify(linked)} source={linked} />;
   const section = sectionOf(path);
+  const detail = path.startsWith("/connectors/") ? decodeURIComponent(path.slice("/connectors/".length)) : undefined;
   return (
     <Shell section={section} endpoint={mcp_url}>
-      {path === "/import" ? <ImportPage /> : section === "access" ? <Agents /> : section === "approvals" ? <Approvals /> : <Connectors />}
+      {section === "access" ? <Agents /> : section === "approvals" ? <Approvals /> : detail ? <ConnectorDetail id={detail} /> : <ConnectorsPage />}
     </Shell>
   );
 }

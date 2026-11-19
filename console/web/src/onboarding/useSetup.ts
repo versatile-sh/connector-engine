@@ -48,6 +48,7 @@ export function useSetup() {
     done,
     total: steps.length,
     ready: connectors.isSuccess && keys.isSuccess,
+    settled: !connectors.isPending && !keys.isPending,
     hidden,
     hide() {
       hiddenThisVisit = true;

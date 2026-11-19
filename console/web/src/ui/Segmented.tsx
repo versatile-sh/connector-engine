@@ -17,7 +17,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
     0,
   );
   return (
-    <div role="group" aria-label={label} className={`bubble-word relative flex shrink-0 border border-line-strong p-1 ${SIZE[size].frame} ${disabled ? "opacity-60" : ""} ${className}`}>
+    <div role="group" aria-label={label} className={`bubble-word relative grid shrink-0 auto-cols-fr grid-flow-col border border-line-strong p-1 ${SIZE[size].frame} ${disabled ? "opacity-60" : ""} ${className}`}>
       <span
         aria-hidden="true"
         style={{ width: `calc((100% - 0.5rem) / ${options.length})`, translate: `${at * 100}% 0` }}
@@ -31,7 +31,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
           aria-pressed={value === option.value}
           disabled={disabled}
           onClick={() => option.value !== value && onChange(option.value)}
-          className={`relative z-10 h-full flex-1 [border-radius:inherit] font-semibold whitespace-nowrap text-muted transition-colors duration-300 hover:text-fg aria-pressed:text-canvas ${SIZE[size].button}`}
+          className={`relative z-10 h-full [border-radius:inherit] font-semibold whitespace-nowrap text-muted transition-colors duration-300 hover:text-fg aria-pressed:text-canvas ${SIZE[size].button}`}
         >
           {option.text}
         </button>

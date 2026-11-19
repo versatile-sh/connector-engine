@@ -14,8 +14,10 @@ export function useLocation() {
   return { path: url.pathname, query: url.searchParams };
 }
 
-/** Moves to another console page without reloading. */
-export function navigate(to: string) {
-  window.history.pushState(null, "", to);
+/** Moves to another console page without reloading; `replace` rewrites the current entry instead of adding one. */
+export function navigate(to: string, { replace = false }: { replace?: boolean } = {}) {
+  if (replace) window.history.replaceState(null, "", to);
+  else window.history.pushState(null, "", to);
+  window.scrollTo({ top: 0 });
   window.dispatchEvent(new PopStateEvent("popstate"));
 }

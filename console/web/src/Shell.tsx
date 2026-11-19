@@ -95,7 +95,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           >
             <Wordmark />
           </a>
-          <nav aria-label={t("nav.label")} className="ml-4 hidden items-center gap-1 md:flex">
+          <nav aria-label={t("nav.label")} className="ml-4 hidden items-center gap-1 lg:flex">
             <NavLinks section={section} waiting={waiting} />
           </nav>
           <div className="ml-auto flex items-center gap-2">
@@ -107,7 +107,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
             </button>
           </div>
         </div>
-        <nav aria-label={t("nav.label")} className="no-scrollbar mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 pb-2 md:hidden">
+        <nav aria-label={t("nav.label")} className="no-scrollbar mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
           <NavLinks section={section} waiting={waiting} />
         </nav>
       </header>

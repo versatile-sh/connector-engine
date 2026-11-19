@@ -1,0 +1,87 @@
+name: connector-engine
+
+x-image: &image
+  image: connector-engine:local
+  build:
+    context: ..
+    dockerfile: Dockerfile
+
+x-secrets-ro: &secrets-ro secrets:/run/connector-engine:ro
+
+services:
+  init:
+    <<: *image
+    profiles: [person, headless]
+    entrypoint: ["/usr/local/bin/connector-console", "init", "--dir", "/run/connector-engine", "--db-host", "postgres:5432"]
+    volumes:
+      - secrets:/run/connector-engine
+    restart: "no"
+
+  postgres:
+    image: postgres:16-alpine
+    profiles: [person, headless]
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/connector-engine/pg-admin-password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - *secrets-ro
+      - ./postgres/init-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    depends_on:
+      init: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "connector_engine"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  engine:
+    <<: *image
+    profiles: [person]
+    command: ["--config", "/etc/connector-engine/connector-engine.yaml", "--adapters", "/etc/connector-engine/adapters.yaml"]
+    volumes:
+      - ./profiles/person:/etc/connector-engine:ro
+      - *secrets-ro
+      - engine-data:/var/lib/connector-engine
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: unless-stopped
+
+  console:
+    <<: *image
+    profiles: [person]
+    entrypoint: ["/usr/local/bin/connector-console", "serve"]
+    environment:
+      CONSOLE_LISTEN: 0.0.0.0:7465
+      CONSOLE_PUBLIC_URL: http://127.0.0.1:7465
+      CONSOLE_ENGINE_URL: http://engine:8080
+      CONSOLE_ENGINE_OPERATOR_URL: http://engine:8081
+    ports:
+      - "127.0.0.1:7465:7465"
+    volumes:
+      - *secrets-ro
+      - console-data:/var/lib/connector-console
+    depends_on:
+      engine: {condition: service_started}
+    restart: unless-stopped
+
+  engine-headless:
+    <<: *image
+    profiles: [headless]
+    command: ["--config", "/etc/connector-engine/connector-engine.yaml", "--adapters", "/etc/connector-engine/adapters.yaml"]
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - ./profiles/headless:/etc/connector-engine:ro
+      - *secrets-ro
+      - engine-data:/var/lib/connector-engine
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: unless-stopped
+
+volumes:
+  secrets:
+  pgdata:
+  engine-data:
+  console-data:

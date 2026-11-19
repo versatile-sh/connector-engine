@@ -24,7 +24,6 @@ export const en = {
   "nav.approvals": "Approvals",
   "nav.waiting": "{count} waiting",
   "shell.signOut": "Sign out",
-  "shell.endpoint": "Endpoint",
   "shell.copyEndpoint": "Copy the endpoint {url}",
   "shell.setup": "Setup {done}/{total}",
 

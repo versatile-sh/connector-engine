@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
+    "test": "node --test src/i18n/dictionaries.test.ts",
     "dev": "vite"
   },
   "dependencies": {

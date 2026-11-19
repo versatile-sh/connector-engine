@@ -50,11 +50,30 @@ func (r Reach) Transport() *http.Transport {
 	return t
 }
 
+const maxResponseBytes = 4 << 20
+
+type capped struct{ next http.RoundTripper }
+
+type cappedBody struct {
+	io.Reader
+	io.Closer
+}
+
+// RoundTrip limits every response body to maxResponseBytes; a longer body reads as truncated.
+func (c capped) RoundTrip(r *http.Request) (*http.Response, error) {
+	resp, err := c.next.RoundTrip(r)
+	if err != nil {
+		return nil, err
+	}
+	resp.Body = cappedBody{Reader: io.LimitReader(resp.Body, maxResponseBytes), Closer: resp.Body}
+	return resp, nil
+}
+
 // Client follows at most three redirects, each checked against the reach.
 func (r Reach) Client() *http.Client {
 	return &http.Client{
 		Timeout:   fetchTimeout,
-		Transport: r.Transport(),
+		Transport: capped{next: r.Transport()},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= maxRedirects {
 				return fmt.Errorf("too many redirects")

@@ -48,6 +48,15 @@ api() {
 body() { sed '$d' <<<"$1"; }
 code() { tail -n1 <<<"$1"; }
 
+step "the image serves the frontend, and an install link is the shell without a session"
+shell="$(curl -fsS "$base/")"
+grep -q '<div id="root">' <<<"$shell" || fail "/ is not the console shell"
+asset="$(grep -o '/assets/index-[^"]*\.js' <<<"$shell" | head -n1)"
+[ -n "$asset" ] || fail "no script in the shell"
+curl -fsS -o /dev/null -w '%{http_code} %{content_type}\n' "$base$asset"
+curl -fsS "$base/import?listing=https%3A%2F%2Fexample.com%2Flisting.yaml" | grep -q '<div id="root">' || fail "/import is not the shell"
+curl -sS -D - -o /dev/null "$base/" | grep -iE '^(content-security-policy|x-frame-options):'
+
 step "wait for the engine and the local tenant"
 for _ in $(seq 1 60); do
   "${compose[@]}" logs console 2>/dev/null | grep -q '"tenant ready"' && break

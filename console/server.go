@@ -1,0 +1,595 @@
+package console
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"io/fs"
+	"log/slog"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/agents-control/connector-engine/port"
+)
+
+const (
+	maxIconBytes  = 512 << 10
+	maxIconCache  = 256
+	maxAPIBody    = 64 << 10
+	oauthStateTTL = 10 * time.Minute
+)
+
+var iconTypes = []string{"image/png", "image/jpeg", "image/gif", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"}
+
+type icon struct {
+	body []byte
+	kind string
+}
+
+type pendingOAuth struct {
+	issuer  string
+	expires time.Time
+}
+
+// Console is the console server: the engine client, the owner's state and sessions, and the addresses it answers on.
+type Console struct {
+	Engine        *Engine
+	State         *State
+	Sessions      *Sessions
+	Guard         Guard
+	Web           fs.FS
+	MCPURL        string
+	OAuthRedirect string
+	MaxAgentTTL   time.Duration
+	Log           *slog.Logger
+
+	loginMu sync.Mutex
+	iconMu  sync.Mutex
+	icons   map[string]icon
+	oauthMu sync.Mutex
+	oauth   map[string]pendingOAuth
+}
+
+// Handler returns every route behind the guard.
+func (c *Console) Handler() http.Handler {
+	c.icons, c.oauth = map[string]icon{}, map[string]pendingOAuth{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/session", c.session)
+	mux.HandleFunc("POST /api/setup", c.setup)
+	mux.HandleFunc("POST /api/login", c.login)
+	mux.HandleFunc("POST /api/logout", c.authed(c.logout))
+	mux.HandleFunc("GET /api/connectors", c.authed(c.listConnectors))
+	mux.HandleFunc("POST /api/preview", c.authed(c.preview))
+	mux.HandleFunc("POST /api/import", c.authed(c.doImport))
+	mux.HandleFunc("PUT /api/connectors/{id}/functions/{name}", c.authed(c.setAccess))
+	mux.HandleFunc("DELETE /api/connectors/{id}", c.authed(c.removeConnector))
+	mux.HandleFunc("POST /api/connectors/{id}/headers", c.authed(c.setHeaders))
+	mux.HandleFunc("POST /api/connectors/{id}/oauth", c.authed(c.beginOAuth))
+	mux.HandleFunc("GET /oauth/callback", c.oauthCallback)
+	mux.HandleFunc("GET /api/agents", c.authed(c.listAgents))
+	mux.HandleFunc("POST /api/agents", c.authed(c.mintAgent))
+	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
+	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
+	mux.HandleFunc("GET /api/icon", c.authed(c.icon))
+	agent := c.agentProxy()
+	for _, m := range []string{"GET", "POST", "DELETE"} {
+		mux.Handle(m+" /mcp", agent)
+	}
+	mux.Handle("GET /.well-known/oauth-protected-resource", agent)
+	mux.Handle("GET /.well-known/oauth-protected-resource/mcp", agent)
+	mux.HandleFunc("GET /", c.spa)
+	return c.Guard.Wrap(mux)
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func (c *Console) fail(w http.ResponseWriter, err error) {
+	var ee *EngineError
+	if errors.As(err, &ee) {
+		status := ee.Status
+		if status >= 500 {
+			status = http.StatusBadGateway
+		}
+		writeJSON(w, status, map[string]string{"error": ee.Detail, "code": ee.Code})
+		return
+	}
+	writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+}
+
+func readJSON(w http.ResponseWriter, r *http.Request, into any) bool {
+	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		writeJSON(w, http.StatusUnsupportedMediaType, map[string]string{"error": "the body is JSON"})
+		return false
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxAPIBody)).Decode(into); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the body is not valid JSON"})
+		return false
+	}
+	return true
+}
+
+func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		csrf, ok := c.Sessions.Get(r)
+		if !ok {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in first"})
+			return
+		}
+		if !safeMethod(r.Method) && !csrfOK(csrf, r.Header.Get(csrfHeader)) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "missing or wrong CSRF token"})
+			return
+		}
+		next(w, r)
+	}
+}
+
+func (c *Console) session(w http.ResponseWriter, r *http.Request) {
+	csrf, ok := c.Sessions.Get(r)
+	out := map[string]any{"owner_exists": c.State.HasOwner(), "signed_in": ok, "mcp_url": c.MCPURL}
+	if ok {
+		out["csrf"] = csrf
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+type credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
+	var in credentials
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.State.CreateOwner(strings.TrimSpace(in.Username), in.Password); err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, ErrOwnerExists) {
+			status = http.StatusConflict
+		}
+		writeJSON(w, status, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{"csrf": c.Sessions.Start(w)})
+}
+
+func (c *Console) login(w http.ResponseWriter, r *http.Request) {
+	var in credentials
+	if !readJSON(w, r, &in) {
+		return
+	}
+	c.loginMu.Lock()
+	ok, err := c.State.CheckLogin(strings.TrimSpace(in.Username), in.Password)
+	if !ok {
+		time.Sleep(500 * time.Millisecond)
+	}
+	c.loginMu.Unlock()
+	switch {
+	case errors.Is(err, ErrNoOwner):
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "create the owner account first"})
+	case err != nil:
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot read the account"})
+	case !ok:
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "wrong username or password"})
+	default:
+		writeJSON(w, http.StatusOK, map[string]string{"csrf": c.Sessions.Start(w)})
+	}
+}
+
+func (c *Console) logout(w http.ResponseWriter, r *http.Request) {
+	c.Sessions.End(w, r)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) listConnectors(w http.ResponseWriter, r *http.Request) {
+	list, err := c.Connectors(r.Context())
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"connectors": list})
+}
+
+type importRequest struct {
+	MCP          string            `json:"mcp,omitempty"`
+	Listing      string            `json:"listing,omitempty"`
+	Local        bool              `json:"local,omitempty"`
+	HeaderSecret bool              `json:"header_secret,omitempty"`
+	Choices      map[string]Access `json:"choices,omitempty"`
+}
+
+// Preview is what the confirm screen shows before an import: where it comes from, the listing and each function's proposed choice.
+type Preview struct {
+	Kind        string       `json:"kind"`
+	URL         string       `json:"url"`
+	Host        string       `json:"host"`
+	Name        string       `json:"name"`
+	Title       string       `json:"title"`
+	Description string       `json:"description,omitempty"`
+	Icon        string       `json:"icon,omitempty"`
+	Publisher   string       `json:"publisher,omitempty"`
+	Version     string       `json:"version"`
+	RemoteURL   string       `json:"remote_url,omitempty"`
+	WebsiteURL  string       `json:"website_url,omitempty"`
+	Protocol    string       `json:"protocol,omitempty"`
+	Auth        []string     `json:"auth,omitempty"`
+	Tools       []ProbedTool `json:"tools"`
+	Warning     string       `json:"warning,omitempty"`
+	manifest    port.Manifest
+}
+
+func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, error) {
+	switch {
+	case in.MCP != "" && in.Listing == "":
+		p, err := Probe(ctx, strings.TrimSpace(in.MCP), Reach{Local: in.Local})
+		if err != nil {
+			return Preview{}, err
+		}
+		m, err := ManifestFor(p, in.HeaderSecret)
+		if err != nil {
+			return Preview{}, err
+		}
+		u, _ := url.Parse(p.URL)
+		return Preview{Kind: "mcp", URL: p.URL, Host: u.Host, Name: m.Name, Title: m.Title, Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name,
+			Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), manifest: m}, nil
+	case in.Listing != "" && in.MCP == "":
+		src := strings.TrimSpace(in.Listing)
+		m, err := FetchManifest(ctx, src)
+		if err != nil {
+			return Preview{}, err
+		}
+		u, _ := url.Parse(src)
+		pv := Preview{Kind: "listing", URL: src, Host: u.Host, Name: m.Name, Title: firstOf(m.Title, m.Name), Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name, Version: m.Version}
+		for _, a := range m.Auth {
+			pv.Auth = append(pv.Auth, string(a.Kind))
+		}
+		for _, f := range m.Functions {
+			ro := f.Annotations != nil && f.Annotations.ReadOnlyHint != nil && *f.Annotations.ReadOnlyHint
+			prop := AccessAsk
+			if ro {
+				prop = AccessRead
+			}
+			pv.Tools = append(pv.Tools, ProbedTool{Name: f.Name, Title: f.Title, Description: f.Description, ReadOnly: ro, Destructive: !ro, Proposed: prop})
+		}
+		if m.Remote != nil {
+			pv.RemoteURL = m.Remote.URL
+			p, err := Probe(ctx, m.Remote.URL, Reach{})
+			if err != nil {
+				pv.Warning = "the server could not be reached to list its functions: " + err.Error()
+			} else {
+				pv.Tools, pv.Protocol, pv.WebsiteURL = nonNil(p.Tools), p.Protocol, p.WebsiteURL
+				if pv.Icon == "" {
+					pv.Icon = p.Icon
+				}
+			}
+		}
+		m.Icon = pv.Icon
+		pv.Tools = nonNil(pv.Tools)
+		pv.manifest = m
+		return pv, nil
+	}
+	return Preview{}, errors.New("give exactly one of mcp or listing")
+}
+
+func nonNil[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
+
+func (c *Console) preview(w http.ResponseWriter, r *http.Request) {
+	var in importRequest
+	if !readJSON(w, r, &in) {
+		return
+	}
+	p, err := c.buildPreview(r.Context(), in)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
+	var in importRequest
+	if !readJSON(w, r, &in) {
+		return
+	}
+	for name, a := range in.Choices {
+		if !a.Valid() {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "function " + name + ": access is off, read, write or ask"})
+			return
+		}
+	}
+	p, err := c.buildPreview(r.Context(), in)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	choices := map[string]Access{}
+	for _, t := range p.Tools {
+		choices[t.Name] = t.Proposed
+		if a, ok := in.Choices[t.Name]; ok {
+			choices[t.Name] = a
+		}
+	}
+	id, err := c.Install(r.Context(), p.manifest, choices)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{"connector": id})
+}
+
+func (c *Console) setAccess(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Access Access `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.SetAccess(r.Context(), r.PathValue("id"), r.PathValue("name"), in.Access); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) removeConnector(w http.ResponseWriter, r *http.Request) {
+	if err := c.Remove(r.Context(), r.PathValue("id")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) setHeaders(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Headers map[string]string `json:"headers"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	for k, v := range in.Headers {
+		if k == "" || strings.ContainsAny(k, " :\r\n") || strings.ContainsAny(v, "\r\n") {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "a header name has no spaces or colons and a value has no line breaks"})
+			return
+		}
+	}
+	if len(in.Headers) == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "give at least one header"})
+		return
+	}
+	if err := c.SetHeaderSecret(r.Context(), r.PathValue("id"), in.Headers); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	conn := r.PathValue("id")
+	issuer, err := c.OAuthIssuer(r.Context(), conn)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	if in.ClientID != "" {
+		if err := c.SetOAuthClient(r.Context(), issuer, in.ClientID, in.ClientSecret); err != nil {
+			c.fail(w, err)
+			return
+		}
+	}
+	state, to, err := c.BeginOAuth(r.Context(), conn)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	c.oauthMu.Lock()
+	now := time.Now()
+	for k, v := range c.oauth {
+		if now.After(v.expires) {
+			delete(c.oauth, k)
+		}
+	}
+	c.oauth[state] = pendingOAuth{issuer: issuer, expires: now.Add(oauthStateTTL)}
+	c.oauthMu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]string{"url": to})
+}
+
+func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
+	qv := r.URL.Query()
+	state := qv.Get("state")
+	c.oauthMu.Lock()
+	pend, ok := c.oauth[state]
+	delete(c.oauth, state)
+	c.oauthMu.Unlock()
+	back := func(result string) { http.Redirect(w, r, "/?oauth="+url.QueryEscape(result), http.StatusSeeOther) }
+	switch {
+	case !ok || time.Now().After(pend.expires):
+		back("unknown_state")
+	case qv.Get("error") != "":
+		back("refused")
+	case qv.Has("iss") && strings.TrimRight(qv.Get("iss"), "/") != strings.TrimRight(pend.issuer, "/"):
+		back("issuer_mismatch")
+	default:
+		if err := c.CompleteOAuth(r.Context(), state, qv.Get("code")); err != nil {
+			c.Log.Warn("oauth completion failed", "error", err)
+			back("failed")
+			return
+		}
+		back("connected")
+	}
+}
+
+func (c *Console) listAgents(w http.ResponseWriter, _ *http.Request) {
+	list := c.State.Agents()
+	slices.SortFunc(list, func(a, b Agent) int { return strings.Compare(a.Name, b.Name) })
+	writeJSON(w, http.StatusOK, map[string]any{"agents": list, "mcp_url": c.MCPURL, "max_ttl_hours": int(c.MaxAgentTTL.Hours())})
+}
+
+func (c *Console) mintAgent(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name     string `json:"name"`
+		TTLHours int    `json:"ttl_hours"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	tok, err := c.MintAgent(r.Context(), in.Name, time.Duration(in.TTLHours)*time.Hour)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, tok)
+}
+
+func (c *Console) listApprovals(w http.ResponseWriter, r *http.Request) {
+	list, err := c.Approvals(r.Context())
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"approvals": nonNil(list)})
+}
+
+func (c *Console) decide(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Approve bool `json:"approve"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.Decide(r.Context(), r.PathValue("id"), in.Approve); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// FetchIcon loads an untrusted icon as image bytes: https or a data URI, at most 512 KiB, and only PNG, JPEG, GIF, WebP or ICO by content sniffing; SVG is refused.
+func FetchIcon(ctx context.Context, raw string) ([]byte, string, error) {
+	var body []byte
+	if rest, ok := strings.CutPrefix(raw, "data:"); ok {
+		meta, data, found := strings.Cut(rest, ",")
+		if !found || !strings.HasSuffix(meta, ";base64") {
+			return nil, "", errors.New("only base64 data URIs are read")
+		}
+		var err error
+		if body, err = base64.StdEncoding.DecodeString(data); err != nil {
+			return nil, "", err
+		}
+		if len(body) > maxIconBytes {
+			return nil, "", ErrTooLarge
+		}
+	} else {
+		var err error
+		if body, _, err = (Reach{}).Get(ctx, raw, maxIconBytes, "image/png, image/webp, image/jpeg, image/gif, image/x-icon"); err != nil {
+			return nil, "", err
+		}
+	}
+	kind := http.DetectContentType(body)
+	if !slices.Contains(iconTypes, kind) {
+		return nil, "", errors.New("the icon is not a PNG, JPEG, GIF, WebP or ICO image")
+	}
+	return body, kind, nil
+}
+
+func (c *Console) icon(w http.ResponseWriter, r *http.Request) {
+	raw := r.URL.Query().Get("u")
+	c.iconMu.Lock()
+	ic, ok := c.icons[raw]
+	c.iconMu.Unlock()
+	if !ok {
+		body, kind, err := FetchIcon(r.Context(), raw)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		ic = icon{body: body, kind: kind}
+		c.iconMu.Lock()
+		if len(c.icons) >= maxIconCache {
+			clear(c.icons)
+		}
+		c.icons[raw] = ic
+		c.iconMu.Unlock()
+	}
+	h := w.Header()
+	h.Set("Content-Type", ic.kind)
+	h.Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	h.Set("Content-Disposition", "inline; filename=icon")
+	h.Set("Cache-Control", "private, max-age=3600")
+	_, _ = w.Write(ic.body)
+}
+
+func (c *Console) agentProxy() http.Handler {
+	target, _ := url.Parse(c.Engine.PublicURL)
+	return &httputil.ReverseProxy{
+		FlushInterval: -1,
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Header.Del("Cookie")
+			pr.Out.Header.Del(csrfHeader)
+		},
+		ModifyResponse: func(resp *http.Response) error {
+			resp.Header.Del("Set-Cookie")
+			return nil
+		},
+	}
+}
+
+func (c *Console) spa(w http.ResponseWriter, r *http.Request) {
+	if c.Web == nil {
+		http.Error(w, "the console frontend is not built", http.StatusServiceUnavailable)
+		return
+	}
+	name := strings.TrimPrefix(r.URL.Path, "/")
+	if strings.HasPrefix(name, "api/") {
+		http.NotFound(w, r)
+		return
+	}
+	if name != "" && !strings.HasSuffix(name, "/") {
+		if f, err := c.Web.Open(name); err == nil {
+			st, err := f.Stat()
+			f.Close()
+			if err == nil && !st.IsDir() {
+				if strings.HasPrefix(name, "assets/") {
+					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+				}
+				http.ServeFileFS(w, r, c.Web, name)
+				return
+			}
+		}
+		if strings.HasPrefix(name, "assets/") {
+			http.NotFound(w, r)
+			return
+		}
+	}
+	index, err := fs.ReadFile(c.Web, "index.html")
+	if err != nil {
+		http.Error(w, "the console frontend is not built", http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(index)
+}

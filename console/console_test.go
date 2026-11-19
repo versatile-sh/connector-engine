@@ -1,0 +1,410 @@
+package console_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"net"
+	"net/http"
+	"net/http/cookiejar"
+	"net/http/httptest"
+	"slices"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/agents-control/connector-engine/app"
+	"github.com/agents-control/connector-engine/config"
+	"github.com/agents-control/connector-engine/console"
+)
+
+const operatorToken = "console-test-operator"
+
+type upstream struct {
+	*httptest.Server
+	mu    sync.Mutex
+	calls map[string]int
+}
+
+func (u *upstream) count(name string) int {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.calls[name]
+}
+
+func newUpstream(t *testing.T) *upstream {
+	t.Helper()
+	u := &upstream{calls: map[string]int{}}
+	srv := mcp.NewServer(&mcp.Implementation{Name: "notes", Title: "Notes", Version: "1.2.0", Description: "A notebook"}, nil)
+	yes, no := true, false
+	for _, spec := range []struct {
+		name string
+		ann  *mcp.ToolAnnotations
+	}{{"search", &mcp.ToolAnnotations{ReadOnlyHint: true}}, {"create", &mcp.ToolAnnotations{DestructiveHint: &no}}, {"purge", &mcp.ToolAnnotations{DestructiveHint: &yes}}, {"mystery", nil}} {
+		srv.AddTool(&mcp.Tool{Name: spec.name, Description: "does " + spec.name, Annotations: spec.ann, InputSchema: map[string]any{"type": "object"}},
+			func(_ context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+				u.mu.Lock()
+				u.calls[req.Params.Name]++
+				u.mu.Unlock()
+				return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "ran " + req.Params.Name}}}, nil
+			})
+	}
+	u.Server = httptest.NewServer(mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return srv }, nil))
+	t.Cleanup(u.Close)
+	return u
+}
+
+func bootEngine(t *testing.T, publicURL string) (string, string) {
+	t.Helper()
+	c := config.Default()
+	c.Mode = config.ModeDev
+	c.Server.Listen, c.Server.GRPCListen, c.Server.OperatorListen = "127.0.0.1:0", "", "127.0.0.1:0"
+	c.Server.PublicURL = publicURL
+	c.Auth.LocalIssuer.Enabled = true
+	c.Auth.AgentTokenMaxLifetime = 720 * time.Hour
+	c.Auth.Operator.TokenRef = "env:CN_OPERATOR_TOKEN"
+	c.Bootstrap.Roles = []config.RoleRow{{Tenant: "local", Person: "owner", Role: "tenant_admin", Scope: "t/local"}}
+	c.Runtime.AllowPrivateHosts = true
+	c.Approval.HoldWindow = 300 * time.Millisecond
+	c.Approval.SweepInterval = 100 * time.Millisecond
+	file, err := c.LoadAdapters([]byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: memory}\n  secrets: {use: memory}\n  auth: {use: builtin:local}\n"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, stop := context.WithCancel(context.Background())
+	a, err := app.New(ctx, c, file, app.Options{Lookup: func(k string) string {
+		if k == "CN_OPERATOR_TOKEN" {
+			return operatorToken
+		}
+		return ""
+	}})
+	if err != nil {
+		stop()
+		t.Fatal(err)
+	}
+	l, err := a.Listen()
+	if err != nil {
+		stop()
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- a.Run(ctx, l) }()
+	t.Cleanup(func() { stop(); <-done; a.Close() })
+	return "http://" + l.HTTP.Addr().String(), "http://" + l.Operator.Addr().String()
+}
+
+type browser struct {
+	t      *testing.T
+	base   string
+	client *http.Client
+	csrf   string
+}
+
+func (b *browser) send(method, path string, body any, headers map[string]string) (int, []byte) {
+	b.t.Helper()
+	var in io.Reader
+	if body != nil {
+		raw, _ := json.Marshal(body)
+		in = bytes.NewReader(raw)
+	}
+	req, _ := http.NewRequest(method, b.base+path, in)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("Origin", b.base)
+	if b.csrf != "" {
+		req.Header.Set("X-CSRF-Token", b.csrf)
+	}
+	for k, v := range headers {
+		if k == "Host" {
+			req.Host = v
+			continue
+		}
+		if v == "" {
+			req.Header.Del(k)
+		} else {
+			req.Header.Set(k, v)
+		}
+	}
+	resp, err := b.client.Do(req)
+	if err != nil {
+		b.t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, raw
+}
+
+func (b *browser) ok(method, path string, body, out any) {
+	b.t.Helper()
+	status, raw := b.send(method, path, body, nil)
+	if status >= 300 {
+		b.t.Fatalf("%s %s: %d %s", method, path, status, raw)
+	}
+	if out != nil {
+		if err := json.Unmarshal(raw, out); err != nil {
+			b.t.Fatalf("%s %s: %v %s", method, path, err, raw)
+		}
+	}
+}
+
+type bearer string
+
+func (b bearer) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.Header.Set("Authorization", "Bearer "+string(b))
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+func textOf(res *mcp.CallToolResult) string {
+	var sb strings.Builder
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			sb.WriteString(tc.Text)
+		}
+	}
+	return sb.String()
+}
+
+func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := "http://" + lis.Addr().String()
+	public, operator := bootEngine(t, base)
+	up := newUpstream(t)
+	state, err := console.OpenState(t.TempDir() + "/state.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	if err := eng.EnsureTenant(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
+		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour}
+	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
+	srv.Start()
+	t.Cleanup(srv.Close)
+	jar, _ := cookiejar.New(nil)
+	b := &browser{t: t, base: base, client: &http.Client{Jar: jar}}
+
+	var sess map[string]any
+	b.ok("GET", "/api/session", nil, &sess)
+	if sess["owner_exists"] != false || sess["signed_in"] != false {
+		t.Fatalf("first visit: %v", sess)
+	}
+	if status, _ := b.send("POST", "/api/setup", map[string]string{"username": "me", "password": "short"}, nil); status != http.StatusBadRequest {
+		t.Fatalf("a short password: %d", status)
+	}
+	var setup struct{ CSRF string }
+	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
+	b.csrf = setup.CSRF
+	if status, _ := b.send("POST", "/api/setup", map[string]string{"username": "x", "password": "another long one"}, nil); status != http.StatusConflict {
+		t.Fatalf("a second owner: %d", status)
+	}
+
+	t.Run("guards", func(t *testing.T) {
+		if status, _ := b.send("GET", "/api/session", nil, map[string]string{"Host": "evil.example:80"}); status != http.StatusMisdirectedRequest {
+			t.Errorf("a foreign Host: %d", status)
+		}
+		if status, _ := b.send("POST", "/api/agents", map[string]any{"name": "x"}, map[string]string{"Origin": ""}); status != http.StatusForbidden {
+			t.Errorf("no Origin: %d", status)
+		}
+		if status, _ := b.send("POST", "/api/agents", map[string]any{"name": "x"}, map[string]string{"Origin": "http://evil.example"}); status != http.StatusForbidden {
+			t.Errorf("a foreign Origin: %d", status)
+		}
+		if status, _ := b.send("POST", "/api/agents", map[string]any{"name": "x"}, map[string]string{"X-CSRF-Token": "nope"}); status != http.StatusForbidden {
+			t.Errorf("a wrong CSRF token: %d", status)
+		}
+		if status, raw := b.send("POST", "/local/token", map[string]any{"sub": "owner", "tenant": "local"}, nil); status == http.StatusOK || strings.Contains(string(raw), "token") {
+			t.Errorf("the local issuer is reachable through the console: %d %s", status, raw)
+		}
+		if status, _ := b.send("GET", "/v1/connectors", nil, nil); status == http.StatusOK {
+			t.Errorf("the engine API is reachable through the console")
+		}
+		_, raw := b.send("GET", "/api/session", nil, nil)
+		if strings.Contains(string(raw), operatorToken) {
+			t.Errorf("the operator token reached the browser")
+		}
+		if status, _ := b.send("POST", "/api/preview", map[string]any{"mcp": up.URL + "/mcp"}, nil); status != http.StatusBadRequest {
+			t.Errorf("an http MCP without the local tick: %d", status)
+		}
+	})
+
+	var pv console.Preview
+	b.ok("POST", "/api/preview", map[string]any{"mcp": up.URL + "/mcp", "local": true}, &pv)
+	proposed := map[string]console.Access{}
+	for _, tool := range pv.Tools {
+		proposed[tool.Name] = tool.Proposed
+	}
+	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessRead || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessAsk {
+		t.Fatalf("preview: %+v", pv)
+	}
+	var imported struct{ Connector string }
+	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "write", "mystery": "off"}}, &imported)
+
+	var list struct{ Connectors []console.ConnectorSummary }
+	b.ok("GET", "/api/connectors", nil, &list)
+	if len(list.Connectors) != 1 {
+		t.Fatalf("connectors: %+v", list)
+	}
+	conn := list.Connectors[0]
+	got := map[string]console.Access{}
+	for _, f := range conn.Functions {
+		got[f.Name] = f.Access
+	}
+	want := map[string]console.Access{"search": "read", "create": "write", "purge": "ask", "mystery": "off"}
+	for k, v := range want {
+		if got[k] != v {
+			t.Fatalf("access read back: %v, want %v", got, want)
+		}
+	}
+
+	var tok console.AgentToken
+	b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
+	if tok.Agent != "claude-code" || tok.Token == "" || tok.MCPURL != base+"/mcp" {
+		t.Fatalf("agent token: %+v", tok)
+	}
+	client := mcp.NewClient(&mcp.Implementation{Name: "agent", Version: "1"}, nil)
+	cs, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: tok.MCPURL, HTTPClient: &http.Client{Transport: bearer(tok.Token)}}, nil)
+	if err != nil {
+		t.Fatalf("agent connect through the console: %v", err)
+	}
+	defer cs.Close()
+	tools, err := cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, tool := range tools.Tools {
+		names = append(names, tool.Name)
+	}
+	a := conn.Alias + "__"
+	for _, n := range []string{"search", "create", "purge"} {
+		if !slices.Contains(names, a+n) {
+			t.Fatalf("listed %v, want %s", names, a+n)
+		}
+	}
+	if slices.Contains(names, a+"mystery") {
+		t.Fatalf("an off function is listed: %v", names)
+	}
+	for _, n := range []string{"search", "create"} {
+		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{}})
+		if err != nil || res.IsError || textOf(res) != "ran "+n {
+			var d map[string]any
+			_ = eng.Call(context.Background(), "POST", "/v1/access:explain", map[string]any{"workspace": "default", "agent": "claude-code", "on_behalf_of": "owner", "connector": conn.ID, "function": n}, &d)
+			t.Logf("explain %v", d)
+			t.Fatalf("%s: %v %v", n, res, err)
+		}
+	}
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + "purge", Arguments: map[string]any{}})
+	if err != nil || up.count("purge") != 0 {
+		t.Fatalf("an ask call ran at once: %v %v", res, err)
+	}
+	var approvals struct {
+		Approvals []struct{ ID, Function string }
+	}
+	b.ok("GET", "/api/approvals", nil, &approvals)
+	if len(approvals.Approvals) != 1 || approvals.Approvals[0].Function != "purge" {
+		t.Fatalf("approvals: %+v", approvals)
+	}
+	b.ok("POST", "/api/approvals/"+approvals.Approvals[0].ID, map[string]any{"approve": true}, nil)
+	deadline := time.Now().Add(10 * time.Second)
+	for up.count("purge") == 0 && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if up.count("purge") != 1 {
+		t.Fatalf("the approved call did not run")
+	}
+
+	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/create", map[string]string{"access": "off"}, nil)
+	if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + "create", Arguments: map[string]any{}}); err == nil || up.count("create") != 1 {
+		t.Fatalf("a function set off still runs: %v, upstream %d", err, up.count("create"))
+	}
+}
+
+func TestReachRefusesPlainHTTPAndPrivateAddresses(t *testing.T) {
+	ctx := context.Background()
+	for _, raw := range []string{"http://example.com/mcp", "ftp://example.com", "https://user:pw@example.com/"} {
+		if _, err := (console.Reach{}).CheckURL(raw); err == nil {
+			t.Errorf("%s accepted", raw)
+		}
+	}
+	for _, raw := range []string{"https://127.0.0.1:1/x", "https://169.254.169.254/latest", "https://10.0.0.1/x", "https://[::1]:1/x", "https://localhost:1/x"} {
+		if _, _, err := (console.Reach{}).Get(ctx, raw, 10, ""); err == nil || !strings.Contains(err.Error(), "non-public") {
+			t.Errorf("%s: %v", raw, err)
+		}
+	}
+	if _, err := (console.Reach{Local: true}).CheckURL("http://127.0.0.1:3000/mcp"); err != nil {
+		t.Errorf("a ticked local URL: %v", err)
+	}
+}
+
+func TestARedirectToAPrivateAddressIsRefused(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://127.0.0.1:9/secret", http.StatusFound)
+	}))
+	defer srv.Close()
+	r := console.Reach{}
+	client := r.Client()
+	client.Transport.(*http.Transport).TLSClientConfig = srv.Client().Transport.(*http.Transport).TLSClientConfig
+	_, err := client.Get(srv.URL)
+	if err == nil || !strings.Contains(err.Error(), "non-public") {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestIconsAreImagesNeverSVG(t *testing.T) {
+	ctx := context.Background()
+	png := "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+	if _, kind, err := console.FetchIcon(ctx, png); err != nil || kind != "image/png" {
+		t.Fatalf("png: %s %v", kind, err)
+	}
+	svg := "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48L3N2Zz4="
+	if _, _, err := console.FetchIcon(ctx, svg); err == nil {
+		t.Fatal("an SVG icon was accepted")
+	}
+}
+
+func TestOnlyReadOnlyHintProposesRead(t *testing.T) {
+	no := false
+	cases := []struct {
+		ann  *mcp.ToolAnnotations
+		want console.Access
+	}{{nil, console.AccessAsk}, {&mcp.ToolAnnotations{ReadOnlyHint: true}, console.AccessRead}, {&mcp.ToolAnnotations{DestructiveHint: &no}, console.AccessAsk}}
+	for _, c := range cases {
+		if _, _, got := console.Propose(c.ann); got != c.want {
+			t.Errorf("%+v: %s", c.ann, got)
+		}
+	}
+	if _, destructive, _ := console.Propose(nil); !destructive {
+		t.Error("no hints means destructive")
+	}
+}
+
+func TestTheOwnerSignsInWithThePasswordOnly(t *testing.T) {
+	s, err := console.OpenState(t.TempDir() + "/s.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CheckLogin("a", "b"); err != console.ErrNoOwner {
+		t.Fatalf("before setup: %v", err)
+	}
+	if err := s.CreateOwner("me", "correct horse battery"); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		user, pass string
+		want       bool
+	}{{"me", "correct horse battery", true}, {"me", "wrong password!", false}, {"you", "correct horse battery", false}} {
+		if ok, err := s.CheckLogin(c.user, c.pass); err != nil || ok != c.want {
+			t.Errorf("%s/%s: %v %v", c.user, c.pass, ok, err)
+		}
+	}
+}

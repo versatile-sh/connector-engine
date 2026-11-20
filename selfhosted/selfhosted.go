@@ -50,15 +50,12 @@ func openHostkey(ctx context.Context, env app.Env) (port.SecretStore, func(), er
 }
 
 func checkHostkey(c config.Config, acknowledged func(string) bool) config.Findings {
-	if c.Secrets.Adapter != "hostkey" {
-		return nil
-	}
 	var fs config.Findings
 	if c.Secrets.UnlockSocket == "" {
 		fs = append(fs, config.Finding{Level: config.LevelError, Where: "secrets.unlockSocket", Message: "the hostkey adapter waits for the unlock key on this socket; it is empty"})
 	}
 	if !acknowledged(config.AckPlaintextRootKey) {
-		fs = append(fs, config.Finding{Level: c.RefusalLevel(), Where: "secrets.adapter",
+		fs = append(fs, config.Finding{Level: c.RefusalLevel(), Where: "port secrets",
 			Message: "hostkey keeps a plaintext root key on a host without a keychain and until it is migrated; acknowledge " + config.AckPlaintextRootKey + " to run with it"})
 	}
 	return fs

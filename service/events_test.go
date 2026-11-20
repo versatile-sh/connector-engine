@@ -39,7 +39,7 @@ func TestExpiryAndCancelWriteTheirAuditRows(t *testing.T) {
 	want(t, slices.Contains(auditActions(w, string(cancelled.Approval.ID)), "connector.approval.cancelled"), true, "A7 audit row")
 }
 
-func TestCallDeniedFollowsSection12(t *testing.T) {
+func TestCallDeniedIsPublishedOnlyForAnAuthorizationDenial(t *testing.T) {
 	w := newWorld(t, opts{reviewed: true, tune: []func(*service.Config, *service.Deps){func(_ *service.Config, d *service.Deps) { d.Authorizer = allowing{d.Authorizer} }}})
 	w.acceptAll()
 	w.customWorkspace()
@@ -47,10 +47,10 @@ func TestCallDeniedFollowsSection12(t *testing.T) {
 	x := w.agent("x", "s1")
 	before := len(w.Events())
 	want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeUnknownTool, "the in-transaction evaluation denies")
-	want(t, w.Types(before), []string{"connector.call.denied"}, "the deny inside the transaction is event 22")
+	want(t, w.Types(before), []string{"connector.call.denied"}, "the deny inside the transaction is connector.call.denied")
 	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
 	w.row(port.ScopeAgent, "x", "*", port.ModeAllow)
 	before = len(w.Events())
-	want(t, w.call(x, "s__search", `{"q":1}`).Code, port.CodeInvalidArgument, "C5 refuses the arguments")
-	want(t, slices.Contains(w.Types(before), "connector.call.denied"), false, "C5 is not event 22")
+	want(t, w.call(x, "s__search", `{"q":1}`).Code, port.CodeInvalidArgument, "the argument check refuses the arguments")
+	want(t, slices.Contains(w.Types(before), "connector.call.denied"), false, "an argument refusal is not connector.call.denied")
 }

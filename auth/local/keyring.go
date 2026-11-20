@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/internal/atomicfile"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -111,9 +112,5 @@ func (k Keyring) write(keys []storedKey) error {
 	if err := os.MkdirAll(filepath.Dir(k.Path), 0o700); err != nil {
 		return err
 	}
-	tmp := k.Path + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, k.Path)
+	return atomicfile.Write(k.Path, raw)
 }

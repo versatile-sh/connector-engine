@@ -20,8 +20,17 @@ type Postgres struct {
 	n    int
 }
 
-// StartPostgres starts the container, or returns an error when CN_PG=0, docker or the image is unavailable.
+// StartPostgres starts the container, or returns an error when CN_PG=0, docker or the image is unavailable; under CN_REQUIRE_PG=1 that error exits the test binary.
 func StartPostgres() (*Postgres, error) {
+	p, err := startPostgres()
+	if err != nil && os.Getenv("CN_REQUIRE_PG") == "1" {
+		fmt.Fprintln(os.Stderr, "CN_REQUIRE_PG=1 and postgres did not start:", err)
+		os.Exit(1)
+	}
+	return p, err
+}
+
+func startPostgres() (*Postgres, error) {
 	if os.Getenv("CN_PG") == "0" || os.Getenv("CN_DOCKER") == "0" {
 		return nil, fmt.Errorf("postgres runs are switched off")
 	}

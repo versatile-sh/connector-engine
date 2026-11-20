@@ -205,7 +205,7 @@ func served(name string, f port.Function, o *port.Overlay) json.RawMessage {
 	return out
 }
 
-// ListFunctions is tools/list L3 and L4: Authorizer.Search for each bound connector, then the stored definitions of every function that is not denied.
+// ListFunctions is tools/list: Authorizer.Search for each bound connector, then the stored definitions of every function that is not denied.
 func (s *Service) ListFunctions(ctx context.Context, p port.Principal) (FunctionList, error) {
 	sub, err := s.agentSubject(ctx, p)
 	if err != nil {
@@ -353,7 +353,7 @@ func toolError(code port.Code, format string, args ...any) Outcome {
 	return Outcome{Status: OutcomeError, Code: code, Detail: port.Errorf(code, format, args...).(*port.Error).Detail}
 }
 
-// Call is tools/call C2 to C12 without transport: resolve, evaluate, check, look up a repeat, hold or forward, and return a neutral outcome.
+// Call is tools/call without transport: resolve, evaluate, check, look up a repeat, hold or forward, and return a neutral outcome.
 func (s *Service) Call(ctx context.Context, p port.Principal, req CallRequest) (Outcome, error) {
 	sub, err := s.agentSubject(ctx, p)
 	if err != nil {

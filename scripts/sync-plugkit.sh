@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: scripts/sync-plugkit.sh <plugkit-checkout> [commit]   (default commit: the one in internal/plugkit/UPSTREAM.md)"
+usage="usage: scripts/sync-plugkit.sh <plugkit-checkout> [commit]   (default commit: the one in internal/plugkit/UPSTREAM.md; upstream is a private repository, internal/plugkit is the public source of record)"
 src="${1:?$usage}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 dest="$root/internal/plugkit"
@@ -55,7 +55,7 @@ left="$(grep -rnE "^[[:space:]]*(import[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*[[:s
 {
   echo "# plugkit, in-module copy"
   echo
-  echo "Upstream: \`$upstream\` (MIT, see LICENSE in this directory)."
+  echo "Upstream: \`$upstream\` (MIT, see LICENSE in this directory), a private repository. This copy is the public source of record."
   echo
   echo "Commit: \`$commit\`"
   echo

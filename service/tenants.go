@@ -56,7 +56,7 @@ func (s *Service) CreateTenant(ctx context.Context, p port.Principal, tenant por
 	return out, err
 }
 
-// RemoveTenant marks a tenant removing, which refuses every token of it at once, and queues the worker's steps 2 to 5.
+// RemoveTenant marks a tenant removing, which refuses every token of it at once, and queues the worker's removal of its data.
 func (s *Service) RemoveTenant(ctx context.Context, p port.Principal, tenant port.TenantID) (port.Operation, error) {
 	var op port.Operation
 	if err := s.authorize(ctx, p, authz.TenantRemove, authz.Installation); err != nil {
@@ -101,7 +101,7 @@ func (s *Service) GetOperation(ctx context.Context, p port.Principal, id port.Op
 	return out, err
 }
 
-// FanOutTenant is the worker's step of an operator's status change or offer for one tenant: events 36 and A7 inside that tenant.
+// FanOutTenant is the worker's step of an operator's status change or offer for one tenant: connector.connector.blocked_changed and the cancelled approvals inside that tenant.
 func (s *Service) FanOutTenant(ctx context.Context, f port.FanOut, tenant port.TenantID) error {
 	var blocked, connectors int
 	err := s.write(ctx, port.Scope{Tenant: tenant}, "FanOutTenant:"+string(f.ID), func(tx port.Tx) error {
@@ -150,7 +150,7 @@ func (s *Service) fanOut(tx port.Tx, id port.OperationID) (port.FanOut, error) {
 	return all[i], nil
 }
 
-// RemoveTenantData is the worker's steps 2 to 5: cancel open approvals, shred the key, delete the rows, publish event 38.
+// RemoveTenantData is the worker's removal of a tenant: cancel open approvals, shred the key, delete the rows, publish connector.tenant.removed.
 func (s *Service) RemoveTenantData(ctx context.Context, f port.FanOut) error {
 	tenant := f.Tenant
 	var creds []port.Credential

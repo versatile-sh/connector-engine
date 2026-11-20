@@ -87,7 +87,7 @@ func (a *Authorizer) SearchBatch(ctx context.Context, tenant port.TenantID, qs [
 	return out, err
 }
 
-// Evaluate runs steps 1 to 14 for one function; step 15(b) has no external point here.
+// Evaluate runs steps 1 to 14 for one function; this Authorizer has no external decision point for step 15.
 func (a *Authorizer) Evaluate(ctx context.Context, q port.Query) (port.AccessDecision, error) {
 	var d evaluate.Decision
 	err := a.facts(ctx, subjectOf(q), q.Connector, func(f evaluate.Facts) error {

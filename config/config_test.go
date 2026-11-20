@@ -18,7 +18,7 @@ import (
 
 var update = flag.Bool("update", false, "rewrite connector-engine.yaml from the defaults")
 
-var keysOfSection14 = strings.Fields(`mode auth.issuers auth.audience auth.localIssuer.enabled gateway.protocolVersions gateway.relayInstructions
+var documentedKeys = strings.Fields(`mode auth.issuers auth.audience auth.localIssuer.enabled gateway.protocolVersions gateway.relayInstructions
 gateway.scanArgumentsForToken apps.appOnlyFunctions auth.agentTokenMaxLifetime auth.senderConstraint auth.manageAudience auth.trustedProxy.listen
 auth.trustedProxy.cidrs manage.mcp.operations catalog.tenantDefault catalog.offerDefault catalog.defaultCeiling catalog.privateListings
 gateway.skills sources.skillCatalog.enabled sources.skillCatalog.urls gateway.listTtl gateway.toolNameMax gateway.separator gateway.denyAs permission.defaultMode permission.levelWrite.write permission.levelWrite.destructive
@@ -29,7 +29,7 @@ approval.executeGrace approval.proofOfReading approval.inChat.classes approval.n
 pinning.relistMax pinning.hashIcons pinning.autoAcceptReviewed pinning.relistBeforeCall exposure.onTrifecta search.thresholdTokens
 search.thresholdFunctions search.resultMax projection.default projection.maxPaths resultFilter.adapter overlay.suggester cli.defaultForCodingAgents
 grpc.unaryOnly sources.official.enabled sources.official.url sources.docker.enabled sources.syncInterval listing.requireDigest listing.requireSignature
-credentials.refreshMargin credentials.registrationOrder credentials.fallback secrets.adapter secrets.dataKeyCache runtime.adapters runtime.callTimeout
+credentials.refreshMargin credentials.registrationOrder credentials.fallback secrets.dataKeyCache runtime.adapters runtime.callTimeout
 runtime.container.cpu runtime.container.memory runtime.container.idleStop runtime.container.network audit.arguments audit.hashChain outbox.signing`)
 
 func TestDefaultsRoundTripAndTheCheckedInFileIsTheDefaults(t *testing.T) {
@@ -52,13 +52,13 @@ func TestDefaultsRoundTripAndTheCheckedInFileIsTheDefaults(t *testing.T) {
 	}
 }
 
-func TestEveryKeyOfSection14IsInTheFile(t *testing.T) {
+func TestEveryDocumentedKeyIsInTheFile(t *testing.T) {
 	data, _ := config.Default().Marshal()
 	var tree map[string]any
 	if err := yaml.Unmarshal(data, &tree); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range keysOfSection14 {
+	for _, key := range documentedKeys {
 		var at any = tree
 		for _, part := range strings.Split(key, ".") {
 			m, ok := at.(map[string]any)
@@ -99,7 +99,7 @@ func has(fs adapters.Findings, where, level string) bool {
 	return false
 }
 
-func TestProductionRefusesWhatSection14Lists(t *testing.T) {
+func TestProductionRefusesRiskySettingsUnlessAcknowledged(t *testing.T) {
 	base := core(config.Default())
 	base.Server.PublicURL = "https://engine.test"
 	base.Auth.Issuers = []config.Issuer{{Name: "idp", URL: "https://idp.test/jwks"}}
@@ -115,12 +115,11 @@ func TestProductionRefusesWhatSection14Lists(t *testing.T) {
 		"local issuer": {func(c *config.Config) {
 			c.Auth.Issuers, c.Auth.LocalIssuer.Enabled, c.Auth.Operator.TokenRef = nil, true, "env:CN_OPERATOR_TOKEN"
 		}, "auth.localIssuer.enabled", config.AckLocalIssuer},
-		"private egress":     {func(c *config.Config) { c.Runtime.AllowPrivateHosts = true }, "runtime.allowPrivateHosts", config.AckPrivateEgress},
-		"long agent tokens":  {func(c *config.Config) { c.Auth.AgentTokenMaxLifetime = 48 * time.Hour }, "auth.agentTokenMaxLifetime", config.AckLongLivedTokens},
-		"trusted proxy":      {func(c *config.Config) { c.Auth.TrustedProxy.Listen = ":8081" }, "auth.trustedProxy.listen", config.AckTrustedProxy},
-		"manage mutation":    {func(c *config.Config) { c.Manage.MCP.Operations = []string{"read_only", "putRole"} }, "manage.mcp.operations", config.AckManageMutations},
-		"no public address":  {func(c *config.Config) { c.Server.PublicURL = "" }, "auth.audience", ""},
-		"plaintext root key": {func(*config.Config) {}, "secrets.adapter", config.AckPlaintextRootKey},
+		"private egress":    {func(c *config.Config) { c.Runtime.AllowPrivateHosts = true }, "runtime.allowPrivateHosts", config.AckPrivateEgress},
+		"long agent tokens": {func(c *config.Config) { c.Auth.AgentTokenMaxLifetime = 48 * time.Hour }, "auth.agentTokenMaxLifetime", config.AckLongLivedTokens},
+		"trusted proxy":     {func(c *config.Config) { c.Auth.TrustedProxy.Listen = ":8081" }, "auth.trustedProxy.listen", config.AckTrustedProxy},
+		"manage mutation":   {func(c *config.Config) { c.Manage.MCP.Operations = []string{"read_only", "putRole"} }, "manage.mcp.operations", config.AckManageMutations},
+		"no public address": {func(c *config.Config) { c.Server.PublicURL = "" }, "auth.audience", ""},
 	} {
 		cfg := base
 		c.edit(&cfg)
@@ -234,3 +233,43 @@ func TestTheLocalIssuerNeedsTheOperatorToken(t *testing.T) {
 }
 
 func core(c config.Config) config.Config { return c.With(app.Core().Builtins()...) }
+
+func findings(t *testing.T, c config.Config, secrets string) adapters.Findings {
+	t.Helper()
+	spec := c.AdaptersSpec()
+	f, err := adapters.Load(spec, []byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: "+c.Mode+"\nallowMemory: true\nports:\n  store: {use: memory}\n  secrets: {use: "+secrets+"}\n"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return adapters.Check(spec, f)
+}
+
+func TestOnlyTheSelectedSecretsAdapterIsChecked(t *testing.T) {
+	cfg := core(config.Default())
+	cfg.Mode = config.ModeDev
+	for _, f := range findings(t, cfg, "memory") {
+		if strings.Contains(f.Message, "localfile") || f.Where == "secrets.onePassword" {
+			t.Errorf("memory is selected but %s reports %q", f.Where, f.Message)
+		}
+	}
+	if fs := findings(t, cfg, "memory"); !has(fs, "port secrets", adapters.LevelWarning) {
+		t.Errorf("memory keeps the root key in plaintext without a warning: %v", fs)
+	}
+	if fs := findings(t, cfg, "builtin:onepassword"); !has(fs, "secrets.onePassword", adapters.LevelError) || has(fs, "port secrets", adapters.LevelWarning) {
+		t.Errorf("onepassword selected by its port: %v", fs)
+	}
+}
+
+func TestTheDeprecatedSecretsAdapterKeyMustAgreeWithItsPort(t *testing.T) {
+	cfg := core(config.Default())
+	cfg.Mode, cfg.Secrets.Adapter = config.ModeDev, "memory"
+	if f, err := cfg.LoadAdapters(nil, nil); err != nil || !reflect.DeepEqual([]string(f.Ports[config.PortSecrets].Use), []string{"memory"}) {
+		t.Fatalf("an old configuration without an adapters file: %v, %v", f.Ports[config.PortSecrets].Use, err)
+	}
+	if fs := findings(t, cfg, "memory"); !has(fs, "secrets.adapter", adapters.LevelWarning) || has(fs, "secrets.adapter", adapters.LevelError) {
+		t.Errorf("an agreeing key is not only deprecated: %v", fs)
+	}
+	if fs := findings(t, cfg, "builtin:localfile"); !has(fs, "secrets.adapter", adapters.LevelError) {
+		t.Errorf("a key that disagrees with ports.secrets is accepted: %v", fs)
+	}
+}

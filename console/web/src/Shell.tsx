@@ -48,7 +48,7 @@ function Endpoint({ url }: { url: string }) {
 function SetupProgress() {
   const t = useT();
   const setup = useSetup();
-  if (!setup.ready || setup.hidden || setup.done === setup.total) return null;
+  if (!setup.visible) return null;
   return (
     <button type="button" onClick={() => navigate("/")} className={`${button({ variant: "secondary", size: "sm" })} arrive hidden font-mono text-xs sm:inline-flex`}>
       <span aria-hidden="true" className="flex gap-1">

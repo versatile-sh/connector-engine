@@ -17,7 +17,6 @@ export const ptBR: Record<MessageKey, string> = {
   "common.copied": "Copiado",
   "common.copyFailed": "Bloqueado",
   "common.save": "Salvar",
-  "common.done": "Pronto",
   "common.opensNewTab": "(abre em uma nova aba)",
 
   "nav.label": "Console",
@@ -73,7 +72,6 @@ export const ptBR: Record<MessageKey, string> = {
   "onboarding.title": "Primeiros passos",
   "onboarding.progress": "{done} de {total} feitos",
   "onboarding.hide": "Ocultar o guia",
-  "onboarding.allSet": "Tudo pronto. Seus apps de IA já alcançam seus conectores.",
   "onboarding.stepDone": "feito",
   "onboarding.step1": "Crie sua conta",
   "onboarding.step2": "Importe seu primeiro conector",

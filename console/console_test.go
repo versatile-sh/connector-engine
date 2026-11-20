@@ -617,3 +617,63 @@ func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) 
 		t.Fatalf("a revoked key after a console restart: %d", got)
 	}
 }
+
+func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
+	for _, finish := range []bool{false, true} {
+		lis, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		host := lis.Addr().String()
+		base := "http://" + host
+		public, operator := bootEngine(t, base)
+		up := newUpstream(t)
+		path := t.TempDir() + "/state.json"
+		state, err := console.OpenState(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+		if err := eng.EnsureTenant(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{host}}, MCPURL: base + "/mcp", MaxAgentTTL: time.Hour}
+		srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
+		srv.Start()
+		jar, _ := cookiejar.New(nil)
+		b := &browser{t: t, base: base, client: &http.Client{Jar: jar}}
+		var setup struct{ CSRF string }
+		b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
+		b.csrf = setup.CSRF
+		dismissed := func() bool {
+			var s struct {
+				Dismissed bool `json:"onboarding_dismissed"`
+			}
+			b.ok("GET", "/api/session", nil, &s)
+			return s.Dismissed
+		}
+		if dismissed() {
+			t.Fatal("a new console starts with the guide closed")
+		}
+		if finish {
+			b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true}, nil)
+			if dismissed() {
+				t.Fatal("the guide closed with a step left")
+			}
+			b.ok("POST", "/api/agents", map[string]any{"name": "cursor"}, nil)
+		} else {
+			if status, _ := b.send("POST", "/api/onboarding/dismiss", nil, map[string]string{"X-CSRF-Token": ""}); status != http.StatusForbidden {
+				t.Fatalf("a dismiss without the CSRF token: %d", status)
+			}
+			b.ok("POST", "/api/onboarding/dismiss", nil, nil)
+		}
+		if !dismissed() {
+			t.Fatalf("finish %v: the guide is still open", finish)
+		}
+		srv.Close()
+		reopened, err := console.OpenState(path)
+		if err != nil || !reopened.OnboardingDismissed() {
+			t.Fatalf("finish %v: the guide came back after a restart: %v", finish, err)
+		}
+	}
+}

@@ -1,9 +1,6 @@
 app = "connector-engine"
 primary_region = "iad"
 
-[build]
-  dockerfile = "deploy/cloud/Dockerfile"
-
 [http_service]
   internal_port = 8080
   force_https = true

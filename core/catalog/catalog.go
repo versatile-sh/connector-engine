@@ -151,7 +151,7 @@ type Answer struct {
 	People      []Level      `json:"people,omitempty"`
 }
 
-// Resolve applies V1 to V8 to one listing for a workspace and the people considered (owner of the agent, person acted for, or the caller).
+// Resolve says whether one listing is visible and installable, and under which ceiling, for a workspace and the people considered (owner of the agent, person acted for, or the caller).
 func (v View) Resolve(workspace port.WorkspaceID, people []port.PersonID, ref port.ListingRef) Answer {
 	l, ok := v.Offered(ref)
 	version, exists := v.Newest(ref)

@@ -204,7 +204,7 @@ func DefinitionHash(name string, raw []byte) (port.Hash, error) {
 	return HashJSON(b)
 }
 
-// ChangedFields lists the pinned keys whose canonical value differs between two raw definitions of the function or item name (event 6).
+// ChangedFields lists the pinned keys whose canonical value differs between two raw definitions of the function or item name (connector.function.quarantined).
 func ChangedFields(name string, oldRaw, newRaw []byte) ([]string, error) {
 	a, err := Hashed(name, oldRaw)
 	if err != nil {

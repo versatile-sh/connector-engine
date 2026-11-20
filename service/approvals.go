@@ -128,7 +128,7 @@ func (s *Service) GetApproval(ctx context.Context, p port.Principal, id port.App
 	return d, nil
 }
 
-// DecideApproval is A3, A4 and A5; when another decision won the race the record as it now is comes back.
+// DecideApproval records an approver's decision; when another decision won the race the record as it now is comes back.
 func (s *Service) DecideApproval(ctx context.Context, p port.Principal, id port.ApprovalID, d port.Decision, note, channel string) (port.Approval, error) {
 	var out port.Approval
 	if err := s.authorize(ctx, p, authz.ApprovalDecide, s.tenantResource(p)); err != nil {
@@ -218,7 +218,7 @@ func (s *Service) countDecision(tx port.Tx, a port.Approval, d port.Decision) er
 	return err
 }
 
-// CancelApproval is A7 by an approver or a workspace admin.
+// CancelApproval cancels a pending record, by an approver or a workspace admin.
 func (s *Service) CancelApproval(ctx context.Context, p port.Principal, id port.ApprovalID) (port.Approval, error) {
 	var out port.Approval
 	if err := s.authorize(ctx, p, authz.ConnectorRead, s.tenantResource(p)); err != nil {

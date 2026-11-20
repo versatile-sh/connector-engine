@@ -386,7 +386,7 @@ func (s *Service) ApprovalStatus(ctx context.Context, p port.Principal, id port.
 	return s.answer(ctx, a)
 }
 
-// MarkDelivered is A14: the surface calls it once the terminal answer of a record of the calling agent and session reached the agent.
+// MarkDelivered marks a record delivered: the surface calls it once the terminal answer of a record of the calling agent and session reached the agent.
 func (s *Service) MarkDelivered(ctx context.Context, p port.Principal, id port.ApprovalID) error {
 	a, err := s.ownApproval(ctx, p, id)
 	if err != nil {
@@ -405,7 +405,7 @@ func (s *Service) MarkDelivered(ctx context.Context, p port.Principal, id port.A
 	})
 }
 
-// ApprovalCancelByAgent is approval_cancel: A7 for a pending record of the calling agent and session.
+// ApprovalCancelByAgent is approval_cancel: it cancels a pending record of the calling agent and session.
 func (s *Service) ApprovalCancelByAgent(ctx context.Context, p port.Principal, id port.ApprovalID) (Outcome, error) {
 	a, err := s.ownApproval(ctx, p, id)
 	if err != nil {

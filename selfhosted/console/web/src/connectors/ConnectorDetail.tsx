@@ -125,9 +125,9 @@ export function ConnectorDetail({ id }: { id: string }) {
         </div>
       </header>
       <article className={`${PANEL} p-4 sm:p-8 xl:p-10`}>
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] xl:gap-14">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
           <ConnectorChoices connector={connector} agent={query.get("profile")} />
-          <aside className="flex flex-col gap-8 lg:self-start lg:tall:sticky lg:tall:top-24">
+          <aside className="flex flex-col gap-6 lg:self-start lg:tall:sticky lg:tall:top-24">
             <Credentials connector={connector} />
             <dl className="grid gap-4 text-sm">
               {facts.map((fact) => (

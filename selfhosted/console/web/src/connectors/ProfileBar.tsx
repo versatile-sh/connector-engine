@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { errorText, type Connector, type Profile, type ProfileMode } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { dropWaiting, setNewKeysOff, setProfileMode } from "../mutations";
@@ -9,6 +9,19 @@ import { InlineConfirm } from "../ui/InlineConfirm";
 import { Select } from "../ui/Select";
 import { Switch } from "../ui/Switch";
 import { CAPTION, WELL, button } from "../ui/styles";
+
+/** The card that opens a connector's choices: the profile picker on top, then the controls of the profile shown, in one region. */
+export function ProfileCard({ connector, agent, children }: { connector: Connector; agent: string | undefined; children: ReactNode }) {
+  const t = useT();
+  return (
+    <section aria-label={t("profile.label")} className={`${WELL} divide-y divide-line`}>
+      <div className="px-4 py-3 sm:px-5">
+        <ProfilePicker connector={connector} agent={agent} />
+      </div>
+      {children}
+    </section>
+  );
+}
 import { Tag } from "../ui/Tag";
 import { commonMode, keysWithOverrides, overrideCount, profileHref } from "./profiles";
 
@@ -78,7 +91,7 @@ export function DefaultBar({ connector }: { connector: Connector }) {
   const kept = every.data?.keys.filter((key) => key.error) ?? [];
   const error = every.isError && !asking ? errorText(every.error) : newKeys.isError ? errorText(newKeys.error) : kept.length > 0 ? t("profile.everyKeyKept", { keys: kept.map((key) => key.agent).join(", ") }) : "";
   return (
-    <div className={`${WELL} @container divide-y divide-line`}>
+    <div className="@container divide-y divide-line">
       {connector.profiles.length > 1 ? (
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-5">
           <div className="min-w-0">
@@ -137,7 +150,7 @@ export function KeyBar({ connector, profile, mode, onCustom, onLeave }: KeyBarPr
   };
   const choose = (next: ProfileMode) => (next !== "custom" && overrides > 0 ? setAsking(next) : apply(next));
   return (
-    <div className={`${WELL} @container px-4 py-3 sm:px-5`}>
+    <div className="@container px-4 py-3 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <code className="min-w-0 font-mono text-sm font-medium [overflow-wrap:anywhere]" translate="no">

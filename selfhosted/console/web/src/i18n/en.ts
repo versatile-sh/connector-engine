@@ -378,6 +378,7 @@ export const en = {
   "skills.warn.needs": "It needs connector {names}, which is not installed. It is still listed, with a note.",
   "skills.keyName": "{skill} for {key}",
   "skills.keysOn": "{count}/{total} keys",
+  "skills.about": "About this skill",
   "skills.perKey": "Per access key",
   "skills.allKeys": "All {count} keys",
   "skills.allKeysName": "every key on {skill}",

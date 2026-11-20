@@ -380,6 +380,7 @@ export const ptBR: Record<MessageKey, string> = {
   "skills.warn.needs": "Ela precisa do conector {names}, que não está instalado. Ela continua listada, com um aviso.",
   "skills.keyName": "{skill} para {key}",
   "skills.keysOn": "{count}/{total} chaves",
+  "skills.about": "Sobre esta skill",
   "skills.perKey": "Por chave de acesso",
   "skills.allKeys": "Todas as {count} chaves",
   "skills.allKeysName": "todas as chaves em {skill}",

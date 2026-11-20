@@ -5,14 +5,14 @@ import { CopyPanel } from "./CopyPanel";
 import { Functions } from "./Functions";
 import { ItemSections } from "./ItemSections";
 import { useDefaultLens, useProfileLens, type Lens } from "./lens";
-import { DefaultBar, KeyBar, ProfilePicker } from "./ProfileBar";
+import { DefaultBar, KeyBar, ProfileCard } from "./ProfileBar";
 
 type Copy = { text: string; open(): void } | undefined;
 
 function Rows({ connector, lens, copy }: { connector: Connector; lens: Lens; copy: Copy }) {
   return (
     <>
-      <p role="alert" className="-mb-6 text-sm text-amber-400 empty:hidden">
+      <p role="alert" className="-mb-3 text-sm text-amber-400 empty:hidden">
         {lens.error}
       </p>
       <Functions connector={connector} lens={lens} copy={copy} />
@@ -36,8 +36,10 @@ function DefaultView({ connector }: { connector: Connector }) {
   const [copying, setCopying] = useState(false);
   const copy = connector.profiles.length > 1 ? { text: t("bulk.copyTo"), open: () => setCopying(true) } : undefined;
   return (
-    <div className="swap-in flex min-w-0 flex-col gap-10">
-      <DefaultBar connector={connector} />
+    <div className="swap-in flex min-w-0 flex-col gap-6">
+      <ProfileCard connector={connector} agent={undefined}>
+        <DefaultBar connector={connector} />
+      </ProfileCard>
       {copying ? <CopyPanel connector={connector} onClose={() => setCopying(false)} /> : null}
       <Rows connector={connector} lens={lens} copy={copy} />
     </div>
@@ -52,21 +54,18 @@ function KeyView({ connector, profile }: { connector: Connector; profile: Profil
   const lens = useProfileLens(connector, profile, mode === "custom");
   const copy = connector.profiles.length > 1 ? { text: t("bulk.copyFrom"), open: () => setCopying(true) } : undefined;
   return (
-    <div className="swap-in flex min-w-0 flex-col gap-10">
-      <KeyBar connector={connector} profile={profile} mode={mode} onCustom={() => setEditing(true)} onLeave={() => setEditing(false)} />
+    <div className="swap-in flex min-w-0 flex-col gap-6">
+      <ProfileCard connector={connector} agent={profile.agent}>
+        <KeyBar connector={connector} profile={profile} mode={mode} onCustom={() => setEditing(true)} onLeave={() => setEditing(false)} />
+      </ProfileCard>
       {copying ? <CopyPanel connector={connector} target={profile} onClose={() => setCopying(false)} /> : null}
       <Rows connector={connector} lens={lens} copy={copy} />
     </div>
   );
 }
 
-/** A connector's functions and items as one profile sees them, picked at the top: the default every key follows, or the key named by `?profile=` with its own mode and narrowings. */
+/** A connector's functions and items as one profile sees them, a column of cards whose first holds the picker: the default every key follows, or the key named by `?profile=` with its own mode and narrowings. */
 export function ConnectorChoices({ connector, agent }: { connector: Connector; agent: string | null }) {
   const profile = connector.profiles.find((p) => p.agent === agent);
-  return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <ProfilePicker connector={connector} agent={profile?.agent} />
-      {profile ? <KeyView key={profile.agent} connector={connector} profile={profile} /> : <DefaultView connector={connector} />}
-    </div>
-  );
+  return profile ? <KeyView key={profile.agent} connector={connector} profile={profile} /> : <DefaultView connector={connector} />;
 }

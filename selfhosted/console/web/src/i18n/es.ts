@@ -380,6 +380,7 @@ export const es: Record<MessageKey, string> = {
   "skills.warn.needs": "Necesita el conector {names}, que no está instalado. Sigue listada, con un aviso.",
   "skills.keyName": "{skill} para {key}",
   "skills.keysOn": "{count}/{total} claves",
+  "skills.about": "Acerca de esta skill",
   "skills.perKey": "Por clave de acceso",
   "skills.allKeys": "Las {count} claves",
   "skills.allKeysName": "todas las claves en {skill}",

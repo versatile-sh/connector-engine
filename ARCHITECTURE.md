@@ -19,7 +19,7 @@ Dependencies point inward: adapters import `port`, `core` imports only `port`, a
 
 | Port | Purpose | Built-in adapters |
 |---|---|---|
-| `Store` | state, audit rows and the event outbox in one transaction | `postgres` (row-level security per tenant), `memory` |
+| `Store` | state, audit rows and the event outbox in one transaction | `postgres` (row-level security per tenant), `memory`; `sqlite` (tenant-scoped queries, WAL) in the self-hosted build |
 | `SecretStore` | envelope encryption with a key per tenant; destroying the key shreds the data | `localfile`, `onepassword`, `memory`; `hostkey` in the self-hosted build |
 | `PrincipalVerifier` | verify bearer tokens | `jwks`, `local` (dev issuer) |
 | `ConnectorRuntime` | start a connector, list its functions, call one | `remote` (MCP), `declarative` (REST), `grpc`, `skill`, `memory` |
@@ -98,7 +98,7 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 
 ## The self-hosted layer
 
-`selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`) and desktop notifications.
+`selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`), desktop notifications, and the install without Docker (`selfhosted/standalone`), which runs the engine and the console in one process over the `sqlite` store.
 
 - Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
 - Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or `cli.Main` (`cnctl`). `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
@@ -107,13 +107,15 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 // cmd/connector-engine: the core alone
 func main() { os.Exit(app.Main(app.Build{Version: version}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr)) }
 
-// selfhosted/cmd/connector-engine: the core plus hostkey and unlock
+// selfhosted/cmd/connector-engine: the core plus hostkey, sqlite, unlock and the no-Docker lifecycle
 func main() {
 	adapters := app.Core()
 	selfhosted.Register(adapters)
-	os.Exit(app.Main(app.Build{Version: version, Adapters: adapters, Commands: selfhosted.EngineCommands()}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr))
+	commands := selfhosted.EngineCommands()
+	maps.Copy(commands, standalone.Commands(version))
+	os.Exit(app.Main(app.Build{Version: version, Adapters: adapters, Commands: commands}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr))
 }
 ```
 
-- The console reaches the engine over HTTP only, like any other client.
+- The console reaches the engine over HTTP only, like any other client; in the no-Docker install both run in one process and still talk over loopback HTTP.
 - Design record: [docs/internal/SELFHOSTED-LAYOUT.md](docs/internal/SELFHOSTED-LAYOUT.md).

@@ -1,22 +1,39 @@
-// Package selfhosted lists what the self-hosted build adds to the core: the hostkey secrets adapter, the unlock command of the engine, and the keychain and notify commands of cnctl.
+// Package selfhosted lists what the self-hosted build adds to the core: the hostkey secrets and sqlite store adapters, the unlock command of the engine, and the keychain and notify commands of cnctl.
 package selfhosted
 
 import (
 	"context"
+	"embed"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 
 	"github.com/versatile-sh/connector-engine/app"
 	"github.com/versatile-sh/connector-engine/cli"
 	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/keychain"
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/notify"
 	"github.com/versatile-sh/connector-engine/selfhosted/secrets/hostkey"
+	"github.com/versatile-sh/connector-engine/store/sqlite"
 )
 
-// Register adds the self-hosted adapters to r.
+//go:embed deploy/profiles/person/connector-engine.yaml deploy/profiles/person/adapters.yaml
+var person embed.FS
+
+// PersonProfile returns the connector-engine.yaml and the adapters.yaml of the person profile.
+func PersonProfile() (engine, adapters []byte) {
+	engine, _ = person.ReadFile("deploy/profiles/person/connector-engine.yaml")
+	adapters, _ = person.ReadFile("deploy/profiles/person/adapters.yaml")
+	return engine, adapters
+}
+
+// Register adds the self-hosted adapters to r: the hostkey secrets and the embedded sqlite store.
 func Register(r *app.Registry) {
+	app.Register(r, app.Stores, app.Adapter{Name: "sqlite", Capabilities: []string{"store.transactional_outbox"},
+		Settings: map[string]adapters.ConfigKind{"path": adapters.ConfigString}}, openSQLite)
 	app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", Capabilities: []string{"secrets.envelope", "secrets.crypto_shredding"}, Check: checkHostkey}, openHostkey)
 }
 
@@ -39,6 +56,18 @@ func Commands() map[string]cli.Command {
 			return notify.Command(ctx, args, cli.Getenv(environ), stderr)
 		},
 	}
+}
+
+func openSQLite(ctx context.Context, env app.Env) (port.Store, func(), error) {
+	path := env.Setting("path")
+	if path == "" {
+		return nil, nil, errors.New("store: the sqlite adapter needs a path")
+	}
+	s, err := sqlite.Open(ctx, path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("store: %w", err)
+	}
+	return s, s.Close, nil
 }
 
 func openHostkey(ctx context.Context, env app.Env) (port.SecretStore, func(), error) {

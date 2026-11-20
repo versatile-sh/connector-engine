@@ -99,8 +99,11 @@ func Listen(path string) (net.Listener, error) {
 	return lis, err
 }
 
-// Close stops the unlock socket.
+// Close stops the unlock socket, if the store has one.
 func (s *Store) Close() {
+	if s.lis == nil {
+		return
+	}
 	s.lis.Close()
 	<-s.done
 }

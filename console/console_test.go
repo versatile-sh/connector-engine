@@ -22,6 +22,7 @@ import (
 	"github.com/agents-control/connector-engine/app"
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/console"
+	"github.com/agents-control/connector-engine/port"
 )
 
 const operatorToken = "console-test-operator"
@@ -517,5 +518,91 @@ func TestTheHostAllowlistFollowsTheConsolePort(t *testing.T) {
 	h.ServeHTTP(rec, post)
 	if rec.Code != http.StatusNoContent {
 		t.Errorf("a same-console Origin at the custom port: %d", rec.Code)
+	}
+}
+
+func initialize(t *testing.T, h http.Handler, host, token string) int {
+	t.Helper()
+	body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req.Host = host
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("Authorization", "bearer "+token)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec.Code
+}
+
+func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := lis.Addr().String()
+	base := "http://" + host
+	public, operator := bootEngine(t, base)
+	up := newUpstream(t)
+	path := t.TempDir() + "/state.json"
+	state, err := console.OpenState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	if err := eng.EnsureTenant(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	newConsole := func(s *console.State) *console.Console {
+		return &console.Console{Engine: eng, State: s, Sessions: console.NewSessions(s), Guard: console.Guard{Hosts: []string{host}},
+			MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour}
+	}
+	c := newConsole(state)
+	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
+	srv.Start()
+	t.Cleanup(srv.Close)
+	jar, _ := cookiejar.New(nil)
+	b := &browser{t: t, base: base, client: &http.Client{Jar: jar}}
+	var setup struct{ CSRF string }
+	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
+	b.csrf = setup.CSRF
+	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true}, nil)
+
+	var tok, kept console.AgentToken
+	b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
+	b.ok("POST", "/api/agents", map[string]any{"name": "Codex"}, &kept)
+	h := c.Handler()
+	if got := initialize(t, h, host, tok.Token); got != http.StatusOK {
+		t.Fatalf("a fresh key: %d", got)
+	}
+	if status, _ := b.send("DELETE", "/api/agents/claude-code", nil, map[string]string{"X-CSRF-Token": ""}); status != http.StatusForbidden {
+		t.Fatalf("a revoke without the CSRF token: %d", status)
+	}
+	if status, _ := b.send("DELETE", "/api/agents/nobody", nil, nil); status != http.StatusNotFound {
+		t.Fatalf("revoking an unknown key: %d", status)
+	}
+	b.ok("DELETE", "/api/agents/claude-code", nil, nil)
+
+	if got := initialize(t, h, host, tok.Token); got != http.StatusUnauthorized {
+		t.Fatalf("a revoked key on /mcp: %d", got)
+	}
+	if got := initialize(t, h, host, kept.Token); got != http.StatusOK {
+		t.Fatalf("another key after a revoke: %d", got)
+	}
+	var agents struct{ Agents []console.Agent }
+	b.ok("GET", "/api/agents", nil, &agents)
+	if len(agents.Agents) != 1 || agents.Agents[0].Name != "codex" {
+		t.Fatalf("keys after a revoke: %+v", agents.Agents)
+	}
+	var grants struct{ Items []port.Grant }
+	if err := eng.Call(context.Background(), http.MethodGet, "/v1/grants?scope_kind=agent&scope_id=claude-code", nil, &grants); err != nil || len(grants.Items) != 0 {
+		t.Fatalf("grants of a revoked agent: %+v %v", grants.Items, err)
+	}
+
+	reopened, err := console.OpenState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := initialize(t, newConsole(reopened).Handler(), host, tok.Token); got != http.StatusUnauthorized {
+		t.Fatalf("a revoked key after a console restart: %d", got)
 	}
 }

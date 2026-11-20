@@ -351,6 +351,39 @@ func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil)
 }
 
+// RevokeAgent refuses every token minted so far for the agent, then unbinds it from every connector and deletes the grants scoped to it.
+func (c *Console) RevokeAgent(ctx context.Context, name string) error {
+	ok, err := c.State.RevokeAgent(name, time.Now())
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}
+	}
+	var list items[connectorView]
+	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
+		return err
+	}
+	for _, v := range list.Items {
+		if !v.Connector.RemovedAt.IsZero() {
+			continue
+		}
+		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/connectors/"+esc(string(v.Connector.ID))+"/bindings/"+esc(name), nil, nil); err != nil && !IsCode(err, "not_found") {
+			return err
+		}
+	}
+	var rows items[port.Grant]
+	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/grants"+q("scope_kind", string(port.ScopeAgent), "scope_id", name), nil, &rows); err != nil {
+		return err
+	}
+	for _, g := range rows.Items {
+		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil && !IsCode(err, "not_found") {
+			return err
+		}
+	}
+	return nil
+}
+
 // AgentToken is a minted agent token with where to use it.
 type AgentToken struct {
 	Agent     string    `json:"agent"`

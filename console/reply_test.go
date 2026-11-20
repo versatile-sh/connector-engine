@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +12,7 @@ import (
 )
 
 func TestFailAnswersTheStatusTheErrorCarries(t *testing.T) {
-	c := &Console{Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	c := &Console{}
 	for _, tc := range []struct {
 		err    error
 		status int

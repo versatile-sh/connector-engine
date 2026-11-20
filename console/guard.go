@@ -2,6 +2,7 @@ package console
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 
 const (
 	sessionCookie = "cn_console"
-	sessionTTL    = 12 * time.Hour
+	sessionTTL    = 30 * 24 * time.Hour
 	csrfHeader    = "X-CSRF-Token"
 )
 
@@ -26,31 +27,50 @@ func randomID() string {
 	return hex.EncodeToString(b)
 }
 
-type session struct {
-	csrf    string
-	expires time.Time
+func sessionKey(id string) string {
+	sum := sha256.Sum256([]byte(id))
+	return hex.EncodeToString(sum[:])
 }
 
-// Sessions holds the owner's sessions in memory; a restart of the console signs the owner out.
+// Sessions holds the owner's sessions keyed by the SHA-256 of their cookie, kept in the state file when one is given so a restart does not sign the owner out.
 type Sessions struct {
-	mu   sync.Mutex
-	byID map[string]session
+	mu    sync.Mutex
+	byKey map[string]StoredSession
+	state *State
 }
 
-// NewSessions returns an empty session table.
-func NewSessions() *Sessions { return &Sessions{byID: map[string]session{}} }
+// NewSessions returns the session table, loaded from state when it is not nil.
+func NewSessions(state *State) *Sessions {
+	s := &Sessions{byKey: map[string]StoredSession{}, state: state}
+	if state != nil {
+		s.byKey = state.Sessions()
+	}
+	return s
+}
+
+func (s *Sessions) persist() {
+	if s.state == nil {
+		return
+	}
+	snapshot := make(map[string]StoredSession, len(s.byKey))
+	for k, v := range s.byKey {
+		snapshot[k] = v
+	}
+	_ = s.state.PutSessions(snapshot)
+}
 
 // Start opens a session, sets its HttpOnly SameSite=Strict cookie and returns its CSRF token.
 func (s *Sessions) Start(w http.ResponseWriter) string {
 	id, csrf := randomID(), randomID()
 	now := time.Now()
 	s.mu.Lock()
-	for k, v := range s.byID {
-		if now.After(v.expires) {
-			delete(s.byID, k)
+	for k, v := range s.byKey {
+		if now.After(v.Expires) {
+			delete(s.byKey, k)
 		}
 	}
-	s.byID[id] = session{csrf: csrf, expires: now.Add(sessionTTL)}
+	s.byKey[sessionKey(id)] = StoredSession{CSRF: csrf, Expires: now.Add(sessionTTL)}
+	s.persist()
 	s.mu.Unlock()
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: int(sessionTTL.Seconds())})
 	return csrf
@@ -64,18 +84,19 @@ func (s *Sessions) Get(r *http.Request) (string, bool) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	v, ok := s.byID[c.Value]
-	if !ok || time.Now().After(v.expires) {
+	v, ok := s.byKey[sessionKey(c.Value)]
+	if !ok || time.Now().After(v.Expires) {
 		return "", false
 	}
-	return v.csrf, true
+	return v.CSRF, true
 }
 
 // End closes the request's session and clears its cookie.
 func (s *Sessions) End(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie(sessionCookie); err == nil {
 		s.mu.Lock()
-		delete(s.byID, c.Value)
+		delete(s.byKey, sessionKey(c.Value))
+		s.persist()
 		s.mu.Unlock()
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1})

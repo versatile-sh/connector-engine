@@ -188,7 +188,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
+	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
 		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour}
 	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
 	srv.Start()
@@ -462,6 +462,36 @@ func TestTheOwnerSignsInWithThePasswordOnly(t *testing.T) {
 		if ok, err := s.CheckLogin(c.user, c.pass); err != nil || ok != c.want {
 			t.Errorf("%s/%s: %v %v", c.user, c.pass, ok, err)
 		}
+	}
+}
+
+func TestASessionOutlivesAConsoleRestartAndNotItsSignOut(t *testing.T) {
+	path := t.TempDir() + "/s.json"
+	state, err := console.OpenState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	csrf := console.NewSessions(state).Start(rec)
+	cookie := rec.Result().Cookies()[0]
+	raw, _ := os.ReadFile(path)
+	if strings.Contains(string(raw), cookie.Value) {
+		t.Fatal("the state file holds the raw session cookie")
+	}
+	reopened, err := console.OpenState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after := console.NewSessions(reopened)
+	req := httptest.NewRequest(http.MethodGet, "/api/session", nil)
+	req.AddCookie(cookie)
+	if got, ok := after.Get(req); !ok || got != csrf {
+		t.Fatalf("after restart: %q %v", got, ok)
+	}
+	after.End(httptest.NewRecorder(), req)
+	again, _ := console.OpenState(path)
+	if _, ok := console.NewSessions(again).Get(req); ok {
+		t.Fatal("a signed-out session came back after a restart")
 	}
 }
 

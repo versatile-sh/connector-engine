@@ -146,7 +146,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		return 1
 	}
 	eng := &console.Engine{PublicURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)), Tenant: *tenant, Workspace: *workspace, Person: *person}
-	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(),
+	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(),
 		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

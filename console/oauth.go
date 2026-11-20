@@ -288,7 +288,7 @@ func (c *Console) authorize(w http.ResponseWriter, r *http.Request) {
 	if redirect == "" && len(cl.RedirectURIs) == 1 {
 		redirect = cl.RedirectURIs[0]
 	}
-	if !cl.allows(redirect) {
+	if !cl.allows(redirect) || !RedirectAllowed(redirect) {
 		http.Error(w, "this redirect_uri is not registered for the client", http.StatusBadRequest)
 		return
 	}

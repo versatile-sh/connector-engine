@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useReducer, useState, type FormEvent } from "react";
 import { api, errorText, type AgentToken } from "../api";
-import { useLocale, useT } from "../i18n/I18nProvider";
+import { useT } from "../i18n/I18nProvider";
 import { keysQuery } from "../queries";
 import { Bubble } from "../ui/Bubble";
 import { CopyBox } from "../ui/CopyBox";
@@ -11,6 +11,8 @@ import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { HAIRLINE, SURFACE, button } from "../ui/styles";
 import { ClientPicker } from "./ClientPicker";
+import { KeyRow } from "./KeyRow";
+import { revokeStep, type RevokeEvent } from "./revoke";
 
 const intoView = (element: HTMLElement | null) => {
   element?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -40,10 +42,9 @@ function Created({ token }: { token: AgentToken }) {
   );
 }
 
-/** Connect an AI app: one endpoint for every MCP client, access keys made here, and for a new key the exact way into each app. */
+/** Connect an AI app: one endpoint for every MCP client, access keys made and revoked here, and for a new key the exact way into each app. */
 export function AccessPage() {
   const t = useT();
-  const locale = useLocale();
   const queryClient = useQueryClient();
   const keys = useQuery(keysQuery);
   const [name, setName] = useState("");
@@ -55,9 +56,28 @@ export function AccessPage() {
       void queryClient.invalidateQueries({ queryKey: ["agents"] });
     },
   });
+  const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
+  const revoke = useMutation({
+    mutationFn: (agent: string) => api("DELETE", `/api/agents/${encodeURIComponent(agent)}`),
+    onSuccess: (_, agent) => {
+      dispatch({ type: "revoked" });
+      if (mint.data?.agent === agent) mint.reset();
+      void queryClient.invalidateQueries({ queryKey: ["agents"] });
+    },
+    onError: () => dispatch({ type: "failed" }),
+  });
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     mint.mutate();
+  };
+  const onRevokeEvent = (event: RevokeEvent) => {
+    if (event.type === "ask") revoke.reset();
+    dispatch(event);
+  };
+  const onConfirm = () => {
+    if (flow.kind !== "confirming") return;
+    dispatch({ type: "confirm" });
+    revoke.mutate(flow.name);
   };
   const maxDays = Math.max(1, Math.floor((keys.data?.max_ttl_hours ?? 720) / 24));
   const endpoint = keys.data?.mcp_url ?? "";
@@ -114,19 +134,9 @@ export function AccessPage() {
             <p className="py-2 text-sm text-muted">{t("keys.empty", { endpoint })}</p>
           ) : (
             <ul>
-              {list.map((key) => {
-                const expired = new Date(key.expires_at) < new Date();
-                return (
-                  <li key={key.name} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-3 last:border-b-0">
-                    <span className={`size-2 shrink-0 rounded-full ${expired ? "bg-amber" : "bg-lime"}`} aria-hidden="true" />
-                    <code className="min-w-0 flex-1 truncate font-mono text-sm font-semibold" translate="no">
-                      {key.name}
-                    </code>
-                    <span className="font-mono text-xs text-muted">{t("keys.until", { date: new Date(key.expires_at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) })}</span>
-                    {expired ? <Bubble tone="amber">{t("keys.expired")}</Bubble> : null}
-                  </li>
-                );
-              })}
+              {list.map((key) => (
+                <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
+              ))}
             </ul>
           )}
         </section>

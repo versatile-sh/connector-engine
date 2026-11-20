@@ -34,8 +34,11 @@ type rpcMessage struct {
 
 type toolCall struct {
 	Name      string          `json:"name"`
+	URI       string          `json:"uri"`
 	Arguments json.RawMessage `json:"arguments"`
 }
+
+var capturedMethods = map[string]string{"tools/call": "", "prompts/get": port.ItemPrompt, "resources/read": port.ItemResource}
 
 type inflight struct {
 	activity *Activity
@@ -96,14 +99,16 @@ func (c *Console) callsIn(r *http.Request, body []byte) *inflight {
 	in := &inflight{activity: c.Activity, results: settings.RecordResults, byID: map[string]*Capture{}, answers: map[string]rpcMessage{}}
 	for _, m := range msgs {
 		var p toolCall
-		if m.Method != "tools/call" || len(m.ID) == 0 || json.Unmarshal(m.Params, &p) != nil {
+		item, captured := capturedMethods[m.Method]
+		if !captured || len(m.ID) == 0 || json.Unmarshal(m.Params, &p) != nil {
 			continue
 		}
-		cp := &Capture{ID: newCaptureID(now), At: now, Agent: claims.Agent, Tool: p.Name, CallPayload: CallPayload{Session: claims.Session, MCPSession: r.Header.Get("Mcp-Session-Id"), RPCID: m.ID}}
-		switch p.Name {
-		case "find", "approval_cancel", "skill_list":
+		cp := &Capture{ID: newCaptureID(now), At: now, Agent: claims.Agent, Tool: firstOf(p.Name, p.URI), Item: item, CallPayload: CallPayload{Session: claims.Session, MCPSession: r.Header.Get("Mcp-Session-Id"), RPCID: m.ID}}
+		switch {
+		case item != "":
+		case p.Name == port.ToolFind, p.Name == port.ToolApprovalCancel, p.Name == port.ToolSkillList:
 			continue
-		case "skill_load":
+		case p.Name == port.ToolSkillLoad:
 			var s struct {
 				Skill string `json:"skill"`
 				Path  string `json:"path"`
@@ -112,13 +117,13 @@ func (c *Console) callsIn(r *http.Request, body []byte) *inflight {
 				continue
 			}
 			cp.Skill, cp.Path = s.Skill, s.Path
-		case "call":
+		case p.Name == port.ToolCall:
 			var inner toolCall
 			if json.Unmarshal(p.Arguments, &inner) != nil || inner.Name == "" {
 				continue
 			}
 			cp.Tool, p.Arguments = inner.Name, inner.Arguments
-		case "approval_status":
+		case p.Name == port.ToolApprovalStatus:
 			var a struct {
 				ApprovalID string `json:"approval_id"`
 			}

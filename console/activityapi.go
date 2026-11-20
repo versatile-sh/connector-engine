@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agents-control/connector-engine/core/names"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -180,8 +181,17 @@ func join(captures []Capture, f engineFacts, sep string) []joined {
 		switch {
 		case cp.Skill != "":
 			alias, fn = cp.Skill, port.SkillFunction
+		case cp.Item == port.ItemResource:
+			var uri string
+			if alias, uri, found = names.SplitResourceURI(cp.Tool); found {
+				fn = port.ItemResource + uri
+			} else {
+				alias, fn = "", cp.Tool
+			}
 		case !found:
 			alias, fn = "", cp.Tool
+		case cp.Item == port.ItemPrompt:
+			fn = port.ItemPrompt + fn
 		}
 		conn := f.byAlias[alias]
 		var call *port.Call

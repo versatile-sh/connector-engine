@@ -80,6 +80,6 @@ func (t *tx) track(kind, k string, owner port.TenantID, v any) error {
 }
 
 func (t *tx) untrack(kind, k string) error {
-	_, err := t.exec(`DELETE FROM due_work WHERE rec_kind = ?3 AND k = ?4`, kind, k)
+	_, err := t.exec(`DELETE FROM due_work WHERE rec_kind = ?3 AND k = ?4 AND (tenant_id = ?1 OR ?2)`, kind, k)
 	return err
 }

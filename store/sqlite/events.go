@@ -49,7 +49,10 @@ func (t *tx) Emit(e port.Event) (port.Event, error) {
 	e.Source = port.SourceOf(e.Tenant)
 	e.Stream = e.Source
 	seq, err := one[int64](t, `INSERT INTO streams (stream, tenant_id, last) VALUES (?3, ?4, 1)
-		ON CONFLICT (stream) DO UPDATE SET last = last + 1 RETURNING last`, e.Stream, string(e.Tenant))
+		ON CONFLICT (stream) DO UPDATE SET last = last + 1 WHERE streams.tenant_id = excluded.tenant_id RETURNING last`, e.Stream, string(e.Tenant))
+	if port.IsCode(err, port.CodeNotFound) {
+		return e, port.Errorf(port.CodePermissionDenied, "stream %s belongs to another tenant", e.Stream)
+	}
 	if err != nil {
 		return e, err
 	}

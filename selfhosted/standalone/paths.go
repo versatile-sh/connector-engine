@@ -73,10 +73,37 @@ func prepare(root string) (paths, error) {
 		if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
 			return p, fmt.Errorf("%s is open to other users; run chmod 700 on it", d)
 		}
+		if uid := ownerUID(info); uid >= 0 && uid != os.Geteuid() {
+			return p, fmt.Errorf("%s belongs to another user; an install keeps its data in a directory of its own user", d)
+		}
 	}
 	token, err := operatorToken(p.operatorFile)
 	p.operator = token
 	return p, err
+}
+
+func holdsInstall(root string) error {
+	p := layout(root)
+	if info, err := os.Lstat(root); err != nil || !info.IsDir() {
+		return fmt.Errorf("%s is not a directory (a symlink is refused): nothing is deleted", root)
+	}
+	if info, err := os.Lstat(p.operatorFile); err != nil || !info.Mode().IsRegular() {
+		return fmt.Errorf("%s holds no install (no operator-token): nothing is deleted", root)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return err
+	}
+	known := map[string]bool{}
+	for _, f := range []string{filepath.Dir(p.store), filepath.Dir(p.consoleState), p.control, p.operatorFile, ".DS_Store", "desktop.ini"} {
+		known[filepath.Base(f)] = true
+	}
+	for _, e := range entries {
+		if !known[e.Name()] {
+			return fmt.Errorf("%s also holds %s, which no install writes: nothing is deleted", root, e.Name())
+		}
+	}
+	return nil
 }
 
 func operatorToken(path string) (string, error) {

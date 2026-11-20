@@ -38,6 +38,7 @@ type env struct {
 func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 	cases := map[string]func(*env){
 		"tenant isolation":          isolation,
+		"cross-tenant matrix":       crossTenantMatrix,
 		"installation rows":         installationRows,
 		"unit of work":              unitOfWork,
 		"read only":                 readOnly,

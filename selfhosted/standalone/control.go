@@ -26,18 +26,46 @@ type Status struct {
 var errRunning = errors.New("an install already runs on this data directory")
 
 func listenControl(path string) (net.Listener, error) {
-	if c, err := net.DialTimeout("unix", path, time.Second); err == nil {
-		c.Close()
-		return nil, errRunning
-	}
-	_ = os.Remove(path)
 	lis, err := net.Listen("unix", path)
-	if err == nil && runtime.GOOS != "windows" {
-		if err = os.Chmod(path, 0o600); err != nil {
-			lis.Close()
+	if err != nil {
+		if c, derr := net.DialTimeout("unix", path, time.Second); derr == nil {
+			c.Close()
+			return nil, errRunning
+		}
+		if info, lerr := os.Lstat(path); lerr != nil || info.Mode()&os.ModeSocket == 0 {
+			return nil, err
+		}
+		_ = os.Remove(path)
+		if lis, err = net.Listen("unix", path); err != nil {
+			return nil, err
 		}
 	}
-	return lis, err
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(path, 0o600); err != nil {
+			lis.Close()
+			return nil, err
+		}
+	}
+	return peerListener{Listener: lis, uid: os.Geteuid()}, nil
+}
+
+type peerListener struct {
+	net.Listener
+	uid int
+}
+
+// Accept returns the next connection whose peer runs as the owning user and closes the others; an OS without peer credentials relies on the 0700 data directory.
+func (l peerListener) Accept() (net.Conn, error) {
+	for {
+		c, err := l.Listener.Accept()
+		if err != nil {
+			return nil, err
+		}
+		if uid, err := peerUID(c); err == nil && (uid < 0 || uid == l.uid) {
+			return c, nil
+		}
+		c.Close()
+	}
 }
 
 func (in *Install) control() http.Handler {

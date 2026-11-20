@@ -8,6 +8,7 @@ import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
+import { PageTitle } from "../ui/PageTitle";
 import { HAIRLINE, SURFACE, button } from "../ui/styles";
 import { ClientPicker } from "./ClientPicker";
 
@@ -64,9 +65,7 @@ export function AccessPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-8">
-        <h1 id="page-title" className="font-serif text-5xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl">
-          {t("keys.title")}
-        </h1>
+        <PageTitle section={t("nav.access")} title={t("keys.title")} />
         <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
         {endpoint ? <CopyBox label={t("keys.endpoint")} text={endpoint} tone="card" className="mt-5 max-w-xl" /> : null}
       </header>

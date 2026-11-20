@@ -10,6 +10,7 @@ import { navigate, useLocation } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
+import { PageTitle } from "../ui/PageTitle";
 import { button } from "../ui/styles";
 import { ConnectorCard, ConnectorCardSkeleton } from "./ConnectorCard";
 import { HubCard } from "./HubCard";
@@ -49,12 +50,9 @@ export function ConnectorsPage() {
     <section aria-labelledby="page-title">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 id="page-title" className="font-serif text-5xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl">
-              {t("connectors.title")}
-            </h1>
+          <PageTitle section={t("nav.connectors")} title={t("connectors.title")}>
             {connectors.isSuccess ? <Bubble tone={list.length > 0 ? "accent" : "neutral"}>{list.length}</Bubble> : null}
-          </div>
+          </PageTitle>
           <p className="mt-3 text-muted">{t("connectors.intro")}</p>
         </div>
         <button type="button" className={button({ variant: "accent" })} onClick={() => open()}>

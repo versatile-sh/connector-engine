@@ -48,7 +48,7 @@ export const ptBR: Record<MessageKey, string> = {
   "auth.linkLine1": "Um conector",
   "auth.linkLine2": "está esperando.",
   "auth.linkBody": "Um link de instalação de {host} quer adicionar um conector. Entre para revisar; nada é instalado até você confirmar.",
-  "auth.setup.title": "Crie a conta do dono",
+  "auth.setup.title": "Crie a conta do *dono*",
   "auth.setup.intro": "Este console tem uma conta só. Ela fica apenas nesta máquina.",
   "auth.login.title": "Entrar",
   "auth.login.intro": "A conta do dono deste console.",
@@ -79,7 +79,7 @@ export const ptBR: Record<MessageKey, string> = {
   "onboarding.step3.body": "Crie uma chave e cole uma linha no Claude, Cursor, Codex ou no seu código.",
   "onboarding.step3.action": "Conectar um app",
 
-  "connectors.title": "Conectores",
+  "connectors.title": "Seus *conectores*",
   "connectors.intro": "O que seus apps de IA alcançam, função por função.",
   "connectors.import": "Importar",
   "connectors.functions": "{count} funções",
@@ -167,7 +167,7 @@ export const ptBR: Record<MessageKey, string> = {
   "import.noTools": "O servidor não listou nenhuma função.",
   "import.home": "Ir para o console",
 
-  "keys.title": "Conecte um app de IA",
+  "keys.title": "*Conecte* um app de IA",
   "keys.intro": "Qualquer cliente MCP se conecta a um endpoint com uma chave e vê todos os conectores com as permissões que você definiu.",
   "keys.endpoint": "Endpoint",
   "keys.new": "Nova chave de acesso",
@@ -187,7 +187,7 @@ export const ptBR: Record<MessageKey, string> = {
   "keys.once": "Exibida uma vez só. Escolha seu app abaixo: a chave já vem preenchida.",
   "keys.key": "Chave de acesso",
 
-  "approvals.title": "Aprovações",
+  "approvals.title": "Suas *aprovações*",
   "approvals.intro": "Chamadas de funções marcadas como pedir esperam aqui. O app recebe a resposta assim que você decide.",
   "approvals.from": "de {agent}",
   "approvals.session": "sessão {id}",

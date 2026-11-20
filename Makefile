@@ -6,7 +6,7 @@ COMPOSE  ?= docker compose -f $(COMPOSE_FILE) -p $(PROJECT)
 IMAGE    ?= connector-engine:local
 export CN_IMAGE := $(IMAGE)
 ARGS     ?= --help
--include deploy/.env
+-include $(dir $(COMPOSE_FILE)).env
 CONSOLE_PORT ?= 7465
 export CONSOLE_PORT
 ENGINE   := $(if $(filter headless,$(PROFILE)),engine-headless,engine)

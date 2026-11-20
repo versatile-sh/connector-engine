@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, errorText, type Approval } from "../api";
+import { api, errorText, type Approval, type ApprovalChoice, type Decision } from "../api";
+import { listChoices } from "../approve/choices";
+import { DecisionButtons } from "../approve/DecisionButtons";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import type { Locale } from "../i18n";
 import { approvalsQuery, connectorsQuery } from "../queries";
@@ -16,7 +18,7 @@ const fromNow = (iso: string, locale: Locale) => {
   return Math.abs(seconds) < 90 ? format.format(seconds, "second") : format.format(Math.round(seconds / 60), "minute");
 };
 
-function Held({ approval, connector, deciding, onDecide }: { approval: Approval; connector: string; deciding: boolean; onDecide(approve: boolean): void }) {
+function Held({ approval, connector, deciding, onDecide }: { approval: Approval; connector: string; deciding: ApprovalChoice | undefined; onDecide(choice: ApprovalChoice): void }) {
   const t = useT();
   const locale = useLocale();
   return (
@@ -39,14 +41,8 @@ function Held({ approval, connector, deciding, onDecide }: { approval: Approval;
           <span title={new Date(approval.expires_at).toLocaleString(locale)}>{t("approvals.expires", { when: fromNow(approval.expires_at, locale) })}</span>
         </p>
       </div>
-      <div className="flex shrink-0 gap-2">
-        <button type="button" disabled={deciding} className={button({ variant: "secondary", size: "sm" })} onClick={() => onDecide(false)}>
-          {t("approvals.deny")}
-        </button>
-        <button type="button" disabled={deciding} className={button({ variant: "accent", size: "sm" })} onClick={() => onDecide(true)}>
-          <Icon name="check" className="size-4" />
-          {t("approvals.approve")}
-        </button>
+      <div className="min-w-0 sm:max-w-md">
+        <DecisionButtons choices={listChoices(approval.mode)} deciding={deciding} onChoose={onDecide} />
       </div>
     </li>
   );
@@ -59,8 +55,11 @@ export function ApprovalsPage() {
   const approvals = useQuery(approvalsQuery);
   const connectors = useQuery(connectorsQuery);
   const decide = useMutation({
-    mutationFn: ({ id, approve }: { id: string; approve: boolean }) => api("POST", `/api/approvals/${encodeURIComponent(id)}`, { approve }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["approvals"] }),
+    mutationFn: ({ id, choice }: { id: string; choice: ApprovalChoice }) => api<Decision>("POST", `/api/approvals/${encodeURIComponent(id)}/decide`, { choice }),
+    onSettled: (_, __, { choice }) => {
+      if (choice === "always") void queryClient.invalidateQueries({ queryKey: ["connectors"] });
+      return queryClient.invalidateQueries({ queryKey: ["approvals"] });
+    },
   });
   const list = approvals.data ?? [];
   const titleOf = (id: string) => connectors.data?.find((c) => c.id === id)?.title ?? id;
@@ -102,8 +101,8 @@ export function ApprovalsPage() {
               key={approval.id}
               approval={approval}
               connector={titleOf(approval.connector)}
-              deciding={decide.isPending && decide.variables.id === approval.id}
-              onDecide={(approve) => decide.mutate({ id: approval.id, approve })}
+              deciding={decide.isPending && decide.variables.id === approval.id ? decide.variables.choice : undefined}
+              onDecide={(choice) => decide.mutate({ id: approval.id, choice })}
             />
           ))}
         </ul>

@@ -143,6 +143,7 @@ export type Approval = {
   state: string;
   created_at: string;
   expires_at: string;
+  mode?: string;
 };
 
 /** What a call came to: answered, failed, refused as unknown, held for approval, or still running. */
@@ -241,3 +242,54 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
 }
 
 export const iconURL = (raw: string | undefined) => (raw ? `/api/icon?u=${encodeURIComponent(raw)}` : undefined);
+
+/** An answer to a held call: allow it once, for the app's session, from now on, or deny it. */
+export type ApprovalChoice = "once" | "session" | "always" | "deny";
+
+/** One held call as GET /api/approvals/{id} shows it, arguments included, to the local page only. */
+export type ApprovalView = {
+  id: string;
+  state: "pending" | "approved" | "denied" | "expired" | "cancelled" | (string & {});
+  mode: "ask" | "ask_once";
+  connector: { id: string; alias: string; title: string; icon?: string };
+  function: string;
+  function_title?: string;
+  kind: Kind;
+  app: string;
+  session: string;
+  created_at: string;
+  expires_at: string;
+  arguments?: unknown;
+  may_have_run: boolean;
+  reaches_outside: boolean;
+  choices: ApprovalChoice[];
+  decided_by?: string;
+  decided_at?: string;
+  channel?: string;
+};
+
+/** What POST /api/approvals/{id}/decide answers: the record now, and whether someone else had decided it first. */
+export type Decision = { outcome: ApprovalView; already_decided: boolean };
+
+/** Where a notification can go: chat bots that take clicks, and notify-only pushes and webhooks. */
+export type ChannelKind = "discord" | "slack" | "telegram" | "ntfy" | "discord_webhook" | "slack_webhook";
+
+export type ChannelView = {
+  id: string;
+  kind: ChannelKind;
+  label: string;
+  interactive: boolean;
+  owner?: string;
+  secret_hint?: string;
+  created_at: string;
+  status: "connected" | "connecting" | "error" | "notify_only";
+  error?: string;
+};
+
+export type DeviceView = { id: string; name: string; created_at: string; last_seen?: string };
+
+/** What GET /api/notifications answers; it never carries a secret. */
+export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[]; apps: { name: string; elicit: boolean }[] };
+
+/** A computer just paired for desktop popups: its key, shown once, and the command that uses it. */
+export type PairedDevice = { device: DeviceView; key: string; command: string };

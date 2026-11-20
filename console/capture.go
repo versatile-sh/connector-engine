@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/agents-control/connector-engine/port"
 )
 
 const (
@@ -18,7 +20,6 @@ const (
 	excerptMax     = 4 << 10
 	detailMax      = 512
 	codeMax        = 64
-	rpcInvalidArgs = -32602
 )
 
 type captureKey struct{}
@@ -283,20 +284,23 @@ func (in *inflight) describe(cp *Capture, m rpcMessage) {
 		var e struct {
 			Code    int    `json:"code"`
 			Message string `json:"message"`
+			Data    struct {
+				Meta map[string]json.RawMessage `json:"_meta"`
+			} `json:"data"`
 		}
 		_ = json.Unmarshal(m.Error, &e)
 		cp.Outcome, cp.Code = OutcomeError, strconv.Itoa(e.Code)
-		if e.Code == rpcInvalidArgs && strings.HasPrefix(e.Message, "unknown tool") {
-			cp.Outcome, cp.Code = OutcomeDenied, "unknown_tool"
+		if own := metaString(e.Data.Meta, port.ErrorMeta); own == string(port.CodeUnknownTool) {
+			cp.Outcome, cp.Code = OutcomeDenied, own
+		} else if own != "" && len(own) <= codeMax {
+			cp.Code = own
 		}
 		cp.Detail, _ = cut(redactText(e.Message), detailMax)
 		return
 	}
 	var r struct {
-		IsError bool `json:"isError"`
-		Content []struct {
-			Text string `json:"text"`
-		} `json:"content"`
+		IsError    bool                       `json:"isError"`
+		Meta       map[string]json.RawMessage `json:"_meta"`
 		Structured struct {
 			Status   string `json:"status"`
 			Approval string `json:"approval_id"`
@@ -306,7 +310,7 @@ func (in *inflight) describe(cp *Capture, m rpcMessage) {
 	}
 	_ = json.Unmarshal(m.Result, &r)
 	sc := r.Structured
-	if !r.IsError || len(r.Content) != 1 || r.Content[0].Text != sc.Code+": "+sc.Detail || len(sc.Code) > codeMax {
+	if !r.IsError || metaString(r.Meta, port.ErrorMeta) != sc.Code || len(sc.Code) > codeMax {
 		sc.Code, sc.Detail = "", ""
 	}
 	cp.ResultBytes = len(m.Result)

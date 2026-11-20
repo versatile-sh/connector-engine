@@ -320,11 +320,12 @@ type Credentials struct {
 	Clients           []OAuthClient `yaml:"clients"`
 }
 
-// Secrets is secrets.*; Dir is where the localfile adapter keeps its root key.
+// Secrets is secrets.*; Dir is where the localfile and hostkey adapters keep their root key, UnlockSocket where hostkey waits for the host's unlock key.
 type Secrets struct {
 	Adapter      string        `yaml:"adapter"`
 	DataKeyCache time.Duration `yaml:"dataKeyCache"`
 	Dir          string        `yaml:"dir"`
+	UnlockSocket string        `yaml:"unlockSocket"`
 }
 
 // Container is runtime.container; no container runtime ships in this build (OD-20).

@@ -35,11 +35,12 @@ type Owner struct {
 	Iterations int    `json:"iterations"`
 }
 
-// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, when it did and whether the owner has seen it since.
+// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, the OAuth client that owns it, when it connected and whether the owner has seen it since.
 type Agent struct {
 	Name        string    `json:"name"`
 	ExpiresAt   time.Time `json:"expires_at"`
 	ViaBrowser  bool      `json:"via_browser,omitempty"`
+	ClientID    string    `json:"client_id,omitempty"`
 	ConnectedAt time.Time `json:"connected_at,omitzero"`
 	Seen        bool      `json:"seen,omitempty"`
 }
@@ -255,21 +256,21 @@ func (s *State) Agents() []Agent {
 func (s *State) PutAgent(a Agent) error {
 	return s.update(func(d *stateFile) error {
 		if old, ok := d.Agents[a.Name]; ok {
-			a.ViaBrowser, a.ConnectedAt, a.Seen = old.ViaBrowser, old.ConnectedAt, old.Seen
+			a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen = old.ViaBrowser, old.ClientID, old.ConnectedAt, old.Seen
 		}
 		put(&d.Agents, a.Name, a)
 		return nil
 	})
 }
 
-// MarkBrowserConnected records that an app connected the agent through the browser sign-in at at, unseen by the owner so far.
-func (s *State) MarkBrowserConnected(name string, at time.Time) error {
+// MarkBrowserConnected records that the OAuth client connected the agent through the browser sign-in at at, unseen by the owner so far.
+func (s *State) MarkBrowserConnected(name, clientID string, at time.Time) error {
 	return s.update(func(d *stateFile) error {
 		a, ok := d.Agents[name]
 		if !ok {
 			return notFound("no agent is named %s", name)
 		}
-		a.ViaBrowser, a.ConnectedAt, a.Seen = true, at.UTC().Truncate(time.Second), false
+		a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen = true, clientID, at.UTC().Truncate(time.Second), false
 		d.Agents[name] = a
 		return nil
 	})

@@ -54,6 +54,19 @@ func (s *State) Agent(name string) (Agent, bool) {
 	return a, ok
 }
 
+// SignedIn reports whether a live refresh grant ties the agent to the OAuth client.
+func (s *State) SignedIn(agent, clientID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	for _, g := range s.data.Refresh {
+		if g.Agent == agent && g.ClientID == clientID && now.Before(g.Expires) {
+			return true
+		}
+	}
+	return false
+}
+
 // RefreshGrant returns the live grant stored under the hash of a refresh token.
 func (s *State) RefreshGrant(hash string) (RefreshGrant, bool) {
 	s.mu.Lock()

@@ -405,6 +405,15 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 	return true
 }
 
+func (c *Console) agentFor(cl OAuthClient) string {
+	name := Slug(cl.Name)
+	a, taken := c.State.Agent(name)
+	if !taken || a.ClientID == cl.ID || a.ClientID == "" && a.ViaBrowser && c.State.SignedIn(name, cl.ID) {
+		return name
+	}
+	return name + "-" + cl.ID[:8]
+}
+
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Approve  bool   `json:"approve"`
@@ -432,12 +441,12 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect": withParams(req.redirect, params)})
 		return
 	}
-	a, err := c.BindAgent(r.Context(), req.client.Name, c.MaxAgentTTL)
+	a, err := c.BindAgent(r.Context(), c.agentFor(req.client), c.MaxAgentTTL)
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
-	if err := c.State.MarkBrowserConnected(a.Name, time.Now()); err != nil {
+	if err := c.State.MarkBrowserConnected(a.Name, req.client.ID, time.Now()); err != nil {
 		c.fail(w, err)
 		return
 	}

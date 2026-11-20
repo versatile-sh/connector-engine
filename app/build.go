@@ -16,32 +16,9 @@ import (
 	"github.com/versatile-sh/connector-engine/auth/local"
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/credential"
-	filterbuiltin "github.com/versatile-sh/connector-engine/filter/builtin"
-	"github.com/versatile-sh/connector-engine/index/lexical"
 	"github.com/versatile-sh/connector-engine/internal/egress"
 	"github.com/versatile-sh/connector-engine/port"
-	rtdeclarative "github.com/versatile-sh/connector-engine/runtime/declarative"
-	rtgrpc "github.com/versatile-sh/connector-engine/runtime/grpc"
-	rtmemory "github.com/versatile-sh/connector-engine/runtime/memory"
 	"github.com/versatile-sh/connector-engine/runtime/mux"
-	rtremote "github.com/versatile-sh/connector-engine/runtime/remote"
-	rtskill "github.com/versatile-sh/connector-engine/runtime/skill"
-	"github.com/versatile-sh/connector-engine/secrets/hostkey"
-	secretslocal "github.com/versatile-sh/connector-engine/secrets/local"
-	secretsmemory "github.com/versatile-sh/connector-engine/secrets/memory"
-	"github.com/versatile-sh/connector-engine/secrets/onepassword"
-	sinklog "github.com/versatile-sh/connector-engine/sink/log"
-	sinkmemory "github.com/versatile-sh/connector-engine/sink/memory"
-	sinkwebhook "github.com/versatile-sh/connector-engine/sink/webhook"
-	"github.com/versatile-sh/connector-engine/source/bsr"
-	"github.com/versatile-sh/connector-engine/source/docker"
-	"github.com/versatile-sh/connector-engine/source/files"
-	"github.com/versatile-sh/connector-engine/source/openapi"
-	"github.com/versatile-sh/connector-engine/source/reflection"
-	"github.com/versatile-sh/connector-engine/source/registry"
-	"github.com/versatile-sh/connector-engine/source/skillcatalog"
-	"github.com/versatile-sh/connector-engine/store/memory"
-	"github.com/versatile-sh/connector-engine/store/postgres"
 )
 
 type builder struct {
@@ -50,6 +27,7 @@ type builder struct {
 	lookup func(string) string
 	clock  port.Clock
 	log    *slog.Logger
+	reg    *Registry
 }
 
 func (b builder) uses(name string) []adapters.Use {
@@ -63,25 +41,22 @@ func (b builder) uses(name string) []adapters.Use {
 
 func (b builder) one(name string) (adapters.Use, bool) { return b.file.First(name) }
 
+func (b builder) env(name string) Env {
+	return Env{Config: b.cfg, Settings: b.file.Ports[name].Config, Lookup: b.lookup, Clock: b.clock, Log: b.log}
+}
+
 func (b builder) store(ctx context.Context) (port.Store, port.Outbox, func(), error) {
 	u, _ := b.one(config.PortStore)
-	if u.Tier == adapters.TierMemory {
-		s := memory.New()
-		return s, s, func() {}, nil
-	}
-	dsn, err := resolveRef(b.lookup, configString(b.file.Ports[config.PortStore].Config, "databaseUrlRef"))
+	s, closer, err := openAdapter(ctx, b.reg, Stores, u, b.env(config.PortStore))
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("store: %w", err)
+		return nil, nil, nil, err
 	}
-	s, err := postgres.New(ctx, dsn)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("store: %w", err)
+	outbox, ok := s.(port.Outbox)
+	if !ok {
+		closeAll(closer)()
+		return nil, nil, nil, fmt.Errorf("store: %s keeps no outbox", u.Name)
 	}
-	if err := s.Migrate(ctx); err != nil {
-		s.Close()
-		return nil, nil, nil, fmt.Errorf("store: migrate: %w", err)
-	}
-	return s, s, s.Close, nil
+	return s, outbox, closeAll(closer), nil
 }
 
 func (b builder) localIssuer(ctx context.Context, secrets port.SecretStore) (*local.Issuer, error) {
@@ -93,38 +68,10 @@ func (b builder) localIssuer(ctx context.Context, secrets port.SecretStore) (*lo
 		RotateEvery: c.RotateEvery, Keep: max(time.Hour, b.cfg.Auth.AgentTokenMaxLifetime)})
 }
 
-var vaultHTTP = &http.Client{Timeout: 30 * time.Second}
-
-func (b builder) onePassword(ctx context.Context) (*secretslocal.Store, error) {
-	c := b.cfg.Secrets.OnePassword
-	token, err := resolveRef(b.lookup, c.TokenRef)
-	if err != nil {
-		return nil, fmt.Errorf("secrets.onePassword.tokenRef: %w", err)
-	}
-	return onepassword.Open(ctx, b.cfg.Secrets.Dir, onepassword.Config{ConnectURL: c.ConnectURL, Token: token, Vault: c.Vault, Item: c.Item, Field: c.Field}, vaultHTTP)
-}
-
 func (b builder) secrets(ctx context.Context) (port.SecretStore, func(), error) {
-	var s *secretslocal.Store
-	var err error
-	switch u, _ := b.one(config.PortSecrets); {
-	case u.Tier == adapters.TierMemory:
-		return secretsmemory.New(), func() {}, nil
-	case u.Name == "hostkey":
-		hk, err := hostkey.Open(ctx, b.cfg.Secrets.Dir, b.cfg.Secrets.UnlockSocket, b.log)
-		if err != nil {
-			return nil, nil, err
-		}
-		return hk, hk.Close, nil
-	case u.Name == "onepassword":
-		s, err = b.onePassword(ctx)
-	default:
-		s, err = secretslocal.Open(b.cfg.Secrets.Dir)
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	return s, func() {}, nil
+	u, _ := b.one(config.PortSecrets)
+	s, closer, err := openAdapter(ctx, b.reg, Secrets, u, b.env(config.PortSecrets))
+	return s, closeAll(closer), err
 }
 
 func (b builder) clients() ([]credential.Registered, error) {
@@ -150,35 +97,26 @@ func (b builder) issuerHosts() []string {
 	return hostsOf(issuers...)
 }
 
-func (b builder) runtime(store port.Store, secrets port.SecretStore) (port.ConnectorRuntime, error) {
-	applier := credential.Applier{Resolve: credential.NewResolver(store, secrets), Injector: credential.Injector{}}
+func (b builder) runtime(ctx context.Context, store port.Store, secrets port.SecretStore) (port.ConnectorRuntime, func(), error) {
+	env := b.env(config.PortRuntime)
+	env.Store, env.Secrets, env.Applier = store, secrets, credential.Applier{Resolve: credential.NewResolver(store, secrets), Injector: credential.Injector{}}
 	var runtimes []port.ConnectorRuntime
+	var closers []func()
 	for _, u := range b.uses(config.PortRuntime) {
-		switch {
-		case u.Tier == adapters.TierMemory:
-			runtimes = append(runtimes, rtmemory.New())
-		case u.Name == "remote":
-			runtimes = append(runtimes, rtremote.New(applier, nil, b.guard(nil)))
-		case u.Name == "declarative":
-			runtimes = append(runtimes, rtdeclarative.New(applier, nil, b.guard(nil)))
-		case u.Name == "skill":
-			runtimes = append(runtimes, rtskill.New())
-		case u.Name == "grpc":
-			runtimes = append(runtimes, rtgrpc.New(rtgrpc.Options{Applier: applier, Insecure: b.cfg.GRPC.Insecure, Guard: b.guard(nil)}))
+		rt, closer, err := openAdapter(ctx, b.reg, Runtimes, u, env)
+		closers = append(closers, closer)
+		if err != nil {
+			closeAll(closers...)()
+			return nil, nil, err
 		}
+		runtimes = append(runtimes, rt)
 	}
-	return mux.New(runtimes...)
-}
-
-func (b builder) optionalRef(where, ref string) (string, error) {
-	if ref == "" {
-		return "", nil
-	}
-	v, err := resolveRef(b.lookup, ref)
+	m, err := mux.New(runtimes...)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", where, err)
+		closeAll(closers...)()
+		return nil, nil, err
 	}
-	return v, nil
+	return m, closeAll(closers...), nil
 }
 
 func (b builder) guard(operatorHosts []string) egress.Guard {
@@ -197,73 +135,59 @@ func hostsOf(addresses ...string) []string {
 	return out
 }
 
-func (b builder) sources() (map[string]port.ListingSource, error) {
+func (b builder) sources(ctx context.Context) (map[string]port.ListingSource, func(), error) {
 	out := map[string]port.ListingSource{}
-	add := func(s port.ListingSource) { out[s.Name()] = s }
+	var closers []func()
 	for _, u := range b.uses(config.PortSource) {
-		switch {
-		case u.Tier == adapters.TierMemory:
-			continue
-		case u.Name == "files":
-			add(files.New(b.cfg.Sources.Files.Dir, b.clock.Now))
-		case u.Name == "docker":
-			add(docker.New(b.cfg.Sources.Docker.Dir, b.clock.Now))
-		case u.Name == "official":
-			token, err := b.optionalRef("sources.official.tokenRef", b.cfg.Sources.Official.TokenRef)
-			if err != nil {
-				return nil, err
-			}
-			add(registry.New(registry.Config{Token: token, BaseURL: b.cfg.Sources.Official.URL, Guard: b.guard(hostsOf(b.cfg.Sources.Official.URL)), NamespaceVerified: true, Now: b.clock.Now}))
-		case u.Name == "bsr":
-			token, err := b.optionalRef("sources.bsr.tokenRef", b.cfg.Sources.BSR.TokenRef)
-			if err != nil {
-				return nil, err
-			}
-			add(bsr.New(bsr.Config{BaseURL: b.cfg.Sources.BSR.URL, Token: token, Owners: b.cfg.Sources.BSR.Owners, Targets: b.cfg.Sources.BSR.Targets,
-				Guard: b.guard(hostsOf(b.cfg.Sources.BSR.URL)), Now: b.clock.Now}))
-		case u.Name == "openapi":
-			add(openapi.New(openapi.Config{Dir: b.cfg.Sources.OpenAPI.Dir, URLs: b.cfg.Sources.OpenAPI.URLs, Guard: b.guard(hostsOf(b.cfg.Sources.OpenAPI.URLs...)), Now: b.clock.Now}))
-		case u.Name == "skillcatalog":
-			add(skillcatalog.New(skillcatalog.Config{URLs: b.cfg.Sources.SkillCatalog.URLs, Guard: b.guard(nil), Now: b.clock.Now}))
-		case u.Name == "reflection":
-			add(reflection.New(reflection.Config{Targets: b.cfg.Sources.Reflection.Targets, Guard: b.guard(b.cfg.Sources.Reflection.Targets), Insecure: b.cfg.Sources.Reflection.Insecure, Now: b.clock.Now}))
+		s, closer, err := openAdapter(ctx, b.reg, Sources, u, b.env(config.PortSource))
+		closers = append(closers, closer)
+		if err != nil {
+			closeAll(closers...)()
+			return nil, nil, err
+		}
+		if s != nil {
+			out[s.Name()] = s
 		}
 	}
-	return out, nil
+	return out, closeAll(closers...), nil
 }
 
-func (b builder) sink() (port.EventSink, error) {
-	u, _ := b.one(config.PortSink)
-	switch {
-	case u.Tier == adapters.TierMemory:
-		return sinkmemory.New(), nil
-	case u.Name == "webhook":
-		c := b.file.Ports[config.PortSink].Config
-		secret := ""
-		if ref := configString(c, "secretRef"); ref != "" {
-			var err error
-			if secret, err = resolveRef(b.lookup, ref); err != nil {
-				return nil, fmt.Errorf("sink: %w", err)
+func (b builder) sink(ctx context.Context) (port.EventSink, func(), error) {
+	u, ok := b.one(config.PortSink)
+	if !ok {
+		u = adapters.Use{Tier: adapters.TierBuiltin, Name: "log"}
+	}
+	s, closer, err := openAdapter(ctx, b.reg, Sinks, u, b.env(config.PortSink))
+	return s, closeAll(closer), err
+}
+
+func (b builder) filter(ctx context.Context) (port.ResultFilter, func(), error) {
+	u, ok := b.one(config.PortFilter)
+	if !ok {
+		return nil, func() {}, nil
+	}
+	f, closer, err := openAdapter(ctx, b.reg, Filters, u, b.env(config.PortFilter))
+	return f, closeAll(closer), err
+}
+
+func (b builder) index(ctx context.Context) (port.ToolIndex, func(), error) {
+	u, ok := b.one(config.PortIndex)
+	if !ok {
+		u = adapters.Use{Tier: adapters.TierBuiltin, Name: "lexical"}
+	}
+	i, closer, err := openAdapter(ctx, b.reg, Indexes, u, b.env(config.PortIndex))
+	return i, closeAll(closer), err
+}
+
+func closeAll(closers ...func()) func() {
+	return func() {
+		for i := len(closers) - 1; i >= 0; i-- {
+			if closers[i] != nil {
+				closers[i]()
 			}
 		}
-		timeout, _ := time.ParseDuration(configString(c, "timeout"))
-		return sinkwebhook.New(sinkwebhook.Config{URL: configString(c, "url"), Secret: secret, Timeout: timeout})
 	}
-	return sinklog.New(b.log), nil
 }
-
-func (b builder) filter() (port.ResultFilter, error) {
-	if _, ok := b.one(config.PortFilter); !ok {
-		return nil, nil
-	}
-	f, err := filterbuiltin.New(b.cfg.ResultFilter.Locales...)
-	if err != nil {
-		return nil, fmt.Errorf("resultFilter.locales: %w", err)
-	}
-	return f, nil
-}
-
-func (b builder) index() port.ToolIndex { return lexical.New() }
 
 type localTransport struct{ issuer http.Handler }
 

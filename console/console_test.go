@@ -79,7 +79,7 @@ func bootEngine(t *testing.T, publicURL string, tweaks ...func(*config.Config)) 
 	for _, tweak := range tweaks {
 		tweak(&c)
 	}
-	file, err := c.LoadAdapters([]byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: memory}\n  secrets: {use: memory}\n  auth: {use: builtin:local}\n"), nil)
+	file, err := c.With(app.Core().Builtins()...).LoadAdapters([]byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: memory}\n  secrets: {use: memory}\n  auth: {use: builtin:local}\n"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

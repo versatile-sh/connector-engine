@@ -133,6 +133,8 @@ export type ActivityCall = {
   connector?: string;
   alias?: string;
   function: string;
+  skill?: string;
+  path?: string;
   class?: string;
   outcome: CallOutcome;
   code?: string;
@@ -162,7 +164,7 @@ export type ActivityDetail = ActivityCall & {
 
 export type HourCount = { start: string; ok: number; error: number; denied: number; pending: number; running: number };
 
-export type ConnectorCount = { connector?: string; alias?: string; total: number; failed: number };
+export type ConnectorCount = { connector?: string; alias?: string; skill?: boolean; total: number; failed: number };
 
 export type ActivityData = {
   from: string;

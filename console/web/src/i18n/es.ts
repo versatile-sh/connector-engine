@@ -368,5 +368,8 @@ export const es: Record<MessageKey, string> = {
   "activity.settings.delete": "Borrar toda la actividad",
   "activity.settings.deleteTitle": "¿Borrar toda la actividad?",
   "activity.settings.deleteBody": "Todas las llamadas guardadas se van, y los registros antiguos del motor dejan de aparecer aquí. No se puede deshacer.",
+  "activity.skill": "skill",
+  "activity.detail.skill": "Skill",
+  "activity.detail.file": "Archivo",
   "activity.settings.deleteConfirm": "Borrar todo",
 };

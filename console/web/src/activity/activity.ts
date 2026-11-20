@@ -1,4 +1,4 @@
-import type { CallOutcome, HourCount, Kind } from "../api";
+import type { CallOutcome, Connector, HourCount, Kind, Skill } from "../api";
 import type { Locale, MessageKey } from "../i18n";
 
 /** How far back the activity page looks. */
@@ -125,3 +125,17 @@ export function timeOf(iso: string, locale: Locale, now = new Date()): string {
   const today = at.toDateString() === now.toDateString();
   return new Intl.DateTimeFormat(locale, today ? { hour: "2-digit", minute: "2-digit", second: "2-digit" } : { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(at);
 }
+
+/** A connector or a skill as the activity page names it. */
+export type Named = { id: string; title: string; icon?: string | undefined; skill: boolean };
+
+/** The installed connectors and skills by id, for the titles and icons of calls. */
+export function namedOf(connectors: readonly Connector[], skills: readonly Skill[]): Map<string, Named> {
+  const out = new Map<string, Named>();
+  for (const c of connectors) out.set(c.id, { id: c.id, title: c.title, icon: c.icon, skill: false });
+  for (const s of skills) out.set(s.id, { id: s.id, title: s.title || s.alias, skill: true });
+  return out;
+}
+
+/** The file a skill load read: the one named, or SKILL.md. */
+export const skillFile = (path: string | undefined) => path || "SKILL.md";

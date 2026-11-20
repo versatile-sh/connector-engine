@@ -96,6 +96,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("POST /api/onboarding/dismiss", c.authed(c.dismissOnboarding))
 	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
 	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
+	mux.HandleFunc("POST /api/approvals/{id}/cancel", c.atLeast(RoleAdmin, c.cancelApproval))
 	mux.HandleFunc("GET /api/icon", c.authed(c.icon))
 	mux.HandleFunc("GET /api/activity", c.authed(c.withActivity(c.listActivity)))
 	mux.HandleFunc("DELETE /api/activity", c.authed(c.withActivity(c.deleteActivity)))

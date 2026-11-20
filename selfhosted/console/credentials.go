@@ -106,6 +106,24 @@ func (c *Console) SetCredentialMode(ctx context.Context, conn string, mode Crede
 	return nil
 }
 
+func (c *Console) mayDecide(a port.Approval, viewer string) bool {
+	if slices.Contains(a.Approvers, viewer) {
+		return true
+	}
+	u, ok := c.State.User(viewer)
+	return ok && u.Role.AtLeast(RoleAdmin) && slices.Contains(a.Approvers, string(c.managers()))
+}
+
+func (c *Console) seesEveryApproval(viewer string) bool {
+	u, ok := c.State.User(viewer)
+	return ok && u.Role.AtLeast(RoleAdmin)
+}
+
+// CancelApproval cancels one waiting call as the context's actor; the engine allows it to the call's approvers and to workspace admins.
+func (c *Console) CancelApproval(ctx context.Context, id string) error {
+	return c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":cancel", nil, nil)
+}
+
 func (c *Console) atLeast(min Role, next http.HandlerFunc) http.HandlerFunc {
 	return c.authed(func(w http.ResponseWriter, r *http.Request) {
 		if u, ok := signedInUser(r.Context()); !ok || !u.Role.AtLeast(min) {
@@ -124,6 +142,14 @@ func (c *Console) setCredentialMode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := c.SetCredentialMode(r.Context(), r.PathValue("id"), in.Mode); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) cancelApproval(w http.ResponseWriter, r *http.Request) {
+	if err := c.CancelApproval(r.Context(), r.PathValue("id")); err != nil {
 		c.fail(w, err)
 		return
 	}

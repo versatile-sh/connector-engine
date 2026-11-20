@@ -12,13 +12,14 @@ import (
 
 func (c *Console) approvalPage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if _, ok := c.Sessions.Get(r); !ok {
-		if _, _, err := c.checkLink(r.URL.Query().Get("t"), id); err != nil {
-			refuseLink(w, err, "sign in first")
-			return
-		}
+	ctx := r.Context()
+	if u, _, ok := c.Sessions.Current(r); ok {
+		ctx = WithActor(ctx, u.Person)
+	} else if _, _, err := c.checkLink(r.URL.Query().Get("t"), id); err != nil {
+		refuseLink(w, err, "sign in first")
+		return
 	}
-	v, err := c.Approval(r.Context(), id)
+	v, err := c.Approval(ctx, id)
 	if err != nil {
 		c.fail(w, err)
 		return

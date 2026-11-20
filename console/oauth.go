@@ -23,7 +23,7 @@ const (
 	registrationsPerMin = 10
 	maxPendingAuth      = 256
 	maxClientName       = 64
-	consentFailsPerMin  = 5
+	passwordFailsPerMin = 5
 )
 
 var appSchemes = map[string]string{"cursor": "Cursor", "vscode": "VS Code"}
@@ -386,7 +386,7 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 	c.loginMu.Lock()
 	defer c.loginMu.Unlock()
 	now := time.Now()
-	if c.consentFails.full(now, consentFailsPerMin) {
+	if c.passwordFails.full(now, passwordFailsPerMin) {
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
 		return false
@@ -397,7 +397,7 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 		return false
 	}
 	if !ok {
-		c.consentFails.hit(now)
+		c.passwordFails.hit(now)
 		time.Sleep(500 * time.Millisecond)
 		writeJSON(w, http.StatusForbidden, apiError{Error: "wrong password", Code: "wrong_password"})
 		return false

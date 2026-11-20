@@ -83,7 +83,7 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 	}
 	base := "http://" + lis.Addr().String()
 	public, operator := bootEngine(t, base, func(c *config.Config) { c.Gateway.Skills = "tools" })
-	state, err := console.OpenState(t.TempDir() + "/state.json")
+	state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

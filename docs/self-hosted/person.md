@@ -23,7 +23,7 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 | `make unlock` | deliver the unlock key from the host keychain after a restart |
 | `make notify` | desktop popups for calls waiting for approval |
 | `make export` / `make import FILE=...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
-| `make reset-password` | set a new console password from this machine |
+| `make reset-password` | set a new console password from this machine; `USER=<username>` names whose once there are several users |
 | `make cli ARGS="tools list"` | `cnctl` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
 | `make admin ARGS="tenants create t2"` | `cnctl admin` against the operator listener with the generated operator token |
 | `make keychain-status` / `keychain-migrate` / `keychain-revert` | report, move a plaintext root key under the keychain, or back ([keychain](keychain.md)) |
@@ -44,7 +44,7 @@ connector-engine-selfhosted up --open
 | `status` | `--data DIR` | prints the pid, version, console URL and data directory; exits 3 when nothing runs |
 | `export` | `--data DIR`, `--out FILE`, `--setup`, `--yes` | a full encrypted backup (`.cebak`, asks a passphrase twice), or a shareable setup with `--setup`; the default file is dated, in `$BACKUP_DIR` or `~/connector-engine-backups` |
 | `import FILE` | `--data DIR`, `--yes` | shows what the file holds, asks, then restores it; a full backup replaces everything and restarts the engine and the console on the restored data |
-| `reset-password` | `--data DIR` | sets a new console password and signs every session out |
+| `reset-password` | `--data DIR`, `--user NAME` | sets a new console password for the named user, or the only one, and signs that user's sessions out |
 | `uninstall` | `--data DIR`, `--keep-data` or `--purge`, `--yes`, `--no-keychain` | stops the install; `--purge` also deletes the data directory and the unlock key, but only a real directory (not a symlink) whose entries are all part of an install (`.DS_Store` and `desktop.ini` aside) |
 
 `export`, `import` and `reset-password` reach the running process through its control socket, so the install must be up.

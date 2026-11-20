@@ -141,7 +141,7 @@ func newActivityRig(t *testing.T) *activityRig {
 	up := httptest.NewServer(fe.handler())
 	t.Cleanup(up.Close)
 	dir := t.TempDir()
-	state, err := console.OpenState(dir + "/state.json")
+	state, err := console.OpenState(dir+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -598,7 +598,7 @@ func newRealRig(t *testing.T, tweaks ...func(*config.Config)) *realRig {
 	public, operator := bootEngine(t, base, tweaks...)
 	up := newUpstream(t)
 	dir := t.TempDir()
-	state, err := console.OpenState(dir + "/state.json")
+	state, err := console.OpenState(dir+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

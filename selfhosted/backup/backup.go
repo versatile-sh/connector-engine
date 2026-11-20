@@ -26,7 +26,7 @@ import (
 const Extension = ".cebak"
 
 // Format is the version of the backup format this build writes and the newest it reads.
-const Format = 1
+const Format = 2
 
 const (
 	magic        = "CEBAK\n"

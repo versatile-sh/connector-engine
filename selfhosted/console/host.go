@@ -41,7 +41,7 @@ func HostRequest(ctx context.Context, socket, method, path string, body io.Reade
 	return err
 }
 
-// HostHandler serves what only the local machine may ask, through a socket that only the host reaches: a password reset, a backup export and an import.
+// HostHandler serves what only the local machine may ask, through a socket that only the host reaches: a password reset (an optional username line, then the password), a backup export and an import.
 func (c *Console) HostHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /password", c.resetPassword)
@@ -60,9 +60,17 @@ func readSecret(r io.Reader) ([]byte, error) {
 }
 
 func (c *Console) resetPassword(w http.ResponseWriter, r *http.Request) {
-	password, err := readSecret(r.Body)
+	body, err := readSecret(r.Body)
+	username, password, named := bytes.Cut(body, []byte("\n"))
+	if !named {
+		username, password = nil, body
+	}
+	var u User
 	if err == nil {
-		err = c.State.SetPassword(string(password), "")
+		u, err = c.State.HostUser(strings.TrimSpace(string(username)))
+	}
+	if err == nil {
+		err = c.State.SetPassword(u.Person, string(bytes.TrimRight(password, "\r")), "")
 	}
 	if err != nil {
 		c.fail(w, err)

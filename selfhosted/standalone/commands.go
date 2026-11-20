@@ -120,7 +120,10 @@ func Commands(version string) map[string]app.Command {
 			})
 		},
 		"reset-password": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			return newCommand("reset-password", args, stdin, stdout, stderr, resetPassword, nil)
+			var user string
+			return newCommand("reset-password", args, stdin, stdout, stderr, func(c *command) error { return resetPassword(c, user) }, func(fs *flag.FlagSet) {
+				fs.StringVar(&user, "user", "", "the username whose password to set; may be left out while the console has one user")
+			})
 		},
 		"uninstall": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			var keep, purge, yes, noKeychain bool
@@ -280,7 +283,7 @@ func importFile(c *command, yes bool) error {
 	return nil
 }
 
-func resetPassword(c *command) error {
+func resetPassword(c *command, user string) error {
 	ctx := context.Background()
 	if err := c.live(ctx); err != nil {
 		return err
@@ -289,10 +292,14 @@ func resetPassword(c *command) error {
 	if err != nil {
 		return err
 	}
-	if err := request(ctx, *c.data, http.MethodPost, "/password", bytes.NewReader(password), io.Discard); err != nil {
+	body := password
+	if user != "" {
+		body = append([]byte(user+"\n"), password...)
+	}
+	if err := request(ctx, *c.data, http.MethodPost, "/password", bytes.NewReader(body), io.Discard); err != nil {
 		return err
 	}
-	fmt.Fprintln(c.out, "password changed; every console session is signed out")
+	fmt.Fprintln(c.out, "password changed; every console session of that user is signed out")
 	fmt.Fprintln(c.out, "access keys and apps signed in through the browser still work: revoke them on the Access page if you suspect a compromise")
 	return nil
 }

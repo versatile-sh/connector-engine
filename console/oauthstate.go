@@ -21,6 +21,7 @@ type RefreshGrant struct {
 	ClientID string    `json:"client_id"`
 	Agent    string    `json:"agent"`
 	Resource string    `json:"resource,omitempty"`
+	Family   string    `json:"family,omitempty"`
 	Issued   time.Time `json:"issued"`
 	Expires  time.Time `json:"expires"`
 }
@@ -64,12 +65,31 @@ func (s *State) RefreshGrant(hash string) (RefreshGrant, bool) {
 	return g, true
 }
 
-// RotateRefresh drops the grant under old, when given, and stores g under next, pruning expired grants on the way.
+// RotateRefresh drops the grant under old, when given, remembering it as spent for its family, and stores g under next, pruning expired grants on the way.
 func (s *State) RotateRefresh(old, next string, g RefreshGrant) error {
 	return s.update(func(d *stateFile) error {
-		expire(d.Refresh, time.Now(), func(v RefreshGrant) time.Time { return v.Expires })
-		delete(d.Refresh, old)
+		now := time.Now()
+		expire(d.Refresh, now, func(v RefreshGrant) time.Time { return v.Expires })
+		expire(d.Spent, now, func(v RefreshGrant) time.Time { return v.Expires })
+		if old != "" {
+			delete(d.Refresh, old)
+			put(&d.Spent, old, g)
+		}
 		put(&d.Refresh, next, g)
 		return nil
 	})
+}
+
+// RevokeReusedRefresh ends every grant of the family of a refresh token already spent, reporting whether hash was one.
+func (s *State) RevokeReusedRefresh(hash string) (bool, error) {
+	reused := false
+	err := s.update(func(d *stateFile) error {
+		spent, ok := d.Spent[hash]
+		if reused = ok; !ok {
+			return errUnchanged
+		}
+		maps.DeleteFunc(d.Refresh, func(_ string, g RefreshGrant) bool { return g.Family == spent.Family })
+		return nil
+	})
+	return reused && err == nil, err
 }

@@ -68,14 +68,19 @@ func seededSetup(t *testing.T) (*stack, console.AgentToken, string) {
 
 func TestASharedSetupHoldsNoSecret(t *testing.T) {
 	src, tok, query := seededSetup(t)
+	hidden := newToolServer(t, "hidden", "peek")
+	src.b.ok("POST", "/api/import", map[string]any{"mcp": hidden.URL + "/mcp/sk-ak-0123456789abcdefghij/sse?k=K-SECRET-8", "local": true}, nil)
 	out := src.exportSetup()
-	for _, secret := range []string{apiKey, tok.Token, "Q-SECRET-42", operatorToken, ownerPassword, "a console secret", "client-1", "chat_id", "my phone", "api_key="} {
+	for _, secret := range []string{apiKey, tok.Token, "Q-SECRET-42", "K-SECRET-8", "sk-ak-0123456789", operatorToken, ownerPassword, "a console secret", "client-1", "chat_id", "my phone", "api_key="} {
 		if strings.Contains(string(out), secret) {
 			t.Errorf("the setup holds %q:\n%s", secret, out)
 		}
 	}
-	if !strings.Contains(string(out), "region=eu") || !strings.Contains(string(out), `removed the query parameter "api_key"`) {
-		t.Errorf("the setup does not keep the harmless query or say what it removed:\n%s", out)
+	if strings.Contains(string(out), "region=eu") || !strings.Contains(string(out), "removed the query from an address of http://127.0.0.1:") {
+		t.Errorf("the setup keeps a query or does not say it removed it:\n%s", out)
+	}
+	if !strings.Contains(string(out), "its path looks like it carries a secret") {
+		t.Errorf("the setup does not say it left out an address with a secret path:\n%s", out)
 	}
 	if !strings.Contains(string(out), "telegram") || !strings.Contains(string(out), strings.TrimPrefix(query, "http://")) {
 		t.Errorf("the setup lacks the channel kind or a source:\n%s", out)

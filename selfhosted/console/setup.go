@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -19,7 +20,7 @@ const (
 	maxSetupBytes   = 1 << 20
 )
 
-var secretParam = regexp.MustCompile(`(?i)(token|key|secret|pass|auth|sig|session|code|credential|bearer|jwt)`)
+var tokenLike = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 // Setup is a shareable install: the connectors and skills to add with their choices and the kinds of notification channel, never a secret.
 type Setup struct {
@@ -65,6 +66,10 @@ func setupName(at time.Time) string {
 	return "connector-engine-setup-" + at.UTC().Format("20060102T150405Z") + setupExtension
 }
 
+func secretSegment(seg string) bool {
+	return len(seg) >= 20 && tokenLike.MatchString(seg) && strings.ContainsAny(seg, "0123456789")
+}
+
 func stripURL(raw string, stripped *[]string) string {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
@@ -73,21 +78,20 @@ func stripURL(raw string, stripped *[]string) string {
 		}
 		return ""
 	}
-	if u.User != nil {
-		u.User = nil
-		*stripped = append(*stripped, fmt.Sprintf("removed the user name and password from %s", u.Redacted()))
+	site := u.Scheme + "://" + u.Host
+	if slices.ContainsFunc(strings.Split(u.Path, "/"), secretSegment) {
+		*stripped = append(*stripped, fmt.Sprintf("left out an address of %s: its path looks like it carries a secret", site))
+		return ""
 	}
-	q := u.Query()
-	for name := range q {
-		if secretParam.MatchString(name) {
-			q.Del(name)
-			*stripped = append(*stripped, fmt.Sprintf("removed the query parameter %q from %s://%s%s", name, u.Scheme, u.Host, u.Path))
+	for _, part := range []struct {
+		what    string
+		present bool
+	}{{"the user name and password", u.User != nil}, {"the query", u.RawQuery != ""}, {"the fragment", u.Fragment != ""}} {
+		if part.present {
+			*stripped = append(*stripped, fmt.Sprintf("removed %s from an address of %s", part.what, site))
 		}
 	}
-	if u.Fragment != "" {
-		*stripped = append(*stripped, fmt.Sprintf("removed the fragment from %s://%s%s", u.Scheme, u.Host, u.Path))
-	}
-	u.RawQuery, u.Fragment, u.RawFragment = q.Encode(), "", ""
+	u.User, u.RawQuery, u.Fragment, u.RawFragment = nil, "", "", ""
 	return u.String()
 }
 

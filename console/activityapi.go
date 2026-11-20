@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/agents-control/connector-engine/port"
+	skillruntime "github.com/agents-control/connector-engine/runtime/skill"
 )
 
 const (
@@ -28,6 +29,8 @@ type ActivityCall struct {
 	Connector     string      `json:"connector,omitempty"`
 	Alias         string      `json:"alias,omitempty"`
 	Function      string      `json:"function"`
+	Skill         string      `json:"skill,omitempty"`
+	Path          string      `json:"path,omitempty"`
 	Class         port.Class  `json:"class,omitempty"`
 	Outcome       CallOutcome `json:"outcome"`
 	Code          string      `json:"code,omitempty"`
@@ -71,6 +74,7 @@ type HourCount struct {
 type ConnectorCount struct {
 	Connector string `json:"connector,omitempty"`
 	Alias     string `json:"alias,omitempty"`
+	Skill     bool   `json:"skill,omitempty"`
 	Total     int    `json:"total"`
 	Failed    int    `json:"failed"`
 }
@@ -141,6 +145,7 @@ type engineFacts struct {
 	approvals map[port.ApprovalID]port.Approval
 	byAlias   map[string]string
 	byID      map[string]string
+	skills    map[string]bool
 }
 
 func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string) (engineFacts, error) {
@@ -148,7 +153,7 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &conns); err != nil {
 		return engineFacts{}, err
 	}
-	f := engineFacts{approvals: map[port.ApprovalID]port.Approval{}, byAlias: map[string]string{}, byID: map[string]string{}}
+	f := engineFacts{approvals: map[port.ApprovalID]port.Approval{}, byAlias: map[string]string{}, byID: map[string]string{}, skills: map[string]bool{}}
 	for _, v := range conns.Items {
 		f.byID[string(v.Connector.ID)] = v.Connector.Alias
 		if _, taken := f.byAlias[v.Connector.Alias]; !taken || v.Connector.RemovedAt.IsZero() {
@@ -168,6 +173,17 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 		f.approvals[a.ID] = a
 	}
 	f.calls = calls.items
+	for _, call := range f.calls {
+		if call.Function == skillruntime.Function {
+			f.skills[string(call.Connector)] = false
+		}
+	}
+	for _, v := range conns.Items {
+		if _, maybe := f.skills[string(v.Connector.ID)]; maybe {
+			skill, err := c.isSkill(ctx, v.Connector)
+			f.skills[string(v.Connector.ID)] = skill && err == nil
+		}
+	}
 	return f, nil
 }
 
@@ -209,7 +225,10 @@ func join(captures []Capture, f engineFacts) []joined {
 	for i := range captures {
 		cp := &captures[i]
 		alias, fn, found := strings.Cut(cp.Tool, toolSeparator)
-		if !found {
+		switch {
+		case cp.Skill != "":
+			alias, fn = cp.Skill, skillruntime.Function
+		case !found:
 			alias, fn = "", cp.Tool
 		}
 		conn := f.byAlias[alias]
@@ -223,7 +242,7 @@ func join(captures []Capture, f engineFacts) []joined {
 		if call != nil {
 			used[call.ID] = true
 		}
-		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
+		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Skill: cp.Skill, Path: cp.Path, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
 		if cp.Outcome != OutcomePending && !cp.Done.IsZero() {
 			ms := cp.Done.Sub(cp.At).Milliseconds()
 			row.DurationMS = &ms
@@ -243,6 +262,9 @@ func join(captures []Capture, f engineFacts) []joined {
 func (f engineFacts) settle(r ActivityCall, call *port.Call) ActivityCall {
 	if call != nil {
 		r.Connector, r.Alias, r.Function, r.Class = string(call.Connector), f.byID[string(call.Connector)], call.Function, call.Class
+		if f.skills[r.Connector] {
+			r.Skill = r.Alias
+		}
 		r.DurationMS = nil
 		switch {
 		case call.State == port.CallStarted:
@@ -322,7 +344,7 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 			k := firstOf(r.Connector, "alias:"+r.Alias)
 			cc := byConn[k]
 			if cc == nil {
-				cc = &ConnectorCount{Connector: r.Connector, Alias: r.Alias}
+				cc = &ConnectorCount{Connector: r.Connector, Alias: r.Alias, Skill: r.Skill != ""}
 				byConn[k] = cc
 			}
 			cc.Total++

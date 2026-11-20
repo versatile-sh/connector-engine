@@ -54,6 +54,8 @@ type Capture struct {
 	MCPSession    string          `json:"mcp_session,omitempty"`
 	RPCID         json.RawMessage `json:"rpc_id,omitempty"`
 	Tool          string          `json:"tool"`
+	Skill         string          `json:"skill,omitempty"`
+	Path          string          `json:"path,omitempty"`
 	Outcome       CallOutcome     `json:"outcome"`
 	Code          string          `json:"code,omitempty"`
 	Detail        string          `json:"detail,omitempty"`

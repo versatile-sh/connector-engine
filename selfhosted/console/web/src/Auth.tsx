@@ -1,15 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { errorText } from "./api";
-import { Wordmark } from "./Brand";
+import { Frame } from "./Frame";
 import { useT } from "./i18n/I18nProvider";
-import { LanguageSwitch } from "./LanguageSwitch";
 import { signIn } from "./mutations";
-import { Said, Split } from "./Split";
 import { Field } from "./ui/Field";
-import { Marked } from "./ui/Marked";
+import { Display } from "./ui/Display";
 import { Arrow } from "./ui/Icon";
-import { button } from "./ui/styles";
+import { CAPTION, SURFACE, button } from "./ui/styles";
 
 type AuthProps = { mode: "setup" | "login"; endpoint: string; waitingHost?: string };
 
@@ -27,44 +25,53 @@ export function waitingLinkHost(path: string, query: URLSearchParams): string | 
   return link ? hostOf(link) : undefined;
 }
 
-function Pitch({ endpoint, waitingHost }: { endpoint: string; waitingHost?: string }) {
+function Headline({ waitingHost }: { waitingHost?: string | undefined }) {
   const t = useT();
-  const where = hostOf(endpoint) + new URL(endpoint, window.location.origin).pathname;
   return (
-    <>
-      <Wordmark onAccent className="self-start" />
-      <div className="flex flex-1 flex-col justify-center pt-8 pb-2 lg:py-0">
-        <h1 className="font-serif text-[2.75rem] leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl xl:text-7xl">
-          <span className="block">{t(waitingHost ? "auth.linkLine1" : "auth.line1")}</span>
-          <span className="block">{t(waitingHost ? "auth.linkLine2" : "auth.line2")}</span>
-          <span className="bubble-word mt-[0.34em] inline-block max-w-full bg-ink [overflow-wrap:anywhere] px-[0.5em] py-[0.24em] font-mono text-[0.42em] leading-[1.15] font-medium tracking-[-0.02em] text-lime">
-            {waitingHost ?? t("auth.answer")}
-          </span>
-        </h1>
-        {waitingHost ? (
-          <p className="mt-6 max-w-md text-ink/80">{t("auth.linkBody", { host: waitingHost })}</p>
-        ) : (
-          <ul aria-label={t("auth.answer")} className="mt-10 hidden max-w-md flex-col gap-2.5 sm:flex">
-            <Said>
-              <strong className="font-semibold">{t("auth.point1.title")}.</strong> {t("auth.point1.body")}
-            </Said>
-            <Said>
-              <strong className="font-semibold">{t("auth.point2.title")}.</strong> {t("auth.point2.body")}
-            </Said>
-            <Said>
-              <strong className="font-semibold">{t("auth.point3.title")}.</strong> {t("auth.point3.body", { endpoint: where })}
-            </Said>
-            <Said mine live>
-              <span translate="no">{where}</span>
-            </Said>
-          </ul>
-        )}
-      </div>
-    </>
+    <div>
+      <Display size="hero">
+        <span className="block">{t(waitingHost ? "auth.linkLine1" : "auth.line1")}</span>
+        <em className="block text-lime">{t(waitingHost ? "auth.linkLine2" : "auth.line2")}</em>
+      </Display>
+      <p className="mt-6 max-w-lg text-lg text-pretty text-muted">{waitingHost ? t("auth.linkBody", { host: waitingHost }) : t("auth.lead")}</p>
+      {waitingHost ? (
+        <p className={`${CAPTION} mt-4 [overflow-wrap:anywhere]`} translate="no">
+          {waitingHost}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
-/** First-visit owner creation or sign-in as the live front page: the pitch on lime, the form on ink. An install link waiting in the address bar is named on the lime half and opens once signed in. */
+function Points({ endpoint }: { endpoint: string }) {
+  const t = useT();
+  const where = hostOf(endpoint) + new URL(endpoint, window.location.origin).pathname;
+  const points = [
+    { title: t("auth.point1.title"), body: t("auth.point1.body") },
+    { title: t("auth.point2.title"), body: t("auth.point2.body") },
+    { title: t("auth.point3.title"), body: t("auth.point3.body") },
+  ];
+  return (
+    <div className="@container">
+      <ul className="max-w-xl border-t border-line">
+        {points.map((point) => (
+          <li key={point.title} className="grid gap-1 border-b border-line py-4 @md:grid-cols-[10rem_minmax(0,1fr)] @md:gap-6">
+            <p className="font-medium">{point.title}</p>
+            <p className="text-pretty text-muted">{point.body}</p>
+          </li>
+        ))}
+      </ul>
+      <p className={`${CAPTION} mt-4 flex items-center gap-2`}>
+        <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-lime" />
+        <span className="min-w-0 [overflow-wrap:anywhere]" translate="no">
+          {where}
+        </span>
+      </p>
+    </div>
+  );
+}
+
+/** First-visit owner creation or sign-in as an editorial page: the serif headline with its lime answer, the form in a card beside it, and what the gateway does under the headline. An install link waiting in the address bar is named in the headline and opens once signed in. */
 export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
   const t = useT();
   const [username, setUsername] = useState("");
@@ -75,40 +82,36 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
     submit.mutate({ mode, username, password });
   };
   return (
-    <Split
-      pitch={<Pitch endpoint={endpoint} waitingHost={waitingHost} />}
-      panel={
-        <>
-          <LanguageSwitch className="self-end" />
-          <div className="flex flex-1 items-center justify-center py-8">
-            <form className="ride-in w-full max-w-md" onSubmit={onSubmit} aria-labelledby="auth-title">
-              <h2 id="auth-title" className="text-lit serif-room font-serif text-5xl leading-none font-normal tracking-[-0.02em]">
-                <Marked text={t(mode === "setup" ? "auth.setup.title" : "auth.login.title")} />
-              </h2>
-              <p className="mt-2 mb-7 text-muted">{t(mode === "setup" ? "auth.setup.intro" : "auth.login.intro")}</p>
-              <Field label={t("auth.username")} className="mb-2" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
-              <Field
-                label={t("auth.password")}
-                hint={mode === "setup" ? t("auth.passwordHint") : undefined}
-                type="password"
-                autoComplete={mode === "setup" ? "new-password" : "current-password"}
-                minLength={mode === "setup" ? 10 : undefined}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <p role="alert" className="mt-1 min-h-6 text-sm text-amber">
-                {submit.isError ? errorText(submit.error) : ""}
-              </p>
-              <button type="submit" disabled={submit.isPending} className={`${button({ variant: "accent", size: "lg" })} mt-2 w-full`}>
-                {submit.isPending ? t("auth.working") : t(mode === "setup" ? "auth.setup.submit" : "auth.login.submit")}
-                <Arrow />
-              </button>
-              <p className="mt-6 border-t border-line pt-5 text-sm text-muted">{t("auth.local")}</p>
-            </form>
-          </div>
-        </>
-      }
-    />
+    <Frame width="wide">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_26rem] lg:grid-rows-[auto_1fr] lg:gap-x-20 lg:gap-y-12">
+        <Headline waitingHost={waitingHost} />
+        <form className={`${SURFACE} p-6 sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center`} onSubmit={onSubmit} aria-labelledby="auth-title">
+          <h2 id="auth-title" className="text-2xl leading-tight font-medium">
+            {t(mode === "setup" ? "auth.setup.title" : "auth.login.title")}
+          </h2>
+          <p className="mt-2 mb-7 text-pretty text-muted">{t(mode === "setup" ? "auth.setup.intro" : "auth.login.intro")}</p>
+          <Field label={t("auth.username")} className="mb-2" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
+          <Field
+            label={t("auth.password")}
+            hint={mode === "setup" ? t("auth.passwordHint") : undefined}
+            type="password"
+            autoComplete={mode === "setup" ? "new-password" : "current-password"}
+            minLength={mode === "setup" ? 10 : undefined}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <p role="alert" className="mt-1 min-h-6 text-sm text-amber-400">
+            {submit.isError ? errorText(submit.error) : ""}
+          </p>
+          <button type="submit" disabled={submit.isPending} className={`${button()} mt-2 w-full`}>
+            {submit.isPending ? t("auth.working") : t(mode === "setup" ? "auth.setup.submit" : "auth.login.submit")}
+            <Arrow />
+          </button>
+          <p className="mt-6 border-t border-line pt-5 text-sm text-muted">{t("auth.local")}</p>
+        </form>
+        {waitingHost ? null : <Points endpoint={endpoint} />}
+      </div>
+    </Frame>
   );
 }

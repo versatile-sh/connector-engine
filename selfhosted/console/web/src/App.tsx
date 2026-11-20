@@ -36,7 +36,7 @@ function Splash({ failure, onRetry }: { failure?: string; onRetry?: () => void }
     <main className="grid min-h-dvh place-items-center px-6">
       <div className="flex flex-col items-center gap-4 text-center">
         <Mark className={`size-12 ${failure ? "" : "pulse"}`} />
-        <p role={failure ? "alert" : "status"} className={failure ? "text-amber" : "text-muted"}>
+        <p role={failure ? "alert" : "status"} className={failure ? "text-amber-400" : "text-muted"}>
           {failure ? `${t("app.failed")} ${failure}` : t("app.loading")}
         </p>
         {onRetry ? (

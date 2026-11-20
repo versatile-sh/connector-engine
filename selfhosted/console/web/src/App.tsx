@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AccessPage } from "./access/AccessPage";
+import { AccountPage } from "./account/AccountPage";
 import { ActivityPage } from "./activity/ActivityPage";
 import { errorText } from "./api";
 import { ApprovalsPage } from "./approvals/ApprovalsPage";
@@ -26,7 +27,7 @@ const linkedSource = (path: string, query: URLSearchParams): ImportSource | unde
   return listing ? { listing } : mcp ? { mcp } : undefined;
 };
 
-const SECTIONS: Record<string, Section> = { "/access": "access", "/agents": "access", "/approvals": "approvals", "/skills": "skills", "/activity": "activity", "/notifications": "notifications" };
+const SECTIONS: Record<string, Section> = { "/access": "access", "/agents": "access", "/approvals": "approvals", "/skills": "skills", "/activity": "activity", "/notifications": "notifications", "/account": "account" };
 
 const sectionOf = (path: string): Section => SECTIONS[path] ?? "connectors";
 
@@ -76,6 +77,8 @@ export function App() {
         <ActivityPage endpoint={mcp_url} />
       ) : section === "notifications" ? (
         <NotificationsPage />
+      ) : section === "account" ? (
+        <AccountPage />
       ) : detail ? (
         <ConnectorDetail id={detail} />
       ) : (

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -27,9 +28,10 @@ var (
 )
 
 type env struct {
-	t *testing.T
-	s port.Store
-	o port.Outbox
+	t     *testing.T
+	s     port.Store
+	o     port.Outbox
+	fresh func() (port.Store, port.Outbox)
 }
 
 // Run executes the whole suite, each case on a fresh store from newStore.
@@ -58,11 +60,12 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"calls clients and syncs":   callsClientsAndSyncs,
 		"purge tenant":              purgeTenant,
 		"prune history":             pruneHistory,
+		"snapshot and restore":      snapshotRestore,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
 			s, o := newStore(t)
-			fn(&env{t: t, s: s, o: o})
+			fn(&env{t: t, s: s, o: o, fresh: func() (port.Store, port.Outbox) { return newStore(t) }})
 		})
 	}
 }
@@ -845,4 +848,122 @@ func pruneHistory(e *env) {
 	left, err := e.o.Pending(ctx, 0)
 	e.must(err)
 	e.same([]any{1, "pending"}, []any{len(left), left[0].Type})
+}
+
+type storeView struct {
+	Connectors map[port.TenantID][]port.Connector
+	Grants     []port.Grant
+	Approvals  []port.Approval
+	Audit      []port.AuditRow
+	Events     []port.Event
+	Pending    int
+	Due        int
+	Seen       bool
+	Tenants    []port.Tenant
+	Listings   []port.Listing
+}
+
+func viewOf(e *env, s port.Store, o port.Outbox) storeView {
+	e.t.Helper()
+	v := storeView{Connectors: map[port.TenantID][]port.Connector{}}
+	for _, scope := range []port.Scope{scopeA, scopeB} {
+		e.must(s.Read(ctx, scope, func(tx port.Tx) error {
+			cs, err := tx.ListConnectors(port.ConnectorFilter{})
+			v.Connectors[scope.Tenant] = cs
+			return err
+		}))
+	}
+	e.must(s.Read(ctx, scopeA, func(tx port.Tx) (err error) {
+		if v.Grants, err = tx.ListGrants(port.GrantFilter{}); err != nil {
+			return err
+		}
+		if v.Approvals, err = tx.ListApprovals(port.ApprovalFilter{}); err != nil {
+			return err
+		}
+		if v.Audit, err = tx.ListAudit("c1"); err != nil {
+			return err
+		}
+		if v.Events, err = tx.EventsAfter(port.SourceOf("ta"), 0, 0); err != nil {
+			return err
+		}
+		v.Seen, err = tx.SeenInbox("m1")
+		return err
+	}))
+	e.must(s.Read(ctx, inst, func(tx port.Tx) (err error) {
+		if v.Tenants, err = tx.ListTenants(); err == nil {
+			v.Listings, err = tx.ListListings()
+		}
+		due, err2 := tx.DueWork(t0.Add(24*time.Hour), 0)
+		v.Due = len(due)
+		return errors.Join(err, err2)
+	}))
+	pending, err := o.Pending(ctx, 0)
+	e.must(err)
+	v.Pending = len(pending)
+	return v
+}
+
+func snapshotRestore(e *env) {
+	src, ok := e.s.(port.Snapshotter)
+	if !ok {
+		e.t.Skip("the store takes no snapshot")
+	}
+	e.must(e.write(inst, func(tx port.Tx) error {
+		return errors.Join(tx.PutTenant(port.Tenant{ID: "ta", State: port.TenantActive, CreatedAt: t0}), tx.PutTenant(port.Tenant{ID: "tb", State: port.TenantActive, CreatedAt: t0}),
+			tx.PutListing(port.Listing{Ref: port.ListingRef{Name: "io.x/svc"}, Source: "own", Publisher: "x", Status: port.ListingActive}))
+	}))
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		g := agentGrant("ta", "g1", "*", 0)
+		g.ExpiresAt = t0.Add(time.Hour)
+		_, err := tx.PutConnector(connector("ta", "c1"), port.AnyRevision)
+		_, err2 := tx.MarkInbox("m1", t0)
+		_, err3 := tx.Emit(port.Event{Type: "connector.connector.installed", Tenant: "ta", Subject: "c1", Time: t0})
+		_, err4 := tx.Emit(port.Event{Type: "connector.connector.updated", Tenant: "ta", Subject: "c1", Time: t0})
+		return errors.Join(err, err2, err3, err4, tx.PutGrant(g), tx.CreateApproval(pending("ta", "a1", "h1")),
+			tx.Audit(port.AuditRow{Tenant: "ta", Actor: "a", Action: "install", Subject: "c1", At: t0}))
+	}))
+	e.must(e.write(scopeB, func(tx port.Tx) error {
+		_, err := tx.PutConnector(connector("tb", "c2"), port.AnyRevision)
+		return err
+	}))
+	first, err := e.o.Pending(ctx, 1)
+	e.must(err)
+	e.must(e.o.MarkDelivered(ctx, []string{first[0].ID}))
+	want := viewOf(e, e.s, e.o)
+	if want.Due == 0 || want.Pending != 1 || len(want.Audit) != 1 || !want.Seen || len(want.Events) != 2 {
+		e.t.Fatalf("the seed is not what the case checks: %+v", want)
+	}
+	snap, err := src.Snapshot(ctx)
+	e.must(err)
+
+	s, o := e.fresh()
+	dst := s.(port.Snapshotter)
+	for range 2 {
+		e.must(dst.Restore(ctx, snap))
+		e.same(want, viewOf(e, s, o))
+	}
+	e.must(s.Write(ctx, scopeA, func(tx port.Tx) error {
+		ev, err := tx.Emit(port.Event{Type: "connector.connector.updated", Tenant: "ta", Subject: "c1", Time: t0})
+		e.same(int64(3), ev.Sequence)
+		return errors.Join(err, tx.Audit(port.AuditRow{Tenant: "ta", Actor: "a", Action: "again", Subject: "c1", At: t0}))
+	}))
+
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		_, err := tx.PutConnector(connector("ta", "c9"), port.AnyRevision)
+		return err
+	}))
+	broken := port.Snapshot{Store: snap.Store, Tables: maps.Clone(snap.Tables)}
+	for name, rows := range broken.Tables {
+		broken.Tables[name] = append(slices.Clone(rows), json.RawMessage(`"not a row"`))
+	}
+	before := viewOf(e, e.s, e.o)
+	if err := src.Restore(ctx, broken); err == nil {
+		e.t.Fatal("a broken snapshot was restored")
+	}
+	e.same(before, viewOf(e, e.s, e.o))
+	if err := src.Restore(ctx, port.Snapshot{Store: "elsewhere"}); !port.IsCode(err, port.CodeInvalidArgument) {
+		e.t.Fatalf("a snapshot of another store: %v", err)
+	}
+	e.must(src.Restore(ctx, snap))
+	e.same(want, viewOf(e, e.s, e.o))
 }

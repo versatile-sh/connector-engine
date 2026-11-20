@@ -3,6 +3,7 @@ package console
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -69,12 +70,24 @@ func (c *Console) liveAgents() []Agent {
 	return out
 }
 
+func httpsOnly(raw string) string {
+	if u, err := url.Parse(raw); err == nil && u.Scheme == "https" && u.Host != "" {
+		return raw
+	}
+	return ""
+}
+
+func safeSource(s port.SkillSource) port.SkillSource {
+	s.URL = httpsOnly(s.URL)
+	return s
+}
+
 func (c *Console) skillPreview(e skillcatalog.Entry) SkillPreview {
 	keys := []string{}
 	for _, a := range c.liveAgents() {
 		keys = append(keys, a.Name)
 	}
-	return SkillPreview{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: e.Source.URL},
+	return SkillPreview{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: httpsOnly(e.Source.URL)},
 		Licence: port.SkillLicence{SPDX: e.License.SPDX, From: e.License.From, Redistributable: e.License.Redistributable}, Redistribution: e.Redistribution(),
 		HasScripts: e.HasScriptsDeclaredOrSeen(),
 		Digest:     e.Digest(), Files: fileViews(e.SkillFiles()), Keys: keys}
@@ -191,7 +204,7 @@ func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
 		}
 		s := m.Skill
 		sum := SkillSummary{ID: string(conn.ID), Alias: conn.Alias, Title: firstOf(m.Title, s.Name), Description: m.Description, Publisher: skillcatalog.Publisher(s.Source.Repository, m.Publisher.Name), Version: conn.Listing.Version,
-			SkillPreview: SkillPreview{Name: s.Name, Category: s.Category, Source: s.Source, Licence: s.Licence, Redistribution: s.Redistribution, HasScripts: s.HasScripts,
+			SkillPreview: SkillPreview{Name: s.Name, Category: s.Category, Source: safeSource(s.Source), Licence: s.Licence, Redistribution: s.Redistribution, HasScripts: s.HasScripts,
 				Files: fileViews(s.Files), Keys: []string{}}, Access: []KeyAccess{}}
 		if f, err := c.skillFunction(ctx, string(conn.ID)); err == nil {
 			sum.State = string(f.State)

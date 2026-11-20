@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ChannelView } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { removeChannel } from "../mutations";
 import { Icon } from "../ui/Icon";
 import { button } from "../ui/styles";
 import { AddChannelDialog } from "./AddChannelDialog";
@@ -12,7 +13,7 @@ import { useRemove } from "./useRemove";
 export function ChannelsSection({ channels }: { channels: ChannelView[] }) {
   const t = useT();
   const [adding, setAdding] = useState(false);
-  const remove = useRemove((id) => `/api/notifications/channels/${encodeURIComponent(id)}`);
+  const remove = useRemove(removeChannel);
   return (
     <Section
       id="channels-title"

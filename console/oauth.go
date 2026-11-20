@@ -203,7 +203,6 @@ func (c *Console) authServerMetadata(w http.ResponseWriter, r *http.Request) {
 		"grant_types_supported":                          []string{"authorization_code", "refresh_token"},
 		"code_challenge_methods_supported":               []string{"S256"},
 		"token_endpoint_auth_methods_supported":          []string{"none"},
-		"client_id_metadata_document_supported":          true,
 		"authorization_response_iss_parameter_supported": true,
 	})
 }
@@ -257,6 +256,9 @@ func (c *Console) register(w http.ResponseWriter, r *http.Request) {
 func (c *Console) lookupClient(id string) (OAuthClient, error) {
 	if cl, ok := c.State.OAuthClient(id); ok {
 		return cl, nil
+	}
+	if strings.HasPrefix(id, "https://") {
+		return OAuthClient{}, errors.New("client_id metadata documents are not supported: register the app at /oauth/register first")
 	}
 	return OAuthClient{}, errors.New("unknown client_id: register the app first")
 }

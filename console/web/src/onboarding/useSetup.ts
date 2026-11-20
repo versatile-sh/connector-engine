@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type Session } from "../api";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { MessageKey } from "../i18n";
+import { dismissGuide } from "../mutations";
 import { connectorsQuery, keysQuery, sessionQuery } from "../queries";
 import { guideVisible } from "./visibility";
 
@@ -9,15 +9,10 @@ export type SetupStep = { id: "account" | "connector" | "app"; title: MessageKey
 
 /** The first-run guide: its three steps ticked from the real connectors and keys, whether it shows, and the dismissal the console's state keeps for good. */
 export function useSetup() {
-  const queryClient = useQueryClient();
   const session = useQuery(sessionQuery);
   const connectors = useQuery(connectorsQuery);
   const keys = useQuery(keysQuery);
-  const dismiss = useMutation({
-    mutationFn: () => api("POST", "/api/onboarding/dismiss"),
-    onMutate: () => queryClient.setQueryData<Session>(sessionQuery.queryKey, (s) => s && { ...s, onboarding_dismissed: true }),
-    onError: () => queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey }),
-  });
+  const dismiss = useMutation(dismissGuide);
   const steps: SetupStep[] = [
     { id: "account", title: "onboarding.step1", done: true },
     { id: "connector", title: "onboarding.step2", done: (connectors.data?.length ?? 0) > 0 },

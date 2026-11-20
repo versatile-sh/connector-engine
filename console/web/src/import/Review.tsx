@@ -15,7 +15,7 @@ import { useImport } from "./useImport";
 /** The second step of the import window: what the server is, the proposed access of each function, prompt, resource and the server instructions, and Install. */
 export function Review({ source, onBack, onInstalled }: { source: ImportSource; onBack(): void; onInstalled(): void }) {
   const t = useT();
-  const { preview, install, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
+  const { preview, install, request, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
   const back = (
     <button type="button" className={button({ variant: "quiet", size: "sm" })} onClick={onBack}>
       <Arrow back />
@@ -73,7 +73,7 @@ export function Review({ source, onBack, onInstalled }: { source: ImportSource; 
           disabled={install.isPending}
           className={button({ variant: "accent" })}
           onClick={() =>
-            install.mutate(undefined, {
+            install.mutate(request, {
               onSuccess: ({ connector }) => {
                 onInstalled();
                 navigate(connector ? `/connectors/${encodeURIComponent(connector)}` : "/skills");

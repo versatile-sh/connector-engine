@@ -1,14 +1,20 @@
 import type { CallOutcome, Connector, HourCount, Kind, Skill } from "../api";
 import type { Locale, MessageKey } from "../i18n";
 
-/** How far back the activity page looks. */
-export type ActivityRange = "24h" | "7d" | "30d";
+/** A range that ends now. */
+export type PresetRange = "24h" | "7d" | "30d";
+
+/** How far back the activity page looks: a preset that ends now, or local days from and to, both included, as `YYYY-MM-DD`. */
+export type ActivityPeriod = { range: PresetRange } | { range: "custom"; from: string; to: string };
+
+/** What narrows the page within its period: a connector, an app, an outcome and a text in the function name. */
+export type Narrowing = { connector?: string; agent?: string; outcome?: CallOutcome; search?: string };
 
 /** What the activity page shows, as its URL query holds it. */
-export type ActivityFilter = { range: ActivityRange; connector?: string; agent?: string; outcome?: CallOutcome };
+export type ActivityFilter = ActivityPeriod & Narrowing;
 
-/** The ranges the page offers, with their length in hours. */
-export const RANGES: readonly { value: ActivityRange; hours: number }[] = [
+/** The preset ranges the page offers, with their length in hours. */
+export const RANGES: readonly { value: PresetRange; hours: number }[] = [
   { value: "24h", hours: 24 },
   { value: "7d", hours: 24 * 7 },
   { value: "30d", hours: 24 * 30 },
@@ -17,41 +23,86 @@ export const RANGES: readonly { value: ActivityRange; hours: number }[] = [
 /** The outcomes a call can come to, in the order the page lists them. */
 export const OUTCOMES: readonly CallOutcome[] = ["ok", "error", "denied", "pending", "running"];
 
-const isRange = (value: string | null): value is ActivityRange => RANGES.some((range) => range.value === value);
+const HOUR = 3_600_000;
+
+const isRange = (value: string | null): value is PresetRange => RANGES.some((range) => range.value === value);
 
 const isOutcome = (value: string | null): value is CallOutcome => OUTCOMES.some((outcome) => outcome === value);
 
-/** Reads the filter from the page's query, dropping what is not a known range or outcome. */
+const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const startOf = (day: string): Date | undefined => {
+  const match = DAY.exec(day);
+  if (!match) return undefined;
+  const at = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return dayOf(at) === day ? at : undefined;
+};
+
+const setNarrowing = (query: URLSearchParams, narrowing: Narrowing) => {
+  for (const name of ["connector", "agent", "outcome", "search"] as const) {
+    const value = narrowing[name];
+    if (value) query.set(name, value);
+  }
+};
+
+/** A local day as `YYYY-MM-DD`. */
+export const dayOf = (at: Date) => `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
+
+/** The custom period the page opens with: the last seven local days, today included. */
+export const lastWeek = (now: Date): ActivityPeriod => ({ range: "custom", from: dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)), to: dayOf(now) });
+
+/** Reads the filter from the page's query: two real days make a custom period, earliest first; otherwise an unknown range falls back to a day, and an unknown outcome is dropped. */
 export function filterOf(query: URLSearchParams): ActivityFilter {
   const range = query.get("range");
-  const connector = query.get("connector");
-  const agent = query.get("agent");
+  const from = query.get("from") ?? "";
+  const to = query.get("to") ?? "";
+  const filter: ActivityFilter = startOf(from) && startOf(to) ? { range: "custom", from: from < to ? from : to, to: from < to ? to : from } : { range: isRange(range) ? range : "24h" };
+  for (const name of ["connector", "agent", "search"] as const) {
+    const value = query.get(name);
+    if (value) filter[name] = value;
+  }
   const outcome = query.get("outcome");
-  const filter: ActivityFilter = { range: isRange(range) ? range : "24h" };
-  if (connector) filter.connector = connector;
-  if (agent) filter.agent = agent;
   if (isOutcome(outcome)) filter.outcome = outcome;
   return filter;
 }
 
-/** The page's own address for a filter; the default range is left out. */
-export function hrefOf(filter: ActivityFilter): string {
+/** The call open over the page, when the query names one. */
+export const callOf = (query: URLSearchParams): string | undefined => query.get("call") || undefined;
+
+/** The page's own address for a filter and the call open over it; the default range is left out. */
+export function hrefOf(filter: ActivityFilter, call?: string): string {
   const query = new URLSearchParams();
-  if (filter.range !== "24h") query.set("range", filter.range);
-  if (filter.connector) query.set("connector", filter.connector);
-  if (filter.agent) query.set("agent", filter.agent);
-  if (filter.outcome) query.set("outcome", filter.outcome);
+  if (filter.range === "custom") {
+    query.set("from", filter.from);
+    query.set("to", filter.to);
+  } else if (filter.range !== "24h") query.set("range", filter.range);
+  setNarrowing(query, filter);
+  if (call) query.set("call", call);
   const text = query.toString();
   return text ? `/activity?${text}` : "/activity";
 }
 
-/** The API query for a filter, its time range ending now. */
+/** The filter's period alone, with nothing narrowing it. */
+export const periodOf = (filter: ActivityFilter): ActivityPeriod => (filter.range === "custom" ? { range: "custom", from: filter.from, to: filter.to } : { range: filter.range });
+
+/** Whether anything narrows the page within its period. */
+export const isNarrowed = (filter: ActivityFilter) => Boolean(filter.connector || filter.agent || filter.outcome || filter.search);
+
+/** The API query for a filter: a preset ends now; custom days run from the first's local midnight to the end of the last or now, at most the 30 days the console keeps. */
 export function apiQueryOf(filter: ActivityFilter, now: Date): string {
-  const hours = RANGES.find((range) => range.value === filter.range)?.hours ?? 24;
-  const query = new URLSearchParams({ from: new Date(now.getTime() - hours * 3_600_000).toISOString(), to: now.toISOString() });
-  if (filter.connector) query.set("connector", filter.connector);
-  if (filter.agent) query.set("agent", filter.agent);
-  if (filter.outcome) query.set("outcome", filter.outcome);
+  let from: Date;
+  let to = now;
+  if (filter.range === "custom") {
+    const first = startOf(filter.from) ?? now;
+    const last = startOf(filter.to) ?? now;
+    to = new Date(Math.min(now.getTime(), new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime()));
+    from = new Date(Math.min(to.getTime(), Math.max(first.getTime(), to.getTime() - 30 * 24 * HOUR)));
+  } else {
+    const hours = RANGES.find((range) => range.value === filter.range)?.hours ?? 24;
+    from = new Date(now.getTime() - hours * HOUR);
+  }
+  const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() });
+  setNarrowing(query, filter);
   return query.toString();
 }
 
@@ -63,9 +114,11 @@ const localDay = (iso: string) => {
   return `${at.getFullYear()}-${at.getMonth() + 1}-${at.getDate()}`;
 };
 
-/** Turns the API's hourly counts into bars: one per hour over a day, one per local day over longer ranges. */
-export function barsOf(hours: readonly HourCount[], range: ActivityRange): Bar[] {
-  const unit = range === "24h" ? "hour" : "day";
+const HOURLY_UP_TO = 49;
+
+/** Turns the API's hourly counts into bars: one per hour over up to two days, one per local day over longer ranges. */
+export function barsOf(hours: readonly HourCount[]): Bar[] {
+  const unit = hours.length <= HOURLY_UP_TO ? "hour" : "day";
   const bars: Bar[] = [];
   let key = "";
   for (const hour of hours) {

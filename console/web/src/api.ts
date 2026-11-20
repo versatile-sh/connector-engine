@@ -131,7 +131,7 @@ export type ImportSource = { mcp?: string; listing?: string; local?: boolean; he
 
 export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean };
 
-export type AgentToken = { agent: string; token: string; expires_at: string; mcp_url: string };
+export type AgentToken = { agent: string; token: string; expires_at: string };
 
 export type Approval = {
   id: string;

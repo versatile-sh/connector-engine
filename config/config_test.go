@@ -18,7 +18,7 @@ import (
 
 var update = flag.Bool("update", false, "rewrite connector-engine.yaml from the defaults")
 
-var keysOfSection14 = strings.Fields(`mode auth.issuers auth.audience auth.localIssuer.enabled gateway.protocolVersions gateway.relayInstructions
+var documentedKeys = strings.Fields(`mode auth.issuers auth.audience auth.localIssuer.enabled gateway.protocolVersions gateway.relayInstructions
 gateway.scanArgumentsForToken apps.appOnlyFunctions auth.agentTokenMaxLifetime auth.senderConstraint auth.manageAudience auth.trustedProxy.listen
 auth.trustedProxy.cidrs manage.mcp.operations catalog.tenantDefault catalog.offerDefault catalog.defaultCeiling catalog.privateListings
 gateway.skills sources.skillCatalog.enabled sources.skillCatalog.urls gateway.listTtl gateway.toolNameMax gateway.separator gateway.denyAs permission.defaultMode permission.levelWrite.write permission.levelWrite.destructive
@@ -52,13 +52,13 @@ func TestDefaultsRoundTripAndTheCheckedInFileIsTheDefaults(t *testing.T) {
 	}
 }
 
-func TestEveryKeyOfSection14IsInTheFile(t *testing.T) {
+func TestEveryDocumentedKeyIsInTheFile(t *testing.T) {
 	data, _ := config.Default().Marshal()
 	var tree map[string]any
 	if err := yaml.Unmarshal(data, &tree); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range keysOfSection14 {
+	for _, key := range documentedKeys {
 		var at any = tree
 		for _, part := range strings.Split(key, ".") {
 			m, ok := at.(map[string]any)
@@ -99,7 +99,7 @@ func has(fs adapters.Findings, where, level string) bool {
 	return false
 }
 
-func TestProductionRefusesWhatSection14Lists(t *testing.T) {
+func TestProductionRefusesRiskySettingsUnlessAcknowledged(t *testing.T) {
 	base := core(config.Default())
 	base.Server.PublicURL = "https://engine.test"
 	base.Auth.Issuers = []config.Issuer{{Name: "idp", URL: "https://idp.test/jwks"}}

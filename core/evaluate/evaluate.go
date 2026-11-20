@@ -57,7 +57,7 @@ func People(s port.Subject) []port.PersonID {
 	return out
 }
 
-// Evaluate runs steps 1 to 15 for one function; step 15(b) runs only when r.Call is set.
+// Evaluate runs steps 1 to 15 for one function; the external point is asked again with the arguments only when r.Call is set.
 func Evaluate(f Facts, r Request) Decision {
 	c := f.Connector
 	switch {

@@ -37,7 +37,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
         </dd>
       </dl>
       <details className="group bubble border border-line-strong bg-ink-raised/60">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm pointer-coarse:min-h-11">
           <span>{t("skills.files", { count: skill.files.length })}</span>
           <span className="font-mono text-xs text-muted">{formatBytes(totalBytes(skill.files))}</span>
         </summary>

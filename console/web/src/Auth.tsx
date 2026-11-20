@@ -36,7 +36,7 @@ function Pitch({ endpoint, waitingHost }: { endpoint: string; waitingHost?: stri
         <h1 className="font-serif text-[2.75rem] leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl xl:text-7xl">
           <span className="block">{t(waitingHost ? "auth.linkLine1" : "auth.line1")}</span>
           <span className="block">{t(waitingHost ? "auth.linkLine2" : "auth.line2")}</span>
-          <span className="bubble-word mt-[0.34em] inline-block bg-ink px-[0.5em] py-[0.24em] font-mono text-[0.42em] leading-[1.15] font-medium tracking-[-0.02em] text-lime">
+          <span className="bubble-word mt-[0.34em] inline-block max-w-full bg-ink [overflow-wrap:anywhere] px-[0.5em] py-[0.24em] font-mono text-[0.42em] leading-[1.15] font-medium tracking-[-0.02em] text-lime">
             {waitingHost ?? t("auth.answer")}
           </span>
         </h1>
@@ -88,7 +88,7 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
           <LanguageSwitch className="self-end" />
           <div className="flex flex-1 items-center justify-center py-8">
             <form className="ride-in w-full max-w-md" onSubmit={onSubmit} aria-labelledby="auth-title">
-              <h2 id="auth-title" className="text-lit font-serif text-5xl leading-none font-normal tracking-[-0.02em]">
+              <h2 id="auth-title" className="text-lit serif-room font-serif text-5xl leading-none font-normal tracking-[-0.02em]">
                 <Marked text={t(mode === "setup" ? "auth.setup.title" : "auth.login.title")} />
               </h2>
               <p className="mt-2 mb-7 text-muted">{t(mode === "setup" ? "auth.setup.intro" : "auth.login.intro")}</p>

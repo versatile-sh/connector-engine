@@ -12,7 +12,7 @@ const TONE = {
 /** A few words in a small bubble: a status, a count, a flag. */
 export function Bubble({ tone = "neutral", title, children }: BubbleProps) {
   return (
-    <span title={title} className={`bubble-word inline-flex shrink-0 items-center gap-1 px-2 py-0.5 font-mono text-xs whitespace-nowrap ${TONE[tone]}`}>
+    <span title={title} className={`bubble-word inline-flex max-w-full shrink-0 items-center gap-1 px-2 py-0.5 font-mono text-xs [overflow-wrap:anywhere] ${TONE[tone]}`}>
       {children}
     </span>
   );

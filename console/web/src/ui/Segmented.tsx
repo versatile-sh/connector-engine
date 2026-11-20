@@ -1,3 +1,5 @@
+import { TOUCH_ROW } from "./styles";
+
 type SegmentedProps<T extends string> = {
   label: string;
   options: readonly { value: T; text: string; hint?: string }[];
@@ -31,7 +33,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
           aria-pressed={value === option.value}
           disabled={disabled}
           onClick={() => option.value !== value && onChange(option.value)}
-          className={`relative z-10 h-full [border-radius:inherit] font-semibold whitespace-nowrap text-muted transition-colors duration-300 hover:text-paper aria-pressed:text-ink ${SIZE[size].button}`}
+          className={`relative z-10 h-full [border-radius:inherit] font-semibold whitespace-nowrap text-muted transition-colors duration-300 hover:text-paper aria-pressed:text-ink ${TOUCH_ROW} ${SIZE[size].button}`}
         >
           {option.text}
         </button>

@@ -24,6 +24,7 @@ const (
 	maxIconCache  = 256
 	maxAPIBody    = 64 << 10
 	oauthStateTTL = 10 * time.Minute
+	newKeyFor     = 24 * time.Hour
 )
 
 var iconTypes = []string{"image/png", "image/jpeg", "image/gif", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"}
@@ -62,6 +63,8 @@ type Console struct {
 	codes      map[string]authCode
 	registered []time.Time
 	refreshMu  sync.Mutex
+
+	consentFails []time.Time
 }
 
 // Handler returns every route behind the guard.
@@ -86,6 +89,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/agents", c.authed(c.listAgents))
 	mux.HandleFunc("POST /api/agents", c.authed(c.mintAgent))
 	mux.HandleFunc("DELETE /api/agents/{name}", c.authed(c.revokeAgent))
+	mux.HandleFunc("POST /api/agents/seen", c.authed(c.seeAgents))
 	mux.HandleFunc("POST /api/onboarding/dismiss", c.authed(c.dismissOnboarding))
 	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
 	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
@@ -547,10 +551,28 @@ func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// AgentView is an access key as the key list shows it: new while an app that connected itself through the browser sign-in is unseen and less than a day old.
+type AgentView struct {
+	Agent
+	New bool `json:"new"`
+}
+
 func (c *Console) listAgents(w http.ResponseWriter, _ *http.Request) {
 	list := c.State.Agents()
 	slices.SortFunc(list, func(a, b Agent) int { return strings.Compare(a.Name, b.Name) })
-	writeJSON(w, http.StatusOK, map[string]any{"agents": list, "mcp_url": c.MCPURL, "max_ttl_hours": int(c.MaxAgentTTL.Hours())})
+	views := make([]AgentView, 0, len(list))
+	for _, a := range list {
+		views = append(views, AgentView{Agent: a, New: a.ViaBrowser && !a.Seen && time.Since(a.ConnectedAt) < newKeyFor})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"agents": views, "mcp_url": c.MCPURL, "max_ttl_hours": int(c.MaxAgentTTL.Hours())})
+}
+
+func (c *Console) seeAgents(w http.ResponseWriter, _ *http.Request) {
+	if err := c.State.SeeAgents(); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (c *Console) mintAgent(w http.ResponseWriter, r *http.Request) {

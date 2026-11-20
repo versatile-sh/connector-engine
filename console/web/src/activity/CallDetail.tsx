@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { errorText, type ActivityDetail, type Connector } from "../api";
+import { errorText, type ActivityDetail } from "../api";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { KindLabel } from "../connectors/KindLabel";
 import { useLocale, useT } from "../i18n/I18nProvider";
@@ -8,7 +8,7 @@ import { activityCallQuery } from "../queries";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { CAPTION, SKELETON } from "../ui/styles";
-import { approvalStateKey, durationText, kindOf, prettyJSON, timeOf } from "./activity";
+import { approvalStateKey, durationText, kindOf, prettyJSON, skillFile, timeOf, type Named } from "./activity";
 import { OutcomeBubble } from "./OutcomeBubble";
 
 const PRE = "mt-2 max-h-80 overflow-auto rounded-lg border border-line bg-ink-sunken p-3.5 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-paper focus-visible:outline-2 focus-visible:outline-paper/55";
@@ -44,8 +44,12 @@ function Facts({ call, connector }: { call: ActivityDetail; connector: string })
   const facts: { label: string; value: ReactNode }[] = [
     { label: t("activity.detail.when"), value: <time dateTime={call.at}>{timeOf(call.at, locale)}</time> },
     { label: t("activity.detail.app"), value: call.agent },
-    { label: t("activity.detail.connector"), value: connector },
-    ...(kind ? [{ label: t("activity.detail.kind"), value: <KindLabel kind={kind} /> }] : []),
+    ...(call.skill
+      ? [
+          { label: t("activity.detail.skill"), value: connector === call.skill ? call.skill : `${connector} (${call.skill})` },
+          { label: t("activity.detail.file"), value: skillFile(call.path) },
+        ]
+      : [{ label: t("activity.detail.connector"), value: connector }, ...(kind ? [{ label: t("activity.detail.kind"), value: <KindLabel kind={kind} /> }] : [])]),
     { label: t("activity.detail.outcome"), value: [t(`outcome.${call.outcome}`), call.code, call.detail].filter(Boolean).join(" · ") },
     { label: t("activity.detail.duration"), value: durationText(call.duration_ms) },
     ...(call.approval ? [{ label: t("activity.detail.approval"), value: approval ? t(approval) : (call.approval_state ?? call.approval) }] : []),
@@ -65,14 +69,14 @@ function Facts({ call, connector }: { call: ActivityDetail; connector: string })
 }
 
 /** One call in full, in the modal window: who called what and how it ended, then the arguments as indented JSON and the result excerpt, or why they are not here. */
-export function CallDetail({ id, connectors, onClose }: { id: string; connectors: readonly Connector[]; onClose(): void }) {
+export function CallDetail({ id, named, onClose }: { id: string; named: ReadonlyMap<string, Named>; onClose(): void }) {
   const t = useT();
   const detail = useQuery(activityCallQuery(id));
   const call = detail.data;
-  const connector = connectors.find((c) => c.id === call?.connector);
+  const connector = call?.connector ? named.get(call.connector) : undefined;
   const title = connector?.title ?? call?.alias ?? call?.connector ?? "?";
   return (
-    <Sheet title={call?.function ?? t("activity.calls")} closeLabel={t("common.close")} onClose={onClose} wide>
+    <Sheet title={call?.skill ?? call?.function ?? t("activity.calls")} closeLabel={t("common.close")} onClose={onClose} wide>
       {detail.isPending ? (
         <div aria-hidden="true" className="flex flex-col gap-3">
           <div className={`${SKELETON} h-10`} />

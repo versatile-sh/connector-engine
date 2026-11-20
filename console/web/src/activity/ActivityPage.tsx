@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { errorText, type CallOutcome } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { activityQuery, connectorsQuery, sessionQuery } from "../queries";
+import { activityQuery, connectorsQuery, sessionQuery, skillsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Icon } from "../ui/Icon";
@@ -11,7 +11,7 @@ import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { Segmented } from "../ui/Segmented";
 import { CAPTION, CHIP, SKELETON, SURFACE, button } from "../ui/styles";
-import { filterOf, hrefOf, RANGES, type ActivityFilter } from "./activity";
+import { filterOf, hrefOf, namedOf, RANGES, type ActivityFilter } from "./activity";
 import { ActivitySettings } from "./ActivitySettings";
 import { CallDetail } from "./CallDetail";
 import { CallList } from "./CallList";
@@ -45,6 +45,7 @@ export function ActivityPage() {
   const filter = filterOf(query);
   const activity = useQuery(activityQuery(filter));
   const connectors = useQuery(connectorsQuery);
+  const skills = useQuery(skillsQuery);
   const endpoint = useQuery(sessionQuery).data?.mcp_url ?? "/mcp";
   const [open, setOpen] = useState<string>();
   const change = (next: Partial<ActivityFilter>) => {
@@ -52,7 +53,7 @@ export function ActivityPage() {
     navigate(hrefOf(merged), { replace: true, keepScroll: true });
   };
   const data = activity.data;
-  const list = connectors.data ?? [];
+  const named = namedOf(connectors.data ?? [], skills.data ?? []);
   const filtered = Boolean(filter.connector || filter.agent || filter.outcome);
   return (
     <section aria-labelledby="page-title">
@@ -107,7 +108,7 @@ export function ActivityPage() {
               </ul>
             ) : data.calls.length > 0 ? (
               <div className="mt-2">
-                <CallList calls={data.calls} connectors={list} onOpen={setOpen} />
+                <CallList calls={data.calls} named={named} onOpen={setOpen} />
               </div>
             ) : filtered ? (
               <div className="arrive flex flex-col items-center px-4 py-10 text-center">
@@ -121,18 +122,18 @@ export function ActivityPage() {
                 <span aria-hidden="true" className="grid size-14 place-items-center rounded-full border border-line-strong text-muted">
                   <Icon name="activity" className="size-6" />
                 </span>
-                <h3 className="mt-4 font-serif text-3xl leading-none font-normal tracking-[-0.02em]"><Marked text={t("activity.empty.title")} /></h3>
+                <h3 className="serif-room mt-4 font-serif text-3xl leading-none font-normal tracking-[-0.02em]"><Marked text={t("activity.empty.title")} /></h3>
                 <p className="mt-2 max-w-md text-muted">{t("activity.empty.body", { endpoint })}</p>
               </div>
             )}
           </section>
         </div>
         <aside className="flex flex-col gap-6">
-          {data ? <ConnectorTotals counts={data.connectors} connectors={list} selected={filter.connector} onSelect={(connector) => change({ connector })} /> : <div aria-hidden="true" className={`${SKELETON} h-48`} />}
+          {data ? <ConnectorTotals counts={data.connectors} named={named} selected={filter.connector} onSelect={(connector) => change({ connector })} /> : <div aria-hidden="true" className={`${SKELETON} h-48`} />}
           <ActivitySettings />
         </aside>
       </div>
-      {open ? <CallDetail id={open} connectors={list} onClose={() => setOpen(undefined)} /> : null}
+      {open ? <CallDetail id={open} named={named} onClose={() => setOpen(undefined)} /> : null}
     </section>
   );
 }

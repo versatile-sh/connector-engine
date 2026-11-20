@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { HourCount } from "../api.ts";
-import { apiQueryOf, approvalStateKey, barsOf, durationText, filterOf, hrefOf, kindOf, prettyJSON } from "./activity.ts";
+import type { Connector, HourCount, Skill } from "../api.ts";
+import { apiQueryOf, approvalStateKey, barsOf, durationText, filterOf, hrefOf, kindOf, namedOf, prettyJSON, skillFile } from "./activity.ts";
 
 const hour = (start: Date, counts: Partial<Omit<HourCount, "start">> = {}): HourCount => ({ start: start.toISOString(), ok: 0, error: 0, denied: 0, pending: 0, running: 0, ...counts });
 
@@ -90,5 +90,21 @@ describe("kindOf and approvalStateKey", () => {
   test("name only what the console has a label for", () => {
     assert.deepEqual([kindOf("write"), kindOf("admin"), kindOf(undefined)], ["write", undefined, undefined]);
     assert.deepEqual([approvalStateKey("denied"), approvalStateKey("unheard"), approvalStateKey(undefined)], ["approvalState.denied", undefined, undefined]);
+  });
+});
+
+describe("namedOf", () => {
+  test("names connectors and skills by id, marking the skills", () => {
+    const connector = { id: "c1", title: "Notes", icon: "https://x/i.png" } as Connector;
+    const skill = { id: "s1", title: "", alias: "pdf" } as Skill;
+    const named = namedOf([connector], [skill]);
+    assert.deepEqual(named.get("c1"), { id: "c1", title: "Notes", icon: "https://x/i.png", skill: false });
+    assert.deepEqual(named.get("s1"), { id: "s1", title: "pdf", skill: true });
+  });
+});
+
+describe("skillFile", () => {
+  test("is SKILL.md unless a file was named", () => {
+    assert.deepEqual([skillFile(undefined), skillFile(""), skillFile("reference/fields.md")], ["SKILL.md", "SKILL.md", "reference/fields.md"]);
   });
 });

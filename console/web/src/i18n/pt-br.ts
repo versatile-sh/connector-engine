@@ -368,5 +368,8 @@ export const ptBR: Record<MessageKey, string> = {
   "activity.settings.delete": "Apagar toda a atividade",
   "activity.settings.deleteTitle": "Apagar toda a atividade?",
   "activity.settings.deleteBody": "Todas as chamadas gravadas somem, e os registros antigos do motor deixam de aparecer aqui. Não dá para desfazer.",
+  "activity.skill": "skill",
+  "activity.detail.skill": "Skill",
+  "activity.detail.file": "Arquivo",
   "activity.settings.deleteConfirm": "Apagar tudo",
 };

@@ -366,6 +366,9 @@ export const en = {
   "activity.settings.delete": "Delete all activity",
   "activity.settings.deleteTitle": "Delete all activity?",
   "activity.settings.deleteBody": "Every recorded call goes, and the engine's older records stop showing here. This cannot be undone.",
+  "activity.skill": "skill",
+  "activity.detail.skill": "Skill",
+  "activity.detail.file": "File",
   "activity.settings.deleteConfirm": "Delete all",
 } as const;
 

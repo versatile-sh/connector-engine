@@ -188,6 +188,7 @@ export const en = {
   "keys.revokeAsk": "Revoke {name}? Every app using this key stops at once, and it cannot be undone.",
   "keys.revokeConfirm": "Revoke key",
   "keys.newBadge": "new",
+  "keys.signedOut": "signed out: connect the app again",
   "keys.viaBrowser": "connected via browser sign-in",
   "keys.revoking": "Revoking…",
   "keys.empty": "No app is connected yet. Apps that sign in through the browser show up here, and so do the keys you create.",

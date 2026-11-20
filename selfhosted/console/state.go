@@ -37,7 +37,7 @@ type Owner struct {
 	Iterations int    `json:"iterations"`
 }
 
-// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, the OAuth client that owns it, when it connected and whether the owner has seen it since.
+// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, the OAuth client that owns it, when it connected, whether the owner has seen it since and when a replayed refresh token signed it out.
 type Agent struct {
 	Name        string    `json:"name"`
 	ExpiresAt   time.Time `json:"expires_at"`
@@ -45,6 +45,7 @@ type Agent struct {
 	ClientID    string    `json:"client_id,omitempty"`
 	ConnectedAt time.Time `json:"connected_at,omitzero"`
 	Seen        bool      `json:"seen,omitempty"`
+	SignedOutAt time.Time `json:"signed_out_at,omitzero"`
 }
 
 // StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value.
@@ -313,7 +314,7 @@ func (s *State) Agents() []Agent {
 	return out
 }
 
-// PutAgent records an agent and the expiry of its newest token, keeping how and when it was connected.
+// PutAgent records an agent and the expiry of its newest token, keeping how and when it was connected and clearing a sign-out.
 func (s *State) PutAgent(a Agent) error {
 	return s.update(func(d *stateFile) error {
 		if old, ok := d.Agents[a.Name]; ok {

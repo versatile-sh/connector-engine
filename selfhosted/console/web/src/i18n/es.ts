@@ -190,6 +190,7 @@ export const es: Record<MessageKey, string> = {
   "keys.revokeAsk": "¿Revocar {name}? Toda app que usa esta clave se detiene al instante, y no se puede deshacer.",
   "keys.revokeConfirm": "Revocar clave",
   "keys.newBadge": "nueva",
+  "keys.signedOut": "desconectada: conecta la app de nuevo",
   "keys.viaBrowser": "conectada con el inicio de sesión del navegador",
   "keys.revoking": "Revocando…",
   "keys.empty": "Aún no hay apps conectadas. Las apps que entran por el navegador aparecen aquí, y también las claves que crees.",

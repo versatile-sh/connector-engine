@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"slices"
+	"strings"
 
 	"github.com/agents-control/connector-engine/authz"
 	"github.com/agents-control/connector-engine/catalog"
@@ -248,7 +249,7 @@ func (s *Service) ConfirmGrant(ctx context.Context, p port.Principal, id port.Gr
 		return g, err
 	}
 	err = s.write(ctx, port.Scope{Tenant: g.Tenant}, "ConfirmGrant", func(tx port.Tx) error {
-		name := g.Selector[len(port.SelectorFunction):]
+		name := strings.TrimPrefix(g.Selector, port.SelectorFunction)
 		f, err := tx.GetFunction(g.Connector, name)
 		if err != nil {
 			return err

@@ -91,7 +91,7 @@ func TestDescriptorSources(t *testing.T) {
 			if lookup.Meta[hints.Key]["http_method"] != "GET" {
 				t.Fatalf("hints %s", byName["Greeter_Lookup"].Raw)
 			}
-			if h1, err := pinning.DefinitionHash(byName["Greeter_SayHello"].Raw); err != nil || h1 == "" {
+			if h1, err := pinning.DefinitionHash("Greeter_SayHello", byName["Greeter_SayHello"].Raw); err != nil || h1 == "" {
 				t.Fatalf("a definition must hash: %v", err)
 			}
 
@@ -186,7 +186,7 @@ func TestListFunctionsSeesUpstreamDrift(t *testing.T) {
 		}
 		for _, d := range defs {
 			if d.Name == "Greeter_SayHello" {
-				return st.Ok(pinning.DefinitionHash(d.Raw))
+				return st.Ok(pinning.DefinitionHash(d.Name, d.Raw))
 			}
 		}
 		t.Fatal("Greeter_SayHello is not listed")

@@ -50,6 +50,7 @@ type Config struct {
 	SearchResultMax     int
 	SessionTimeout      time.Duration
 	Skills              bool
+	Instructions        bool
 	Logger              *slog.Logger
 }
 

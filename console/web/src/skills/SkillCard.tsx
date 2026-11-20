@@ -115,7 +115,7 @@ export function SkillCard({ skill, open, onToggle }: SkillCardProps) {
             {skill.publisher ? ` · ${t("import.by", { publisher: skill.publisher })}` : ""}
           </p>
         </div>
-        <button type="button" aria-expanded={open} aria-controls={open ? details : undefined} aria-label={label} title={label} className={`${ICON_BUTTON} -mt-1.5 -mr-1.5 scroll-mt-32 scroll-mb-6`} onClick={(event) => onToggle(event.currentTarget)}>
+        <button type="button" aria-expanded={open} aria-controls={open ? details : undefined} aria-label={label} title={label} className={`${ICON_BUTTON} -mt-1.5 -mr-1.5 scroll-mt-28 scroll-mb-6 lg:scroll-mt-20`} onClick={(event) => onToggle(event.currentTarget)}>
           <Icon name={open ? "collapse" : "expand"} className="size-4" />
         </button>
       </div>

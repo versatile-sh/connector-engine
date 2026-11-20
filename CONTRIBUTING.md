@@ -130,6 +130,10 @@ The user documentation lives in [`docs/`](docs/README.md), one page per task.
 | `docs/` | the user documentation and its banners |
 | `e2e/`, `scripts/` | end-to-end runs of the built binaries; smoke, e2e, docs checks and the installers |
 
+## Contribution terms
+
+By submitting a contribution, you certify that you wrote it or otherwise have the right to submit it, and you license it to Versatile under the same terms as this project ([LICENSE](LICENSE)). You agree that Versatile may relicense your contribution, including under commercial terms. Sign off each commit (`git commit -s`) to confirm this.
+
 ## Code of conduct
 
 This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).

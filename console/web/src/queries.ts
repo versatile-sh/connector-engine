@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
-import { api, setCsrf, type Agent, type Approval, type Connector, type Session, type Skill } from "./api";
+import { apiQueryOf, type ActivityFilter } from "./activity/activity";
+import { api, setCsrf, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type Connector, type Session, type Skill } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -38,3 +39,19 @@ export const approvalsQuery = queryOptions({
   select: (data) => data.approvals,
   refetchInterval: 4_000,
 });
+
+/** The activity page for a filter, its range ending at each fetch, refreshed while it is open. */
+export const activityQuery = (filter: ActivityFilter) =>
+  queryOptions({
+    queryKey: ["activity", filter],
+    queryFn: () => api<ActivityData>("GET", `/api/activity?${apiQueryOf(filter, new Date())}`),
+    refetchInterval: 10_000,
+    placeholderData: (previous) => previous,
+  });
+
+/** One call in full: its arguments, its result excerpt and the engine's record. */
+export const activityCallQuery = (id: string) =>
+  queryOptions({ queryKey: ["activity-call", id], queryFn: () => api<ActivityDetail>("GET", `/api/activity/${encodeURIComponent(id)}`) });
+
+/** What the console keeps of each call. */
+export const activitySettingsQuery = queryOptions({ queryKey: ["activity-settings"], queryFn: () => api<ActivitySettings>("GET", "/api/activity/settings") });

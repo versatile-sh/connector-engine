@@ -366,3 +366,9 @@ svg {
     transition: none !important;
   }
 }
+
+.chart-bar {
+  transition:
+    y 250ms var(--ease-settle),
+    height 250ms var(--ease-settle);
+}

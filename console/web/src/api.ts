@@ -123,6 +123,61 @@ export type Approval = {
   expires_at: string;
 };
 
+/** What a call came to: answered, failed, refused as unknown, held for approval, or still running. */
+export type CallOutcome = "ok" | "error" | "denied" | "pending" | "running";
+
+export type ActivityCall = {
+  id: string;
+  at: string;
+  agent: string;
+  connector?: string;
+  alias?: string;
+  function: string;
+  skill?: string;
+  path?: string;
+  class?: string;
+  outcome: CallOutcome;
+  code?: string;
+  duration_ms?: number;
+  approval?: string;
+  approval_state?: string;
+  captured: boolean;
+};
+
+export type ActivityDetail = ActivityCall & {
+  tool?: string;
+  session?: string;
+  mcp_session?: string;
+  rpc_id?: unknown;
+  detail?: string;
+  kept_arguments: boolean;
+  arguments?: string;
+  arguments_cut?: boolean;
+  kept_result: boolean;
+  result?: string;
+  result_cut?: boolean;
+  result_bytes?: number;
+  engine_call?: string;
+  call_state?: string;
+  finished_at?: string;
+};
+
+export type HourCount = { start: string; ok: number; error: number; denied: number; pending: number; running: number };
+
+export type ConnectorCount = { connector?: string; alias?: string; skill?: boolean; total: number; failed: number };
+
+export type ActivityData = {
+  from: string;
+  to: string;
+  calls: ActivityCall[];
+  total: number;
+  hours: HourCount[];
+  connectors: ConnectorCount[];
+  agents: string[];
+};
+
+export type ActivitySettings = { record_arguments: boolean; record_results: boolean; retention_days: number; cleared_at?: string };
+
 export type ApiError = { status: number; message: string; code?: string | undefined };
 
 let csrfToken = "";

@@ -27,6 +27,8 @@ const (
 
 var appSchemes = map[string]string{"cursor": "Cursor", "vscode": "VS Code"}
 
+var hostedCallbacks = map[string]string{"https://antigravity.google/oauth-callback": "Antigravity"}
+
 var browserSchemes = []string{"https", "javascript", "data", "file", "blob", "about", "ftp", "ws", "wss", "mailto", "tel", "sms", "view-source", "chrome", "chrome-extension", "edge", "moz-extension", "intent", "filesystem", "jar", "vbscript", "resource"}
 
 type authRequest struct {
@@ -51,8 +53,11 @@ func loopbackName(host string) bool {
 	return host == "127.0.0.1" || host == "localhost" || host == "::1"
 }
 
-// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port (RFC 8252 §7.3) or an app's private-use scheme (§7.1), never https or a scheme a browser handles itself.
+// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port (RFC 8252 §7.3), an app's private-use scheme (§7.1), or one exactly listed app callback page that shows the code for the owner to paste back; never any other https or a scheme a browser handles itself.
 func RedirectAllowed(raw string) bool {
+	if _, ok := hostedCallbacks[raw]; ok {
+		return true
+	}
 	u, err := url.Parse(raw)
 	if err != nil || u.Fragment != "" || u.User != nil || u.Scheme == "" {
 		return false
@@ -317,6 +322,9 @@ func DestinationOf(redirect string) Destination {
 	u, err := url.Parse(redirect)
 	if err != nil {
 		return Destination{Kind: "scheme"}
+	}
+	if app, ok := hostedCallbacks[redirect]; ok {
+		return Destination{Kind: "app", App: app}
 	}
 	scheme := strings.ToLower(u.Scheme)
 	if scheme == "http" && loopbackName(u.Hostname()) {

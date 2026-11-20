@@ -1,7 +1,7 @@
 import { ACCESS, type Access } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { Segmented } from "../ui/Segmented";
-import { PILL } from "../ui/styles";
+import { CONTROL } from "../ui/styles";
 
 type AccessPickerProps = { name: string; value: Access | undefined; disabled?: boolean; of?: "function" | "skill" | "item"; choices?: readonly Access[]; onChange(next: Access): void };
 
@@ -25,7 +25,7 @@ export function AccessPicker({ name, value, disabled = false, of = "function", c
           const next = choices.find((access) => access === event.target.value);
           if (next) onChange(next);
         }}
-        className={`${PILL} pr-2 disabled:opacity-60 @min-[22rem]:hidden`}
+        className={`${CONTROL} h-8 pr-2 disabled:opacity-50 @min-[22rem]:hidden`}
       >
         {value === undefined ? <option value="">—</option> : null}
         {options.map((option) => (

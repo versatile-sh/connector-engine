@@ -20,9 +20,9 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
   return (
     <li className={`border-b border-line py-3 transition-opacity duration-300 last:border-b-0 ${remove.busy && asking ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{channel.label}</p>
-          <p className="flex flex-wrap gap-x-3 font-mono text-xs text-muted">
+        <div className="min-w-0 grow basis-full @md:basis-0">
+          <p title={channel.label} className="truncate font-medium">{channel.label}</p>
+          <p className="flex flex-wrap gap-x-3 font-mono text-xs text-muted [overflow-wrap:anywhere]">
             <span>{t(SETUP[channel.kind].title)}</span>
             {channel.owner ? <span translate="no">{t("notify.channels.owner", { id: channel.owner })}</span> : null}
             {channel.secret_hint ? <span translate="no">••••{channel.secret_hint}</span> : null}
@@ -42,8 +42,8 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
           </div>
         )}
       </div>
-      {channel.status === "error" && channel.error ? <p className="mt-1.5 text-sm text-amber">{channel.error}</p> : null}
-      <p aria-live="polite" className="text-sm empty:hidden">
+      {channel.status === "error" && channel.error ? <p className="mt-1.5 text-sm text-amber [overflow-wrap:anywhere]">{channel.error}</p> : null}
+      <p aria-live="polite" className="text-sm [overflow-wrap:anywhere] empty:hidden">
         {failed ? <span className="text-amber">{failed}</span> : test.data?.ok ? <span className="text-lime">{t("notify.channels.testSent")}</span> : ""}
       </p>
       {asking ? (

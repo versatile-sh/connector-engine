@@ -14,7 +14,7 @@ function Paired({ paired, onDone }: { paired: PairedDevice; onDone(): void }) {
   return (
     <div className="arrive bubble-sent relative mb-5 overflow-hidden border border-lime/50 bg-ink-sunken p-4">
       <span aria-hidden="true" className={HAIRLINE} />
-      <p className="font-medium">{t("notify.devices.paired", { name: paired.device.name })}</p>
+      <p className="font-medium [overflow-wrap:anywhere]">{t("notify.devices.paired", { name: paired.device.name })}</p>
       <p className="mt-0.5 text-sm text-muted">{t("notify.devices.once")}</p>
       <CopyBox label={t("notify.devices.command")} text={paired.command} className="mt-3" />
       <CopyBox label={t("notify.devices.key")} text={paired.key} className="mt-3" />
@@ -48,11 +48,11 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
   return (
     <Section id="devices-title" icon="terminal" title={t("notify.devices.title")} intro={t("notify.devices.intro")}>
       {pair.data ? <Paired key={pair.data.key} paired={pair.data} onDone={() => pair.reset()} /> : null}
-      <form onSubmit={onSubmit} className="flex flex-wrap items-start gap-3">
+      <form onSubmit={onSubmit} className="grid gap-x-3 @md:grid-cols-[minmax(0,1fr)_auto] @md:items-start">
         <Field
           label={t("notify.devices.name")}
           hint={t("notify.devices.nameHint")}
-          className="min-w-56 flex-1"
+          className="min-w-0"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
@@ -60,7 +60,7 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
           spellCheck={false}
           error={pair.isError ? errorText(pair.error) : undefined}
         />
-        <button type="submit" disabled={pair.isPending} className={`${button({ variant: "accent" })} mt-7`}>
+        <button type="submit" disabled={pair.isPending} className={`${button({ variant: "accent" })} mb-4 @md:mt-7 @md:mb-0`}>
           {pair.isPending ? t("notify.devices.pairing") : t("notify.devices.pair")}
         </button>
       </form>
@@ -71,8 +71,8 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
           {devices.map((device) => (
             <li key={device.id} className={`border-b border-line py-3 transition-opacity duration-300 last:border-b-0 ${remove.busy && remove.asking(device.id) ? "opacity-60" : ""}`}>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="min-w-0 flex-1 truncate font-medium">{device.name}</span>
-                <span className="font-mono text-xs text-muted">{device.last_seen ? t("notify.devices.seen", { when: date(device.last_seen) }) : t("notify.devices.never")}</span>
+                <span title={device.name} className="min-w-0 grow basis-full truncate font-medium @md:basis-0">{device.name}</span>
+                <span className="min-w-0 grow font-mono text-xs text-muted @md:grow-0">{device.last_seen ? t("notify.devices.seen", { when: date(device.last_seen) }) : t("notify.devices.never")}</span>
                 {remove.asking(device.id) ? null : (
                   <button type="button" autoFocus={remove.returning(device.id)} aria-label={t("notify.devices.revokeLabel", { name: device.name })} className={button({ variant: "danger", size: "xs" })} onClick={() => remove.ask(device.id)}>
                     {t("notify.revoke")}

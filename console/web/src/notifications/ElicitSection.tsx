@@ -3,6 +3,7 @@ import { api, errorText, type NotificationsData } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { Notice } from "../ui/Notice";
 import { Switch } from "../ui/Switch";
+import { Warning } from "../approve/Warning";
 import { Section } from "./Section";
 
 /** Ask in the AI app: MCP elicitation turned on per app, off by default, with the plain warning about apps that answer by themselves. */
@@ -15,7 +16,7 @@ export function ElicitSection({ apps }: { apps: NotificationsData["apps"] }) {
   });
   return (
     <Section id="elicit-title" icon="chat" title={t("notify.elicit.title")} intro={t("notify.elicit.intro")}>
-      <p className="bubble border border-amber/40 border-l-4 border-l-amber bg-amber/5 py-2.5 pr-3 pl-4 text-sm">{t("notify.elicit.warning")}</p>
+      <Warning>{t("notify.elicit.warning")}</Warning>
       {apps.length === 0 ? (
         <p className="mt-4 text-sm text-muted">{t("notify.elicit.empty")}</p>
       ) : (
@@ -27,7 +28,7 @@ export function ElicitSection({ apps }: { apps: NotificationsData["apps"] }) {
                 onChange={(elicit) => toggle.mutate({ name: app.name, elicit })}
                 hint={t(app.elicit ? "notify.elicit.on" : "notify.elicit.off")}
               >
-                <span className="font-mono" translate="no">
+                <span className="font-mono [overflow-wrap:anywhere]" translate="no">
                   {app.name}
                 </span>
               </Switch>

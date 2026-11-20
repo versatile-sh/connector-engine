@@ -15,7 +15,7 @@ const VARIANT = { once: "accent", session: "secondary", always: "secondary", den
 export function DecisionButtons({ choices, deciding, size = "sm", stacked = false, onChoose }: DecisionButtonsProps) {
   const t = useT();
   return (
-    <div role="group" aria-label={t("decide.label")} aria-busy={deciding ? true : undefined} className={stacked ? "grid gap-2 sm:grid-cols-2" : "flex flex-wrap gap-2"}>
+    <div role="group" aria-label={t("decide.label")} aria-busy={deciding ? true : undefined} className={stacked ? "grid gap-2 @sm:grid-cols-2" : "flex flex-wrap gap-2"}>
       {offeredChoices(choices).map((choice) => (
         <button
           key={choice}

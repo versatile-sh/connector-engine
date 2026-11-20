@@ -6,6 +6,7 @@ import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Sheet } from "../ui/Sheet";
 import { PRESS, button } from "../ui/styles";
+import { Warning } from "../approve/Warning";
 import { SETUP, SETUPS, SLACK_MANIFEST, missingFields, settingsFor } from "./setup";
 
 const OPTION = `bubble flex flex-col items-start gap-0.5 border border-line-strong px-3.5 py-2.5 text-left hover:border-paper/50 aria-pressed:border-lime/60 aria-pressed:bg-lime/5 ${PRESS}`;
@@ -31,7 +32,7 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
   return (
     <form onSubmit={onSubmit} className="swap-in mt-5" aria-label={t(setup.title)}>
       {setup.interactive ? null : (
-        <p className="bubble mb-4 border border-amber/40 border-l-4 border-l-amber bg-amber/5 py-2.5 pr-3 pl-4 text-sm">{t(kind === "ntfy" ? "notify.add.ntfyWarning" : "notify.add.notifyOnly")}</p>
+        <Warning className="mb-4">{t(kind === "ntfy" ? "notify.add.ntfyWarning" : "notify.add.notifyOnly")}</Warning>
       )}
       <ol className="flex flex-col gap-2.5">
         {setup.steps.map((step, index) => (
@@ -39,7 +40,7 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
             <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full border border-line-strong font-mono text-xs text-muted">
               {index + 1}
             </span>
-            <span className="min-w-0 pt-0.5">{t(step)}</span>
+            <span className="min-w-0 pt-0.5 [overflow-wrap:anywhere]">{t(step)}</span>
           </li>
         ))}
       </ol>
@@ -78,16 +79,18 @@ export function AddChannelDialog({ onClose }: { onClose(): void }) {
   const [kind, setKind] = useState<ChannelKind | undefined>();
   return (
     <Sheet title={t("notify.add.title")} closeLabel={t("common.close")} onClose={onClose} wide>
-      <p className="text-sm text-muted">{t("notify.add.pick")}</p>
-      <div role="group" aria-label={t("notify.add.kind")} className="mt-3 grid gap-2 sm:grid-cols-3">
-        {SETUPS.map((setup) => (
-          <button key={setup.kind} type="button" aria-pressed={kind === setup.kind} className={OPTION} onClick={() => setKind(setup.kind)}>
-            <span className="text-sm font-semibold">{t(setup.title)}</span>
-            <span className="font-mono text-xs text-muted">{t(setup.interactive ? "notify.add.buttons" : "notify.add.linkOnly")}</span>
-          </button>
-        ))}
+      <div className="@container">
+        <p className="text-sm text-muted">{t("notify.add.pick")}</p>
+        <div role="group" aria-label={t("notify.add.kind")} className="mt-3 grid grid-cols-2 gap-2 @xl:grid-cols-3">
+          {SETUPS.map((setup) => (
+            <button key={setup.kind} type="button" aria-pressed={kind === setup.kind} className={OPTION} onClick={() => setKind(setup.kind)}>
+              <span className="text-sm font-semibold [overflow-wrap:anywhere]">{t(setup.title)}</span>
+              <span className="font-mono text-xs text-muted">{t(setup.interactive ? "notify.add.buttons" : "notify.add.linkOnly")}</span>
+            </button>
+          ))}
+        </div>
+        {kind ? <SetupForm key={kind} kind={kind} onSaved={onClose} /> : null}
       </div>
-      {kind ? <SetupForm key={kind} kind={kind} onSaved={onClose} /> : null}
     </Sheet>
   );
 }

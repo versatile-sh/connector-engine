@@ -133,7 +133,10 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		}
 	}
 	svcCfg := a.Config.Service()
-	a.Filter, a.Index = b.filter(), b.index()
+	if a.Filter, err = b.filter(); err != nil {
+		return err
+	}
+	a.Index = b.index()
 	a.Service, err = service.New(service.Deps{
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
 		Authorizer: table.New(store, a.Clock, table.Settings{DestructiveMax: svcCfg.DestructiveMax, ForceAsk: svcCfg.ForceAsk}),
@@ -142,7 +145,8 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	if err != nil {
 		return err
 	}
-	a.worker = worker.New(a.Service, store, a.Clock, worker.Config{Interval: a.Config.Approval.SweepInterval})
+	a.metrics = telemetry.New(a.outbox, a.Clock.Now)
+	a.worker = worker.New(a.Service, store, a.Clock, worker.Config{Interval: a.Config.Approval.SweepInterval, Grace: a.Config.Server.ShutdownGrace, Log: a.log, Failed: a.metrics.WorkerFailed})
 	a.env = &server.Env{Svc: a.Service, Adapters: a.document}
 	gcfg := gateway.DefaultConfig(a.Config.Audience())
 	gcfg.ViewTokens = a.Config.Apps.AppOnlyFunctions == "view_token"
@@ -150,7 +154,6 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	gcfg.HoldWindow, gcfg.Logger, gcfg.Skills, gcfg.SkillPrompts = a.Config.Approval.HoldWindow, a.log, a.Config.Gateway.Skills != "off", a.Config.Gateway.Skills == "tools+prompts"
 	gcfg.Instructions, gcfg.Content = a.Config.Gateway.RelayInstructions == "pinned", a.Config.Gateway.UpstreamContent == "granted"
 	gcfg.ThresholdTokens, gcfg.ThresholdFunctions, gcfg.SearchResultMax = a.Config.Search.ThresholdTokens, a.Config.Search.ThresholdFunctions, a.Config.Search.ResultMax
-	a.metrics = telemetry.New(a.outbox, a.Clock.Now)
 	agent, err := gateway.New(a.metrics.Core(a.Service), a.Verifier, a.Index, gcfg)
 	if err != nil {
 		return fmt.Errorf("gateway: %w", err)

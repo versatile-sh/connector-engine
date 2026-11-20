@@ -65,10 +65,10 @@ func (g Guard) DialContext(extra ...string) func(ctx context.Context, network, a
 	}
 }
 
-// Transport returns a clone of the default HTTP transport that dials through the guard.
+// Transport returns a clone of the default HTTP transport that dials through the guard and never through an environment proxy, whose address the guard would check instead of the target's.
 func (g Guard) Transport(extra ...string) *http.Transport {
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.DialContext = g.DialContext(extra...)
+	t.Proxy, t.DialContext = nil, g.DialContext(extra...)
 	return t
 }
 

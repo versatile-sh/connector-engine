@@ -110,10 +110,10 @@ func metaString(meta map[string]json.RawMessage, key string) string {
 }
 
 func calledFunction(p callParams) string {
-	if p.Name == "skill_load" {
-		return "skill"
+	if p.Name == port.ToolSkillLoad {
+		return port.SkillFunction
 	}
-	if p.Name != "call" {
+	if p.Name != port.ToolCall {
 		return p.Name
 	}
 	var inner struct {
@@ -195,9 +195,10 @@ func (c *Console) correlate(ctx context.Context, agent, session, function string
 	if err != nil {
 		return ""
 	}
+	sep := c.separator(ctx, agent)
 	var found []string
 	for _, a := range pending {
-		if (function == a.Function || strings.HasSuffix(function, "__"+a.Function)) && !a.CreatedAt.Before(start.Add(-bindSkew)) && !c.surf.el.isClaimed(string(a.ID)) {
+		if (function == a.Function || strings.HasSuffix(function, sep+a.Function)) && !a.CreatedAt.Before(start.Add(-bindSkew)) && !c.surf.el.isClaimed(string(a.ID)) {
 			found = append(found, string(a.ID))
 		}
 	}

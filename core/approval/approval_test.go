@@ -301,3 +301,17 @@ func TestTransitions(t *testing.T) {
 		t.Fatalf("§8.3: the third consecutive denial fires the brake: %+v", p)
 	}
 }
+
+func TestAnExpiredRecordCannotBeDecidedBeforeTheWorkerExpiresIt(t *testing.T) {
+	now := time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC)
+	a, err := approval.Open(port.Approval{ID: "a", Mode: port.ModeAsk, Approvers: []string{"u1"}, Arguments: &port.Sealed{}}, 0, approval.Defaults, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := approval.Decide(a, "u1", true, port.DecisionApprove, "", "", approval.Defaults, a.ExpiresAt); !port.IsCode(err, port.CodeApprovalExpired) {
+		t.Fatalf("at expires_at: %v", err)
+	}
+	if _, _, err := approval.Decide(a, "u1", true, port.DecisionApprove, "", "", approval.Defaults, a.ExpiresAt.Add(-time.Nanosecond)); err != nil {
+		t.Fatalf("just before expires_at: %v", err)
+	}
+}

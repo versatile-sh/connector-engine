@@ -15,6 +15,7 @@ import (
 
 	"github.com/agents-control/connector-engine/core/approval"
 	"github.com/agents-control/connector-engine/core/grant"
+	"github.com/agents-control/connector-engine/filter/builtin"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 )
@@ -130,6 +131,11 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 			add(adapters.LevelError, key, "%q is not one of %s", v, strings.Join(allowed, ", "))
 		}
 	}
+	for _, l := range c.ResultFilter.Locales {
+		if !slices.Contains(builtin.Locales(), l) {
+			add(adapters.LevelError, "resultFilter.locales", "%q is not one of %s", l, strings.Join(builtin.Locales(), ", "))
+		}
+	}
 	if c.Secrets.Adapter == "hostkey" && c.Secrets.UnlockSocket == "" {
 		add(adapters.LevelError, "secrets.unlockSocket", "the hostkey adapter waits for the unlock key on this socket; it is empty")
 	}
@@ -139,8 +145,11 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if len(c.Auth.Issuers) == 0 && !c.Auth.LocalIssuer.Enabled {
 		add(level, "auth.issuers", "the list is empty: no token can be verified")
 	}
+	if c.Auth.LocalIssuer.Enabled && c.Auth.Operator.TokenRef == "" {
+		add(adapters.LevelError, "auth.localIssuer.enabled", "the local issuer mints tokens only for the operator token; set auth.operator.tokenRef")
+	}
 	if c.Auth.LocalIssuer.Enabled && !acknowledged(AckLocalIssuer) {
-		add(level, "auth.localIssuer.enabled", "the local issuer signs tokens for anyone who reaches it; acknowledge %s in the adapters file to run it", AckLocalIssuer)
+		add(level, "auth.localIssuer.enabled", "the local issuer signs the claims the operator token asks for; acknowledge %s in the adapters file to run it", AckLocalIssuer)
 	}
 	if c.Auth.AgentTokenMaxLifetime > maxAgentTokenDefault && !acknowledged(AckLongLivedTokens) {
 		add(level, "auth.agentTokenMaxLifetime", "%s is above one hour; acknowledge %s to accept agent tokens that live longer", c.Auth.AgentTokenMaxLifetime, AckLongLivedTokens)

@@ -22,7 +22,9 @@ import (
 	"github.com/agents-control/connector-engine/app"
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/console"
+	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/port"
+	secretslocal "github.com/agents-control/connector-engine/secrets/local"
 )
 
 const operatorToken = "console-test-operator"
@@ -193,7 +195,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
-		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour}
+		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour, Secrets: &sealed.Box{}}
 	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
 	srv.Start()
 	t.Cleanup(srv.Close)
@@ -211,6 +213,20 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	var setup struct{ CSRF string }
 	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
 	b.csrf = setup.CSRF
+	for _, want := range []string{"locked", "plaintext"} {
+		var keys struct {
+			KeyProtection string `json:"key_protection"`
+		}
+		b.ok("GET", "/api/session", nil, &keys)
+		if keys.KeyProtection != want {
+			t.Fatalf("key protection %q, want %q", keys.KeyProtection, want)
+		}
+		store, err := secretslocal.Open(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.Secrets.Unlock(store)
+	}
 	if status, _ := b.send("POST", "/api/setup", map[string]string{"username": "x", "password": "another long one"}, nil); status != http.StatusConflict {
 		t.Fatalf("a second owner: %d", status)
 	}

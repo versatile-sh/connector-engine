@@ -7,7 +7,7 @@ import type { MessageKey } from "./i18n";
 import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { useSetup } from "./onboarding/useSetup";
-import { approvalsQuery } from "./queries";
+import { approvalsQuery, sessionQuery } from "./queries";
 import { navigate, useLocation } from "./router";
 import { Icon } from "./ui/Icon";
 import { Notice } from "./ui/Notice";
@@ -44,6 +44,19 @@ function Endpoint({ url }: { url: string }) {
       <span className="min-w-0 truncate" translate="no">{url.replace(/^https?:\/\//, "")}</span>
       <Icon name={result === "copied" ? "check" : "copy"} className="size-3.5" />
     </button>
+  );
+}
+
+const KEY_NOTICE: Partial<Record<string, MessageKey>> = { plaintext: "shell.keysPlaintext", locked: "shell.keysLocked" };
+
+function KeyNotice() {
+  const t = useT();
+  const key = KEY_NOTICE[useQuery(sessionQuery).data?.key_protection ?? ""];
+  if (!key) return null;
+  return (
+    <div className="mb-6">
+      <Notice>{t(key)}</Notice>
+    </div>
   );
 }
 
@@ -130,6 +143,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
             </Notice>
           </div>
         ) : null}
+        <KeyNotice />
         <div key={section} className="swap-in flex flex-1 flex-col">
           {children}
         </div>

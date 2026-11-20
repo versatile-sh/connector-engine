@@ -24,6 +24,7 @@ import (
 	"github.com/agents-control/connector-engine/runtime/mux"
 	rtremote "github.com/agents-control/connector-engine/runtime/remote"
 	rtskill "github.com/agents-control/connector-engine/runtime/skill"
+	"github.com/agents-control/connector-engine/secrets/hostkey"
 	secretslocal "github.com/agents-control/connector-engine/secrets/local"
 	secretsmemory "github.com/agents-control/connector-engine/secrets/memory"
 	sinklog "github.com/agents-control/connector-engine/sink/log"
@@ -80,11 +81,22 @@ func (b builder) store(ctx context.Context) (port.Store, port.Outbox, func(), er
 	return s, s, s.Close, nil
 }
 
-func (b builder) secrets() (port.SecretStore, error) {
-	if u, _ := b.one(config.PortSecrets); u.Tier == adapters.TierMemory {
-		return secretsmemory.New(), nil
+func (b builder) secrets(ctx context.Context) (port.SecretStore, func(), error) {
+	switch u, _ := b.one(config.PortSecrets); {
+	case u.Tier == adapters.TierMemory:
+		return secretsmemory.New(), func() {}, nil
+	case u.Name == "hostkey":
+		s, err := hostkey.Open(ctx, b.cfg.Secrets.Dir, b.cfg.Secrets.UnlockSocket, b.log)
+		if err != nil {
+			return nil, nil, err
+		}
+		return s, s.Close, nil
 	}
-	return secretslocal.Open(b.cfg.Secrets.Dir)
+	s, err := secretslocal.Open(b.cfg.Secrets.Dir)
+	if err != nil {
+		return nil, nil, err
+	}
+	return s, func() {}, nil
 }
 
 func (b builder) clients() ([]credential.Registered, error) {

@@ -4,9 +4,11 @@ package sealed
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 
 	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/secrets/hostkey"
 	"github.com/agents-control/connector-engine/secrets/local"
 )
 
@@ -19,10 +21,33 @@ var ErrLocked = errors.New("the console's secrets are locked until the host deli
 // Box seals and opens console secrets; it is locked until Unlock gives it a store, and a nil Box stays locked.
 type Box struct {
 	store atomic.Pointer[port.SecretStore]
+	mu    sync.Mutex
+	ready chan struct{}
+	once  sync.Once
 }
 
-// Unlock makes the box use store from now on.
-func (b *Box) Unlock(store port.SecretStore) { b.store.Store(&store) }
+// Unlock makes the box use store from now on and closes Ready.
+func (b *Box) Unlock(store port.SecretStore) {
+	b.store.Store(&store)
+	b.once.Do(func() { close(b.readyChan()) })
+}
+
+// Ready returns a channel closed once the box has a store, so whatever needs a secret at start can wait for the host to deliver the key.
+func (b *Box) Ready() <-chan struct{} {
+	if b == nil {
+		return nil
+	}
+	return b.readyChan()
+}
+
+func (b *Box) readyChan() chan struct{} {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.ready == nil {
+		b.ready = make(chan struct{})
+	}
+	return b.ready
+}
 
 // Locked reports whether the box has no store yet.
 func (b *Box) Locked() bool { return b.load() == nil }
@@ -38,7 +63,7 @@ func (b *Box) load() *port.SecretStore {
 func (b *Box) Protection() string {
 	s := b.load()
 	if s == nil {
-		return "locked"
+		return hostkey.Locked
 	}
 	if f, ok := (*s).(interface{ Form() local.Form }); ok {
 		return string(f.Form())

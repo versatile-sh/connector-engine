@@ -46,7 +46,7 @@ This builds one image (engine, `cnctl`, console) and starts the `person` profile
 | `runtime/` | `ConnectorRuntime` adapters: `remote` (MCP), `declarative` (REST), `grpc`, `skill` (pinned skill files as text, no process), `memory` |
 | `source/` | `ListingSource` adapters: `files`, `openapi`, `reflection`, `bsr`, `registry`, `docker`, `skillcatalog` (https catalog entries, no URL built in) |
 | `store/` | `memory` and `postgres` (row-level security per tenant) |
-| `secrets/`, `auth/`, `credential/` | envelope encryption (`local`, `hostkey`), token verification and the local issuer, the credential broker |
+| `secrets/`, `auth/`, `credential/` | envelope encryption (`local`, `hostkey`, `onepassword`), token verification and the local issuer, the credential broker |
 | `cli/keychain` | `cnctl keychain`: the unlock key in the host's keychain |
 | `filter/`, `index/`, `sink/`, `relay/` | result filter, tool index, event sinks, the outbox relay |
 | `app/`, `config/` | the composition root and `connector-engine.yaml` with `adapters.yaml` |

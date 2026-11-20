@@ -6,6 +6,7 @@ op="${1:?$usage}"
 read -r -a compose <<<"${COMPOSE:?$usage}"
 cnctl="${CNCTL:-}"
 project="${PROJECT:-connector-engine}"
+protection=""
 
 deliver() {
   local cmd=(/usr/local/bin/connector-console unlock)
@@ -19,7 +20,6 @@ keychain() {
 }
 
 report() {
-  local protection
   if [ "$2" = key ]; then protection="$(keychain get | deliver "$1" "$3")"; else protection="$(deliver "$1" "$2")"; fi
   echo "$1: $protection"
 }
@@ -27,14 +27,13 @@ report() {
 warn() { printf 'warning: %s\n' "$*" >&2; }
 
 unlock() {
-  local code=0 protection
+  local code=0
   keychain ensure >/dev/null || code=$?
   case "$code" in
     0)
       for service in engine console; do
-        protection="$(report "$service" key unlock)"
-        echo "$protection"
-        if [ "${protection#*: }" = plaintext ]; then warn "the $service root key is still a plaintext file; run: make keychain-migrate"; fi
+        report "$service" key unlock
+        if [ "$protection" = plaintext ]; then warn "the $service root key is still a plaintext file; run: make keychain-migrate"; fi
       done
       ;;
     3)
@@ -47,7 +46,8 @@ unlock() {
 
 wrapped() {
   for service in engine console; do
-    if [ "$(deliver "$service" status)" != wrapped ]; then echo "$service is not wrapped" >&2; return 1; fi
+    report "$service" status
+    if [ "$protection" != wrapped ]; then echo "$service is not wrapped" >&2; return 1; fi
   done
 }
 

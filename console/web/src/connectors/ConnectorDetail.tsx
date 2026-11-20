@@ -13,6 +13,7 @@ import { Sheet } from "../ui/Sheet";
 import { SKELETON, SURFACE, button } from "../ui/styles";
 import { AccessPicker } from "./AccessPicker";
 import { ConnectorIcon } from "./ConnectorIcon";
+import { ConnectorItems } from "./ConnectorItems";
 import { Credentials } from "./Credentials";
 import { FunctionRow } from "./FunctionRow";
 import { KindLabel } from "./KindLabel";
@@ -142,7 +143,7 @@ function Remove({ connector, onClose }: { connector: Connector; onClose(): void 
   );
 }
 
-/** One connector in full: who it is, every function with its access, its credentials, and its removal behind a confirmation. */
+/** One connector in full: who it is, every function and item with its access, its credentials, and its removal behind a confirmation. */
 export function ConnectorDetail({ id }: { id: string }) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -210,7 +211,10 @@ export function ConnectorDetail({ id }: { id: string }) {
         </div>
       </header>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <Functions connector={connector} />
+        <div className="flex min-w-0 flex-col gap-6">
+          <Functions connector={connector} />
+          <ConnectorItems connector={connector} />
+        </div>
         <aside className="flex flex-col gap-6">
           <Credentials connector={connector} onSaved={() => void queryClient.invalidateQueries({ queryKey: ["connectors"] })} />
           <dl className={`${SURFACE} grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 p-5 text-sm`}>

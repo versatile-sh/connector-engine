@@ -2,6 +2,7 @@ import type { ImportSource } from "../api";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { navigate } from "../router";
+import { ItemSections } from "../connectors/ItemSections";
 import { Bubble } from "../ui/Bubble";
 import { Arrow } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
@@ -11,7 +12,7 @@ import { Identity } from "./Identity";
 import { SkillChoice } from "./SkillChoice";
 import { useImport } from "./useImport";
 
-/** The second step of the import window: what the server is, the proposed access of each function, and Install. */
+/** The second step of the import window: what the server is, the proposed access of each function, prompt, resource and the server instructions, and Install. */
 export function Review({ source, onBack, onInstalled }: { source: ImportSource; onBack(): void; onInstalled(): void }) {
   const t = useT();
   const { preview, install, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
@@ -61,6 +62,7 @@ export function Review({ source, onBack, onInstalled }: { source: ImportSource; 
       <div className="mt-2">
         {p.skill ? <SkillChoice skill={p.skill} access={skillAccess} onChange={setSkillAccess} /> : <Choices tools={p.tools} accessOf={accessOf} choose={choose} />}
       </div>
+      {p.skill ? null : <ItemSections items={p.items} variant="review" accessOf={(item) => accessOf(item.name, item.access)} choose={(item, access) => choose(item.name, access)} />}
       <p role="alert" className="min-h-6 text-sm text-amber">
         {install.isError ? errorText(install.error) : ""}
       </p>

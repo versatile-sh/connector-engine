@@ -2,7 +2,7 @@
 
 Target: every piece of the local, self-hosted experience lives under `selfhosted/`. The repository builds, tests and installs with no access to the private `github.com/agents-control/plugkit` module. The engine core keeps no knowledge of self-hosted adapters or commands.
 
-Status: design, Phase 1. Nothing moves until the in-flight console branches (`refactor/*`, `refactor-e-frontend`, `feat/skill-modal`) have merged. Base read: `origin/main` at `b03dc20`.
+Status: executed. The design was approved in #25. The registry seam replaced the extensions-only seam of that draft, to also remove the adapter `switch` statements.
 
 ## Invariants
 
@@ -39,13 +39,13 @@ Self-hosted means "only the person profile on a person's own machine uses it". C
 
 ```
 .
-├── app/                         core composition root; gains Main and Extensions
+├── app/                         core composition root: Registry, Core, Build, Main
 ├── cli/                         core CLI; gains Command, Core and Main
 │   ├── admin/ skills/ tools/
 ├── cmd/
 │   ├── cnctl/                   core cnctl: admin, skills, tools
 │   └── connector-engine/        core engine: serve, adapters, init
-├── config/                      gains Builtin and AdaptersSpec(extra ...Builtin)
+├── config/                      gains Builtin and Config.With
 ├── deploy/
 │   ├── compose.yaml             init, postgres, engine-headless
 │   ├── postgres/
@@ -86,133 +86,135 @@ Go `internal/` rule: `selfhosted/...` stays inside the module, so it keeps impor
 
 ## The composition seam
 
-Three couplings make the core know `hostkey` today:
+Before the move, the core knew `hostkey` in three places, and it chose every adapter in `switch` statements (`app/build.go`, 14 `u.Name ==` cases):
 
-1. `app/build.go` `builder.secrets` opens `hostkey` by name.
-2. `app.document()` type-asserts `*hostkey.Store` to add the `secrets.root_key_<form>` capability.
-3. `cmd/connector-engine` runs `hostkey.Main` for `unlock`, and `config` lists `hostkey` in the `secrets.adapter` enum, in `Builtins`, in `Capabilities`, and checks `secrets.unlockSocket` and the plaintext-root-key acknowledgement.
+1. `builder.secrets` opened `hostkey` by name.
+2. `app.document()` type-asserted `*hostkey.Store` to add the `secrets.root_key_<form>` capability.
+3. `cmd/connector-engine` ran `hostkey.Main` for `unlock`, and `config` listed `hostkey` in the `secrets.adapter` enum, in `Builtins` and in `Capabilities`, and checked `secrets.unlockSocket` and the plaintext-root-key acknowledgement.
 
-`cmd/cnctl` has the same shape: its command map imports `cli/keychain` and `cli/notify`.
+`cmd/cnctl` had the same shape: its command map imported `cli/keychain` and `cli/notify`.
 
-### Option A: explicit extensions passed by the main
+### Option A: an explicit registry the built-ins use too (chosen)
 
-The core exposes one value type and one entry point. A main composes the value and passes it in. Nothing is global.
-
-```go
-package config
-
-// Builtin declares an adapter that a build adds to a port: its name, capabilities and the checks it adds to connector-engine.yaml.
-type Builtin struct {
-	Port         string
-	Name         string
-	Capabilities []string
-	Check        func(Config) adapters.Findings
-}
-
-// AdaptersSpec declares the ports of the engine, with the builtins of the core and those a build adds.
-func (c Config) AdaptersSpec(extra ...Builtin) adapters.Spec
-```
+Each binary builds one `*app.Registry` and passes it in. The core registers its own adapters through the same call a third party uses. Nothing is global, and nothing happens in `init()`.
 
 ```go
 package app
 
-// Extensions are the adapters and commands a build adds to the core engine.
-type Extensions struct {
-	Secrets  []SecretsAdapter
+// Port names a port of the engine and the Go type its adapters provide.
+type Port[T any] struct{ name string }
+
+var (
+	Stores   = Port[port.Store]{config.PortStore}
+	Secrets  = Port[port.SecretStore]{config.PortSecrets}
+	Runtimes = Port[port.ConnectorRuntime]{config.PortRuntime}
+	Sources  = Port[port.ListingSource]{config.PortSource}
+	Sinks    = Port[port.EventSink]{config.PortSink}
+	Filters  = Port[port.ResultFilter]{config.PortFilter}
+	Indexes  = Port[port.ToolIndex]{config.PortIndex}
+)
+
+// Adapter declares an adapter of a port: name, capabilities, the settings it accepts in adapters.yaml, the checks it adds to connector-engine.yaml.
+type Adapter = config.Builtin
+
+// Factory opens an adapter once its port is selected; the closer may be nil.
+type Factory[T any] func(ctx context.Context, env Env) (T, func(), error)
+
+// Register adds the adapter a on the port p; a duplicate name on a port panics, as a composition error.
+func Register[T any](r *Registry, p Port[T], a Adapter, open Factory[T])
+
+// Core returns a registry holding the engine's own adapters.
+func Core() *Registry
+
+// Env is what a factory may read: the configuration, its port's settings, references, the clock, the log, the ports opened before it.
+type Env struct {
+	Config   config.Config
+	Settings map[string]any
+	Lookup   func(string) string
+	Clock    port.Clock
+	Log      *slog.Logger
+	Store    port.Store
+	Secrets  port.SecretStore
+	Applier  credential.Applier
+}
+```
+
+The typed `Port[T]` makes `Register(r, app.Secrets, ..., openSink)` a compile error. `Adapter{Name: "memory"}` registers the memory tier of a port. The auth port stays the core's own: its verifier is tied to the local issuer and has one implementation.
+
+`app.New` takes `Options.Adapters` (nil is `Core()`). `builder` opens each selection through the registry, so `app/build.go` has no `switch` on adapter names. An adapter that knows extra capabilities only once open, such as `hostkey` with how its root key rests, implements `Capabilities() []string`. `app.document()` checks for that interface and no longer type-asserts.
+
+Each binary is a `Build`:
+
+```go
+// Build is what one engine binary composes: its version, its adapters (nil is Core) and the subcommands it adds.
+type Build struct {
+	Version  string
+	Adapters *Registry
 	Commands map[string]Command
 }
 
-// SecretsAdapter is a secrets port adapter that a build registers by name.
-type SecretsAdapter struct {
-	config.Builtin
-	Open func(ctx context.Context, cfg config.Config, log *slog.Logger) (port.SecretStore, func(), error)
-}
-
-// Command is a subcommand of the engine binary, run after connector-engine.yaml loads.
+// Command is a subcommand of the engine binary; it runs once connector-engine.yaml has loaded.
 type Command func(cfg config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int
 
-// Main runs the engine binary: serve, adapters check|plan, init, and the commands of ext.
-func Main(args, environ []string, stdin io.Reader, stdout, stderr io.Writer, ext Extensions) int
+// Main runs the engine binary: serve, "adapters" check|plan, "init", or a subcommand of b.
+func Main(b Build, args, environ []string, stdin io.Reader, stdout, stderr io.Writer) int
 ```
 
-`Options` gains `Extensions Extensions`. `builder.secrets` looks the selected name up in `ext.Secrets` before the core builtins. `app.document()` replaces the type assertion with a structural check that the core owns:
-
-```go
-// reporter is a port adapter that reports capabilities known only once it is open.
-type reporter interface{ Capabilities() []string }
-```
-
-The core CLI gets the same treatment:
+The core CLI follows the same pattern:
 
 ```go
 package cli
 
-// Command is one cnctl subcommand.
 type Command func(ctx context.Context, args []string, stdout, stderr io.Writer, environ []string) int
 
 // Core returns the subcommands every cnctl build has: admin, skills, tools.
 func Core() map[string]Command
 
-// Main dispatches args to commands and prints usage for an unknown one.
+// Main runs the subcommand args[0] of commands, or prints their names and returns 2.
 func Main(ctx context.Context, args []string, stdout, stderr io.Writer, environ []string, commands map[string]Command) int
 ```
 
 The mains:
 
 ```go
-// cmd/connector-engine
-func main() { os.Exit(app.Main(os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr, app.Extensions{})) }
-
-// cmd/cnctl
-func main() { /* signal context */ os.Exit(cli.Main(ctx, os.Args[1:], os.Stdout, os.Stderr, os.Environ(), cli.Core())) }
+// cmd/connector-engine: the core alone
+app.Main(app.Build{Version: version}, ...)
 
 // selfhosted/cmd/connector-engine
-func main() { os.Exit(app.Main(os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr, selfhosted.Engine())) }
+adapters := app.Core()
+selfhosted.Register(adapters)
+app.Main(app.Build{Version: version, Adapters: adapters, Commands: selfhosted.EngineCommands()}, ...)
 
 // selfhosted/cmd/cnctl
-func main() { /* signal context */ cmds := cli.Core(); maps.Copy(cmds, selfhosted.Commands()); os.Exit(cli.Main(ctx, os.Args[1:], os.Stdout, os.Stderr, os.Environ(), cmds)) }
+commands := cli.Core()
+maps.Copy(commands, selfhosted.Commands())
+cli.Main(ctx, os.Args[1:], os.Stdout, os.Stderr, os.Environ(), commands)
 ```
 
-`selfhosted/selfhosted.go` is the single self-hosted composition list:
-
-```go
-// Package selfhosted lists what the self-hosted build adds to the core engine and to cnctl.
-package selfhosted
-
-// Engine returns the hostkey secrets adapter and the unlock command.
-func Engine() app.Extensions
-
-// Commands returns the keychain and notify subcommands of cnctl.
-func Commands() map[string]cli.Command
-```
+A third-party adapter is one package with a `Register(r *app.Registry)` and one line in its own main. Out-of-process plugin selections (`plugin:<name>`) are still refused: no port of this build speaks the plugin protocol yet, and that is separate from this seam.
 
 ### Option B: init-time registry and blank imports
 
-`config` and `cli` keep package-level registries (`config.RegisterBuiltin`, `cli.Register`), like `database/sql` drivers. `secrets/hostkey` and `cli/keychain` register themselves in `init()`. `selfhosted/cmd/*` blank-imports them, and the core mains import nothing extra.
+`app` keeps a package-level registry, as `database/sql` does for drivers. `secrets/hostkey` registers itself in `init()`. `selfhosted/cmd/*` blank-imports it, and the core mains import nothing extra.
 
 ### Comparison
 
-| Criterion | A: explicit extensions | B: init registry |
+| Criterion | A: explicit registry | B: init registry |
 | --- | --- | --- |
-| Interface depth | one value type per surface, one `Main` | one `Register` per surface, simpler signature |
-| Locality | a reader sees every self-hosted contribution in `selfhosted.go` and the main | the composition is spread over `init()` functions and blank imports |
-| Testability | a test builds `Extensions{...}` with a fake adapter; no shared state | tests share a process-wide registry; order and leakage matter |
-| Seam placement | at the main, the composition root the backend guide prescribes (`docs/back/02-COMPOSITION-ROOT`) | inside library packages, as a side effect of import |
-| Failure mode | forgetting an extension fails at compile time or at the first `adapters check` | a missing blank import silently drops an adapter |
-| Extensibility | a third build (for example a product with its own vault adapter) writes its own main | same, through blank imports |
+| Interface depth | `Register` plus a typed `Port`, one `Main` per binary | `Register` alone, a simpler signature |
+| Locality | each main shows its whole composition; the built-ins are one list in `app/core.go` | the composition is spread over `init()` functions and blank imports |
+| Testability | a test builds `app.Core()`, registers a fake, boots; no shared state (`TestAnAddedSecretsAdapterIsSelectableAndReportsItsCapabilities`) | tests share a process-wide registry; order and leakage matter |
+| Seam placement | at the main, the composition root (`docs/back/02-COMPOSITION-ROOT`) | inside library packages, as a side effect of import |
+| Failure mode | a missing registration fails `adapters check` with `unknown built-in` | a missing blank import silently drops an adapter |
 
 Choice: **Option A**. It keeps one composition root per binary, explicit and testable. It adds no global state. B saves about ten lines, and it hides the composition that should stay visible.
 
-### Decision on configuration keys
+### Configuration keys
 
-Two ways to keep `hostkey` out of `config`:
+`config` cannot import `app`, so it learns the adapters of a build as data: `cfg.With(r.Builtins()...)`. `AdaptersSpec` then lists each port's builtins, capabilities and settings from those declarations, and `Check` accepts a `secrets.adapter` only if the build has it. `app.Main` and `app.New` call `With`. A test that loads adapters without a boot calls `cfg.With(app.Core().Builtins()...)`.
 
-1. The registration carries the whole configuration section and its YAML decoding. This is fully decoupled, but `config.Load` would need raw YAML plumbing per adapter and a second validation pass.
-2. The core keeps the neutral key `secrets.unlockSocket` (documented as "a socket where a secrets adapter receives its root key") and its YAML field. The `secrets.adapter` enum becomes the core names plus the registered names. The rules that mention `hostkey` (the socket is required, the plaintext root-key acknowledgement) move into the registration's `Builtin.Check`.
+The core keeps the neutral key `secrets.unlockSocket` ("where an adapter of the build receives its unlock key"), because `config.Load` decodes strictly. The rules that mention `hostkey` (the socket is required, the plaintext root-key acknowledgement) live in its registration's `Check`. In a core build, `secrets.adapter: hostkey` fails with `"hostkey" is not one of memory, localfile, onepassword, the secrets adapters of this build`. Per-adapter configuration sections would remove the inert key. That is the upgrade once a second adapter needs its own section.
 
-Choice: **2**. Strict YAML decoding stays as it is. The core holds one inert field and no rule about `hostkey`. Selecting `hostkey` in a core build fails with a clear finding: `secrets.adapter "hostkey" is not in this build; it ships in selfhosted/cmd/connector-engine`. Upgrade to 1 when a second adapter needs its own section.
-
-`AckPlaintextRootKey` stays a core constant: the acknowledgement mechanism is core, and only its use moves.
 
 ## The plugkit copy
 
@@ -311,10 +313,10 @@ Base: `origin/main` after the console branches merge. One worktree, one PR, each
 1. **Module path rename**: `go.mod`, imports, the `.proto` option, regenerated `*.pb.go`, doc paths. Mechanical, nothing else.
 2. **plugkit copy**: `internal/plugkit` via `scripts/sync-plugkit.sh`, imports switched, `go mod tidy` drops the requirement.
 3. **testmcp to core**: `git mv console/testmcp internal/testmcp`, imports, the Dockerfile target.
-4. **init to core**: `connector-console init` becomes `connector-engine init`; compose `init` switches; `connector-console` keeps `init` as a deprecated alias for one release, so an older compose file still works.
-5. **Composition seams**: `config.Builtin`, `AdaptersSpec(extra...)`, `app.Extensions`, `app.Main`, `cli.Core` and `cli.Main`, the `reporter` interface. The hostkey rules move into a registration. `cmd/connector-engine` and `cmd/cnctl` still pass the hostkey and keychain extensions at this point, so behaviour is proven unchanged before anything moves.
+4. **Composition seams**: `config.Builtin` and `Config.With`, `app.Registry`, `app.Core`, `app.Build` and `app.Main`, `cli.Core` and `cli.Main`, the `Capabilities()` interface. The hostkey rules move into a registration. `app/build.go` opens every selection through the registry. `selfhosted/selfhosted.go` is created here, and `cmd/connector-engine` and `cmd/cnctl` still compose it at this point, so behaviour is proven unchanged before anything moves.
+5. **init to core**: `connector-console init` becomes `connector-engine init`, and compose `init` switches through `app.Main`. No alias is kept: the compose file and the image ship from the same commit.
 6. **Move**: `git mv` of every self-hosted path in the table above into `selfhosted/`. The commit holds renames plus import-line edits only (`git diff -M --stat` shows renames at 90% similarity or more).
-7. **Self-hosted mains**: `selfhosted/selfhosted.go`, `selfhosted/cmd/{connector-engine,cnctl}`. The core mains drop the self-hosted extensions. Dockerfile, compose, Makefile and `selfhosted.mk`.
+7. **Self-hosted mains**: `selfhosted/cmd/{connector-engine,cnctl}`. The core mains drop the self-hosted registrations and commands. Dockerfile, compose, Makefile and `selfhosted.mk`.
 8. **Layering guard**: `scripts/check-layering.sh` wired into `make test`.
 9. **Docs**: `selfhosted/README.md`, move `SECRETS.md` and `approvals-surfaces.md`, update `README.md`, `docs/internal/STATUS.md` and `docs/internal/PLAN.md` paths, this document's status.
 

@@ -7,13 +7,13 @@ Every secret the engine keeps (credentials, held call arguments, results, client
 | Adapter | Root key at rest | Who selects it |
 |---|---|---|
 | `builtin:localfile` (`secrets/local`) | `root.key`, plaintext hex, mode 0600, refused when group or other can read it | the default, the `headless` profile, any config that does not opt in |
-| `builtin:hostkey` (`secrets/hostkey`) | `root.key.wrapped`: the root sealed with AES-256-GCM under an unlock key that lives in the host's OS keychain | the `person` profile |
+| `builtin:hostkey` (`selfhosted/secrets/hostkey`) | `root.key.wrapped`: the root sealed with AES-256-GCM under an unlock key that lives in the host's OS keychain | the `person` profile |
 | `builtin:onepassword` (`secrets/onepassword`) | `root.key.wrapped`, under an unlock key read at start from a 1Password item through a 1Password Connect server | opt-in by config, any profile, headless included |
 | `memory` | in the process only | tests and dev |
 
 `hostkey` is `secrets/local` with the root file wrapped; the key ring, the rotation files (`root.key.next`, `root.key.next.wrapped`) and the crash recovery are the same code. Selecting it is opt-in (`secrets.adapter: hostkey`, `secrets.unlockSocket`, `ports.secrets.use: builtin:hostkey`); the engine binary never needs it, and the `headless` selection is pinned by `config/profiles_test.go`.
 
-The console seals its own secrets (notifier tokens) through `console/sealed`, a `port.SecretStore` under key scope `console`, with the same adapter: `hostkey` in the `person` profile (`CONSOLE_UNLOCK_SOCKET`), `secrets/local` otherwise. Owner passwords, session cookies and refresh tokens stay hashes.
+The console seals its own secrets (notifier tokens) through `selfhosted/console/sealed`, a `port.SecretStore` under key scope `selfhosted/console`, with the same adapter: `hostkey` in the `person` profile (`CONSOLE_UNLOCK_SOCKET`), `secrets/local` otherwise. Owner passwords, session cookies and refresh tokens stay hashes.
 
 The local token issuer keeps its Ed25519 signing keys in `local-issuer.json` beside the ring, each seed sealed under the installation key, so tokens it minted survive a restart, a reboot and `make keychain-migrate`. At boot it rotates a signing key older than `auth.localIssuer.rotateEvery` (30 days by default). The retired key stays in the published key set for `max(1h, auth.agentTokenMaxLifetime)`, until every token it signed has expired. With `secrets: memory` the key is made at start and never stored, as before.
 

@@ -77,6 +77,10 @@ describe("oauthGuides", () => {
     assert.deepEqual(JSON.parse(find("claude-desktop").blocks[0]?.text ?? "").mcpServers.versatile.args, ["-y", "mcp-remote", url]);
   });
 
+  test("OpenCode uses the current mcp.servers nesting", () => {
+    assert.deepEqual(JSON.parse(find("opencode").blocks[0]?.text ?? "").mcp.servers.versatile, { type: "remote", url });
+  });
+
   test("the Cursor link carries only the URL", () => {
     const href = new URL(find("cursor").link?.href ?? "");
     assert.deepEqual(JSON.parse(atob(href.searchParams.get("config") ?? "")), { url });

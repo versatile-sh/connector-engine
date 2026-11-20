@@ -396,7 +396,7 @@ func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, erro
 		return f, invalid("from is before to")
 	}
 	if f.to.Sub(f.from) > activityRetention+time.Hour {
-		return f, invalid("the range is at most 30 days")
+		return f, invalid("the range is at most %d days", retentionDays)
 	}
 	switch f.outcome {
 	case "", OutcomeOK, OutcomeError, OutcomeDenied, OutcomePending, OutcomeRunning:
@@ -415,21 +415,20 @@ func latest(a, b time.Time) time.Time {
 	return a
 }
 
-func (c *Console) activityOff(w http.ResponseWriter) bool {
-	if c.Activity == nil {
-		writeError(w, http.StatusServiceUnavailable, "this console keeps no activity")
-		return true
+func (c *Console) withActivity(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if c.Activity == nil {
+			writeError(w, http.StatusServiceUnavailable, "this console keeps no activity")
+			return
+		}
+		next(w, r)
 	}
-	return false
 }
 
 func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	f, err := parseActivityFilter(r, c.Activity.Floor())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		c.fail(w, err)
 		return
 	}
 	c.Activity.Flush()
@@ -466,9 +465,6 @@ func detailOf(j joined) ActivityDetail {
 }
 
 func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	id := r.PathValue("id")
 	floor := c.Activity.Floor()
 	var captures []Capture
@@ -520,17 +516,11 @@ type activitySettingsView struct {
 }
 
 func (c *Console) activitySettings(w http.ResponseWriter, _ *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	s := c.Activity.Settings()
-	writeJSON(w, http.StatusOK, activitySettingsView{RecordArguments: s.RecordArguments, RecordResults: s.RecordResults, RetentionDays: int(activityRetention / (24 * time.Hour)), ClearedAt: s.ClearedAt})
+	writeJSON(w, http.StatusOK, activitySettingsView{RecordArguments: s.RecordArguments, RecordResults: s.RecordResults, RetentionDays: retentionDays, ClearedAt: s.ClearedAt})
 }
 
 func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	var in struct {
 		RecordArguments *bool `json:"record_arguments"`
 		RecordResults   *bool `json:"record_results"`
@@ -550,9 +540,6 @@ func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Console) deleteActivity(w http.ResponseWriter, _ *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	if err := c.Activity.DeleteAll(); err != nil {
 		writeError(w, http.StatusInternalServerError, "cannot delete the activity")
 		return

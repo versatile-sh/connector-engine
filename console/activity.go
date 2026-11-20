@@ -17,9 +17,11 @@ import (
 )
 
 const (
-	activityRetention = 30 * 24 * time.Hour
+	retentionDays     = 30
+	activityRetention = retentionDays * 24 * time.Hour
 	activityQueue     = 1024
 	activityDay       = "2006-01-02"
+	captureDay        = "20060102"
 	activityExt       = ".jsonl"
 	activitySettings  = "settings.json"
 	activityLineMax   = 4 << 20
@@ -115,7 +117,7 @@ func OpenActivity(dir string, log *slog.Logger) (*Activity, error) {
 func newCaptureID(at time.Time) string {
 	b := make([]byte, 8)
 	rand.Read(b)
-	return at.UTC().Format("20060102") + "-" + hex.EncodeToString(b)
+	return at.UTC().Format(captureDay) + "-" + hex.EncodeToString(b)
 }
 
 func (a *Activity) write() {
@@ -339,7 +341,7 @@ func (a *Activity) Captures(from time.Time) ([]Capture, error) {
 
 // Capture returns one captured call by its id.
 func (a *Activity) Capture(id string) (Capture, bool, error) {
-	day, err := time.Parse("20060102", strings.SplitN(id, "-", 2)[0])
+	day, err := time.Parse(captureDay, strings.SplitN(id, "-", 2)[0])
 	if err != nil {
 		return Capture{}, false, nil
 	}

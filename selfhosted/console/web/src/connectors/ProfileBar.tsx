@@ -1,65 +1,43 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { errorText, type Connector, type Profile, type ProfileMode } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { dropWaiting, setNewKeysOff, setProfileMode } from "../mutations";
 import { navigate } from "../router";
 import { Choice } from "../ui/Choice";
 import { InlineConfirm } from "../ui/InlineConfirm";
-import { Select } from "../ui/Select";
+import { rowMotion } from "../ui/kept";
 import { Switch } from "../ui/Switch";
-import { CAPTION, WELL, button } from "../ui/styles";
-
-/** The card that opens a connector's choices: the profile picker on top, then the controls of the profile shown, in one region. */
-export function ProfileCard({ connector, agent, children }: { connector: Connector; agent: string | undefined; children: ReactNode }) {
-  const t = useT();
-  return (
-    <section aria-label={t("profile.label")} className={`${WELL} divide-y divide-line`}>
-      <div className="px-4 py-3 sm:px-5">
-        <ProfilePicker connector={connector} agent={agent} />
-      </div>
-      {children}
-    </section>
-  );
-}
+import { CAPTION, button } from "../ui/styles";
+import { Tabs } from "../ui/Tabs";
 import { Tag } from "../ui/Tag";
+import { useKept } from "../ui/useKept";
 import { commonMode, keysWithOverrides, overrideCount, profileHref } from "./profiles";
 
 const MODES: readonly ProfileMode[] = ["off", "follow", "custom"];
 
-const SEGMENTED_UP_TO = 4;
-
-/** Which profile the functions and items below show, the default every key follows or one key's own, kept in the address as `?profile=`: a `Choice` for up to four entries, a `Select` past them. */
-export function ProfilePicker({ connector, agent }: { connector: Connector; agent: string | undefined }) {
+/** The tabs of a connector's profiles, the default every key follows and each key's own, kept in the address as `?profile=`, controlling the panel `panel`. */
+export function ProfileTabs({ connector, agent, panel, className }: { connector: Connector; agent: string | undefined; panel: string; className?: string }) {
   const t = useT();
-  if (connector.profiles.length === 0) return <p className="text-sm text-pretty text-muted">{t("profile.noKeys")}</p>;
-  const label = t("profile.pickerLabel", { connector: connector.title });
-  const options = [{ value: "", text: t("profile.default"), hint: t("profile.defaultHint") }, ...connector.profiles.map((p) => ({ value: p.agent, text: p.expired ? t("profile.expiredKey", { key: p.agent }) : p.agent, hint: t(`profile.modeHint.${p.mode}`) }))];
-  const pick = (next: string) => navigate(profileHref(connector.id, next || undefined), { replace: true, keepScroll: true });
-  return (
-    <div className="@container flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-      <span className={CAPTION}>{t("profile.label")}</span>
-      {options.length <= SEGMENTED_UP_TO ? (
-        <Choice<string> label={label} value={agent ?? ""} options={options} onChange={pick} room="36rem" />
-      ) : (
-        <Select<string> label={label} value={agent ?? ""} options={options} onChange={pick} className="w-full max-w-64" />
-      )}
-    </div>
-  );
+  const options = [
+    { value: "", text: t("profile.default"), hint: t("profile.defaultHint") },
+    ...connector.profiles.map((p) => ({ value: p.agent, text: p.expired ? t("profile.expiredKey", { key: p.agent }) : p.agent, hint: t(`profile.modeHint.${p.mode}`), mono: true })),
+  ];
+  return <Tabs<string> label={t("profile.pickerLabel", { connector: connector.title })} value={agent ?? ""} options={options} onChange={(next) => navigate(profileHref(connector.id, next || undefined), { replace: true, keepScroll: true })} panel={panel} className={className} />;
 }
 
 function Waiting({ connector }: { connector: Connector }) {
   const t = useT();
   const drop = useMutation(dropWaiting);
-  const waiting = connector.waiting ?? [];
+  const waiting = useKept(connector.waiting ?? [], (p) => p.agent);
   if (waiting.length === 0) return null;
   return (
     <div className="px-4 py-3 sm:px-5">
       <p className="text-sm font-medium">{t("profile.waiting")}</p>
       <p className="text-[0.8125rem] leading-snug text-pretty text-muted">{t("profile.waitingHint")}</p>
       <ul className="mt-2">
-        {waiting.map((p) => (
-          <li key={p.agent} className="flex items-center justify-between gap-3 py-1">
+        {waiting.map(({ row: p, phase }) => (
+          <li key={p.agent} {...rowMotion(phase)} className="flex items-center justify-between gap-3 py-1">
             <span className="flex min-w-0 flex-wrap items-center gap-x-2">
               <code className="min-w-0 font-mono text-sm [overflow-wrap:anywhere]" translate="no">
                 {p.agent}
@@ -92,6 +70,7 @@ export function DefaultBar({ connector }: { connector: Connector }) {
   const error = every.isError && !asking ? errorText(every.error) : newKeys.isError ? errorText(newKeys.error) : kept.length > 0 ? t("profile.everyKeyKept", { keys: kept.map((key) => key.agent).join(", ") }) : "";
   return (
     <div className="@container divide-y divide-line">
+      {connector.profiles.length === 0 ? <p className="px-4 py-3 text-sm text-pretty text-muted sm:px-5">{t("profile.noKeys")}</p> : null}
       {connector.profiles.length > 1 ? (
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-5">
           <div className="min-w-0">

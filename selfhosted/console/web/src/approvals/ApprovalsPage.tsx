@@ -8,6 +8,7 @@ import { decideApproval } from "../mutations";
 import { approvalsQuery, connectorsQuery, skillsQuery } from "../queries";
 import { navigate } from "../router";
 import { EmptyState } from "../ui/EmptyState";
+import { rowMotion, type RowPhase } from "../ui/kept";
 import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
@@ -20,11 +21,11 @@ const fromNow = (iso: string, locale: Locale) => {
   return Math.abs(seconds) < 90 ? format.format(seconds, "second") : format.format(Math.round(seconds / 60), "minute");
 };
 
-function Held({ approval, connector, skill, deciding, onDecide }: { approval: Approval; connector: string; skill?: string; deciding: ApprovalChoice | undefined; onDecide(choice: ApprovalChoice): void }) {
+function Held({ approval, connector, skill, deciding, phase, onDecide }: { approval: Approval; connector: string; skill?: string; deciding: ApprovalChoice | undefined; phase: RowPhase; onDecide(choice: ApprovalChoice): void }) {
   const t = useT();
   const locale = useLocale();
   return (
-    <li className={`${SURFACE} arrive @container transition-opacity duration-250 ${deciding ? "opacity-60" : ""}`}>
+    <li {...rowMotion(phase)} className={`${SURFACE} @container transition-opacity duration-250 ${deciding ? "opacity-60" : ""}`}>
       <div className="flex flex-col gap-4 p-5 @3xl:flex-row @3xl:items-center">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -85,12 +86,13 @@ export function ApprovalsPage() {
           </EmptyState>
         </div>
       ) : (
-        <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} label={t("approvals.filter")} whole>
+        <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} keyOf={(approval) => approval.id} label={t("approvals.filter")} whole>
           {(shown) => (
             <ul aria-live="polite" className="flex flex-col gap-3">
-              {shown.map((approval) => (
+              {shown.map(({ row: approval, phase }) => (
                 <Held
                   key={approval.id}
+                  phase={phase}
                   approval={approval}
                   connector={titleOf(approval.connector)}
                   skill={skillOf(approval.connector)}

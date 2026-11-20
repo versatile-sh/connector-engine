@@ -217,6 +217,14 @@ const APPS: readonly App[] = [
 
 const guideOf = (app: App, way: Way, t: Translate): Guide => ({ ...way, id: app.id, name: typeof app.name === "string" ? app.name : app.name(t), kind: way.kind ?? app.kind });
 
+/** The apps most people connect, first in the picker in this order; the others wait behind More apps. */
+export const COMMON_APPS: readonly ClientId[] = ["claude-code", "codex", "cursor", "vscode", "claude-desktop"];
+
+/** Splits guides into the common apps, in the order of `COMMON_APPS`, and the others in their own order. */
+export function byUse(all: readonly Guide[]): { common: Guide[]; more: Guide[] } {
+  return { common: COMMON_APPS.flatMap((id) => all.filter((g) => g.id === id)), more: all.filter((g) => !COMMON_APPS.includes(g.id)) };
+}
+
 /** Every app's guide for the endpoint alone: each app signs in through the browser (OAuth), so nothing secret is pasted. */
 export function oauthGuides(url: string, t: Translate): Guide[] {
   return APPS.flatMap((app) => (app.oauth ? [guideOf(app, app.oauth(url, t), t)] : []));

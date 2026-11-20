@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { copyProfile } from "../mutations";
 import { Checkbox } from "../ui/Checkbox";
 import { InlineConfirm } from "../ui/InlineConfirm";
+import { rowMotion } from "../ui/kept";
 import { LongList } from "../ui/LongList";
 import { Select } from "../ui/Select";
 import { CAPTION, WELL, button } from "../ui/styles";
@@ -39,11 +40,11 @@ export function CopyPanel({ connector, target, onClose }: CopyPanelProps) {
       {target ? null : (
         <div className="mt-3">
           <p className={CAPTION}>{t("copy.to")}</p>
-          <LongList rows={connector.profiles.filter((p) => p.agent !== from)} textOf={(p) => p.agent} label={t("keys.filter")}>
+          <LongList rows={connector.profiles.filter((p) => p.agent !== from)} textOf={(p) => p.agent} keyOf={(p) => p.agent} label={t("keys.filter")}>
             {(shown) => (
               <ul className="mt-1 flex flex-col">
-                {shown.map((p) => (
-                  <li key={p.agent}>
+                {shown.map(({ row: p, phase }) => (
+                  <li key={p.agent} {...rowMotion(phase)}>
                     <Checkbox label={p.agent} visibleLabel checked={picked.has(p.agent)} onChange={() => setPicked(toggledOne(picked, p.agent))} />
                   </li>
                 ))}

@@ -1,10 +1,35 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, apiFile, setCsrf, type Access, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
+import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
 import { accountQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
 
 const at = (...segments: string[]) => segments.map(encodeURIComponent).join("/");
+
+const patchConnector = async (client: QueryClient, id: string, patch: (connector: Connector) => Connector) => {
+  await client.cancelQueries({ queryKey: connectorsQuery.queryKey, exact: true });
+  client.setQueryData(connectorsQuery.queryKey, (data) => (data?.connectors ? { connectors: data.connectors.map((connector) => (connector.id === id ? patch(connector) : connector)) } : data));
+};
+
+const withAccess =
+  (names: readonly string[], access: Access) =>
+  (connector: Connector): Connector => ({
+    ...connector,
+    functions: connector.functions && connector.functions.map((fn) => (names.includes(fn.name) ? { ...fn, access } : fn)),
+    items: connector.items && connector.items.map((item) => (names.includes(item.name) ? { ...item, access } : item)),
+  });
+
+const quarantined = (client: QueryClient, id: string, names: readonly string[]) => {
+  const connector = client.getQueryData(connectorsQuery.queryKey)?.connectors?.find((c) => c.id === id);
+  return [...(connector?.functions ?? []), ...(connector?.items ?? [])].some((row) => names.includes(row.name) && row.state === "quarantined");
+};
+
+/** After an access write the cache already holds: the write is laid over the list again, in case a read that started before it landed since, and the engine's answers for this connector's keys are read again; the whole list is read again instead when the write failed, refused a name, or accepted a quarantined row, whose new definition only the console knows. */
+const settleAccess = async (client: QueryClient, id: string, names: readonly string[], access: Access, failed: boolean) => {
+  const reconcile = failed || quarantined(client, id, names);
+  if (!reconcile) await patchConnector(client, id, withAccess(names, access));
+  return invalidate(client, reconcile ? connectorsQuery.queryKey : [...connectorsQuery.queryKey, id]);
+};
 
 /** Creates the owner on first visit or signs them in; the answer arms the CSRF token and the session is read again. */
 export const signIn = mutationOptions({
@@ -52,16 +77,18 @@ export const revokeKey = mutationOptions({
   onSuccess: (_data, _name, _onMutate, { client }) => invalidate(client, sessionQuery.queryKey, keysQuery.queryKey),
 });
 
-/** Sets one function of a connector to off, on or ask. */
+/** Sets one function of a connector to off, on or ask, in the cached list at once. */
 export const setFunctionAccess = mutationOptions({
   mutationFn: ({ connector, name, access }: { connector: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "functions", name)}`, { access }),
-  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+  onMutate: ({ connector, name, access }, { client }) => patchConnector(client, connector, withAccess([name], access)),
+  onSettled: (_data, error, { connector, name, access }, _onMutate, { client }) => settleAccess(client, connector, [name], access, error !== null),
 });
 
-/** Sets one item of a connector to off, on or ask, by name in the body since names hold `/` and `:`. */
+/** Sets one item of a connector to off, on or ask, in the cached list at once, by name in the body since names hold `/` and `:`. */
 export const setItemAccess = mutationOptions({
   mutationFn: ({ connector, name, access }: { connector: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "items")}`, { name, access }),
-  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+  onMutate: ({ connector, name, access }, { client }) => patchConnector(client, connector, withAccess([name], access)),
+  onSettled: (_data, error, { connector, name, access }, _onMutate, { client }) => settleAccess(client, connector, [name], access, error !== null),
 });
 
 /** Sets the named access keys, or every key, to off, follow or custom on a connector, in one request that answers each key. */
@@ -73,10 +100,11 @@ export const setProfileMode = mutationOptions({
 /** What one function or item of a batch came to: done without an error. */
 export type ItemResult = { name: string; error?: string; code?: string };
 
-/** Sets many functions of a connector to off, on or ask for every key that follows it, in one request that answers each. */
+/** Sets many functions of a connector to off, on or ask for every key that follows it, in the cached list at once and in one request that answers each. */
 export const setFunctionsAccess = mutationOptions({
   mutationFn: ({ connector, names, access }: { connector: string; names: readonly string[]; access: Access }) => api<{ items: ItemResult[] }>("PUT", `/api/connectors/${at(connector, "functions")}`, { names, access }),
-  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+  onMutate: ({ connector, names, access }, { client }) => patchConnector(client, connector, withAccess(names, access)),
+  onSettled: (data, error, { connector, names, access }, _onMutate, { client }) => settleAccess(client, connector, names, access, error !== null || (data?.items.some((item) => item.error) ?? true)),
 });
 
 /** Narrows many functions or items for one access key, or resets them to the connector's own access, in one request that answers each; names go in the body since item names hold `/` and `:`. */
@@ -92,16 +120,18 @@ export const copyProfile = mutationOptions({
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 
-/** Forgets a setup's profile waiting on a connector for an access key not made yet. */
+/** Forgets a setup's profile waiting on a connector for an access key not made yet, in the cached list at once; the list is read again only when the console refuses. */
 export const dropWaiting = mutationOptions({
   mutationFn: ({ connector, agent }: { connector: string; agent: string }) => api("DELETE", `/api/connectors/${at(connector, "waiting", agent)}`),
-  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+  onMutate: ({ connector, agent }, { client }) => patchConnector(client, connector, (c) => ({ ...c, waiting: c.waiting?.filter((p) => p.agent !== agent) })),
+  onError: (_error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 
-/** Makes the access keys made from now on start off on a connector, or follow it. */
+/** Makes the access keys made from now on start off on a connector, or follow it, in the cached list at once; the list is read again only when the console refuses. */
 export const setNewKeysOff = mutationOptions({
   mutationFn: ({ connector, off }: { connector: string; off: boolean }) => api("PUT", `/api/connectors/${at(connector, "new-keys")}`, { off }),
-  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+  onMutate: ({ connector, off }, { client }) => patchConnector(client, connector, (c) => ({ ...c, new_keys_off: off })),
+  onError: (_error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 
 /** Seals a secret header onto a connector's calls. */

@@ -48,6 +48,22 @@ const setNarrowing = (query: URLSearchParams, narrowing: Narrowing) => {
 /** A local day as `YYYY-MM-DD`. */
 export const dayOf = (at: Date) => `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
 
+/** How many days back the console keeps calls, so a custom period starts at most this far back. */
+export const KEPT_DAYS = 30;
+
+/** The local days a custom period can start or end on, newest first: from `to` back to `from`, both included, as `YYYY-MM-DD`. */
+export function daysBetween(from: string, to: string): string[] {
+  const first = startOf(from);
+  const last = startOf(to);
+  if (!first || !last) return [];
+  const days: string[] = [];
+  for (const at = last; at >= first; at.setDate(at.getDate() - 1)) days.push(dayOf(at));
+  return days;
+}
+
+/** The first local day the console still keeps calls for. */
+export const keptSince = (now: Date) => dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - KEPT_DAYS));
+
 /** The custom period the page opens with: the last seven local days, today included. */
 export const lastWeek = (now: Date): ActivityPeriod => ({ range: "custom", from: dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)), to: dayOf(now) });
 

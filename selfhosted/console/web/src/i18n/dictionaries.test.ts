@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { en } from "./en.ts";
 import { es } from "./es.ts";
+import { paramsOf } from "./index.ts";
 import { ptBR } from "./pt-br.ts";
 
 const others = { "pt-BR": ptBR, es } as const;
-const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
 const marks = (text: string) => text.split("*").length - 1;
 
 describe("dictionaries", () => {
@@ -15,7 +15,7 @@ describe("dictionaries", () => {
     });
 
     test(`${locale} keeps every placeholder of English`, () => {
-      for (const [key, text] of Object.entries(en)) assert.deepEqual(placeholders(dictionary[key as keyof typeof en]), placeholders(text), key);
+      for (const [key, text] of Object.entries(en)) assert.deepEqual(paramsOf(dictionary[key as keyof typeof en]), paramsOf(text), key);
     });
 
     test(`${locale} marks the lime word of the same titles as English`, () => {
@@ -26,6 +26,16 @@ describe("dictionaries", () => {
       for (const [key, text] of Object.entries(dictionary)) assert.notEqual(text.trim(), "", key);
     });
   }
+
+  test("end every plural with an other branch", () => {
+    for (const dictionary of [en, ptBR, es])
+      for (const [key, text] of Object.entries(dictionary)) for (const plural of text.matchAll(/\{\w+, plural,(.*?)\}\}/g)) assert.match(plural[1] ?? "", /other \{[^{}]*$/, key);
+  });
+
+  test("count nouns through a plural, never a bare number", () => {
+    const bare = /\{(count|total|max|days)\} (functions|keys|calls|files|days|hours|minutes|bytes|errors|overrides|values)\b/;
+    for (const [key, text] of Object.entries(en)) assert.doesNotMatch(text, bare, key);
+  });
 
   test("close every lime mark it opens", () => {
     for (const dictionary of [en, ptBR, es]) for (const [key, text] of Object.entries(dictionary)) assert.equal(marks(text) % 2, 0, key);

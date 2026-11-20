@@ -1,22 +1,23 @@
 import type { Agent } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { InlineConfirm } from "../ui/InlineConfirm";
+import { rowMotion, type RowPhase } from "../ui/kept";
 import { KeyConnectors } from "./KeyConnectors";
 import { Tag } from "../ui/Tag";
 import { button } from "../ui/styles";
 import type { RevokeEvent, RevokeState } from "./revoke";
 
-type KeyRowProps = { entry: Agent; flow: RevokeState; error?: string; dispatch(event: RevokeEvent): void; onConfirm(): void };
+type KeyRowProps = { entry: Agent; flow: RevokeState; error?: string; phase?: RowPhase; dispatch(event: RevokeEvent): void; onConfirm(): void };
 
 /** One access key: its name and expiry, whether an app connected it through the browser sign-in (new until the owner has seen it), its mode on each connector, a visible Revoke, and in place of it the inline question that revokes the key for good. In a list narrower than 28rem the name takes its own line. */
-export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps) {
+export function KeyRow({ entry, flow, error, phase, dispatch, onConfirm }: KeyRowProps) {
   const t = useT();
   const locale = useLocale();
   const expired = new Date(entry.expires_at) < new Date();
   const asking = (flow.kind === "confirming" || flow.kind === "revoking") && flow.name === entry.name;
   const revoking = flow.kind === "revoking" && flow.name === entry.name;
   return (
-    <li className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${revoking ? "opacity-60" : ""}`}>
+    <li {...rowMotion(phase)} className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${revoking ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <span className={`size-1.5 shrink-0 rounded-full ${expired ? "bg-amber-400" : "bg-lime"}`} aria-hidden="true" />
         <code title={entry.name} className="min-w-0 grow basis-[calc(100%-1.5rem)] truncate font-mono text-sm font-medium @md:basis-0" translate="no">

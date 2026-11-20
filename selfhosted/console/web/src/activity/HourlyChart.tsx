@@ -12,7 +12,7 @@ const SERIES = [
   { key: "ok", fill: "fill-paper/45", swatch: "bg-paper/45", label: "outcome.ok" },
   { key: "failed", fill: "fill-amber-400", swatch: "bg-amber-400", label: "outcome.error" },
   { key: "denied", fill: "fill-red-400/80", swatch: "bg-red-400/80", label: "outcome.denied" },
-  { key: "waiting", fill: "fill-lime", swatch: "bg-lime", label: "outcome.pending" },
+  { key: "waiting", fill: "fill-paper", swatch: "bg-paper", label: "outcome.pending" },
 ] as const;
 
 const whenOf = (bar: Bar, locale: Locale) =>
@@ -33,7 +33,7 @@ function Stack({ bar, x, max, label }: { bar: Bar; x: number; max: number; label
   );
 }
 
-/** The calls of the period as stacked bars, per hour over up to two days and per local day beyond, quiet paper for answered calls and colour only for failed, denied and waiting ones, with a legend; screen readers get the same numbers as a table. */
+/** The calls of the period as stacked bars, per hour over up to two days and per local day beyond, quiet paper for answered calls, full paper for waiting ones and colour only for failed and denied ones, with a legend; screen readers get the same numbers as a table. */
 export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
   const t = useT();
   const locale = useLocale();

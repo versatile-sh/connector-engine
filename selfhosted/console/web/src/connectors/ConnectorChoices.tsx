@@ -1,17 +1,21 @@
 import { useState } from "react";
 import type { Connector, Profile } from "../api";
+import { useT } from "../i18n/I18nProvider";
+import { CopyPanel } from "./CopyPanel";
 import { Functions } from "./Functions";
 import { ItemSections } from "./ItemSections";
 import { useDefaultLens, useProfileLens, type Lens } from "./lens";
 import { DefaultBar, KeyBar, ProfilePicker } from "./ProfileBar";
 
-function Rows({ connector, lens }: { connector: Connector; lens: Lens }) {
+type Copy = { text: string; open(): void } | undefined;
+
+function Rows({ connector, lens, copy }: { connector: Connector; lens: Lens; copy: Copy }) {
   return (
     <>
       <p role="alert" className="-mb-6 text-sm text-amber-400 empty:hidden">
         {lens.error}
       </p>
-      <Functions connector={connector} lens={lens} />
+      <Functions connector={connector} lens={lens} copy={copy} />
       <ItemSections
         items={connector.items}
         variant="page"
@@ -27,23 +31,31 @@ function Rows({ connector, lens }: { connector: Connector; lens: Lens }) {
 }
 
 function DefaultView({ connector }: { connector: Connector }) {
+  const t = useT();
   const lens = useDefaultLens(connector);
+  const [copying, setCopying] = useState(false);
+  const copy = connector.profiles.length > 1 ? { text: t("bulk.copyTo"), open: () => setCopying(true) } : undefined;
   return (
     <div className="swap-in flex min-w-0 flex-col gap-10">
       <DefaultBar connector={connector} />
-      <Rows connector={connector} lens={lens} />
+      {copying ? <CopyPanel connector={connector} onClose={() => setCopying(false)} /> : null}
+      <Rows connector={connector} lens={lens} copy={copy} />
     </div>
   );
 }
 
 function KeyView({ connector, profile }: { connector: Connector; profile: Profile }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
+  const [copying, setCopying] = useState(false);
   const mode = profile.mode === "follow" && editing ? "custom" : profile.mode;
   const lens = useProfileLens(connector, profile, mode === "custom");
+  const copy = connector.profiles.length > 1 ? { text: t("bulk.copyFrom"), open: () => setCopying(true) } : undefined;
   return (
     <div className="swap-in flex min-w-0 flex-col gap-10">
       <KeyBar connector={connector} profile={profile} mode={mode} onCustom={() => setEditing(true)} onLeave={() => setEditing(false)} />
-      <Rows connector={connector} lens={lens} />
+      {copying ? <CopyPanel connector={connector} target={profile} onClose={() => setCopying(false)} /> : null}
+      <Rows connector={connector} lens={lens} copy={copy} />
     </div>
   );
 }

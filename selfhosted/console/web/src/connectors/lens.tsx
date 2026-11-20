@@ -2,13 +2,13 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { errorText, type Access, type Connector, type Effect, type Profile } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { setFunctionAccess, setItemAccess, setProfileAccess } from "../mutations";
+import { setFunctionAccess, setFunctionsAccess, setItemAccess, setProfileAccess, type ItemResult } from "../mutations";
 import { profileEffectsQuery } from "../queries";
 import { Tag } from "../ui/Tag";
 import { button } from "../ui/styles";
 import { profileAccess } from "./profiles";
 
-/** How a connector's function and item rows read and write for one profile: the access a row shows, the most it may take, whether it is locked, the flags it adds, what a choice does, the last refusal, and whether a row may accept a changed definition. */
+/** How a connector's function and item rows read and write for one profile: the access a row shows, the most it may take, whether it is locked, the flags it adds, what a choice does, the last refusal, and whether a row may accept a changed definition; `many` sets many rows in one request, with what it refused, while the rows can change. */
 export type Lens = {
   accessOf(name: string, base: Access): Access;
   most(base: Access): Access | undefined;
@@ -17,15 +17,24 @@ export type Lens = {
   choose(name: string, access: Access): void;
   error: string;
   accepts: boolean;
+  many?: { set(names: readonly string[], access: Access | "default"): void; busy: boolean; refused: readonly ItemResult[]; resets: boolean; overridden(name: string): boolean };
 };
 
 /** The default profile: each row is the connector's own choice for every key, written to the connector. */
 export function useDefaultLens(connector: Connector): Lens {
   const fn = useMutation(setFunctionAccess);
   const item = useMutation(setItemAccess);
-  const pending = (name: string) => [fn, item].find((m) => m.isPending && m.variables.name === name)?.variables?.access;
-  const failed = [fn, item].find((m) => m.isError);
+  const all = useMutation(setFunctionsAccess);
+  const pending = (name: string) => [fn, item].find((m) => m.isPending && m.variables.name === name)?.variables?.access ?? (all.isPending && all.variables.names.includes(name) ? all.variables.access : undefined);
+  const failed = [fn, item, all].find((m) => m.isError);
   return {
+    many: {
+      set: (names, access) => access !== "default" && all.mutate({ connector: connector.id, names, access }),
+      busy: all.isPending,
+      refused: all.data?.items.filter((result) => result.error) ?? [],
+      resets: false,
+      overridden: () => false,
+    },
     accessOf: (name, base) => pending(name) ?? base,
     most: () => undefined,
     locked: (name) => pending(name) !== undefined,
@@ -61,10 +70,15 @@ export function useProfileLens(connector: Connector, profile: Profile, editable:
   const set = useMutation(setProfileAccess);
   const effects = useQuery(profileEffectsQuery(connector.id, profile.agent));
   const engine = new Map((effects.data ?? []).map((effect) => [effect.name, effect]));
-  const refused = set.data?.items.find((item) => item.error)?.error;
+  const refusedAll = set.data?.items.filter((item) => item.error) ?? [];
+  const refused = refusedAll.length === 1 && set.variables?.names.length === 1 ? refusedAll[0]?.error : undefined;
   const pending = (name: string) => (set.isPending && set.variables.names.includes(name) && set.variables.access !== "default" ? set.variables.access : undefined);
-  const choose = (name: string, access: Access) => set.mutate({ connector: connector.id, agent: profile.agent, names: [name], access });
+  const write = (names: readonly string[], access: Access | "default") => set.mutate({ connector: connector.id, agent: profile.agent, names, access });
+  const choose = (name: string, access: Access) => write([name], access);
   return {
+    many: editable
+      ? { set: write, busy: set.isPending, refused: set.variables && set.variables.names.length > 1 ? refusedAll : [], resets: true, overridden: (name) => profile.mode === "custom" && name in profile.overrides }
+      : undefined,
     accessOf: (name, base) => pending(name) ?? profileAccess(profile, name, base).access,
     most: (base) => base,
     locked: (name) => !editable || pending(name) !== undefined,

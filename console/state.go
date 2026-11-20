@@ -41,9 +41,16 @@ type Agent struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
+// StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value.
+type StoredSession struct {
+	CSRF    string    `json:"csrf"`
+	Expires time.Time `json:"expires"`
+}
+
 type stateFile struct {
-	Owner  *Owner           `json:"owner,omitempty"`
-	Agents map[string]Agent `json:"agents,omitempty"`
+	Owner    *Owner                   `json:"owner,omitempty"`
+	Agents   map[string]Agent         `json:"agents,omitempty"`
+	Sessions map[string]StoredSession `json:"sessions,omitempty"`
 }
 
 // State is the console's file in its volume: the owner account and the connected agents, written atomically with mode 0600.
@@ -151,6 +158,25 @@ func (s *State) CheckLogin(username, password string) (bool, error) {
 	userOK := subtle.ConstantTimeCompare([]byte(username), []byte(o.Username)) == 1
 	passOK := subtle.ConstantTimeCompare(got, want) == 1
 	return userOK && passOK, nil
+}
+
+// Sessions returns the stored sessions.
+func (s *State) Sessions() map[string]StoredSession {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]StoredSession, len(s.data.Sessions))
+	for k, v := range s.data.Sessions {
+		out[k] = v
+	}
+	return out
+}
+
+// PutSessions replaces the stored sessions.
+func (s *State) PutSessions(sessions map[string]StoredSession) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data.Sessions = sessions
+	return s.save()
 }
 
 // Agents lists the connected agents.

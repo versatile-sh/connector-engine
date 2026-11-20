@@ -173,6 +173,7 @@ type tap struct {
 	once     sync.Once
 }
 
+// Read passes the engine's bytes on unchanged and watches them, through bounded buffers, for the answers.
 func (t *tap) Read(p []byte) (int, error) {
 	n, err := t.body.Read(p)
 	if n > 0 && !t.done {
@@ -189,6 +190,7 @@ func (t *tap) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// Close records the captures off the response path and closes the engine's body.
 func (t *tap) Close() error {
 	t.once.Do(func() { go t.finish() })
 	return t.body.Close()

@@ -70,7 +70,7 @@ File format:
 
 ### Shareable setups
 
-A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, as the names of permission sets), root keys, account data, activity or device pairings.
+A setup records each connector's credential mode as `credentials: per_person`; a connector without the field imports as `shared`, so older setups import as before. A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, as the names of permission sets), root keys, account data, activity or device pairings.
 
 - Every address loses its user name and password, its query and its fragment.
 - An address whose path holds a token-like segment (20 or more letters, digits, `-` or `_`, with a digit) is left out.

@@ -107,7 +107,7 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
             <Icon name="key" className="size-4" />
             {mint.isPending ? t("keys.creating") : t("keys.create")}
           </button>
-          <p className="mt-4 text-[0.8125rem] leading-snug text-pretty text-muted">{t("keys.restart")}</p>
+          <p className="mt-4 text-[0.8125rem] leading-snug text-pretty text-muted">{t("keys.skillsOff")}</p>
         </form>
         <section aria-labelledby="keys-title" className={`${SURFACE} p-5`}>
           <div className="mb-3 flex items-baseline gap-3">

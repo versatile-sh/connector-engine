@@ -181,7 +181,7 @@ export const es: Record<MessageKey, string> = {
   "keys.daysHint": "Hasta {max} días.",
   "keys.create": "Crear clave de acceso",
   "keys.creating": "Creando…",
-  "keys.restart": "Las claves dejan de funcionar cuando el gateway se reinicia; crea una nueva después de reiniciar.",
+  "keys.skillsOff": "Una clave nueva empieza con todas las skills apagadas: enciéndelas para ella en Skills.",
   "keys.list": "Claves de acceso",
   "keys.filter": "Filtrar claves",
   "keys.until": "hasta {date}",

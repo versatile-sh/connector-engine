@@ -179,7 +179,7 @@ export const en = {
   "keys.daysHint": "Up to {max} days.",
   "keys.create": "Create access key",
   "keys.creating": "Creating…",
-  "keys.restart": "Keys stop working when the gateway restarts; create a new one after a restart.",
+  "keys.skillsOff": "A new key starts with every skill off: turn them on for it in Skills.",
   "keys.list": "Access keys",
   "keys.filter": "Filter keys",
   "keys.until": "until {date}",

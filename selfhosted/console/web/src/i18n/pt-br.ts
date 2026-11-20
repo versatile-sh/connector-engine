@@ -181,7 +181,7 @@ export const ptBR: Record<MessageKey, string> = {
   "keys.daysHint": "Até {max} dias.",
   "keys.create": "Criar chave de acesso",
   "keys.creating": "Criando…",
-  "keys.restart": "As chaves param de funcionar quando o gateway reinicia; crie uma nova depois de reiniciar.",
+  "keys.skillsOff": "Uma chave nova começa com todas as skills desligadas: ligue-as para ela em Skills.",
   "keys.list": "Chaves de acesso",
   "keys.filter": "Filtrar chaves",
   "keys.until": "até {date}",

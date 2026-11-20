@@ -57,7 +57,7 @@ func (g *Gateway) skill(ctx context.Context, p port.Principal, d *deliveries, to
 		}
 		return structured(map[string]any{"skills": listed(fl.Skills)}), nil
 	}
-	var a skillArgs
+	var a port.SkillLoad
 	if err := json.Unmarshal(raw, &a); err != nil || a.Skill == "" {
 		return toolError(port.CodeInvalidArgument, "skill_load takes a skill and an optional path"), nil
 	}

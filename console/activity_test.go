@@ -32,6 +32,7 @@ type fakeEngine struct {
 	mcp       http.HandlerFunc
 	calls     []port.Call
 	approvals []port.Approval
+	separator string
 }
 
 func (f *fakeEngine) addCall(c port.Call) {
@@ -71,6 +72,16 @@ func (f *fakeEngine) handler() http.Handler {
 			m.Kind = port.KindSkill
 		}
 		_ = json.NewEncoder(w).Encode(port.ListingVersion{Manifest: m})
+	})
+	mux.HandleFunc("GET /v1/agents/{agent}/functions", func(w http.ResponseWriter, _ *http.Request) {
+		f.mu.Lock()
+		sep := f.separator
+		f.mu.Unlock()
+		if sep == "" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"functions": []map[string]string{{"name": "notes" + sep + "search", "connector": "c-notes", "function": "search"}}})
 	})
 	mux.HandleFunc("GET /v1/calls", func(w http.ResponseWriter, _ *http.Request) {
 		f.mu.Lock()
@@ -795,5 +806,18 @@ func TestACallApprovedInsideTheHoldWindowIsOneRow(t *testing.T) {
 	}
 	if d := rr.detail(row.ID); d.EngineCall == "" || d.Arguments != `{"all":true}` {
 		t.Fatalf("its detail: %+v", d)
+	}
+}
+
+func TestTheToolSeparatorIsLearnedFromTheEngine(t *testing.T) {
+	r := newActivityRig(t)
+	r.engine.mu.Lock()
+	r.engine.separator = "--"
+	r.engine.mu.Unlock()
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"ok"}]}}`, r.engineCall("k1", "search", port.CallFinished, false)))
+	r.post(toolCall(1, "notes--search", `{}`))
+	row := only(t, r.rows("", 1))
+	if row.Alias != "notes" || row.Function != "search" || row.Connector != "c-notes" {
+		t.Fatalf("a call named with the engine's separator: %+v", row)
 	}
 }

@@ -180,6 +180,13 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 	return f, nil
 }
 
+func firstAgent(agent string, captures []Capture) string {
+	if agent == "" && len(captures) > 0 {
+		return captures[0].Agent
+	}
+	return agent
+}
+
 type joined struct {
 	row     ActivityCall
 	capture *Capture
@@ -201,7 +208,7 @@ func earliest(list []*port.Call, cp *Capture, used map[port.CallID]bool) *port.C
 	return best
 }
 
-func join(captures []Capture, f engineFacts) []joined {
+func join(captures []Capture, f engineFacts, sep string) []joined {
 	open := map[callKey][]*port.Call{}
 	byApproval := map[port.ApprovalID]*port.Call{}
 	for i := range f.calls {
@@ -216,7 +223,7 @@ func join(captures []Capture, f engineFacts) []joined {
 	out := make([]joined, 0, len(captures)+len(f.calls))
 	for i := range captures {
 		cp := &captures[i]
-		alias, fn, found := strings.Cut(cp.Tool, toolSeparator)
+		alias, fn, found := strings.Cut(cp.Tool, sep)
 		switch {
 		case cp.Skill != "":
 			alias, fn = cp.Skill, port.SkillFunction
@@ -436,7 +443,7 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, pageOf(join(captures, facts), f))
+	writeJSON(w, http.StatusOK, pageOf(join(captures, facts, c.separator(r.Context(), firstAgent(f.agent, captures))), f))
 }
 
 func detailOf(j joined) ActivityDetail {
@@ -491,7 +498,7 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	for _, j := range join(captures, facts) {
+	for _, j := range join(captures, facts, c.separator(r.Context(), agent)) {
 		if j.row.ID == id {
 			writeJSON(w, http.StatusOK, detailOf(j))
 			return

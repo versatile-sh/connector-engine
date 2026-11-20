@@ -339,7 +339,7 @@ export const en = {
   "activity.filters": "Filters",
   "activity.connector": "Connector",
   "activity.connector.clear": "Show every connector, not only {name}",
-  "activity.search": "Search a function",
+  "activity.search": "Search a function or connector",
   "activity.outcome": "Outcome",
   "activity.outcome.all": "Any outcome",
   "outcome.ok": "ok",

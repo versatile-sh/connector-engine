@@ -1,4 +1,8 @@
+![Approval surfaces](../assets/section-approval-surfaces.svg)
+
 # Approval surfaces for the local install
+
+> Design record. To set up and use approvals, read [approvals and notifications](../using/approvals.md).
 
 How a held call reaches the owner where they already are, and how the owner's answer comes back. This applies to the `person` profile only: the console and a host helper. The engine is not changed. The `headless` profile and products that embed the engine see nothing new.
 

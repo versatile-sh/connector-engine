@@ -10,3 +10,5 @@ vendor/
 /connector-console
 /cnctl
 /testmcp
+/dist/
+/docs/assets/src/node_modules/

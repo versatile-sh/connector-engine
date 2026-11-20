@@ -97,7 +97,7 @@ export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
         <Choice label={t("activity.connector")} all={t("activity.connectors.all")} value={undefined} options={connectors} onChange={(connector) => onChange({ ...filter, connector })} />
       ) : null}
       {data && (data.agents.length > 1 || filter.agent) ? (
-        <Choice label={t("activity.app")} all={t("activity.app.all")} value={filter.agent} options={data.agents.map((agent) => ({ value: agent, text: agent }))} onChange={(agent) => onChange({ ...filter, agent })} />
+        <Choice label={t("common.app")} all={t("activity.app.all")} value={filter.agent} options={data.agents.map((agent) => ({ value: agent, text: agent }))} onChange={(agent) => onChange({ ...filter, agent })} />
       ) : null}
       <Choice<CallOutcome> label={t("activity.outcome")} all={t("activity.outcome.all")} value={filter.outcome} options={FILTER_OUTCOMES.map((outcome) => ({ value: outcome, text: t(`outcome.${outcome}`) }))} onChange={(outcome) => onChange({ ...filter, outcome })} />
       <Search value={filter.search} onSearch={(search) => onChange({ ...filter, search })} />

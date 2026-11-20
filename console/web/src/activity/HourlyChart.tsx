@@ -70,8 +70,8 @@ export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
         <caption>{title}</caption>
         <thead>
           <tr>
-            <th scope="col">{t("activity.chart.when")}</th>
-            <th scope="col">{t("activity.chart.calls")}</th>
+            <th scope="col">{t("activity.when")}</th>
+            <th scope="col">{t("activity.calls")}</th>
           </tr>
         </thead>
         <tbody>

@@ -37,7 +37,7 @@ function RemoveSkill({ skill }: { skill: Skill }) {
     <>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         {confirming ? (
-          <div role="group" aria-label={t("skills.remove")} className="swap-in bubble flex flex-wrap items-center gap-3 border border-amber/40 bg-amber/5 py-2 pr-2 pl-4">
+          <div role="group" aria-label={t("common.remove")} className="swap-in bubble flex flex-wrap items-center gap-3 border border-amber/40 bg-amber/5 py-2 pr-2 pl-4">
             <p className="min-w-0 text-sm [overflow-wrap:anywhere]">{t("skills.removeAsk", { name: skill.alias })}</p>
             <button type="button" autoFocus disabled={remove.isPending} className={button({ variant: "quiet", size: "xs" })} onClick={() => setConfirming(false)}>
               {t("common.cancel")}
@@ -48,7 +48,7 @@ function RemoveSkill({ skill }: { skill: Skill }) {
           </div>
         ) : (
           <button type="button" className={button({ variant: "danger", size: "xs" })} onClick={() => setConfirming(true)}>
-            {t("skills.remove")}
+            {t("common.remove")}
           </button>
         )}
       </div>

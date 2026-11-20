@@ -30,7 +30,7 @@ export function Credentials({ connector }: { connector: Connector }) {
   return (
     <section aria-labelledby="creds-title" className={`${SURFACE} p-5`}>
       <h2 id="creds-title" className="text-base font-medium">
-        {t("creds.title")}
+        {t("common.credentials")}
       </h2>
       {stored.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -56,7 +56,7 @@ export function Credentials({ connector }: { connector: Connector }) {
         <form onSubmit={onOAuth} className="mt-5 border-t border-line pt-4">
           <h3 className="mb-3 text-sm font-semibold">{t("creds.oauth")}</h3>
           <Field label={t("creds.clientId")} hint={t("creds.clientIdHint")} mono value={clientID} onChange={(event) => setClientID(event.target.value)} />
-          <Field label={t("creds.clientSecret")} hint={t("creds.optional")} error={connect.isError ? errorText(connect.error) : undefined} type="password" autoComplete="off" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} />
+          <Field label={t("creds.clientSecret")} hint={t("common.optional")} error={connect.isError ? errorText(connect.error) : undefined} type="password" autoComplete="off" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} />
           <button type="submit" disabled={connect.isPending} className={`${button({ variant: "accent", size: "sm" })} w-full`}>
             {t("creds.connect")}
           </button>

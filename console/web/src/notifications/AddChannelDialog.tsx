@@ -45,7 +45,7 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
           <Field
             key={field.name}
             label={t(field.label)}
-            hint={field.optional ? t("notify.field.optional") : field.secret ? t("notify.field.secretHint") : undefined}
+            hint={field.optional ? t("common.optional") : field.secret ? t("notify.field.secretHint") : undefined}
             type={field.secret ? "password" : "text"}
             autoComplete="off"
             spellCheck={false}

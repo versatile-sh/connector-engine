@@ -7,7 +7,7 @@ import { offeredChoices } from "./choices";
 
 type DecisionButtonsProps = { choices: readonly string[] | undefined; deciding?: ApprovalChoice | undefined; size?: "sm" | "md"; stacked?: boolean; onChoose(choice: ApprovalChoice): void };
 
-const LABEL: Record<ApprovalChoice, MessageKey> = { once: "decide.once", session: "decide.session", always: "decide.always", deny: "decide.deny" };
+const LABEL: Record<ApprovalChoice, MessageKey> = { once: "decide.once", session: "decide.session", always: "decide.always", deny: "common.deny" };
 
 const VARIANT = { once: "accent", session: "secondary", always: "secondary", deny: "danger" } as const;
 

@@ -101,7 +101,7 @@ export function Consent({ id }: { id: string }) {
                     {t("consent.allow")}
                   </button>
                   <button type="button" className={button({ variant: "secondary" })} disabled={decide.isPending} onClick={() => answer(false)}>
-                    {t("consent.deny")}
+                    {t("common.deny")}
                   </button>
                 </div>
               </form>

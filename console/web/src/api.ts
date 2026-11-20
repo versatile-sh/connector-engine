@@ -24,6 +24,22 @@ export type FunctionView = {
   access: Access;
 };
 
+/** What a connector item is: the server's instructions, a prompt or a resource. */
+export type ItemKind = "instructions" | "prompt" | "resource";
+
+/** One prompt, resource or the server instructions, with the text read before choosing; `access` is the proposal in a preview and the choice once installed. */
+export type Item = {
+  name: string;
+  kind: ItemKind;
+  label: string;
+  title?: string;
+  description?: string;
+  preview: string;
+  template?: boolean;
+  state?: "active" | "quarantined" | "disabled";
+  access: Access;
+};
+
 export type Connector = {
   id: string;
   alias: string;
@@ -39,6 +55,7 @@ export type Connector = {
   auth?: string[];
   credentials?: string[];
   functions: FunctionView[] | null;
+  items?: Item[] | null;
 };
 
 export type ProbedTool = {
@@ -102,6 +119,7 @@ export type Preview = {
   protocol?: string;
   auth?: string[];
   tools: ProbedTool[];
+  items?: Item[] | null;
   warning?: string;
 };
 

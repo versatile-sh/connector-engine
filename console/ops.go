@@ -51,6 +51,7 @@ type ConnectorSummary struct {
 	Auth        []string       `json:"auth,omitempty"`
 	Credentials []string       `json:"credentials,omitempty"`
 	Functions   []FunctionView `json:"functions"`
+	Items       []Item         `json:"items"`
 }
 
 func q(kv ...string) string {
@@ -79,7 +80,7 @@ func (c *Console) workspaceGrants(ctx context.Context, conn string) ([]port.Gran
 
 func accessOf(f port.Function, rows []port.Grant) Access {
 	for _, g := range rows {
-		if g.Selector != port.SelectorFunction+f.Name {
+		if g.Selector != port.SelectorOf(f.Name) {
 			continue
 		}
 		switch g.Mode {
@@ -136,8 +137,14 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		if err != nil {
 			return nil, err
 		}
+		s.Items = []Item{}
 		for _, f := range fns.Items {
-			if f.State == port.FunctionRemoved || port.ItemKind(f.Name) != "" {
+			if f.State == port.FunctionRemoved {
+				continue
+			}
+			if it, ok := ItemOf(f.Name, f.Definition); ok {
+				it.State, it.Access = string(f.State), accessOf(f, rows)
+				s.Items = append(s.Items, it)
 				continue
 			}
 			title, desc := describe(f.Definition)
@@ -167,17 +174,32 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function: it accepts a quarantined definition the owner now sees, classes the function read or write by its nature (write for destructive, so on is never capped to ask), then replaces its workspace row (none for off).
+// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature (write for destructive, so on is never capped to ask), replaces its workspace row (none for off), and gives every key the item rows of the connector.
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
-	if !a.Valid() {
-		return fmt.Errorf("access %q is not off, on or ask", a)
+	if err := c.writeAccess(ctx, conn, name, a); err != nil || port.ItemKind(name) == "" || a == AccessOff {
+		return err
+	}
+	for _, ag := range c.State.Agents() {
+		if ag.ExpiresAt.After(time.Now()) {
+			if err := c.bind(ctx, conn, ag); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) error {
+	kind, item := itemKinds[port.ItemKind(name)]
+	if !a.Valid() || item && !validFor(kind, a) {
+		return fmt.Errorf("access %q is not a choice for %s", a, name)
 	}
 	f, err := c.function(ctx, conn, name)
 	if err != nil {
 		return err
 	}
 	if f.State == port.FunctionQuarantined && a != AccessOff {
-		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors/"+esc(conn)+"/functions/"+esc(name)+":accept", map[string]any{"seen": f.DefinitionHash}, nil); err != nil {
+		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors/"+esc(conn)+"/functions:accept", map[string]any{"seen": map[string]port.Hash{name: f.DefinitionHash}}, nil); err != nil {
 			return err
 		}
 		if f, err = c.function(ctx, conn, name); err != nil {
@@ -188,7 +210,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 	if Nature(f) == port.ClassRead {
 		class = port.ClassRead
 	}
-	if class != f.Class {
+	if !item && class != f.Class {
 		if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/functions/"+esc(name)+"/class", map[string]any{"class": class}, &f); err != nil {
 			return err
 		}
@@ -198,7 +220,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 		return err
 	}
 	for _, g := range rows {
-		if g.Selector == port.SelectorFunction+name {
+		if g.Selector == port.SelectorOf(name) {
 			if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil {
 				return err
 			}
@@ -208,7 +230,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 	if mode == "" {
 		return nil
 	}
-	g := port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorFunction + name, Mode: mode, DefinitionHash: f.DefinitionHash}
+	g := port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorOf(name), Mode: mode, DefinitionHash: f.DefinitionHash}
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil)
 }
 
@@ -236,8 +258,8 @@ func (c *Console) freeAlias(ctx context.Context, base string) (string, error) {
 	if len(base) > 24 {
 		base = strings.Trim(base[:24], "-")
 	}
-	if base == "" {
-		base = "mcp"
+	if base == "" || base[0] < 'a' {
+		base = strings.Trim("mcp-"+base, "-")
 	}
 	alias := base
 	for i := 2; taken[alias]; i++ {
@@ -270,10 +292,9 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn)+"/functions", nil, &fns); err != nil {
 		return conn, err
 	}
-	fns.Items = slices.DeleteFunc(fns.Items, func(f port.Function) bool { return port.ItemKind(f.Name) != "" })
 	seen := map[string]port.Hash{}
 	for _, f := range fns.Items {
-		if f.State == port.FunctionQuarantined {
+		if f.State == port.FunctionQuarantined && port.ItemKind(f.Name) == "" {
 			seen[f.Name] = f.DefinitionHash
 		}
 	}
@@ -287,10 +308,12 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 	}
 	for _, f := range fns.Items {
 		a, ok := choices[f.Name]
-		if !ok {
+		if kind, item := itemKinds[port.ItemKind(f.Name)]; !ok && item {
+			a = Proposed(kind)
+		} else if !ok {
 			a = AccessAsk
 		}
-		if err := c.SetAccess(ctx, conn, f.Name, a); err != nil {
+		if err := c.writeAccess(ctx, conn, f.Name, a); err != nil {
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
@@ -350,15 +373,22 @@ func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
 		return err
 	}
 	for _, g := range rows.Items {
-		if g.Selector == port.SelectorAll {
+		if slices.Contains(agentSelectors, g.Selector) {
 			if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil {
 				return err
 			}
 		}
 	}
-	g := port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a.Name, Agent: port.AgentID(a.Name), Connector: port.ConnectorID(conn), Selector: port.SelectorAll, Mode: port.ModeAllow, ExpiresAt: a.ExpiresAt}
-	return c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil)
+	for _, sel := range agentSelectors {
+		g := port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a.Name, Agent: port.AgentID(a.Name), Connector: port.ConnectorID(conn), Selector: sel, Mode: port.ModeAllow, ExpiresAt: a.ExpiresAt}
+		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
+
+var agentSelectors = []string{port.SelectorAll, port.ItemInstructions + port.SelectorAll, port.ItemPrompt + port.SelectorAll, port.ItemResource + port.SelectorAll}
 
 // RevokeAgent refuses every token minted so far for the agent, then unbinds it from every connector and deletes the grants scoped to it; a key and a connector existed, so the first-run guide stays finished.
 func (c *Console) RevokeAgent(ctx context.Context, name string) error {

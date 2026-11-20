@@ -38,9 +38,9 @@ function Endpoint({ url }: { url: string }) {
   const t = useT();
   const { result, copy } = useCopy();
   return (
-    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} className={`bubble-word hidden h-9 items-center gap-2 border border-line-strong px-3 font-mono text-xs text-muted hover:border-paper/50 hover:text-paper xl:inline-flex ${PRESS}`}>
-      <span className={`size-1.5 rounded-full ${result === "copied" ? "bg-lime" : "bg-lime/60"}`} aria-hidden="true" />
-      <span translate="no">{url.replace(/^https?:\/\//, "")}</span>
+    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} title={url} className={`bubble-word hidden h-9 min-w-0 items-center gap-2 border border-line-strong px-3 font-mono text-xs text-muted hover:border-paper/50 hover:text-paper xl:inline-flex ${PRESS}`}>
+      <span className={`size-1.5 shrink-0 rounded-full ${result === "copied" ? "bg-lime" : "bg-lime/60"}`} aria-hidden="true" />
+      <span className="min-w-0 truncate" translate="no">{url.replace(/^https?:\/\//, "")}</span>
       <Icon name={result === "copied" ? "check" : "copy"} className="size-3.5" />
     </button>
   );
@@ -101,7 +101,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           <nav aria-label={t("nav.label")} className="ml-4 hidden items-center gap-1 lg:flex">
             <NavLinks section={section} waiting={waiting} />
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex min-w-0 items-center gap-2">
             <SetupProgress />
             <Endpoint url={endpoint} />
             <LanguageSwitch />

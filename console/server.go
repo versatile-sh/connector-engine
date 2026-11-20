@@ -74,10 +74,11 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /oauth/callback", c.oauthCallback)
 	mux.HandleFunc("GET /api/agents", c.authed(c.listAgents))
 	mux.HandleFunc("POST /api/agents", c.authed(c.mintAgent))
+	mux.HandleFunc("DELETE /api/agents/{name}", c.authed(c.revokeAgent))
 	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
 	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
 	mux.HandleFunc("GET /api/icon", c.authed(c.icon))
-	agent := c.agentProxy()
+	agent := c.refuseRevoked(c.agentProxy())
 	for _, m := range []string{"GET", "POST", "DELETE"} {
 		mux.Handle(m+" /mcp", agent)
 	}
@@ -463,6 +464,14 @@ func (c *Console) mintAgent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, tok)
 }
 
+func (c *Console) revokeAgent(w http.ResponseWriter, r *http.Request) {
+	if err := c.RevokeAgent(r.Context(), r.PathValue("name")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (c *Console) listApprovals(w http.ResponseWriter, r *http.Request) {
 	list, err := c.Approvals(r.Context())
 	if err != nil {
@@ -539,6 +548,38 @@ func (c *Console) icon(w http.ResponseWriter, r *http.Request) {
 	h.Set("Content-Disposition", "inline; filename=icon")
 	h.Set("Cache-Control", "private, max-age=3600")
 	_, _ = w.Write(ic.body)
+}
+
+// bearerClaims reads the agent and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse.
+func bearerClaims(header string) (agent string, iat int64, ok bool) {
+	scheme, raw, found := strings.Cut(header, " ")
+	parts := strings.Split(strings.TrimSpace(raw), ".")
+	if !found || !strings.EqualFold(scheme, "Bearer") || len(parts) != 3 {
+		return "", 0, false
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", 0, false
+	}
+	var claims struct {
+		Agent    string  `json:"agent"`
+		IssuedAt float64 `json:"iat"`
+	}
+	if json.Unmarshal(payload, &claims) != nil || claims.Agent == "" {
+		return "", 0, false
+	}
+	return claims.Agent, int64(claims.IssuedAt), true
+}
+
+func (c *Console) refuseRevoked(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if agent, iat, ok := bearerClaims(r.Header.Get("Authorization")); ok && c.State.Revoked(agent, iat) {
+			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token", error_description="the access key was revoked"`)
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "the access key was revoked"})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (c *Console) agentProxy() http.Handler {

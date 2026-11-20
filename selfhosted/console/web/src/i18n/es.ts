@@ -19,6 +19,7 @@ export const es: Record<MessageKey, string> = {
   "common.save": "Guardar",
   "common.opensNewTab": "(se abre en una pestaña nueva)",
   "list.noMatch": "Nada coincide.",
+  "select.filter": "Escribe para filtrar",
   "list.showAll": "Mostrar todo ({count})",
   "common.credentials": "Credenciales",
   "common.arguments": "Argumentos",

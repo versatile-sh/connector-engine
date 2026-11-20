@@ -327,3 +327,35 @@ svg {
     transition: none !important;
   }
 }
+
+.select-list {
+  --select-from: -0.375rem;
+  transition:
+    opacity 0.2s var(--ease-settle),
+    translate 0.2s var(--ease-settle),
+    display 0.2s allow-discrete,
+    overlay 0.2s allow-discrete;
+}
+
+.select-list[data-up] {
+  --select-from: 0.375rem;
+}
+
+@media (width < 40rem) {
+  .select-list,
+  .select-list[data-up] {
+    --select-from: 1rem;
+  }
+}
+
+.select-list:not(:popover-open) {
+  opacity: 0;
+  translate: 0 var(--select-from);
+}
+
+@starting-style {
+  .select-list:popover-open {
+    opacity: 0;
+    translate: 0 var(--select-from);
+  }
+}

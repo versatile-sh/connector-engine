@@ -1,0 +1,90 @@
+version: 2
+
+project_name: connector-engine
+
+before:
+  hooks:
+    - go mod download
+    - npm --prefix selfhosted/console/web ci --no-audit --no-fund
+    - npm --prefix selfhosted/console/web run build
+
+builds:
+  - id: engine-selfhosted
+    main: ./selfhosted/cmd/connector-engine
+    binary: connector-engine-selfhosted
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+  - id: cnctl-selfhosted
+    main: ./selfhosted/cmd/cnctl
+    binary: cnctl
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w"]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+  - id: console
+    main: ./selfhosted/cmd/connector-console
+    binary: connector-console
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w"]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+  - id: engine-headless
+    main: ./cmd/connector-engine
+    binary: connector-engine
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+  - id: cnctl-headless
+    main: ./cmd/cnctl
+    binary: cnctl
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w"]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: selfhosted
+    ids: [engine-selfhosted, cnctl-selfhosted, console]
+    name_template: "connector-engine_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [LICENSE, README.md]
+  - id: headless
+    ids: [engine-headless, cnctl-headless]
+    name_template: "connector-engine-headless_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [LICENSE, README.md]
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - artifacts: archive
+
+changelog:
+  use: github
+  sort: asc
+
+release:
+  github:
+    owner: versatile-sh
+    name: connector-engine
+  draft: false
+  prerelease: auto
+  extra_files:
+    - glob: scripts/install.sh
+    - glob: scripts/install.ps1

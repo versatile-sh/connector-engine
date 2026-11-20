@@ -10,3 +10,4 @@ vendor/
 /connector-console
 /cnctl
 /testmcp
+/dist/

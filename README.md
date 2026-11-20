@@ -33,10 +33,10 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 | Platform | Command | |
 |---|---|---|
 | **Docker** (any OS) | `git clone https://github.com/versatile-sh/connector-engine && cd connector-engine && make up` | works today |
-| **Linux, macOS** | `curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh \| sh`, then `connector-engine-selfhosted up --open` | after v0.1.0 |
+| **Linux, macOS** | `curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh \| sh`, then `vsh up --open` | after v0.1.0 |
 | **Windows** | `irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 \| iex` | after v0.1.0 |
 | **A VPS** | [Run it on a VPS](docs/self-hosted/vps.md): the binary or Docker on loopback, reached through an SSH tunnel; or the headless engine behind Caddy | works today with Docker |
-| **Docker, no clone** (Linux) | `docker run -d --network host -v connector-engine:/var/lib/connector-engine --entrypoint /usr/local/bin/connector-engine-selfhosted ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain` | after v0.1.0 |
+| **Docker, no clone** (Linux) | `docker run -d --network host -v connector-engine:/var/lib/connector-engine --entrypoint /usr/local/bin/vsh ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain` | after v0.1.0 |
 
 Works today, with Docker:
 
@@ -50,7 +50,7 @@ Without Docker, available after the first release (v0.1.0):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh | sh
-connector-engine-selfhosted up --open
+vsh up --open
 ```
 
 `make up` ends with:
@@ -105,7 +105,7 @@ Cursor and VS Code have one-click links on the console's **Access** page. Claude
 | [Using it](docs/README.md#using-it) | connectors, permissions, skills, approvals, activity, backups |
 | [Self-hosted](docs/README.md#self-hosted) | the person profile, running it on a VPS, the keychain, updating, troubleshooting |
 | [Enterprise and headless](docs/README.md#enterprise-and-headless) | OIDC, Postgres, scaling, security model |
-| [Reference](docs/README.md#reference) | configuration, `cnctl`, API, events |
+| [Reference](docs/README.md#reference) | configuration, `vsh`, API, events |
 | [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) | how it is built, how to contribute, how to report a vulnerability |
 
 ## Other ways to deploy

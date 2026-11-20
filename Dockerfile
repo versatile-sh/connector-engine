@@ -18,9 +18,9 @@ ARG TARGETOS TARGETARCH
 ENV GOOS=$TARGETOS GOARCH=$TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
     go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/connector-engine ./cmd/connector-engine && \
-    go build -ldflags "-s -w" -o /out/core/cnctl ./cmd/cnctl && \
+    go build -ldflags "-s -w" -o /out/core/vsh ./cmd/vsh && \
     go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/connector-engine-selfhosted ./selfhosted/cmd/connector-engine && \
-    go build -ldflags "-s -w" -o /out/cnctl ./selfhosted/cmd/cnctl && \
+    go build -ldflags "-s -w" -o /out/vsh ./selfhosted/cmd/vsh && \
     go build -ldflags "-s -w" -o /out/connector-console ./selfhosted/cmd/connector-console && \
     go build -ldflags "-s -w" -o /out/testmcp ./internal/testmcp && \
     mkdir -p /dirs/var/lib/connector-engine/secrets /dirs/var/lib/connector-console /dirs/run/connector-engine
@@ -31,14 +31,14 @@ ENTRYPOINT ["/usr/local/bin/testmcp"]
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931 AS headless
 COPY --from=build --chown=65532:65532 /dirs/ /
-COPY --from=build /out/connector-engine /out/core/cnctl /usr/local/bin/
+COPY --from=build /out/connector-engine /out/core/vsh /usr/local/bin/
 USER 65532:65532
 EXPOSE 8080 8081
 ENTRYPOINT ["/usr/local/bin/connector-engine"]
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931
 COPY --from=build --chown=65532:65532 /dirs/ /
-COPY --from=build /out/connector-engine /out/connector-engine-selfhosted /out/cnctl /out/connector-console /usr/local/bin/
+COPY --from=build /out/connector-engine /out/connector-engine-selfhosted /out/vsh /out/connector-console /usr/local/bin/
 USER 65532:65532
 EXPOSE 8080 8081 7465
 ENTRYPOINT ["/usr/local/bin/connector-engine"]

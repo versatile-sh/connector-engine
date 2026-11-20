@@ -23,7 +23,7 @@ Allowing an app creates an **access key** named after it. Grants, the key list a
 
 ## Apps without OAuth
 
-Scripts, `cnctl` and apps that cannot sign in use an access key made on the **Access** page. The page shows the exact command or config for each client.
+Scripts, `vsh` and apps that cannot sign in use an access key made on the **Access** page. The page shows the exact command or config for each client.
 
 ```sh
 export CN_AGENT_TOKEN=<the access key>
@@ -32,10 +32,10 @@ make cli ARGS="tools list"
 
 ```text
 <n> tools: <alias>__<function>, ...
-full definitions in /tmp/cnctl-tools-<random>.json
+full definitions in /tmp/vsh-tools-<random>.json
 ```
 
-`make cli` runs `cnctl` from the image against `http://127.0.0.1:7465/mcp` and prints a summary of the functions this key may call. With `cnctl` on your PATH, set `CN_ENDPOINT` and run `cnctl tools list`. See [cnctl](../reference/cnctl.md).
+`make cli` runs `vsh` from the image against `http://127.0.0.1:7465/mcp` and prints a summary of the functions this key may call. With `vsh` on your PATH, set `CN_ENDPOINT` and run `vsh tools list`. See [vsh](../reference/vsh.md).
 
 ## Endpoints the app uses
 

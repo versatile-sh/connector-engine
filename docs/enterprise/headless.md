@@ -8,7 +8,7 @@ The `headless` profile is the engine alone: no console, no keychain, no person. 
 |---|---|---|
 | Identity | the console is the OAuth server | tokens from your OIDC/JWKS issuer |
 | Who decides approvals | one person, in the console or a chat app | your product, through the API and events |
-| Binaries | `selfhosted/cmd/*` | `cmd/connector-engine`, `cmd/cnctl` |
+| Binaries | `selfhosted/cmd/*` | `cmd/connector-engine`, `cmd/vsh` |
 | Profile files | `selfhosted/deploy/profiles/person/` | `deploy/profiles/headless/` |
 
 The headless binaries contain no self-hosted code; `scripts/check-layering.sh` enforces it.
@@ -19,7 +19,7 @@ A dev pair with a memory store and a local token issuer, from a clone:
 
 ```sh
 go install github.com/versatile-sh/connector-engine/cmd/connector-engine@main
-go install github.com/versatile-sh/connector-engine/cmd/cnctl@main
+go install github.com/versatile-sh/connector-engine/cmd/vsh@main
 CN_OPERATOR_TOKEN=dev connector-engine --config examples/dev/connector-engine.yaml --adapters examples/dev/adapters.yaml
 ```
 
@@ -31,7 +31,7 @@ In a second terminal:
 
 ```sh
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/livez
-CNCTL_URL=http://127.0.0.1:8081 CNCTL_TOKEN=dev cnctl admin tenants create t1
+VSH_ADMIN_URL=http://127.0.0.1:8081 VSH_ADMIN_TOKEN=dev vsh admin tenants create t1
 ```
 
 ```text
@@ -45,7 +45,7 @@ CNCTL_URL=http://127.0.0.1:8081 CNCTL_TOKEN=dev cnctl admin tenants create t1
 ```
 
 - No release is tagged yet, so `go install` takes `main`. From the first release, `CONNECTOR_ENGINE_PROFILE=headless` with the [installer](../getting-started/install.md#linux-and-macos) or the `ghcr.io/versatile-sh/connector-engine-headless` image work too.
-- `scripts/smoke.sh` drives this pair end to end with `curl` and `cnctl`; copy its heredocs as a starting point.
+- `scripts/smoke.sh` drives this pair end to end with `curl` and `vsh`; copy its heredocs as a starting point.
 
 ## Run it with Postgres
 
@@ -103,7 +103,7 @@ Every port has built-in adapters, chosen in `adapters.yaml`:
 | filter, index | `builtin`, `lexical` |
 
 ```sh
-cnctl admin adapters list
+vsh admin adapters list
 ```
 
 Your own adapter is one Go package with a `Register(r *app.Registry)` function and one line in your own `main`:

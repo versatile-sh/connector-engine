@@ -264,7 +264,7 @@ export const en = {
   "clients.where.file": "Paste in your config: {path}",
   "clients.where.code": "Paste in your code: {label}",
   "clients.where.values": "Use these three values",
-  "clients.where.cnctl": "Or try it from a terminal with cnctl",
+  "clients.where.vsh": "Or try it from a terminal with vsh",
   "clients.where.ai": "Paste in your AI",
   "clients.open": "Open in {app}",
   "clients.orByHand": "or add it by hand",

@@ -1,4 +1,4 @@
-// Package skills is the host-side `cnctl skills export`: it loads the skills granted to an agent through the agent endpoint and writes their exact bytes into a folder clients read.
+// Package skills is the host-side `vsh skills export`: it loads the skills granted to an agent through the agent endpoint and writes their exact bytes into a folder clients read.
 package skills
 
 import (
@@ -18,13 +18,14 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/versatile-sh/connector-engine/cli/command"
 	"github.com/versatile-sh/connector-engine/cli/tools"
 	"github.com/versatile-sh/connector-engine/core/listing"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
 // ManifestFile is the file an export writes in its folder, naming every file it wrote.
-const ManifestFile = ".cnctl-skills.json"
+const ManifestFile = ".vsh-skills.json"
 
 const usage = `usage: skills export --to DIR [--skill NAME] [--prune]
   DIR is a skills folder such as ~/.claude/skills or ~/.agents/skills.
@@ -38,7 +39,7 @@ type Manifest struct {
 	Files    []string          `json:"files"`
 }
 
-// Command is the `skills` group of cnctl; it is an MCP client of the agent endpoint.
+// Command is the `skills` group of vsh; it is an MCP client of the agent endpoint.
 type Command struct {
 	getenv func(string) string
 }
@@ -65,6 +66,14 @@ type loaded struct {
 	} `json:"files"`
 }
 
+func flags(fs *flag.FlagSet) (*Options, *time.Duration) {
+	var o Options
+	fs.StringVar(&o.To, "to", "", "the skills folder to write into")
+	fs.StringVar(&o.Only, "skill", "", "export this skill alone, by the name skill_list gives")
+	fs.BoolVar(&o.Prune, "prune", false, "remove the files an earlier export wrote that this one did not")
+	return &o, fs.Duration("timeout", 2*time.Minute, "time allowed for the whole command")
+}
+
 // Run executes `skills export`.
 func (c *Command) Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] != "export" {
@@ -73,25 +82,42 @@ func (c *Command) Run(ctx context.Context, args []string, stdout, stderr io.Writ
 	}
 	fs := flag.NewFlagSet("skills export", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	to := fs.String("to", "", "the skills folder to write into")
-	only := fs.String("skill", "", "export this skill alone, by the name skill_list gives")
-	prune := fs.Bool("prune", false, "remove the files an earlier export wrote that this one did not")
-	timeout := fs.Duration("timeout", 2*time.Minute, "time allowed for the whole command")
+	o, timeout := flags(fs)
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
-	if *to == "" || fs.NArg() > 0 {
+	if o.To == "" || fs.NArg() > 0 {
 		fmt.Fprintln(stderr, usage)
 		return fmt.Errorf("export takes --to DIR")
 	}
-	ctx, cancel := context.WithTimeout(ctx, *timeout)
+	return c.export(ctx, *o, *timeout, stdout)
+}
+
+func (c *Command) export(ctx context.Context, o Options, timeout time.Duration, stdout io.Writer) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cs, err := tools.Dial(ctx, c.getenv)
 	if err != nil {
 		return err
 	}
 	defer cs.Close()
-	return Export(ctx, cs, Options{To: *to, Only: *only, Prune: *prune, Endpoint: c.getenv("CN_ENDPOINT")}, stdout)
+	o.Endpoint = c.getenv("CN_ENDPOINT")
+	return Export(ctx, cs, o, stdout)
+}
+
+// ExportCommand is the vsh skills export leaf.
+func ExportCommand() *command.Command {
+	return &command.Command{Name: "export", Summary: "Write the skills granted to this agent into a skills folder.",
+		Long: "DIR is a skills folder such as ~/.claude/skills or ~/.agents/skills.\nEnvironment: CN_ENDPOINT (the /mcp address), CN_AGENT_TOKEN (the token of this agent).",
+		Setup: func(fs *flag.FlagSet) command.Runner {
+			o, timeout := flags(fs)
+			return func(ctx context.Context, x *command.Exec) error {
+				if o.To == "" || len(x.Args) > 0 {
+					return command.Usage(x.Path, "export takes --to DIR and no arguments")
+				}
+				return New(x.Getenv).export(ctx, *o, *timeout, x.Stdout)
+			}
+		}}
 }
 
 // Options are the choices of one export.

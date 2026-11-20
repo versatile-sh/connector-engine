@@ -18,8 +18,8 @@ make logs
 | an approval link answers 503 | the console is locked | `make unlock`, then open the link again |
 | `make up` fails with a bind error on port 7465 | another program uses the port | `make up CONSOLE_PORT=9123` and keep it in `selfhosted/deploy/.env` |
 | `make up` fails on `include` | Docker Compose older than 2.20 | update Docker Compose |
-| `no Go on this host: the keychain is skipped` | Go is not installed, so `bin/cnctl` cannot be built | install Go, or accept a plaintext root key (the console warns) |
-| `keychain-migrate needs an OS keychain and bin/cnctl` | no Secret Service on Linux (`secret-tool` missing), or no Go | install `libsecret-tools` (or `libsecret`) and Go, then retry |
+| `no Go on this host: the keychain is skipped` | Go is not installed, so `bin/vsh` cannot be built | install Go, or accept a plaintext root key (the console warns) |
+| `keychain-migrate needs an OS keychain and bin/vsh` | no Secret Service on Linux (`secret-tool` missing), or no Go | install `libsecret-tools` (or `libsecret`) and Go, then retry |
 
 ## The console
 

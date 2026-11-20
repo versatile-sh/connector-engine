@@ -1,4 +1,4 @@
-// Package admin is "cnctl admin": the management operations of the operation table, called over HTTP.
+// Package admin is "vsh admin": the management operations of the operation table, called over HTTP.
 package admin
 
 import (
@@ -28,7 +28,7 @@ type Alias struct {
 	Positional             []string
 }
 
-// Aliases are the commands of "cnctl admin"; any other operation is reached with "cnctl admin call <operationId>".
+// Aliases are the commands of "vsh admin"; any other operation is reached with "vsh admin call <operationId>".
 var Aliases = []Alias{
 	{"listings", "list", "listListings", nil}, {"listings", "get", "getListing", nil}, {"listings", "create", "createListing", nil},
 	{"listings", "lint", "lintListing", nil}, {"listings", "review", "reviewListing", nil}, {"listings", "quarantine", "quarantineListing", nil},
@@ -60,7 +60,7 @@ type Cmd struct {
 	client   *http.Client
 }
 
-// Command returns "cnctl admin" writing to out and err; CNCTL_URL and CNCTL_TOKEN give the engine and the bearer token.
+// Command returns "vsh admin" writing to out and err; VSH_ADMIN_URL and VSH_ADMIN_TOKEN give the engine and the bearer token.
 func Command(out, err io.Writer, environ []string) *Cmd {
 	return &Cmd{out: out, err: err, environ: environ, client: &http.Client{Timeout: 60 * time.Second}}
 }
@@ -75,21 +75,26 @@ func (c *Cmd) env(name string) string {
 }
 
 func (c *Cmd) usage() int {
-	fmt.Fprintln(c.err, "usage: cnctl admin [--url URL] [--token TOKEN] <group> <verb> [path values] [--field value] [--json BODY]\n       cnctl admin call <operationId> ...\ngroups:")
+	c.help(c.err)
+	return 2
+}
+
+func (c *Cmd) help(w io.Writer) {
+	fmt.Fprintln(w, "Usage: vsh admin [--url URL] [--token TOKEN] <group> <verb> [path values] [--field value] [--json BODY]\n       vsh admin call <operationId> [path values] [--field value] [--json BODY]")
+	fmt.Fprintln(w, "\nCall the engine's management API over HTTP; $VSH_ADMIN_URL and $VSH_ADMIN_TOKEN give the engine and its bearer token.\n\nCommands:")
 	var seen []string
 	for _, a := range Aliases {
 		if !slices.Contains(seen, a.Group) {
 			seen = append(seen, a.Group)
-			fmt.Fprintf(c.err, "  %s:", a.Group)
+			fmt.Fprintf(w, "  %s:", a.Group)
 			for _, b := range Aliases {
 				if b.Group == a.Group {
-					fmt.Fprint(c.err, " "+b.Verb)
+					fmt.Fprint(w, " "+b.Verb)
 				}
 			}
-			fmt.Fprintln(c.err)
+			fmt.Fprintln(w)
 		}
 	}
-	return 2
 }
 
 func operation(id string) (server.Operation, bool) {
@@ -121,12 +126,16 @@ func typed(f server.Field, raw string) (any, error) {
 	return raw, nil
 }
 
-// Run executes "cnctl admin" with args after the word admin; it returns the process exit code.
+// Run executes "vsh admin" with args after the word admin; it returns the process exit code.
 func (c *Cmd) Run(ctx context.Context, args []string) int {
+	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help" || args[0] == "help") {
+		c.help(c.out)
+		return 0
+	}
 	global := flag.NewFlagSet("admin", flag.ContinueOnError)
 	global.SetOutput(c.err)
-	base := global.String("url", c.env("CNCTL_URL"), "base address of the engine")
-	token := global.String("token", "", "bearer token (from $CNCTL_TOKEN when empty)")
+	base := global.String("url", c.env("VSH_ADMIN_URL"), "base address of the engine")
+	token := global.String("token", "", "bearer token (from $VSH_ADMIN_TOKEN when empty)")
 	if err := global.Parse(args); err != nil {
 		return 2
 	}
@@ -154,10 +163,10 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 		return c.usage()
 	}
 	if *base == "" {
-		fmt.Fprintln(c.err, "no engine address: set --url or CNCTL_URL")
+		fmt.Fprintln(c.err, "no engine address: set --url or VSH_ADMIN_URL")
 		return 2
 	}
-	req, err := c.request(ctx, op, positional, rest, strings.TrimRight(*base, "/"), cmp.Or(*token, c.env("CNCTL_TOKEN")))
+	req, err := c.request(ctx, op, positional, rest, strings.TrimRight(*base, "/"), cmp.Or(*token, c.env("VSH_ADMIN_TOKEN")))
 	if err != nil {
 		fmt.Fprintln(c.err, err)
 		return 2

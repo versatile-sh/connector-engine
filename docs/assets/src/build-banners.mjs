@@ -215,7 +215,7 @@ const SECTIONS = [
   ["vps", "self-hosted", "Run it on a ", "VPS"],
   ["architecture", "enterprise", "How it is ", "built"],
   ["config", "reference", "Configuration ", "keys"],
-  ["cnctl", "reference", "The command line, ", "cnctl"],
+  ["vsh", "reference", "The command line, ", "vsh"],
   ["api", "reference", "Operator ", "API"],
   ["events", "reference", "Events, as ", "CloudEvents"],
   ["contributing", "project", "Contributing ", "a change"],

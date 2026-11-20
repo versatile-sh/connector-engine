@@ -20,9 +20,9 @@ type cliRun struct {
 	err    error
 }
 
-func (a agentSession) cnctl(t *testing.T, args ...string) cliRun {
+func (a agentSession) vsh(t *testing.T, args ...string) cliRun {
 	t.Helper()
-	cmd := exec.Command(a.kit.w.bin.cnctl, append([]string{"tools"}, args...)...)
+	cmd := exec.Command(a.kit.w.bin.vsh, append([]string{"tools"}, args...)...)
 	cmd.Env = append(os.Environ(), "CN_ENDPOINT="+a.kit.w.eng.mcpURL(), "CN_AGENT_TOKEN="+a.token)
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -55,7 +55,7 @@ func cliTools(t *testing.T, w *world) {
 	dir := t.TempDir()
 
 	listFile := filepath.Join(dir, "list.json")
-	out := x.cnctl(t, "list", "--out", listFile)
+	out := x.vsh(t, "list", "--out", listFile)
 	var listed []struct{ Name string }
 	readJSONFile(t, listFile, &listed)
 	if out.err != nil || !strings.Contains(out.stdout, "s__customer") || !strings.Contains(out.stdout, listFile) || len(listed) < 2 {
@@ -63,7 +63,7 @@ func cliTools(t *testing.T, w *world) {
 	}
 
 	searchFile := filepath.Join(dir, "search.json")
-	out = x.cnctl(t, "search", "customer", "--out", searchFile)
+	out = x.vsh(t, "search", "customer", "--out", searchFile)
 	var found struct {
 		StructuredContent struct{ Tools []struct{ Name string } }
 	}
@@ -73,7 +73,7 @@ func cliTools(t *testing.T, w *world) {
 	}
 
 	callFile := filepath.Join(dir, "call.json")
-	out = x.cnctl(t, "call", "s__customer", "--args", "{}", "--fields", "/name", "--out", callFile)
+	out = x.vsh(t, "call", "s__customer", "--args", "{}", "--fields", "/name", "--out", callFile)
 	var called struct {
 		StructuredContent map[string]any
 		IsError           bool
@@ -85,7 +85,7 @@ func cliTools(t *testing.T, w *world) {
 
 	before := w.mcp.count("search")
 	heldFile := filepath.Join(dir, "held.json")
-	out = x.cnctl(t, "call", "s__search", "--args", "{}", "--out", heldFile)
+	out = x.vsh(t, "call", "s__search", "--args", "{}", "--out", heldFile)
 	m := approvalIDInSummary.FindStringSubmatch(out.stdout)
 	if out.err != nil || m == nil || !strings.Contains(out.stdout, "pending_approval") || w.mcp.count("search") != before {
 		t.Fatalf("a held call from the CLI: %v %q", out.err, out.stdout)
@@ -94,7 +94,7 @@ func cliTools(t *testing.T, w *world) {
 	var final struct{ Content []struct{ Text string } }
 	statusFile := filepath.Join(dir, "status.json")
 	waitFor(t, "the approved call to answer through the CLI", 15*time.Second, func() bool {
-		run := x.cnctl(t, "call", "approval_status", "--args", `{"approval_id":"`+m[1]+`"}`, "--out", statusFile)
+		run := x.vsh(t, "call", "approval_status", "--args", `{"approval_id":"`+m[1]+`"}`, "--out", statusFile)
 		return run.err == nil && strings.HasPrefix(run.stdout, "ok,")
 	})
 	readJSONFile(t, statusFile, &final)

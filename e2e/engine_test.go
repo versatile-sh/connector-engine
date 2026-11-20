@@ -27,13 +27,13 @@ const (
 
 var bootLine = regexp.MustCompile(`http=(\S+) grpc=(\S+) operator=(\S+)`)
 
-type binaries struct{ engine, cnctl string }
+type binaries struct{ engine, vsh string }
 
 func build(t *testing.T) binaries {
 	t.Helper()
 	dir := t.TempDir()
-	b := binaries{engine: filepath.Join(dir, "connector-engine"), cnctl: filepath.Join(dir, "cnctl")}
-	for out, pkg := range map[string]string{b.engine: "github.com/versatile-sh/connector-engine/cmd/connector-engine", b.cnctl: "github.com/versatile-sh/connector-engine/cmd/cnctl"} {
+	b := binaries{engine: filepath.Join(dir, "connector-engine"), vsh: filepath.Join(dir, "vsh")}
+	for out, pkg := range map[string]string{b.engine: "github.com/versatile-sh/connector-engine/cmd/connector-engine", b.vsh: "github.com/versatile-sh/connector-engine/cmd/vsh"} {
 		if o, err := exec.Command("go", "build", "-o", out, pkg).CombinedOutput(); err != nil {
 			t.Fatalf("go build %s: %v\n%s", pkg, err, o)
 		}

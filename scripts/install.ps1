@@ -4,7 +4,7 @@
 #
 # Settings, all optional (environment variables):
 #   CONNECTOR_ENGINE_VERSION      a release tag such as v0.1.0; default: the latest release
-#   CONNECTOR_ENGINE_PROFILE      person (default: engine, console, cnctl) or headless (engine, cnctl)
+#   CONNECTOR_ENGINE_PROFILE      person (default: vsh) or headless (connector-engine and vsh)
 #   CONNECTOR_ENGINE_INSTALL_DIR  where the binaries go; default: %LOCALAPPDATA%\connector-engine\bin
 #   CONNECTOR_ENGINE_BASE_URL     where the release files are; default: the GitHub release
 $ErrorActionPreference = 'Stop'
@@ -21,8 +21,8 @@ $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
 }
 
 switch ($profileName) {
-  'person' { $archive = "connector-engine_windows_$arch.zip"; $binaries = @('connector-engine-selfhosted.exe', 'connector-console.exe', 'cnctl.exe') }
-  'headless' { $archive = "connector-engine-headless_windows_$arch.zip"; $binaries = @('connector-engine.exe', 'cnctl.exe') }
+  'person' { $archive = "connector-engine_windows_$arch.zip"; $binaries = @('vsh.exe') }
+  'headless' { $archive = "connector-engine-headless_windows_$arch.zip"; $binaries = @('connector-engine.exe', 'vsh.exe') }
   default { throw "install.ps1: CONNECTOR_ENGINE_PROFILE must be person or headless, not $profileName" }
 }
 
@@ -66,7 +66,7 @@ if (-not (($userPath -split ';') -contains $installDir)) {
 Write-Host ""
 if ($profileName -eq 'person') {
   Write-Host "Next step: start it; it opens the console in your browser."
-  Write-Host "  connector-engine-selfhosted up --open"
+  Write-Host "  vsh up --open"
 } else {
   Write-Host "Next step: write connector-engine.yaml and adapters.yaml, then run"
   Write-Host "  connector-engine --config connector-engine.yaml --adapters adapters.yaml adapters check"

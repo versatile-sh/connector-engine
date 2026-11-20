@@ -56,7 +56,7 @@ bootstrap:
 ```
 
 ```sh
-cnctl admin roles put --tenant acme --person bob --role approver --scope t/acme
+vsh admin roles put --tenant acme --person bob --role approver --scope t/acme
 ```
 
 ```text

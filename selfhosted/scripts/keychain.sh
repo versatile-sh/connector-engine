@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: selfhosted/scripts/keychain.sh unlock|migrate|revert|status|recovery|import, with COMPOSE, CNCTL and PROJECT set by make"
+usage="usage: selfhosted/scripts/keychain.sh unlock|migrate|revert|status|recovery|import, with COMPOSE, VSH and PROJECT set by make"
 op="${1:?$usage}"
 read -r -a compose <<<"${COMPOSE:?$usage}"
-cnctl="${CNCTL:-}"
+vsh="${VSH:-}"
 project="${PROJECT:-connector-engine}"
 protection=""
 
@@ -15,8 +15,8 @@ deliver() {
 }
 
 keychain() {
-  if [ -z "$cnctl" ] || ! [ -x "$cnctl" ]; then return 3; fi
-  "$cnctl" keychain "$1" --name "$project"
+  if [ -z "$vsh" ] || ! [ -x "$vsh" ]; then return 3; fi
+  "$vsh" keychain "$1" --name "$project"
 }
 
 report() {
@@ -37,7 +37,7 @@ unlock() {
       done
       ;;
     3)
-      warn "no OS keychain here (or no Go to build bin/cnctl): new root keys stay plaintext files in their volumes, and the console shows a warning"
+      warn "no OS keychain here (or no Go to build bin/vsh): new root keys stay plaintext files in their volumes, and the console shows a warning"
       for service in engine console; do report "$service" plaintext; done
       ;;
     *) exit "$code" ;;
@@ -55,7 +55,7 @@ case "$op" in
   unlock) unlock ;;
   status) for service in engine console; do report "$service" status; done ;;
   migrate)
-    keychain ensure >/dev/null || { echo "keychain-migrate needs an OS keychain and bin/cnctl" >&2; exit 1; }
+    keychain ensure >/dev/null || { echo "keychain-migrate needs an OS keychain and bin/vsh" >&2; exit 1; }
     unlock
     for service in engine console; do report "$service" key migrate; done
     echo "restarting engine and console to prove they unlock from the keychain"

@@ -14,7 +14,7 @@ fail() { echo "smoke: $*" >&2; exit 1; }
 
 cd "$root"
 go build -o "$work/connector-engine" ./cmd/connector-engine
-go build -o "$work/cnctl" ./cmd/cnctl
+go build -o "$work/vsh" ./cmd/vsh
 
 cat >"$work/connector-engine.yaml" <<YAML
 mode: dev
@@ -73,13 +73,13 @@ admin="$(token '{"sub":"ana","tenant":"t1"}')"
 agent="$(token '{"sub":"x","tenant":"t1","workspace":"w1","agent":"x","session":"s1","aud":["http://engine.smoke"]}')"
 [ "$(status -H "Authorization: Bearer $agent" "$http/v1/roles")" = 403 ] || fail "an agent principal is refused (P1)"
 
-cnctl() { CNCTL_URL="$1" CNCTL_TOKEN="$2" "$work/cnctl" admin "${@:3}"; }
-cnctl "$operator" "$CN_OPERATOR_TOKEN" tenants create t1 | grep -q '"id": "t1"' || fail "tenants create"
-cnctl "$operator" "$CN_OPERATOR_TOKEN" adapters list | grep -q '"engine": "connector-engine"' || fail "adapters list"
-cnctl "$http" "$admin" roles put --tenant t1 --person bia --role approver --scope t/t1 | grep -q '"person": "bia"' || fail "roles put"
-cnctl "$http" "$admin" roles list --tenant t1 --person bia | grep -q '"role": "approver"' || fail "roles list"
-cnctl "$http" "$admin" events list | grep -q 'connector.call.finished' || fail "events list"
-if cnctl "$http" "$agent" roles list --tenant t1 2>/dev/null; then fail "cnctl with an agent token"; fi
+vsh() { VSH_ADMIN_URL="$1" VSH_ADMIN_TOKEN="$2" "$work/vsh" admin "${@:3}"; }
+vsh "$operator" "$CN_OPERATOR_TOKEN" tenants create t1 | grep -q '"id": "t1"' || fail "tenants create"
+vsh "$operator" "$CN_OPERATOR_TOKEN" adapters list | grep -q '"engine": "connector-engine"' || fail "adapters list"
+vsh "$http" "$admin" roles put --tenant t1 --person bia --role approver --scope t/t1 | grep -q '"person": "bia"' || fail "roles put"
+vsh "$http" "$admin" roles list --tenant t1 --person bia | grep -q '"role": "approver"' || fail "roles list"
+vsh "$http" "$admin" events list | grep -q 'connector.call.finished' || fail "events list"
+if vsh "$http" "$agent" roles list --tenant t1 2>/dev/null; then fail "vsh with an agent token"; fi
 
 kill -TERM "$pid"
 wait "$pid" || fail "the engine did not stop cleanly"

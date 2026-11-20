@@ -33,7 +33,7 @@ Every secret the engine keeps (credentials, held call arguments, results, client
 |---|---|---|
 | `builtin:localfile` (`secrets/local`) | `root.key`, plaintext hex, mode 0600, refused when group or other can read it | the default, the `headless` profile, any config that does not opt in |
 | `builtin:hostkey` (`selfhosted/secrets/hostkey`) | `root.key.wrapped`: the root sealed with AES-256-GCM under an unlock key that lives in the host's OS keychain | the `person` profile |
-| `builtin:keychain` (`hostkey.Unlock`, registered by `selfhosted/standalone`) | the same `root.key.wrapped`, with the unlock key read from the OS keychain inside the process | the install without Docker (`connector-engine-selfhosted up`) |
+| `builtin:keychain` (`hostkey.Unlock`, registered by `selfhosted/standalone`) | the same `root.key.wrapped`, with the unlock key read from the OS keychain inside the process | the install without Docker (`vsh up`) |
 | `builtin:onepassword` (`secrets/onepassword`) | `root.key.wrapped`, under an unlock key read at start from a 1Password item through a 1Password Connect server | opt-in by config, any profile, headless included |
 | `memory` | in the process only | tests and dev |
 
@@ -49,13 +49,13 @@ The engine and the console run in Docker and cannot reach the host keychain. The
 
 ```
 make up | make unlock
-  bin/cnctl keychain get --name <project>          host: macOS Keychain, Secret Service, or DPAPI
+  bin/vsh keychain get --name <project>          host: macOS Keychain, Secret Service, or DPAPI
     | docker compose exec -T engine connector-engine unlock
         -> unix socket /run/connector-engine-unlock/unlock.sock   tmpfs inside the container, 0700, uid 65532
         -> secrets/hostkey: unwrap root.key.wrapped in memory, open the store
 ```
 
-- The key travels on pipes only: never in argv, an environment variable, a log line, a compose file or a file on any disk. `cnctl keychain` writes it on the stdin of `security -i` (macOS) and `secret-tool store` (Linux), never as an argument.
+- The key travels on pipes only: never in argv, an environment variable, a log line, a compose file or a file on any disk. `vsh keychain` writes it on the stdin of `security -i` (macOS) and `secret-tool store` (Linux), never as an argument.
 - The socket is in a `tmpfs` mount of each container, owned by the image user. No other container and no host process reaches it; `docker exec` needs the Docker socket, which is root-equivalent anyway.
 - It behaves the same on Linux, Docker Desktop for macOS and for Windows: it needs neither a bind-mounted host socket (those do not cross the Docker Desktop VM) nor a host file.
 - After a restart (a crash, `docker restart`, a reboot with `restart: unless-stopped`) the container comes back locked and waits on the socket: the engine logs `waiting for the host to deliver the unlock key` and serves nothing; the console serves and shows "locked". `make unlock` opens both. This is the price of never resting the key outside the keychain. A locked engine with an unlocked console shows no banner: the console only sees an engine that does not answer. An AI app calling `/mcp` meanwhile gets 503 with `Retry-After: 5` and a JSON-RPC error: "the gateway is locked: run make unlock …" while the console is locked too, else "the gateway is not answering; after a restart it stays locked until you run make unlock …".
@@ -66,7 +66,7 @@ Alternatives rejected, from Docker's documentation and not measured here: compos
 
 ## Without Docker
 
-`connector-engine-selfhosted up` runs the engine and the console as one process of the user, so it reads the unlock key from the keychain itself, at start, through the same backends: no socket, no `docker exec`, and no locked state after a restart. A fresh root is created wrapped; a plaintext root, left by a run without a keychain, is wrapped (`Migrate`) on the first start that finds one; a wrapped root without its key refuses to start, and when the keychain holds no item for it the start reads the keychain only, never minting a new key over the lost one. `--no-keychain`, or a host without a keychain, keeps plaintext roots with the warning of [Without a keychain](#without-a-keychain). The account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item. Layout and commands: [the person profile](person.md#without-docker).
+`vsh up` runs the engine and the console as one process of the user, so it reads the unlock key from the keychain itself, at start, through the same backends: no socket, no `docker exec`, and no locked state after a restart. A fresh root is created wrapped; a plaintext root, left by a run without a keychain, is wrapped (`Migrate`) on the first start that finds one; a wrapped root without its key refuses to start, and when the keychain holds no item for it the start reads the keychain only, never minting a new key over the lost one. `--no-keychain`, or a host without a keychain, keeps plaintext roots with the warning of [Without a keychain](#without-a-keychain). The account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item. Layout and commands: [the person profile](person.md#without-docker).
 
 Each Docker install has its own keychain item: service `connector-engine`, account the compose project name (`PROJECT`, default `connector-engine`).
 
@@ -78,7 +78,7 @@ Each Docker install has its own keychain item: service `connector-engine`, accou
 
 ## Without a keychain
 
-When `bin/cnctl` cannot be built (no Go on the host) or the host has no keychain, `make unlock` says so and tells a fresh store to keep a plaintext `root.key`, as `localfile` does. The console shows a warning while either root key is a plaintext file. A store already wrapped never falls back: without its unlock key it stays locked, and the plaintext choice is refused.
+When `bin/vsh` cannot be built (no Go on the host) or the host has no keychain, `make unlock` says so and tells a fresh store to keep a plaintext `root.key`, as `localfile` does. The console shows a warning while either root key is a plaintext file. A store already wrapped never falls back: without its unlock key it stays locked, and the plaintext choice is refused.
 
 ## Migrating an existing install
 

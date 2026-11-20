@@ -7,18 +7,32 @@ import (
 	"testing"
 
 	"github.com/versatile-sh/connector-engine/cli"
+	"github.com/versatile-sh/connector-engine/cli/command"
 )
 
-func TestUnknownGroupPrintsTheGroups(t *testing.T) {
+func run(args ...string) (int, string, string) {
 	var out, errw bytes.Buffer
-	if code := cli.Main(context.Background(), []string{"nope"}, &out, &errw, nil, cli.Core()); code != 2 || !strings.Contains(errw.String(), "tools") {
-		t.Fatalf("code %d: %s", code, errw.String())
+	code := command.Main(context.Background(), cli.Core(), args, strings.NewReader(""), &out, &errw, nil)
+	return code, out.String(), errw.String()
+}
+
+func TestUnknownCommandIsAUsageError(t *testing.T) {
+	if code, _, errw := run("nope"); code != command.ExitUsage || !strings.Contains(errw, "vsh --help") {
+		t.Fatalf("code %d: %s", code, errw)
 	}
 }
 
 func TestGroupErrorExitsOne(t *testing.T) {
-	var out, errw bytes.Buffer
-	if code := cli.Main(context.Background(), []string{"tools", "list"}, &out, &errw, nil, cli.Core()); code != 1 || !strings.Contains(errw.String(), "CN_ENDPOINT") {
-		t.Fatalf("code %d: %s", code, errw.String())
+	if code, _, errw := run("tools", "list"); code != command.ExitFailure || !strings.Contains(errw, "CN_ENDPOINT") {
+		t.Fatalf("code %d: %s", code, errw)
+	}
+}
+
+func TestEveryCommandHasHelp(t *testing.T) {
+	for _, args := range [][]string{{"--help"}, {"tools", "--help"}, {"tools", "call", "-h"}, {"skills", "export", "--help"}, {"admin", "--help"}} {
+		code, out, errw := run(args...)
+		if code != command.ExitOK || !strings.HasPrefix(out, "Usage: vsh") || errw != "" {
+			t.Fatalf("%v: code %d out %q err %q", args, code, out, errw)
+		}
 	}
 }

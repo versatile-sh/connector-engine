@@ -2,7 +2,7 @@
 
 # Install
 
-Pick the line for your machine. Each option installs the `person` profile: the engine, the local console and `cnctl`, for one person on their own computer. On a server, see [run it on a VPS](../self-hosted/vps.md). For a product, see [the headless engine](../enterprise/headless.md).
+Pick the line for your machine. Each option installs the `person` profile: the engine, the local console and `vsh`, for one person on their own computer. On a server, see [run it on a VPS](../self-hosted/vps.md). For a product, see [the headless engine](../enterprise/headless.md).
 
 | You have | Run | Status |
 |---|---|---|
@@ -11,7 +11,7 @@ Pick the line for your machine. Each option installs the `person` profile: the e
 | Windows, no Docker | [`install.ps1`](#windows) | available after the first release (v0.1.0) |
 | Docker, no clone | [`docker run`](#docker-without-a-clone) | available after the first release (v0.1.0) |
 
-The installers and the published images are available after the first release (v0.1.0): they download release files, and no release is tagged yet. The no-Docker runtime they install is on `main`: one binary, `connector-engine-selfhosted`, that runs the engine and the console in one process over an embedded SQLite store, with the root keys in your OS keychain. Until the release, use Docker from a clone, or build the binary from source ([build](../../selfhosted/README.md#build)). Daily use without Docker: [the person profile](../self-hosted/person.md#without-docker).
+The installers and the published images are available after the first release (v0.1.0): they download release files, and no release is tagged yet. The no-Docker runtime they install is on `main`: one binary, `vsh`, that runs the engine and the console in one process over an embedded SQLite store, with the root keys in your OS keychain. Until the release, use Docker from a clone, or build the binary from source ([build](../../selfhosted/README.md#build)). Daily use without Docker: [the person profile](../self-hosted/person.md#without-docker).
 
 ## Docker, from a clone
 
@@ -44,12 +44,10 @@ What it prints:
 ```text
 Downloading connector-engine_linux_amd64.tar.gz (latest) from https://github.com/versatile-sh/connector-engine/releases/latest/download
 Verified SHA-256 3f1c…
-Installed /home/you/.local/bin/connector-engine-selfhosted
-Installed /home/you/.local/bin/connector-console
-Installed /home/you/.local/bin/cnctl
+Installed /home/you/.local/bin/vsh
 
 Next step: start it; it opens the console in your browser.
-  connector-engine-selfhosted up --open
+  vsh up --open
 ```
 
 The script:
@@ -62,7 +60,7 @@ The script:
 | Variable | Default | Sets |
 |---|---|---|
 | `CONNECTOR_ENGINE_VERSION` | `latest` | a release tag, such as `v0.1.0` |
-| `CONNECTOR_ENGINE_PROFILE` | `person` | `headless` installs `connector-engine` and the core `cnctl` instead |
+| `CONNECTOR_ENGINE_PROFILE` | `person` | `headless` installs `connector-engine` and the core `vsh` instead |
 | `CONNECTOR_ENGINE_INSTALL_DIR` | `$HOME/.local/bin` | where the binaries go |
 | `CONNECTOR_ENGINE_BASE_URL` | the GitHub release | another place holding the same files, such as a mirror |
 
@@ -111,7 +109,7 @@ Available after the first release (v0.1.0), and Linux only; this line has not be
 ```sh
 docker run -d --name connector-engine --network host --restart unless-stopped \
   -v connector-engine:/var/lib/connector-engine \
-  --entrypoint /usr/local/bin/connector-engine-selfhosted \
+  --entrypoint /usr/local/bin/vsh \
   ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain
 ```
 
@@ -123,9 +121,9 @@ docker run -d --name connector-engine --network host --restart unless-stopped \
 
 | Artifact | For |
 |---|---|
-| `ghcr.io/versatile-sh/connector-engine` | the full image: engine, self-hosted engine, console, `cnctl` |
-| `ghcr.io/versatile-sh/connector-engine-headless` | the headless image: engine and core `cnctl` only |
-| `connector-engine_<os>_<arch>` | `connector-engine-selfhosted`, `connector-console`, `cnctl` |
-| `connector-engine-headless_<os>_<arch>` | `connector-engine`, core `cnctl` |
+| `ghcr.io/versatile-sh/connector-engine` | the full image: engine, self-hosted engine, console, `vsh` |
+| `ghcr.io/versatile-sh/connector-engine-headless` | the headless image: engine and core `vsh` only |
+| `connector-engine_<os>_<arch>` | `vsh`, which runs and manages the install without Docker |
+| `connector-engine-headless_<os>_<arch>` | `connector-engine`, core `vsh` |
 
 Both images are built for `linux/amd64` and `linux/arm64`. Archives exist for Linux, macOS and Windows on `amd64` and `arm64`.

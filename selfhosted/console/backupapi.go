@@ -65,7 +65,7 @@ func readUpload(w http.ResponseWriter, r *http.Request) ([]byte, []byte, bool) {
 		writeError(w, http.StatusBadRequest, "send the file and its passphrase as a form")
 		return nil, nil, false
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 	f, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "send the file")

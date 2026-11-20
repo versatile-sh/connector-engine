@@ -8,11 +8,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
-	"github.com/versatile-sh/connector-engine/selfhosted/secrets/hostkey"
 )
 
 // Status is what a running install reports on its control socket.
@@ -31,7 +31,13 @@ func listenControl(path string) (net.Listener, error) {
 		return nil, errRunning
 	}
 	_ = os.Remove(path)
-	return hostkey.Listen(path)
+	lis, err := net.Listen("unix", path)
+	if err == nil && runtime.GOOS != "windows" {
+		if err = os.Chmod(path, 0o600); err != nil {
+			lis.Close()
+		}
+	}
+	return lis, err
 }
 
 func (in *Install) control() http.Handler {
@@ -42,6 +48,7 @@ func (in *Install) control() http.Handler {
 	})
 	mux.HandleFunc("POST /stop", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
+		_ = http.NewResponseController(w).Flush()
 		in.stop()
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

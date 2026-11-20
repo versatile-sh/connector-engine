@@ -188,7 +188,7 @@ func run(t *testing.T, name string, stdin string, args ...string) (int, string) 
 
 func TestCommandsDriveARunningInstall(t *testing.T) {
 	data := filepath.Join(t.TempDir(), "data")
-	if code, out := run(t, "status", "", "--data", data); code != 3 || !strings.Contains(out, "not running") {
+	if code, out := run(t, "status", "", "--data", data); code != 3 || !strings.Contains(out, "no install runs") {
 		t.Fatalf("status before up: %d %s", code, out)
 	}
 	in := start(t, data, nil)

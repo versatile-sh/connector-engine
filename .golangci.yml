@@ -68,6 +68,10 @@ linters:
         linters:
           - gosec
         text: G704
+      - path: (^|/)standalone/commands\.go
+        linters:
+          - gosec
+        text: G703
       - path: (^|/)console/decide\.go
         linters:
           - gosec

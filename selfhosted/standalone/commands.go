@@ -164,9 +164,7 @@ func stop(c *command, report bool) error {
 		}
 		return nil
 	}
-	if err := request(ctx, *c.data, http.MethodPost, "/stop", nil, io.Discard); err != nil {
-		return err
-	}
+	_ = request(ctx, *c.data, http.MethodPost, "/stop", nil, io.Discard)
 	for range 300 {
 		if _, ok := running(ctx, *c.data); !ok {
 			fmt.Fprintln(c.out, "stopped")
@@ -180,8 +178,7 @@ func stop(c *command, report bool) error {
 func status(c *command) error {
 	s, ok := running(context.Background(), *c.data)
 	if !ok {
-		fmt.Fprintf(c.out, "not running   data: %s\n", *c.data)
-		return errNotRunning
+		return c.live(context.Background())
 	}
 	fmt.Fprintf(c.out, "running   pid: %d   version: %s   console: %s   agent endpoint: %s/mcp   data: %s\n", s.PID, s.Version, s.URL, s.URL, s.Data)
 	return nil
@@ -216,6 +213,7 @@ func export(c *command, out string, setup, yes bool) error {
 		ext := map[string]string{"setup": ".setup.yaml", "backup": ".cebak"}[kind]
 		out = filepath.Join(dir, "connector-engine-"+kind+"-"+time.Now().UTC().Format("20060102T150405Z")+ext)
 	}
+	out = filepath.Clean(out)
 	if err := os.MkdirAll(filepath.Dir(out), 0o700); err != nil {
 		return err
 	}
@@ -252,7 +250,9 @@ func importFile(c *command, yes bool) error {
 			return err
 		}
 	}
-	body := func() io.Reader { return io.MultiReader(bytes.NewReader(passphrase), bytes.NewReader([]byte("\n")), bytes.NewReader(raw)) }
+	body := func() io.Reader {
+		return io.MultiReader(bytes.NewReader(passphrase), bytes.NewReader([]byte("\n")), bytes.NewReader(raw))
+	}
 	if err := request(ctx, *c.data, http.MethodPost, "/inspect", body(), c.out); err != nil {
 		return err
 	}

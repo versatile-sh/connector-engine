@@ -89,3 +89,41 @@ func (b *Box) Open(ctx context.Context, v port.Sealed) (string, error) {
 	plaintext, err := (*s).Open(ctx, Tenant, v)
 	return string(plaintext), err
 }
+
+type keyStore interface {
+	Keys() (local.Keys, error)
+	Restore(k local.Keys, then func() error) error
+}
+
+// ErrNoKeys is returned for a store that keeps no key material in a directory, such as the in-memory one.
+var ErrNoKeys = errors.New("the console's secrets store keeps no keys to back up")
+
+func (b *Box) keys() (keyStore, error) {
+	s := b.load()
+	if s == nil {
+		return nil, ErrLocked
+	}
+	ks, ok := (*s).(keyStore)
+	if !ok {
+		return nil, ErrNoKeys
+	}
+	return ks, nil
+}
+
+// Keys returns the key material of the box's store in plaintext, for a backup.
+func (b *Box) Keys() (local.Keys, error) {
+	ks, err := b.keys()
+	if err != nil {
+		return local.Keys{}, err
+	}
+	return ks.Keys()
+}
+
+// Restore stages k in the box's store, runs then, and puts k in place only when then succeeds.
+func (b *Box) Restore(k local.Keys, then func() error) error {
+	ks, err := b.keys()
+	if err != nil {
+		return err
+	}
+	return ks.Restore(k, then)
+}

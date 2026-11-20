@@ -2,10 +2,12 @@ package console
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/versatile-sh/connector-engine/internal/egress"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/source/skillcatalog"
 )
@@ -22,31 +24,32 @@ type importRequest struct {
 
 // Preview is what the confirm screen shows before an import: where it comes from, the listing and each function's proposed choice.
 type Preview struct {
-	Kind        string        `json:"kind"`
-	URL         string        `json:"url"`
-	Host        string        `json:"host"`
-	Name        string        `json:"name"`
-	Title       string        `json:"title"`
-	Description string        `json:"description,omitempty"`
-	Icon        string        `json:"icon,omitempty"`
-	Publisher   string        `json:"publisher,omitempty"`
-	Version     string        `json:"version"`
-	RemoteURL   string        `json:"remote_url,omitempty"`
-	WebsiteURL  string        `json:"website_url,omitempty"`
-	Protocol    string        `json:"protocol,omitempty"`
-	Auth        []string      `json:"auth,omitempty"`
-	Tools       []ProbedTool  `json:"tools"`
-	Items       []Item        `json:"items"`
-	Warning     string        `json:"warning,omitempty"`
-	Skill       *SkillPreview `json:"skill,omitempty"`
-	manifest    port.Manifest
-	entry       skillcatalog.Entry
+	Kind         string        `json:"kind"`
+	URL          string        `json:"url"`
+	Host         string        `json:"host"`
+	Name         string        `json:"name"`
+	Title        string        `json:"title"`
+	Description  string        `json:"description,omitempty"`
+	Icon         string        `json:"icon,omitempty"`
+	Publisher    string        `json:"publisher,omitempty"`
+	Version      string        `json:"version"`
+	RemoteURL    string        `json:"remote_url,omitempty"`
+	WebsiteURL   string        `json:"website_url,omitempty"`
+	Protocol     string        `json:"protocol,omitempty"`
+	Auth         []string      `json:"auth,omitempty"`
+	Tools        []ProbedTool  `json:"tools"`
+	Items        []Item        `json:"items"`
+	Warning      string        `json:"warning,omitempty"`
+	HostLoopback bool          `json:"host_loopback,omitempty"`
+	Skill        *SkillPreview `json:"skill,omitempty"`
+	manifest     port.Manifest
+	entry        skillcatalog.Entry
 }
 
 func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, error) {
 	switch {
 	case in.MCP != "" && in.Listing == "":
-		return previewMCP(ctx, strings.TrimSpace(in.MCP), in)
+		return previewMCP(ctx, strings.TrimSpace(in.MCP), in, Reach{Local: in.Local, LoopbackHost: c.LoopbackHost})
 	case in.Listing != "" && in.MCP == "":
 		src := strings.TrimSpace(in.Listing)
 		body, err := c.get()(ctx, src, maxListingBytes)
@@ -57,13 +60,13 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		if skillcatalog.Kind(body) == string(port.KindSkill) {
 			return c.previewSkill(src, u.Host, body)
 		}
-		return previewListing(ctx, src, u.Host, body)
+		return c.previewListing(ctx, src, u.Host, body)
 	}
 	return Preview{}, invalid("give exactly one of mcp or listing")
 }
 
-func previewMCP(ctx context.Context, raw string, in importRequest) (Preview, error) {
-	p, err := Probe(ctx, raw, Reach{Local: in.Local})
+func previewMCP(ctx context.Context, raw string, in importRequest, reach Reach) (Preview, error) {
+	p, err := Probe(ctx, raw, reach)
 	if err != nil {
 		return Preview{}, err
 	}
@@ -73,7 +76,7 @@ func previewMCP(ctx context.Context, raw string, in importRequest) (Preview, err
 	}
 	u, _ := url.Parse(p.URL)
 	return Preview{Kind: "mcp", URL: p.URL, Host: u.Host, Name: m.Name, Title: m.Title, Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name,
-		Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), Items: p.Items, manifest: m}, nil
+		Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), Items: p.Items, HostLoopback: reach.LoopbackHost != "" && egress.IsLoopback(u.Hostname()), manifest: m}, nil
 }
 
 func (c *Console) previewSkill(src, host string, body []byte) (Preview, error) {
@@ -86,7 +89,7 @@ func (c *Console) previewSkill(src, host string, body []byte) (Preview, error) {
 		Version: e.Source.Commit, Tools: []ProbedTool{}, Items: []Item{}, Skill: &sp, entry: e}, nil
 }
 
-func previewListing(ctx context.Context, src, host string, body []byte) (Preview, error) {
+func (c *Console) previewListing(ctx context.Context, src, host string, body []byte) (Preview, error) {
 	m, err := manifestFrom(src, body)
 	if err != nil {
 		return Preview{}, err
@@ -99,6 +102,9 @@ func previewListing(ctx context.Context, src, host string, body []byte) (Preview
 		pv.Tools = append(pv.Tools, probedTool(f.Name, f.Title, f.Description, hintsOf(f.Annotations)))
 	}
 	if m.Remote != nil {
+		if u, err := url.Parse(m.Remote.URL); err == nil && (egress.IsLoopback(u.Hostname()) || c.LoopbackHost != "" && strings.EqualFold(u.Hostname(), c.LoopbackHost)) {
+			return Preview{}, invalid("the listing's server is on this computer; import it by its URL and tick \"local server\"")
+		}
 		pv.RemoteURL = m.Remote.URL
 		if p, err := Probe(ctx, m.Remote.URL, Reach{}); err != nil {
 			pv.Warning = "the server could not be reached to list its functions: " + err.Error()
@@ -121,30 +127,22 @@ func (c *Console) get() skillcatalog.Get {
 	}
 }
 
-func (c *Console) importSkill(w http.ResponseWriter, r *http.Request, in importRequest, p Preview) {
+func (c *Console) importSkill(ctx context.Context, in importRequest, p Preview) (string, error) {
 	access := in.Access
 	if access == "" {
 		access = AccessOn
 	}
 	if !access.Valid() {
-		writeError(w, http.StatusBadRequest, "access is off, on or ask")
-		return
+		return "", invalid("access is off, on or ask")
 	}
 	if in.Digest != p.Skill.Digest {
-		writeError(w, http.StatusConflict, "the skill changed since the preview; review it again")
-		return
+		return "", &statusError{status: http.StatusConflict, err: errors.New("the skill changed since the preview; review it again")}
 	}
-	m, err := skillcatalog.Manifest(r.Context(), c.get(), p.URL, p.entry)
+	m, err := skillcatalog.Manifest(ctx, c.get(), p.URL, p.entry)
 	if err != nil {
-		c.fail(w, err)
-		return
+		return "", err
 	}
-	id, err := c.InstallSkill(r.Context(), m, access)
-	if err != nil {
-		c.fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]string{"skill": id})
+	return c.InstallSkill(ctx, m, access)
 }
 
 func (c *Console) preview(w http.ResponseWriter, r *http.Request) {
@@ -165,38 +163,48 @@ func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
+	id, kind, err := c.importOne(r.Context(), in)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	if kind != "skill" {
+		kind = "connector"
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{kind: id})
+}
+
+func (c *Console) importOne(ctx context.Context, in importRequest) (string, string, error) {
 	for name, a := range in.Choices {
 		if !a.Valid() {
-			writeError(w, http.StatusBadRequest, "function "+name+": access is off, on or ask")
-			return
+			return "", "", invalid("function %s: access is off, on or ask", name)
 		}
 	}
-	p, err := c.buildPreview(r.Context(), in)
+	p, err := c.buildPreview(ctx, in)
 	if err != nil {
-		c.fail(w, err)
-		return
+		return "", "", err
 	}
+	var id string
 	if p.Kind == "skill" {
-		c.importSkill(w, r, in, p)
-		return
-	}
-	choices := map[string]Access{}
-	for _, t := range p.Tools {
-		choices[t.Name] = t.Proposed
-		if a, ok := in.Choices[t.Name]; ok {
-			choices[t.Name] = a
+		id, err = c.importSkill(ctx, in, p)
+	} else {
+		choices := map[string]Access{}
+		for _, t := range p.Tools {
+			choices[t.Name] = t.Proposed
 		}
-	}
-	for _, it := range p.Items {
-		choices[it.Name] = it.Access
-		if a, ok := in.Choices[it.Name]; ok {
-			choices[it.Name] = a
+		for _, it := range p.Items {
+			choices[it.Name] = it.Access
 		}
+		for name, a := range in.Choices {
+			if _, ok := choices[name]; ok {
+				choices[name] = a
+			}
+		}
+		id, err = c.Install(ctx, p.manifest, choices)
 	}
-	id, err := c.Install(r.Context(), p.manifest, choices)
 	if err != nil {
-		c.fail(w, err)
-		return
+		return "", "", err
 	}
-	writeJSON(w, http.StatusCreated, map[string]string{"connector": id})
+	o := Origin{MCP: strings.TrimSpace(in.MCP), Listing: strings.TrimSpace(in.Listing), Local: in.Local, HeaderSecret: in.HeaderSecret, Digest: in.Digest}
+	return id, p.Kind, c.State.PutOrigin(id, o)
 }

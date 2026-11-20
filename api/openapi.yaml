@@ -257,6 +257,9 @@ components:
           type: string
         reaches_outside:
           type: boolean
+        session_until:
+          format: date-time
+          type: string
         trust_level:
           type: string
       required:

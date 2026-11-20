@@ -81,10 +81,25 @@ type activityFilter struct {
 	from, to                 time.Time
 	connector, agent, search string
 	outcome                  CallOutcome
+	titles                   map[string]string
 }
 
 func (f activityFilter) found(r ActivityCall) bool {
-	return f.search == "" || strings.Contains(strings.ToLower(r.Function), f.search) || strings.Contains(strings.ToLower(r.Skill), f.search)
+	return f.search == "" || slices.ContainsFunc([]string{r.Function, r.Skill, r.Alias, f.titles[r.Alias]}, func(s string) bool { return strings.Contains(strings.ToLower(s), f.search) })
+}
+
+func (c *Console) connectorTitles(ctx context.Context) (map[string]string, error) {
+	conns, err := c.Engine.connectors(ctx)
+	if err != nil {
+		return nil, err
+	}
+	titles := map[string]string{}
+	for _, v := range conns {
+		if m, err := c.Engine.manifest(ctx, v.Connector); err == nil {
+			titles[v.Connector.Alias] = firstOf(m.Title, m.Name)
+		}
+	}
+	return titles, nil
 }
 
 type engineFacts struct {
@@ -178,9 +193,13 @@ func join(captures []Capture, f engineFacts, sep string) []joined {
 	for i := range captures {
 		cp := &captures[i]
 		alias, fn, found := strings.Cut(cp.Tool, sep)
+		skill := cp.Skill
 		switch {
-		case cp.Skill != "":
-			alias, fn = cp.Skill, port.SkillFunction
+		case cp.Item == port.ItemPrompt && !found && names.ValidAlias(cp.Tool) == nil:
+			skill = cp.Tool
+			alias, fn = skill, port.SkillFunction
+		case skill != "":
+			alias, fn = skill, port.SkillFunction
 		case cp.Item == port.ItemResource:
 			var uri string
 			if alias, uri, found = names.SplitResourceURI(cp.Tool); found {
@@ -204,7 +223,7 @@ func join(captures []Capture, f engineFacts, sep string) []joined {
 		if call != nil {
 			used[call.ID] = true
 		}
-		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Skill: cp.Skill, Path: cp.Path, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
+		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Skill: skill, Path: cp.Path, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
 		if cp.Outcome != OutcomePending && !cp.Done.IsZero() {
 			ms := cp.Done.Sub(cp.At).Milliseconds()
 			row.DurationMS = &ms
@@ -409,6 +428,9 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	facts, err := c.engineFacts(r.Context(), f.from.Add(-joinSkew), f.agent)
+	if err == nil && f.search != "" {
+		f.titles, err = c.connectorTitles(r.Context())
+	}
 	if err != nil {
 		c.fail(w, err)
 		return

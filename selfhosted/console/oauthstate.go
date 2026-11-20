@@ -93,7 +93,7 @@ func (s *State) RotateRefresh(old, next string, g RefreshGrant) error {
 	})
 }
 
-// RevokeReusedRefresh ends every grant of the family of a refresh token already spent and refuses the agent's tokens issued so far, reporting whether hash was one.
+// RevokeReusedRefresh ends every grant of the family of a refresh token already spent, refuses the agent's tokens issued so far and marks it signed out, reporting whether hash was one.
 func (s *State) RevokeReusedRefresh(hash string) (bool, error) {
 	reused := false
 	err := s.update(func(d *stateFile) error {
@@ -102,7 +102,12 @@ func (s *State) RevokeReusedRefresh(hash string) (bool, error) {
 			return errUnchanged
 		}
 		maps.DeleteFunc(d.Refresh, func(_ string, g RefreshGrant) bool { return g.Family == spent.Family })
-		put(&d.Revoked, spent.Agent, time.Now().UTC())
+		now := time.Now().UTC()
+		put(&d.Revoked, spent.Agent, now)
+		if a, ok := d.Agents[spent.Agent]; ok {
+			a.SignedOutAt = now.Truncate(time.Second)
+			d.Agents[spent.Agent] = a
+		}
 		return nil
 	})
 	return reused && err == nil, err

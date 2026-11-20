@@ -120,7 +120,7 @@ func (b builder) runtime(ctx context.Context, store port.Store, secrets port.Sec
 }
 
 func (b builder) guard(operatorHosts []string) egress.Guard {
-	return egress.Guard{AllowPrivate: b.cfg.Runtime.AllowPrivateHosts, Hosts: operatorHosts}
+	return egress.Guard{AllowPrivate: b.cfg.Runtime.AllowPrivateHosts, Hosts: operatorHosts, LoopbackHost: b.cfg.Runtime.LoopbackHost}
 }
 
 func hostsOf(addresses ...string) []string {

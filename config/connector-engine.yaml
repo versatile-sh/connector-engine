@@ -6,6 +6,7 @@ server:
   publicURL: ""
   maxBodyBytes: 1048576
   shutdownGrace: 15s
+  snapshot: false
 auth:
   issuers: []
   audience: ""
@@ -163,6 +164,7 @@ runtime:
     - declarative
   callTimeout: 1m0s
   allowPrivateHosts: false
+  loopbackHost: ""
   container:
     cpu: 1
     memory: 2GB

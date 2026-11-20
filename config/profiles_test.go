@@ -31,8 +31,11 @@ func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
 	if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(f.Acknowledge, []string{"plaintext_root_key"}) {
 		t.Fatalf("headless selects %v acknowledging %v", got, f.Acknowledge)
 	}
-	if cfg.Runtime.AllowPrivateHosts {
-		t.Fatal("headless reaches private hosts")
+	if cfg.Runtime.AllowPrivateHosts || cfg.Runtime.LoopbackHost != "" {
+		t.Fatal("headless reaches private hosts or maps loopback")
+	}
+	if cfg.Server.Snapshot {
+		t.Fatal("headless serves the snapshot routes")
 	}
 	if r := cfg.Retention; r.DeliveredEvents != 0 || r.IdempotencyKeys != 0 || r.Audit != 0 || r.Calls != 0 {
 		t.Fatalf("headless prunes history: %+v", r)

@@ -63,13 +63,16 @@ func (f *fakeEngine) handler() http.Handler {
 		_ = json.NewEncoder(w).Encode(map[string]string{"token": "person"})
 	})
 	mux.HandleFunc("GET /v1/connectors", func(w http.ResponseWriter, _ *http.Request) {
-		items(w, []map[string]any{{"connector": port.Connector{ID: "c-notes", Alias: "notes"}}, {"connector": port.Connector{ID: "c-mail", Alias: "mail"}},
+		items(w, []map[string]any{{"connector": port.Connector{ID: "c-notes", Alias: "notes", Listing: port.VersionRef{Listing: port.ListingRef{Name: "notes"}, Version: "1"}}}, {"connector": port.Connector{ID: "c-mail", Alias: "mail"}},
 			{"connector": port.Connector{ID: "c-pdf", Alias: "pdf", Listing: port.VersionRef{Listing: port.ListingRef{Name: "pdf"}, Version: "1"}}}})
 	})
 	mux.HandleFunc("GET /v1/listings/version", func(w http.ResponseWriter, r *http.Request) {
 		m := port.Manifest{Name: r.URL.Query().Get("name")}
 		if m.Name == "pdf" {
 			m.Kind = port.KindSkill
+		}
+		if m.Name == "notes" {
+			m.Title = "Kitchen Notebook"
 		}
 		_ = json.NewEncoder(w).Encode(port.ListingVersion{Manifest: m})
 	})
@@ -373,6 +376,11 @@ func TestDeniedHeldAndFailedCallsShowWhatTheyCameTo(t *testing.T) {
 	}
 	if p := r.page("?search=SEAR"); len(p.Calls) != 1 || p.Calls[0].Function != "search" || p.Total != 1 || len(p.Connectors) != 1 || p.Connectors[0].Total != 1 {
 		t.Fatalf("the search narrows the calls and the totals to the functions it names: %+v %+v", p.Calls, p.Connectors)
+	}
+	for _, q := range []string{"NOTES", "kitchen"} {
+		if p := r.page("?search=" + q); p.Total != 3 || len(p.Connectors) != 1 || p.Connectors[0].Alias != "notes" {
+			t.Fatalf("the search %q matches the connector's alias and title: %+v %+v", q, p.Calls, p.Connectors)
+		}
 	}
 
 	r.engine.setApproval(port.Approval{ID: "a1", Agent: "claude-code", Connector: "c-notes", Function: "create", Class: port.ClassWrite, State: port.ApprovalExecuted, CreatedAt: time.Now()})
@@ -774,6 +782,22 @@ func TestASkillLoadIsShownByTheSkillName(t *testing.T) {
 	}
 	if len(p.Connectors) != 1 || !p.Connectors[0].Skill || p.Connectors[0].Total != 2 {
 		t.Fatalf("per connector: %+v", p.Connectors)
+	}
+}
+
+func TestASkillPromptIsOneRowNamedByTheSkill(t *testing.T) {
+	r := newActivityRig(t)
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"messages":[]}}`, func() {
+		now := time.Now().UTC()
+		r.engine.addCall(port.Call{ID: "p1", Agent: "claude-code", Session: "claude-code-s1", Connector: "c-pdf", Function: "skill", Class: port.ClassRead, State: port.CallFinished, StartedAt: now, FinishedAt: now})
+	}))
+	r.post(`{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"pdf"}}`)
+	p := r.until("", func(p console.ActivityPage) bool { return len(p.Calls) > 0 && p.Calls[0].Captured })
+	if c := only(t, p); c.Alias != "pdf" || c.Skill != "pdf" || c.Connector != "c-pdf" || c.Outcome != console.OutcomeOK {
+		t.Fatalf("the skill prompt: %+v", c)
+	}
+	if d := r.detail(p.Calls[0].ID); d.EngineCall != "p1" || d.Tool != "pdf" {
+		t.Fatalf("its detail: %+v", d)
 	}
 }
 

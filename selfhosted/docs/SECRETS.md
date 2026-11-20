@@ -32,7 +32,7 @@ make up | make unlock
 - The key travels on pipes only: never in argv, an environment variable, a log line, a compose file or a file on any disk. `cnctl keychain` writes it on the stdin of `security -i` (macOS) and `secret-tool store` (Linux), never as an argument.
 - The socket is in a `tmpfs` mount of each container, owned by the image user. No other container and no host process reaches it; `docker exec` needs the Docker socket, which is root-equivalent anyway.
 - It behaves the same on Linux, Docker Desktop for macOS and for Windows: it needs neither a bind-mounted host socket (those do not cross the Docker Desktop VM) nor a host file.
-- After a restart (a crash, `docker restart`, a reboot with `restart: unless-stopped`) the container comes back locked and waits on the socket: the engine logs `waiting for the host to deliver the unlock key` and serves nothing; the console serves and shows "locked". `make unlock` opens both. This is the price of never resting the key outside the keychain. A locked engine with an unlocked console shows no banner: the console only sees an engine that does not answer.
+- After a restart (a crash, `docker restart`, a reboot with `restart: unless-stopped`) the container comes back locked and waits on the socket: the engine logs `waiting for the host to deliver the unlock key` and serves nothing; the console serves and shows "locked". `make unlock` opens both. This is the price of never resting the key outside the keychain. A locked engine with an unlocked console shows no banner: the console only sees an engine that does not answer. An AI app calling `/mcp` meanwhile gets 503 with `Retry-After: 5` and a JSON-RPC error: "the gateway is locked: run make unlock …" while the console is locked too, else "the gateway is not answering; after a restart it stays locked until you run make unlock …".
 
 Tested on Linux with gnome-keyring. The macOS and Windows backends are covered by command-line fakes and a cross-compile only.
 
@@ -105,5 +105,7 @@ Limits:
 | Root on the host, or anyone with the Docker socket | everything | everything: they can read the container's memory or run `exec` |
 | A compromised engine or console process | the opened records | the same: the key is in memory while it runs |
 | Logs, `docker inspect`, process lists | no key | no key: pipes only |
+
+A full backup ([console.md](console.md#backups)) holds both root keys in plaintext inside a file encrypted under your passphrase (Argon2id, AES-256-GCM), so it opens on a machine without the old keychain. The import wraps them again with the new machine's key. Whoever holds the file and the passphrase holds every record: the passphrase is that file's only protection. To take the snapshot, the console reads the engine's keys in plaintext from the operator listener on the compose network (`server.snapshot: true`, person profile only). Whoever holds the operator token in the `secrets` volume and reaches that network can do the same, as they could already drive every operation of the engine.
 
 What it does not do: protect a running, unlocked install; protect against the owner's own account being compromised; replace backups (keep the recovery key).

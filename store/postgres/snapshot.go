@@ -1,0 +1,138 @@
+package postgres
+
+import (
+	"context"
+	"encoding/json"
+	"slices"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/versatile-sh/connector-engine/port"
+)
+
+const snapshotStore = "postgres"
+
+var snapshotTables = []struct{ name, order, serial string }{
+	{"records", "kind, k", ""}, {"streams", "stream", ""}, {"outbox", "pos", "pos"}, {"audit", "id", "id"}, {"inbox", "tenant_id, id", ""},
+}
+
+func (s *Store) inAll(ctx context.Context, opts pgx.TxOptions, fn func(t *tx, tenants []string) error) error {
+	q, err := s.pool.BeginTx(ctx, opts)
+	if err != nil {
+		return fail(err)
+	}
+	defer func() { _ = q.Rollback(ctx) }()
+	t := &tx{ctx: ctx, q: q, scope: port.Scope{Installation: true}}
+	if _, err := t.exec(`SELECT set_config('cn.tenant', '', true), set_config('cn.installation', 'on', true), set_config('cn.relay', 'off', true)`); err != nil {
+		return err
+	}
+	tenants, err := many[string](t, `SELECT k FROM records WHERE kind = 'tenant' ORDER BY k`)
+	if err != nil {
+		return err
+	}
+	if err := fn(t, append([]string{""}, tenants...)); err != nil {
+		return err
+	}
+	return fail(q.Commit(ctx))
+}
+
+func (t *tx) as(tenant string) error {
+	_, err := t.exec(`SELECT set_config('cn.tenant', $1, true)`, tenant)
+	return err
+}
+
+// Snapshot copies every row of every tenant and of the installation in one repeatable-read transaction.
+func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
+	snap := port.Snapshot{Store: snapshotStore, Tables: map[string][]json.RawMessage{}}
+	err := s.inAll(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(t *tx, tenants []string) error {
+		for _, tenant := range tenants {
+			if err := t.as(tenant); err != nil {
+				return err
+			}
+			for _, tb := range snapshotTables {
+				rows, err := many[json.RawMessage](t, `SELECT to_jsonb(x) FROM `+tb.name+` x WHERE tenant_id = $1 ORDER BY `+tb.order, tenant)
+				if err != nil {
+					return err
+				}
+				snap.Tables[tb.name] = append(snap.Tables[tb.name], rows...)
+			}
+		}
+		return nil
+	})
+	return snap, err
+}
+
+// Restore replaces every row with the snapshot's in one transaction that holds the tables exclusively; due work is rebuilt by the records trigger.
+func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
+	if snap.Store != snapshotStore {
+		return port.Errorf(port.CodeInvalidArgument, "a %q snapshot does not restore into a %s store", snap.Store, snapshotStore)
+	}
+	byTenant := map[string]map[string][]json.RawMessage{}
+	serials := map[string]int64{}
+	for _, tb := range snapshotTables {
+		for _, raw := range snap.Tables[tb.name] {
+			var r struct {
+				Tenant string `json:"tenant_id"`
+				Pos    int64  `json:"pos"`
+				ID     any    `json:"id"`
+			}
+			if err := json.Unmarshal(raw, &r); err != nil {
+				return port.Errorf(port.CodeInvalidArgument, "snapshot %s: %v", tb.name, err)
+			}
+			if byTenant[r.Tenant] == nil {
+				byTenant[r.Tenant] = map[string][]json.RawMessage{}
+			}
+			byTenant[r.Tenant][tb.name] = append(byTenant[r.Tenant][tb.name], raw)
+			if id, ok := r.ID.(float64); ok && tb.serial == "id" {
+				serials[tb.name] = max(serials[tb.name], int64(id))
+			}
+			if tb.serial == "pos" {
+				serials[tb.name] = max(serials[tb.name], r.Pos)
+			}
+		}
+	}
+	return s.inAll(ctx, pgx.TxOptions{}, func(t *tx, tenants []string) error {
+		if _, err := t.exec(`LOCK TABLE records, streams, outbox, audit, inbox, due_work IN EXCLUSIVE MODE`); err != nil {
+			return err
+		}
+		for tenant := range byTenant {
+			tenants = append(tenants, tenant)
+		}
+		for _, tenant := range slices.Compact(slices.Sorted(slices.Values(tenants))) {
+			if err := t.as(tenant); err != nil {
+				return err
+			}
+			for _, tb := range snapshotTables {
+				if _, err := t.exec(`DELETE FROM `+tb.name+` WHERE tenant_id = $1`, tenant); err != nil {
+					return err
+				}
+			}
+		}
+		for tenant, tables := range byTenant {
+			if err := t.as(tenant); err != nil {
+				return err
+			}
+			for _, tb := range snapshotTables {
+				if rows := tables[tb.name]; len(rows) > 0 {
+					raw, err := json.Marshal(rows)
+					if err != nil {
+						return err
+					}
+					if _, err := t.exec(`INSERT INTO `+tb.name+` SELECT * FROM jsonb_populate_recordset(NULL::`+tb.name+`, $1::jsonb)`, string(raw)); err != nil {
+						return err
+					}
+				}
+			}
+		}
+		for _, tb := range snapshotTables {
+			if tb.serial != "" {
+				if _, err := t.exec(`SELECT setval(pg_get_serial_sequence($1, $2), greatest($3::bigint, nextval(pg_get_serial_sequence($1, $2))))`, tb.name, tb.serial, serials[tb.name]); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+}
+
+var _ port.Snapshotter = (*Store)(nil)

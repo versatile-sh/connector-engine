@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -31,6 +32,9 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) in
 	if len(args) > 0 && args[0] == "unlock" {
 		return hostkey.Main(args[1:], getenv("CONSOLE_UNLOCK_SOCKET"), os.Stdin, stdout, stderr)
 	}
+	if len(args) > 0 && args[0] == "host" {
+		return host(args[1:], getenv("CONSOLE_HOST_SOCKET"), os.Stdin, stdout, stderr)
+	}
 	if len(args) > 0 && args[0] == "serve" {
 		args = args[1:]
 	}
@@ -56,9 +60,11 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	statePath := fs.String("state", or(getenv, "CONSOLE_STATE", "/var/lib/connector-console/state.json"), "the console's state file")
 	secretsDir := fs.String("secrets", or(getenv, "CONSOLE_SECRETS", "/var/lib/connector-console/secrets"), "key store that seals the console's own secrets")
 	unlockSocket := fs.String("unlock-socket", getenv("CONSOLE_UNLOCK_SOCKET"), "socket the host delivers the unlock key on; empty keeps a plaintext root key in --secrets")
+	hostSocket := fs.String("host-socket", getenv("CONSOLE_HOST_SOCKET"), "socket for the requests only the local machine makes, such as a password reset; empty serves none")
 	tenant := fs.String("tenant", or(getenv, "CONSOLE_TENANT", "local"), "tenant of the local install")
 	workspace := fs.String("workspace", or(getenv, "CONSOLE_WORKSPACE", "default"), "workspace connectors are installed in")
 	person := fs.String("person", or(getenv, "CONSOLE_PERSON", "owner"), "engine person the console acts as; a tenant admin in bootstrap.roles")
+	loopbackHost := fs.String("loopback-host", getenv("CONSOLE_LOOPBACK_HOST"), "host a local server at localhost is dialled as, such as host.docker.internal in a container; empty dials loopback itself")
 	agentTTL := fs.Duration("agent-ttl", 720*time.Hour, "longest agent token; at most auth.agentTokenMaxLifetime")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -108,7 +114,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	}
 	eng := &console.Engine{PublicURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)), Tenant: *tenant, Workspace: *workspace, Person: *person}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(), Secrets: box,
-		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log, Activity: activity}
+		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log, Activity: activity, Restart: stop, LoopbackHost: *loopbackHost}
 	go ensureTenant(ctx, eng, log)
 	go c.RunNotifications(ctx)
 	lis, err := net.Listen("tcp", *listen)
@@ -117,11 +123,24 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		return 1
 	}
 	srv := &http.Server{Handler: c.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	servers := []*http.Server{srv}
+	if *hostSocket != "" {
+		hl, err := hostkey.Listen(*hostSocket)
+		if err != nil {
+			fmt.Fprintf(stderr, "host socket: %v\n", err)
+			return 1
+		}
+		hs := &http.Server{Handler: c.HostHandler(), ReadHeaderTimeout: 10 * time.Second}
+		servers = append(servers, hs)
+		go func() { _ = hs.Serve(hl) }()
+	}
 	go func() {
 		<-ctx.Done()
 		shut, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(shut)
+		for _, s := range servers {
+			_ = s.Shutdown(shut)
+		}
 	}()
 	log.Info("console listening", "listen", lis.Addr().String(), "url", public.String())
 	if err := srv.Serve(lis); !errors.Is(err, http.ErrServerClosed) {
@@ -155,4 +174,41 @@ func ensureTenant(ctx context.Context, eng *console.Engine, log *slog.Logger) {
 		case <-time.After(2 * time.Second):
 		}
 	}
+}
+
+func host(args []string, socket string, stdin io.Reader, stdout, stderr io.Writer) int {
+	if len(args) != 2 || socket == "" {
+		fmt.Fprintln(stderr, "usage: connector-console host METHOD PATH, with CONSOLE_HOST_SOCKET set; the body is read from stdin")
+		return 2
+	}
+	client := &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "unix", socket)
+	}}}
+	req, err := http.NewRequest(args[0], "http://console"+args[1], stdin)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 2
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		var e struct {
+			Error string `json:"error"`
+		}
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+		if json.Unmarshal(raw, &e) != nil || e.Error == "" {
+			e.Error = strings.TrimSpace(string(raw))
+		}
+		fmt.Fprintln(stderr, e.Error)
+		return 1
+	}
+	if _, err := io.Copy(stdout, resp.Body); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	return 0
 }

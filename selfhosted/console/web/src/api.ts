@@ -125,11 +125,12 @@ export type Preview = {
   tools: ProbedTool[];
   items?: Item[] | null;
   warning?: string;
+  host_loopback?: boolean;
 };
 
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
 
-export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean };
+export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string };
 
 export type AgentToken = { agent: string; token: string; expires_at: string };
 
@@ -217,28 +218,48 @@ export const errorText = (error: unknown) => (isApiError(error) ? error.message 
 /** The machine code the console put on a refusal, such as `wrong_password`, when it gave one. */
 export const errorCode = (error: unknown) => (isApiError(error) ? error.code : undefined);
 
-export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** The HTTP status of a refusal, when the error is one. */
+export const errorStatus = (error: unknown) => (isApiError(error) ? error.status : undefined);
+
+const parse = (text: string): unknown => (text ? JSON.parse(text) : undefined);
+
+async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const form = body instanceof FormData;
+  if (body !== undefined && !form) headers["Content-Type"] = "application/json";
   if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
   const response = await fetch(path, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     credentials: "same-origin",
   });
-  const text = await response.text();
-  const data: unknown = text ? JSON.parse(text) : undefined;
-  if (!response.ok) {
-    const message =
-      typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
-        ? data.error
-        : `${response.status} ${response.statusText}`;
-    const code = typeof data === "object" && data !== null && "code" in data && typeof data.code === "string" ? data.code : undefined;
-    const failure: ApiError = { status: response.status, message, code };
-    throw failure;
-  }
-  return data as T;
+  if (response.ok) return response;
+  const data = parse(await response.text());
+  const message =
+    typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
+      ? data.error
+      : `${response.status} ${response.statusText}`;
+  const code = typeof data === "object" && data !== null && "code" in data && typeof data.code === "string" ? data.code : undefined;
+  const failure: ApiError = { status: response.status, message, code };
+  throw failure;
+}
+
+/** Calls the console's API with a JSON body, or a form when the body is `FormData`, and reads the JSON answer. */
+export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
+  return parse(await (await send(method, path, body)).text()) as T;
+}
+
+/** The file name a `Content-Disposition: attachment` header gives, if it gives one. */
+export const attachmentName = (header: string | null) => header?.match(/filename="?([^";]+)"?/)?.[1];
+
+/** A file the console answered with: its bytes and the name it gave. */
+export type Download = { blob: Blob; name: string | undefined };
+
+/** Calls the console's API and reads the answer as a file. */
+export async function apiFile(method: string, path: string, body?: unknown): Promise<Download> {
+  const response = await send(method, path, body);
+  return { blob: await response.blob(), name: attachmentName(response.headers.get("Content-Disposition")) };
 }
 
 export const iconURL = (raw: string | undefined) => (raw ? `/api/icon?u=${encodeURIComponent(raw)}` : undefined);
@@ -264,6 +285,7 @@ export type ApprovalView = {
   may_have_run: boolean;
   reaches_outside: boolean;
   choices: ApprovalChoice[];
+  session_until?: string;
   decided_by?: string;
   decided_at?: string;
   channel?: string;
@@ -294,3 +316,28 @@ export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[]
 
 /** A computer just paired for desktop popups: its key, shown once, and the command that uses it. */
 export type PairedDevice = { device: DeviceView; key: string; command: string };
+
+/** What GET /api/account answers; `last_export` is the zero time when there was none. */
+export type Account = { username: string; last_export?: string };
+
+/** A full backup carries every credential; a setup carries none and can be shared. */
+export type BackupKind = "full" | "setup";
+
+/** One connector of a setup: where it comes from, each choice, and whether it is installed here already. */
+export type SetupConnector = { name: string; mcp?: string; listing?: string; transport?: string; functions: Record<string, Access> | null; items: Record<string, Access> | null; exists: boolean };
+
+/** One skill of a setup, and whether it is installed here already. */
+export type SetupSkill = { name: string; listing: string; digest?: string; access: Access; exists: boolean };
+
+/** What POST /api/backup/inspect answers about a file before anything is imported. */
+export type BackupSummary = {
+  kind: BackupKind;
+  build?: string;
+  created_at?: string;
+  counts: { connectors?: number; skills?: number; keys?: number; oauth_clients?: number } | null;
+  replaces: boolean;
+  setup?: { connectors: SetupConnector[] | null; skills: SetupSkill[] | null; notifications: string[] | null; stripped: string[] | null };
+};
+
+/** What importing a setup did: added, kept because installed, failed with why, and the connectors to sign in to. */
+export type SetupResult = { added: string[] | null; kept: string[] | null; failed: Record<string, string> | null; sign_ins: string[] | null };

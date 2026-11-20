@@ -14,7 +14,7 @@ A function set to "ask" holds the call. Today the owner decides in the console's
 The owner also wants fewer questions. Every surface offers three answers:
 
 - "Allow once".
-- "Allow for this session".
+- "Allow for this session", labelled with how long it lasts ("Allow for up to 8 hours").
 - "Always allow this function".
 
 ## 2. What the engine already gives, and what we use
@@ -23,7 +23,7 @@ The owner also wants fewer questions. Every surface offers three answers:
 |---|---|
 | `GET /v1/approvals:watch?after=<seq>` (SSE, `id`/`event`/`data`, tenant approval events) | the feed of requested, decided, expired and cancelled approvals |
 | `GET /v1/approvals?state=pending&agent=&session=` | seeding after a restart; finding the approval of an in-flight call |
-| `GET /v1/approvals/{id}` (`ApprovalDetail`, with arguments opened for the approver) | the prompt text and the argument summary on the local page |
+| `GET /v1/approvals/{id}` (`ApprovalDetail`, with arguments opened for the approver, and `session_until` for a pending `ask_once` record) | the prompt text, the argument summary on the local page, and how long "Allow for this session" lasts |
 | `POST /v1/approvals/{id}:decide` with `approve`, `approve_for_session` or `deny`, and `channel` | every decision, recorded with the surface that made it |
 | mode `ask_once`: `approve_for_session` writes a session row | "Allow for this session" |
 | `Lookup` on (session, call_hash): an identical call attaches to the open record, or is answered by the terminal undelivered one | getting the result of exactly the call that was decided |
@@ -90,7 +90,7 @@ From this change on, the console writes "Ask" as mode `ask_once` instead of `ask
 
 Skill loads are held like calls, with mode `ask_once` on the access key's agent row. A skill approval has the function `skill` on a skill-kind connector. Every surface shows the skill's name (the connector alias that the agent passes to `skill_load`) and its title, labelled "Skill". "Always allow" on a skill turns that one access key On for the skill (`SetSkillAccess`), not the whole workspace.
 
-A session is the `session` claim of the agent token. The console mints one per access key, and one per hourly OAuth access token. "Allow for this session" therefore lasts until the app's current token renews: at most one hour for an app signed in through the browser. The UI says so.
+A session is the `session` claim of the agent token. The console mints one per access key, and one per hourly OAuth access token. "Allow for this session" therefore lasts until the earlier of the token's expiry and `permission.sessionGrantMax` (8 hours by default): within an hour for an app signed in through the browser, and up to 8 hours for a key made in the console, across new MCP sessions of that key, since the key's `session` claim never changes. It is not one conversation. The engine reports that end as `session_until`, and every surface names it: the console's buttons, chat buttons and the elicitation say "Allow for up to N hours" (or minutes), falling back to "Allow for this session" only where the record does not say.
 
 ### 4.2 The relay and the universal channel interface (`selfhosted/surface/`)
 
@@ -217,6 +217,6 @@ Assets: the owner's decisions, the gateway, the bot tokens and webhook URLs, and
 - Adding or removing a channel or a device rebuilds the relay. Pending approvals are then announced again, so the channels that already had them get a second message, and the first one is no longer edited.
 - "Always allow" removes the function's "ask" row. `DeleteGrant` then cancels the other pending approvals of that function, which their surfaces show as cancelled.
 - "Allow once" on a skill covers one `skill_load` call. Loading another file of the same skill is a new call and asks again. "Allow for this session" covers them all.
-- The older console route `POST /api/approvals/{id}` (`approve: true`) now approves for the session, because "Ask" is `ask_once` and #11 made that route approve such records for the session. The UI no longer calls it.
+- The older console route `POST /api/approvals/{id}` (`approve: true`) approves that one call only, like "Allow once". The UI no longer calls it.
 - MCP URL-mode elicitation is not used, and Cursor's form-mode bugs are not worked around.
 - Claude Code, VS Code, Cursor and Codex were not driven against a real console. The tests use the go-sdk client.

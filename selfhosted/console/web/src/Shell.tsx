@@ -16,7 +16,7 @@ import { ICON_BUTTON, PRESS, TOUCH, button } from "./ui/styles";
 import { useCopy } from "./ui/useCopy";
 
 /** The console's sections and the paths each one owns. */
-export type Section = "connectors" | "skills" | "access" | "approvals" | "activity" | "notifications";
+export type Section = "connectors" | "skills" | "access" | "approvals" | "activity" | "notifications" | "account";
 
 const NAV: readonly { section: Section; href: string; label: MessageKey }[] = [
   { section: "connectors", href: "/", label: "nav.connectors" },
@@ -25,6 +25,7 @@ const NAV: readonly { section: Section; href: string; label: MessageKey }[] = [
   { section: "approvals", href: "/approvals", label: "nav.approvals" },
   { section: "activity", href: "/activity", label: "nav.activity" },
   { section: "notifications", href: "/notifications", label: "nav.notifications" },
+  { section: "account", href: "/account", label: "nav.account" },
 ];
 
 const OAUTH: Record<string, MessageKey> = {

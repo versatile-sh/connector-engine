@@ -11,6 +11,7 @@ x-image: &image
 
 x-secrets-ro: &secrets-ro secrets:/run/connector-engine:ro
 x-unlock: &unlock /run/connector-engine-unlock:uid=65532,gid=65532,mode=0700
+x-host-gateway: &host-gateway ["host.docker.internal:host-gateway"]
 
 services:
   engine:
@@ -24,6 +25,7 @@ services:
       - engine-data:/var/lib/connector-engine
     tmpfs:
       - *unlock
+    extra_hosts: *host-gateway
     depends_on:
       postgres: {condition: service_healthy}
     restart: unless-stopped
@@ -38,6 +40,8 @@ services:
       CONSOLE_ENGINE_URL: http://engine:8080
       CONSOLE_ENGINE_OPERATOR_URL: http://engine:8081
       CONSOLE_UNLOCK_SOCKET: /run/connector-engine-unlock/unlock.sock
+      CONSOLE_HOST_SOCKET: /run/connector-engine-unlock/host.sock
+      CONSOLE_LOOPBACK_HOST: host.docker.internal
     ports:
       - "127.0.0.1:${CONSOLE_PORT:-7465}:${CONSOLE_PORT:-7465}"
     volumes:
@@ -45,6 +49,7 @@ services:
       - console-data:/var/lib/connector-console
     tmpfs:
       - *unlock
+    extra_hosts: *host-gateway
     depends_on:
       engine: {condition: service_started}
     restart: unless-stopped

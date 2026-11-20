@@ -200,6 +200,7 @@ message ApprovalDetail {
   string trust_level = 5;
   string publisher = 6;
   bool reaches_outside = 7;
+  google.protobuf.Timestamp session_until = 8;
 }
 
 message ApprovalRequest {

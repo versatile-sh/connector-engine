@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,7 +37,7 @@ type Owner struct {
 	Iterations int    `json:"iterations"`
 }
 
-// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, the OAuth client that owns it, when it connected and whether the owner has seen it since.
+// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, the OAuth client that owns it, when it connected, whether the owner has seen it since and when a replayed refresh token signed it out.
 type Agent struct {
 	Name        string    `json:"name"`
 	ExpiresAt   time.Time `json:"expires_at"`
@@ -44,6 +45,7 @@ type Agent struct {
 	ClientID    string    `json:"client_id,omitempty"`
 	ConnectedAt time.Time `json:"connected_at,omitzero"`
 	Seen        bool      `json:"seen,omitempty"`
+	SignedOutAt time.Time `json:"signed_out_at,omitzero"`
 }
 
 // StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value.
@@ -62,6 +64,17 @@ type stateFile struct {
 	Refresh             map[string]RefreshGrant  `json:"oauth_refresh,omitempty"`
 	Spent               map[string]RefreshGrant  `json:"oauth_refresh_spent,omitempty"`
 	Notify              notifyState              `json:"notifications,omitzero"`
+	LastExport          time.Time                `json:"last_export,omitzero"`
+	Origins             map[string]Origin        `json:"origins,omitempty"`
+}
+
+// Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
+type Origin struct {
+	MCP          string `json:"mcp,omitempty"`
+	Listing      string `json:"listing,omitempty"`
+	Local        bool   `json:"local,omitempty"`
+	HeaderSecret bool   `json:"header_secret,omitempty"`
+	Digest       string `json:"digest,omitempty"`
 }
 
 // State is the console's file in its volume: the owner account, the connected agents and the revoked ones, written atomically with mode 0600.
@@ -168,17 +181,32 @@ func hashPassword(password string, salt []byte, iterations int) ([]byte, error) 
 	return pbkdf2.Key(sha256.New, password, salt, iterations, pbkdf2KeyLen)
 }
 
-// CreateOwner writes the owner account once; the password has at least ten characters.
-func (s *State) CreateOwner(username, password string) error {
+func checkUsername(username string) error {
 	if username == "" || len(username) > 64 {
 		return invalid("the username has 1 to 64 characters")
 	}
+	return nil
+}
+
+func newOwner(username, password string) (*Owner, error) {
+	if err := checkUsername(username); err != nil {
+		return nil, err
+	}
 	if len(password) < minPassword {
-		return invalid("the password has at least %d characters", minPassword)
+		return nil, invalid("the password has at least %d characters", minPassword)
 	}
 	salt := make([]byte, 16)
 	rand.Read(salt)
 	hash, err := hashPassword(password, salt, pbkdf2Iterations)
+	if err != nil {
+		return nil, err
+	}
+	return &Owner{Username: username, Salt: base64.StdEncoding.EncodeToString(salt), Hash: base64.StdEncoding.EncodeToString(hash), Iterations: pbkdf2Iterations}, nil
+}
+
+// CreateOwner writes the owner account once; the password has at least ten characters.
+func (s *State) CreateOwner(username, password string) error {
+	o, err := newOwner(username, password)
 	if err != nil {
 		return err
 	}
@@ -186,7 +214,37 @@ func (s *State) CreateOwner(username, password string) error {
 		if d.Owner != nil {
 			return ErrOwnerExists
 		}
-		d.Owner = &Owner{Username: username, Salt: base64.StdEncoding.EncodeToString(salt), Hash: base64.StdEncoding.EncodeToString(hash), Iterations: pbkdf2Iterations}
+		d.Owner = o
+		return nil
+	})
+}
+
+// SetPassword replaces the owner's password and ends every session except the one keyed keep; an empty keep ends them all.
+func (s *State) SetPassword(password, keep string) error {
+	return s.update(func(d *stateFile) error {
+		if d.Owner == nil {
+			return ErrNoOwner
+		}
+		o, err := newOwner(d.Owner.Username, password)
+		if err != nil {
+			return err
+		}
+		d.Owner = o
+		maps.DeleteFunc(d.Sessions, func(k string, _ StoredSession) bool { return k != keep })
+		return nil
+	})
+}
+
+// Rename changes the owner's username, which has 1 to 64 characters.
+func (s *State) Rename(username string) error {
+	if err := checkUsername(username); err != nil {
+		return err
+	}
+	return s.update(func(d *stateFile) error {
+		if d.Owner == nil {
+			return ErrNoOwner
+		}
+		d.Owner.Username = username
 		return nil
 	})
 }
@@ -256,7 +314,7 @@ func (s *State) Agents() []Agent {
 	return out
 }
 
-// PutAgent records an agent and the expiry of its newest token, keeping how and when it was connected.
+// PutAgent records an agent and the expiry of its newest token, keeping how and when it was connected and clearing a sign-out.
 func (s *State) PutAgent(a Agent) error {
 	return s.update(func(d *stateFile) error {
 		if old, ok := d.Agents[a.Name]; ok {
@@ -334,4 +392,35 @@ func (s *State) DismissOnboarding() error {
 		d.OnboardingDismissed = true
 		return nil
 	})
+}
+
+// LastExport returns when the last full backup was exported, or the zero time when none was.
+func (s *State) LastExport() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.LastExport
+}
+
+// MarkExported records at as the time of the last full backup.
+func (s *State) MarkExported(at time.Time) error {
+	return s.update(func(d *stateFile) error {
+		d.LastExport = at.UTC().Truncate(time.Second)
+		return nil
+	})
+}
+
+// PutOrigin records where the connector or skill id was imported from.
+func (s *State) PutOrigin(id string, o Origin) error {
+	return s.update(func(d *stateFile) error {
+		put(&d.Origins, id, o)
+		return nil
+	})
+}
+
+// OriginOf returns where the connector or skill id was imported from, if the console recorded it.
+func (s *State) OriginOf(id string) (Origin, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	o, ok := s.data.Origins[id]
+	return o, ok
 }

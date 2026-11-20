@@ -3,26 +3,14 @@ package console
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/agents-control/connector-engine/port"
 )
-
-type items[T any] struct {
-	Items []T `json:"items"`
-}
-
-type connectorView struct {
-	Connector port.Connector  `json:"connector"`
-	Functions []port.Function `json:"functions,omitempty"`
-	Blocked   string          `json:"blocked"`
-}
 
 // FunctionView is one function of a connector as the console shows it: its class, what it does by nature, and the owner's choice read back from the engine's grants.
 type FunctionView struct {
@@ -54,43 +42,21 @@ type ConnectorSummary struct {
 	Items       []Item         `json:"items"`
 }
 
-func q(kv ...string) string {
-	v := url.Values{}
-	for i := 0; i+1 < len(kv); i += 2 {
-		if kv[i+1] != "" {
-			v.Set(kv[i], kv[i+1])
-		}
-	}
-	return "?" + v.Encode()
-}
-
-func esc(s string) string { return url.PathEscape(s) }
-
-// IsCode reports whether err is an engine refusal with this code.
-func IsCode(err error, code string) bool {
-	var ee *EngineError
-	return errors.As(err, &ee) && ee.Code == code
-}
-
 func (c *Console) workspaceGrants(ctx context.Context, conn string) ([]port.Grant, error) {
-	var g items[port.Grant]
-	err := c.Engine.Call(ctx, http.MethodGet, "/v1/grants"+q("scope_kind", "workspace", "scope_id", c.Engine.Workspace, "connector", conn), nil, &g)
-	return g.Items, err
+	return c.Engine.grants(ctx, port.ScopeWorkspace, c.Engine.Workspace, conn)
 }
 
-func accessOf(f port.Function, rows []port.Grant) Access {
+func accessOf(rows []port.Grant, match func(port.Grant) bool) Access {
 	for _, g := range rows {
-		if g.Selector != port.SelectorOf(f.Name) {
-			continue
-		}
-		switch g.Mode {
-		case port.ModeAllow:
-			return AccessOn
-		case port.ModeAsk, port.ModeAskOnce:
-			return AccessAsk
+		if a, ok := accessFor(g.Mode); ok && match(g) {
+			return a
 		}
 	}
 	return AccessOff
+}
+
+func functionAccess(f port.Function, rows []port.Grant) Access {
+	return accessOf(rows, func(g port.Grant) bool { return g.Selector == port.SelectorOf(f.Name) })
 }
 
 func describe(def json.RawMessage) (title, description string) {
@@ -104,20 +70,18 @@ func describe(def json.RawMessage) (title, description string) {
 
 // Connectors lists the workspace's connectors with their listing, functions, credentials and the owner's choices.
 func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
-	var list items[connectorView]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
+	views, err := c.Engine.connectors(ctx)
+	if err != nil {
 		return nil, err
 	}
-	out := make([]ConnectorSummary, 0, len(list.Items))
-	for _, v := range list.Items {
+	out := make([]ConnectorSummary, 0, len(views))
+	for _, v := range views {
 		conn := v.Connector
 		if !conn.RemovedAt.IsZero() {
 			continue
 		}
 		s := ConnectorSummary{ID: string(conn.ID), Alias: conn.Alias, Enabled: conn.Enabled, Blocked: v.Blocked, Listing: conn.Listing.Listing.Name, Version: conn.Listing.Version, Title: conn.Alias}
-		var lv port.ListingVersion
-		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", c.Engine.Workspace, "owner", string(conn.Listing.Listing.Owner), "name", conn.Listing.Listing.Name, "version", conn.Listing.Version), nil, &lv); err == nil {
-			m := lv.Manifest
+		if m, err := c.Engine.manifest(ctx, conn); err == nil {
 			if m.Kind == port.KindSkill {
 				continue
 			}
@@ -129,8 +93,8 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 				s.Auth = append(s.Auth, string(a.Kind))
 			}
 		}
-		var fns items[port.Function]
-		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(string(conn.ID))+"/functions", nil, &fns); err != nil {
+		fns, err := c.Engine.functions(ctx, string(conn.ID))
+		if err != nil {
 			return nil, err
 		}
 		rows, err := c.workspaceGrants(ctx, string(conn.ID))
@@ -138,21 +102,20 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 			return nil, err
 		}
 		s.Items = []Item{}
-		for _, f := range fns.Items {
+		for _, f := range fns {
 			if f.State == port.FunctionRemoved {
 				continue
 			}
 			if it, ok := ItemOf(f.Name, f.Definition); ok {
-				it.State, it.Access = string(f.State), accessOf(f, rows)
+				it.State, it.Access = string(f.State), functionAccess(f, rows)
 				s.Items = append(s.Items, it)
 				continue
 			}
 			title, desc := describe(f.Definition)
-			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f), State: string(f.State), Access: accessOf(f, rows)})
+			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f), State: string(f.State), Access: functionAccess(f, rows)})
 		}
-		var creds items[port.Credential]
-		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/credentials"+q("connector", string(conn.ID)), nil, &creds); err == nil {
-			for _, cr := range creds.Items {
+		if creds, err := c.Engine.credentials(ctx, string(conn.ID)); err == nil {
+			for _, cr := range creds {
 				s.Credentials = append(s.Credentials, string(cr.Kind)+":"+string(cr.Status))
 			}
 		}
@@ -162,14 +125,12 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 }
 
 func (c *Console) function(ctx context.Context, conn, name string) (port.Function, error) {
-	var fns items[port.Function]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn)+"/functions", nil, &fns); err != nil {
+	fns, err := c.Engine.functions(ctx, conn)
+	if err != nil {
 		return port.Function{}, err
 	}
-	for _, f := range fns.Items {
-		if f.Name == name {
-			return f, nil
-		}
+	if i := slices.IndexFunc(fns, func(f port.Function) bool { return f.Name == name }); i >= 0 {
+		return fns[i], nil
 	}
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
@@ -179,11 +140,13 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 	if err := c.writeAccess(ctx, conn, name, a); err != nil || port.ItemKind(name) == "" || a == AccessOff {
 		return err
 	}
-	for _, ag := range c.State.Agents() {
-		if ag.ExpiresAt.After(time.Now()) {
-			if err := c.bind(ctx, conn, ag); err != nil {
-				return err
-			}
+	return c.bindAll(ctx, conn, c.bind)
+}
+
+func (c *Console) bindAll(ctx context.Context, conn string, bind func(context.Context, string, Agent) error) error {
+	for _, a := range c.liveAgents() {
+		if err := bind(ctx, conn, a); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -199,7 +162,7 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 		return err
 	}
 	if f.State == port.FunctionQuarantined && a != AccessOff {
-		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors/"+esc(conn)+"/functions:accept", map[string]any{"seen": map[string]port.Hash{name: f.DefinitionHash}}, nil); err != nil {
+		if err := c.Engine.accept(ctx, conn, map[string]port.Hash{name: f.DefinitionHash}); err != nil {
 			return err
 		}
 		if f, err = c.function(ctx, conn, name); err != nil {
@@ -211,7 +174,7 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 		class = port.ClassRead
 	}
 	if !item && class != f.Class {
-		if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/functions/"+esc(name)+"/class", map[string]any{"class": class}, &f); err != nil {
+		if f, err = c.Engine.setClass(ctx, conn, name, class); err != nil {
 			return err
 		}
 	}
@@ -219,40 +182,23 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 	if err != nil {
 		return err
 	}
-	for _, g := range rows {
-		if g.Selector == port.SelectorOf(name) {
-			if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil {
-				return err
-			}
-		}
+	if err := c.Engine.deleteGrants(ctx, slices.DeleteFunc(rows, func(g port.Grant) bool { return g.Selector != port.SelectorOf(name) })); err != nil {
+		return err
 	}
-	mode := map[Access]port.Mode{AccessOn: port.ModeAllow, AccessAsk: port.ModeAskOnce}[a]
-	if mode == "" {
+	if a == AccessOff {
 		return nil
 	}
-	g := port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorOf(name), Mode: mode, DefinitionHash: f.DefinitionHash}
-	return c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil)
-}
-
-func (c *Console) createListing(ctx context.Context, m port.Manifest) (port.ListingVersion, error) {
-	var lv port.ListingVersion
-	err := c.Engine.Call(ctx, http.MethodPost, "/v1/listings", map[string]any{"manifest": m}, &lv)
-	if IsCode(err, "conflict") {
-		err = c.Engine.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", c.Engine.Workspace, "owner", c.Engine.Tenant, "name", m.Name, "version", m.Version), nil, &lv)
-	}
-	return lv, err
+	return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorOf(name), Mode: a.mode(), DefinitionHash: f.DefinitionHash})
 }
 
 func (c *Console) freeAlias(ctx context.Context, base string) (string, error) {
-	var list items[connectorView]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
+	live, err := c.Engine.liveConnectors(ctx)
+	if err != nil {
 		return "", err
 	}
 	taken := map[string]bool{}
-	for _, v := range list.Items {
-		if v.Connector.RemovedAt.IsZero() {
-			taken[v.Connector.Alias] = true
-		}
+	for _, conn := range live {
+		taken[conn.Alias] = true
 	}
 	base = Slug(base)
 	if len(base) > 24 {
@@ -268,45 +214,50 @@ func (c *Console) freeAlias(ctx context.Context, base string) (string, error) {
 	return alias, nil
 }
 
-// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent; with a key already made it also finishes the first-run guide.
-func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
-	lv, err := c.createListing(ctx, m)
+func (c *Console) installListing(ctx context.Context, m port.Manifest, aliasBase func(port.ListingRef) string) (string, []port.Function, error) {
+	lv, err := c.Engine.createListing(ctx, m)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	ref := lv.Ref.Listing
-	target := string(ref.Owner) + "/" + ref.Name
-	if err := c.openToWorkspace(ctx, target); err != nil {
-		return "", err
+	if err := c.openToWorkspace(ctx, string(ref.Owner)+"/"+ref.Name); err != nil {
+		return "", nil, err
 	}
-	alias, err := c.freeAlias(ctx, strings.TrimPrefix(ref.Name[strings.LastIndex(ref.Name, "/")+1:], "mcp-"))
+	alias, err := c.freeAlias(ctx, aliasBase(ref))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
-	var view connectorView
-	if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors", map[string]any{"workspace": c.Engine.Workspace, "alias": alias, "listing": ref, "version": lv.Ref.Version}, &view); err != nil {
-		return "", err
+	conn, err := c.Engine.install(ctx, alias, lv.Ref)
+	if err != nil {
+		return "", nil, err
 	}
-	conn := string(view.Connector.ID)
-	var fns items[port.Function]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn)+"/functions", nil, &fns); err != nil {
-		return conn, err
+	fns, err := c.Engine.functions(ctx, conn)
+	if err != nil {
+		return conn, nil, err
 	}
 	seen := map[string]port.Hash{}
-	for _, f := range fns.Items {
+	for _, f := range fns {
 		if f.State == port.FunctionQuarantined && port.ItemKind(f.Name) == "" {
 			seen[f.Name] = f.DefinitionHash
 		}
 	}
 	if len(seen) > 0 {
-		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors/"+esc(conn)+"/functions:accept", map[string]any{"seen": seen}, nil); err != nil {
-			return conn, err
+		if err := c.Engine.accept(ctx, conn, seen); err != nil {
+			return conn, nil, err
 		}
 	}
-	if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/level", map[string]any{"level": port.LevelCustom}, nil); err != nil {
+	return conn, fns, c.Engine.setLevel(ctx, conn, port.LevelCustom)
+}
+
+// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent; with a key already made it also finishes the first-run guide.
+func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
+	conn, fns, err := c.installListing(ctx, m, func(ref port.ListingRef) string {
+		return strings.TrimPrefix(ref.Name[strings.LastIndex(ref.Name, "/")+1:], "mcp-")
+	})
+	if err != nil {
 		return conn, err
 	}
-	for _, f := range fns.Items {
+	for _, f := range fns {
 		a, ok := choices[f.Name]
 		if kind, item := itemKinds[port.ItemKind(f.Name)]; !ok && item {
 			a = Proposed(kind)
@@ -317,15 +268,10 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
-	agents := c.State.Agents()
-	for _, a := range agents {
-		if a.ExpiresAt.After(time.Now()) {
-			if err := c.bind(ctx, conn, a); err != nil {
-				return conn, err
-			}
-		}
+	if err := c.bindAll(ctx, conn, c.bind); err != nil {
+		return conn, err
 	}
-	if len(agents) > 0 {
+	if len(c.State.Agents()) > 0 {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return conn, err
 		}
@@ -334,20 +280,20 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 }
 
 func (c *Console) openToWorkspace(ctx context.Context, target string) error {
-	var existing items[port.CatalogRule]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/catalog/rules", nil, &existing); err != nil {
+	existing, err := c.Engine.catalogRules(ctx)
+	if err != nil {
 		return err
 	}
 	for _, want := range []port.CatalogRule{
 		{SubjectKind: port.SubjectTenant, SubjectID: c.Engine.Tenant, TargetKind: port.TargetListing, Target: target, Show: true, Install: true, Ceiling: port.CeilingFull},
 		{SubjectKind: port.SubjectWorkspace, SubjectID: c.Engine.Workspace, TargetKind: port.TargetListing, Target: target, Show: true, Install: true, Ceiling: port.CeilingFull},
 	} {
-		for _, r := range existing.Items {
+		for _, r := range existing {
 			if r.Target == want.Target && r.SubjectKind == want.SubjectKind && r.SubjectID == want.SubjectID && r.TargetKind == want.TargetKind {
 				want.ID, want.Audience = r.ID, r.Audience
 			}
 		}
-		if err := c.Engine.Call(ctx, http.MethodPut, "/v1/catalog/rules", want, nil); err != nil {
+		if err := c.Engine.putCatalogRule(ctx, want); err != nil {
 			return err
 		}
 	}
@@ -361,27 +307,23 @@ func (c *Console) Remove(ctx context.Context, conn string) error {
 			return err
 		}
 	}
-	return c.Engine.Call(ctx, http.MethodDelete, "/v1/connectors/"+esc(conn), nil, nil)
+	return c.Engine.removeConnector(ctx, conn)
 }
 
 func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
-	if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/bindings/"+esc(a.Name), map[string]any{"credential_policy": port.CredentialShared, "ask_requester": true}, nil); err != nil {
+	if err := c.Engine.bind(ctx, conn, a.Name); err != nil {
 		return err
 	}
-	var rows items[port.Grant]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/grants"+q("scope_kind", "agent", "scope_id", a.Name, "connector", conn), nil, &rows); err != nil {
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, a.Name, conn)
+	if err != nil {
 		return err
 	}
-	for _, g := range rows.Items {
-		if slices.Contains(agentSelectors, g.Selector) {
-			if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil {
-				return err
-			}
-		}
+	if err := c.Engine.deleteGrants(ctx, slices.DeleteFunc(rows, func(g port.Grant) bool { return !slices.Contains(agentSelectors, g.Selector) })); err != nil {
+		return err
 	}
 	for _, sel := range agentSelectors {
 		g := port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a.Name, Agent: port.AgentID(a.Name), Connector: port.ConnectorID(conn), Selector: sel, Mode: port.ModeAllow, ExpiresAt: a.ExpiresAt}
-		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil); err != nil {
+		if err := c.Engine.createGrant(ctx, g); err != nil {
 			return err
 		}
 	}
@@ -399,31 +341,23 @@ func (c *Console) RevokeAgent(ctx context.Context, name string) error {
 	if !ok {
 		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}
 	}
-	var list items[connectorView]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
+	live, err := c.Engine.liveConnectors(ctx)
+	if err != nil {
 		return err
 	}
-	for _, v := range list.Items {
-		if !v.Connector.RemovedAt.IsZero() {
-			continue
-		}
+	for _, conn := range live {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return err
 		}
-		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/connectors/"+esc(string(v.Connector.ID))+"/bindings/"+esc(name), nil, nil); err != nil && !IsCode(err, "not_found") {
+		if err := c.Engine.unbind(ctx, string(conn.ID), name); err != nil {
 			return err
 		}
 	}
-	var rows items[port.Grant]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/grants"+q("scope_kind", string(port.ScopeAgent), "scope_id", name), nil, &rows); err != nil {
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, name, "")
+	if err != nil {
 		return err
 	}
-	for _, g := range rows.Items {
-		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil && !IsCode(err, "not_found") {
-			return err
-		}
-	}
-	return nil
+	return c.Engine.deleteGrants(ctx, rows)
 }
 
 // AgentToken is a minted agent token with where to use it.
@@ -444,30 +378,25 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration)
 		ttl = c.MaxAgentTTL
 	}
 	a := Agent{Name: name, ExpiresAt: time.Now().Add(ttl).UTC().Truncate(time.Second)}
-	var list items[connectorView]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
+	live, err := c.Engine.liveConnectors(ctx)
+	if err != nil {
 		return Agent{}, err
 	}
-	installed := false
-	for _, v := range list.Items {
-		if !v.Connector.RemovedAt.IsZero() {
-			continue
-		}
-		installed = true
+	for _, conn := range live {
 		bind := c.bind
-		if skill, err := c.isSkill(ctx, v.Connector); err != nil {
+		if skill, err := c.isSkill(ctx, conn); err != nil {
 			return Agent{}, err
 		} else if skill {
 			bind = c.rebindSkill
 		}
-		if err := bind(ctx, string(v.Connector.ID), a); err != nil {
+		if err := bind(ctx, string(conn.ID), a); err != nil {
 			return Agent{}, err
 		}
 	}
 	if err := c.State.PutAgent(a); err != nil {
 		return Agent{}, err
 	}
-	if installed {
+	if len(live) > 0 {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return Agent{}, err
 		}
@@ -494,12 +423,11 @@ func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration)
 
 // Approvals lists the calls waiting for the owner.
 func (c *Console) Approvals(ctx context.Context) ([]port.Approval, error) {
-	var out items[port.Approval]
-	err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals"+q("state", string(port.ApprovalPending)), nil, &out)
-	for i := range out.Items {
-		out.Items[i].Arguments = nil
+	out, err := c.Engine.pendingApprovals(ctx, "", "")
+	for i := range out {
+		out[i].Arguments = nil
 	}
-	return out.Items, err
+	return out, err
 }
 
 // Decide approves or denies one waiting call as the owner; approving an ask-once call, such as a skill load, approves it for the rest of its session.
@@ -507,17 +435,16 @@ func (c *Console) Decide(ctx context.Context, id string, approve bool) error {
 	d := port.DecisionDeny
 	if approve {
 		d = port.DecisionApprove
-		var detail struct {
-			Approval port.Approval `json:"approval"`
-		}
-		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &detail); err != nil {
+		detail, err := c.Engine.approval(ctx, id)
+		if err != nil {
 			return err
 		}
 		if detail.Approval.Mode == port.ModeAskOnce {
 			d = port.DecisionApproveForSession
 		}
 	}
-	return c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":decide", map[string]any{"decision": d, "channel": "console"}, nil)
+	_, err := c.Engine.decide(ctx, id, map[string]any{"decision": d, "channel": "console"})
+	return err
 }
 
 // SetHeaderSecret stores the headers the connector's calls carry, sealed by the engine for the workspace.
@@ -542,7 +469,7 @@ func (c *Console) BeginOAuth(ctx context.Context, conn string) (state, to string
 		State string `json:"state"`
 		URL   string `json:"url"`
 	}
-	err = c.Engine.Call(ctx, http.MethodPost, "/v1/connectors/"+esc(conn)+"/credentials:connect", map[string]any{"owner": port.OwnerWorkspace}, &out)
+	err = c.Engine.Call(ctx, http.MethodPost, connectorPath(conn, "/credentials:connect"), map[string]any{"owner": port.OwnerWorkspace}, &out)
 	return out.State, out.URL, err
 }
 
@@ -553,16 +480,15 @@ func (c *Console) CompleteOAuth(ctx context.Context, state, code string) error {
 
 // OAuthIssuer returns the issuer the listing of a connector names for oauth2_user.
 func (c *Console) OAuthIssuer(ctx context.Context, conn string) (string, error) {
-	var v connectorView
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn), nil, &v); err != nil {
+	v, err := c.Engine.connector(ctx, conn)
+	if err != nil {
 		return "", err
 	}
-	ref := v.Connector.Listing
-	var lv port.ListingVersion
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", c.Engine.Workspace, "owner", string(ref.Listing.Owner), "name", ref.Listing.Name, "version", ref.Version), nil, &lv); err != nil {
+	m, err := c.Engine.manifest(ctx, v)
+	if err != nil {
 		return "", err
 	}
-	for _, a := range lv.Manifest.Auth {
+	for _, a := range m.Auth {
 		if a.Kind == port.CredentialOAuth2User && a.Issuer != "" {
 			return a.Issuer, nil
 		}

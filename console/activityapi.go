@@ -42,21 +42,11 @@ type ActivityCall struct {
 // ActivityDetail is one call in full: its row, what the console captured of it and the engine's record.
 type ActivityDetail struct {
 	ActivityCall
-	Tool          string          `json:"tool,omitempty"`
-	Session       string          `json:"session,omitempty"`
-	MCPSession    string          `json:"mcp_session,omitempty"`
-	RPCID         json.RawMessage `json:"rpc_id,omitempty"`
-	Detail        string          `json:"detail,omitempty"`
-	KeptArguments bool            `json:"kept_arguments"`
-	Arguments     string          `json:"arguments,omitempty"`
-	ArgumentsCut  bool            `json:"arguments_cut,omitempty"`
-	KeptResult    bool            `json:"kept_result"`
-	Result        string          `json:"result,omitempty"`
-	ResultCut     bool            `json:"result_cut,omitempty"`
-	ResultBytes   int             `json:"result_bytes,omitempty"`
-	EngineCall    string          `json:"engine_call,omitempty"`
-	CallState     string          `json:"call_state,omitempty"`
-	FinishedAt    time.Time       `json:"finished_at,omitzero"`
+	Tool string `json:"tool,omitempty"`
+	CallPayload
+	EngineCall string    `json:"engine_call,omitempty"`
+	CallState  string    `json:"call_state,omitempty"`
+	FinishedAt time.Time `json:"finished_at,omitzero"`
 }
 
 // HourCount is how many calls started in one UTC hour, by outcome.
@@ -148,12 +138,12 @@ type engineFacts struct {
 }
 
 func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string) (engineFacts, error) {
-	var conns items[connectorView]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &conns); err != nil {
+	conns, err := c.Engine.connectors(ctx)
+	if err != nil {
 		return engineFacts{}, err
 	}
 	f := engineFacts{approvals: map[port.ApprovalID]port.Approval{}, byAlias: map[string]string{}, byID: map[string]string{}, skills: map[string]bool{}}
-	for _, v := range conns.Items {
+	for _, v := range conns {
 		f.byID[string(v.Connector.ID)] = v.Connector.Alias
 		if _, taken := f.byAlias[v.Connector.Alias]; !taken || v.Connector.RemovedAt.IsZero() {
 			f.byAlias[v.Connector.Alias] = string(v.Connector.ID)
@@ -177,7 +167,7 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 			f.skills[string(call.Connector)] = false
 		}
 	}
-	for _, v := range conns.Items {
+	for _, v := range conns {
 		if _, maybe := f.skills[string(v.Connector.ID)]; maybe {
 			skill, err := c.isSkill(ctx, v.Connector)
 			f.skills[string(v.Connector.ID)] = skill && err == nil
@@ -448,9 +438,7 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 func detailOf(j joined) ActivityDetail {
 	d := ActivityDetail{ActivityCall: j.row}
 	if cp := j.capture; cp != nil {
-		d.Tool, d.Session, d.MCPSession, d.RPCID, d.Detail = cp.Tool, cp.Session, cp.MCPSession, cp.RPCID, cp.Detail
-		d.KeptArguments, d.Arguments, d.ArgumentsCut = cp.KeptArguments, cp.Arguments, cp.ArgumentsCut
-		d.KeptResult, d.Result, d.ResultCut, d.ResultBytes = cp.KeptResult, cp.Result, cp.ResultCut, cp.ResultBytes
+		d.Tool, d.CallPayload = cp.Tool, cp.CallPayload
 	}
 	if call := j.call; call != nil {
 		d.EngineCall, d.CallState, d.FinishedAt, d.Session = string(call.ID), string(call.State), call.FinishedAt, string(call.Session)

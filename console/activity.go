@@ -48,25 +48,30 @@ type ActivitySettings struct {
 
 // Capture is what the console saw of one tools/call on its /mcp proxy; a Late capture is the answer approval_status gave for an earlier held call.
 type Capture struct {
-	ID            string          `json:"id"`
-	At            time.Time       `json:"at"`
-	Done          time.Time       `json:"done,omitzero"`
-	Agent         string          `json:"agent"`
+	ID       string      `json:"id"`
+	At       time.Time   `json:"at"`
+	Done     time.Time   `json:"done,omitzero"`
+	Agent    string      `json:"agent"`
+	Tool     string      `json:"tool"`
+	Skill    string      `json:"skill,omitempty"`
+	Path     string      `json:"path,omitempty"`
+	Outcome  CallOutcome `json:"outcome"`
+	Code     string      `json:"code,omitempty"`
+	Approval string      `json:"approval,omitempty"`
+	Late     bool        `json:"late,omitempty"`
+	CallPayload
+}
+
+// CallPayload is what the console captured of a call beyond its row: the sessions, the JSON-RPC id, the detail and the kept arguments and result.
+type CallPayload struct {
 	Session       string          `json:"session,omitempty"`
 	MCPSession    string          `json:"mcp_session,omitempty"`
 	RPCID         json.RawMessage `json:"rpc_id,omitempty"`
-	Tool          string          `json:"tool"`
-	Skill         string          `json:"skill,omitempty"`
-	Path          string          `json:"path,omitempty"`
-	Outcome       CallOutcome     `json:"outcome"`
-	Code          string          `json:"code,omitempty"`
 	Detail        string          `json:"detail,omitempty"`
-	Approval      string          `json:"approval,omitempty"`
-	Late          bool            `json:"late,omitempty"`
-	KeptArguments bool            `json:"kept_arguments,omitempty"`
+	KeptArguments bool            `json:"kept_arguments"`
 	Arguments     string          `json:"arguments,omitempty"`
 	ArgumentsCut  bool            `json:"arguments_cut,omitempty"`
-	KeptResult    bool            `json:"kept_result,omitempty"`
+	KeptResult    bool            `json:"kept_result"`
 	Result        string          `json:"result,omitempty"`
 	ResultCut     bool            `json:"result_cut,omitempty"`
 	ResultBytes   int             `json:"result_bytes,omitempty"`

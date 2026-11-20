@@ -95,3 +95,24 @@ describe("oauthGuides", () => {
     assert.deepEqual(JSON.parse(decodeURIComponent(href.slice("vscode:mcp/install?".length))), { name: "versatile", type: "http", url });
   });
 });
+
+describe("the app table", () => {
+  const oauth = oauthGuides(url, (message) => message);
+
+  test("offers the same apps both ways, in order, but code and the AI prompt", () => {
+    assert.deepEqual(
+      oauth.map((g) => g.id),
+      all.map((g) => g.id).filter((id) => id !== "code" && id !== "ai"),
+    );
+  });
+
+  test("names each app once for both ways", () => {
+    for (const g of oauth) assert.equal(g.name, guide(g.id).name, g.id);
+  });
+
+  describe("Codex", () => {
+    test("is a terminal step by OAuth and a file with a key", () => {
+      assert.deepEqual([oauth.find((g) => g.id === "codex")?.kind, guide("codex").kind], ["clients.kind.terminal", "clients.kind.config"]);
+    });
+  });
+});

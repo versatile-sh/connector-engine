@@ -5,6 +5,7 @@ import { Mark } from "../Brand";
 import type { MessageKey } from "../i18n";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
+import { decideConsent } from "../mutations";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
@@ -33,17 +34,15 @@ export function Consent({ id }: { id: string }) {
   const path = `/api/oauth/requests/${encodeURIComponent(id)}`;
   const request = useQuery({ queryKey: ["oauth-request", id], queryFn: () => api<ConsentRequest>("GET", path), retry: false, staleTime: Infinity });
   const [password, setPassword] = useState("");
-  const decide = useMutation({
-    mutationFn: (approve: boolean) => api<{ redirect: string }>("POST", path, approve ? { approve, password } : { approve }),
-    onSuccess: (result) => window.location.assign(result.redirect),
-  });
+  const decide = useMutation(decideConsent);
+  const answer = (approve: boolean) => decide.mutate({ request: id, approve, password }, { onSuccess: (result) => window.location.assign(result.redirect) });
   const refusal = decide.isError ? PASSWORD_REFUSALS[errorCode(decide.error) ?? ""] : undefined;
   const onAllow = (event: FormEvent) => {
     event.preventDefault();
-    decide.mutate(true);
+    answer(true);
   };
   const client = request.data?.client ?? "";
-  const done = decide.isSuccess ? (decide.variables ? t("consent.done", { client }) : t("consent.denied", { client })) : undefined;
+  const done = decide.isSuccess ? (decide.variables.approve ? t("consent.done", { client }) : t("consent.denied", { client })) : undefined;
   return (
     <main className="grid min-h-dvh place-items-center px-6 py-10">
       <section aria-labelledby="consent-title" className={`${SURFACE} arrive w-full max-w-lg p-6 sm:p-8`}>
@@ -101,8 +100,8 @@ export function Consent({ id }: { id: string }) {
                   <button type="submit" className={button({ variant: "accent" })} disabled={decide.isPending}>
                     {t("consent.allow")}
                   </button>
-                  <button type="button" className={button({ variant: "secondary" })} disabled={decide.isPending} onClick={() => decide.mutate(false)}>
-                    {t("consent.deny")}
+                  <button type="button" className={button({ variant: "secondary" })} disabled={decide.isPending} onClick={() => answer(false)}>
+                    {t("common.deny")}
                   </button>
                 </div>
               </form>

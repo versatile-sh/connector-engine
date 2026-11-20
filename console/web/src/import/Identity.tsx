@@ -9,7 +9,7 @@ export function Identity({ preview, onLime = false }: { preview: Preview; onLime
   const facts: { label: string; value: string }[] = [
     { label: t("import.from"), value: preview.url },
     ...(preview.remote_url && preview.remote_url !== preview.url ? [{ label: t("import.server"), value: preview.remote_url }] : []),
-    ...(preview.auth && preview.auth.length > 0 ? [{ label: t("import.credentials"), value: preview.auth.join(", ") }] : []),
+    ...(preview.auth && preview.auth.length > 0 ? [{ label: t("common.credentials"), value: preview.auth.join(", ") }] : []),
     ...(preview.protocol ? [{ label: t("import.protocol"), value: `MCP ${preview.protocol}` }] : []),
   ];
   return (

@@ -77,10 +77,7 @@ export function Footer() {
       </div>
       <div className="bg-ink-sunken">
         <div className="mx-auto w-full max-w-6xl px-5 pt-10 sm:px-8">
-          <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <Logotype className="text-lg" />
-            <span className="font-mono text-xs text-muted-light">{t("brand.label")}</span>
-          </div>
+          <Logotype className="text-lg" />
           <FooterWordmark />
         </div>
       </div>

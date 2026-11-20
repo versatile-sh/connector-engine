@@ -325,7 +325,7 @@ export const es: Record<MessageKey, string> = {
   "activity.connectors.all": "Todos los conectores",
   "activity.connectors.calls": "{count} llamadas",
   "activity.connectors.failed": "{count} fallaron",
-  "activity.connectors.removed": "{alias} (quitado)",
+  "activity.connectors.unknown": "{alias} (no instalado)",
   "activity.calls": "Llamadas",
   "activity.calls.shown": "las {shown} más nuevas de {total}",
   "activity.empty.title": "Ninguna llamada *todavía*",

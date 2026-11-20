@@ -325,7 +325,7 @@ export const ptBR: Record<MessageKey, string> = {
   "activity.connectors.all": "Todos os conectores",
   "activity.connectors.calls": "{count} chamadas",
   "activity.connectors.failed": "{count} falharam",
-  "activity.connectors.removed": "{alias} (removido)",
+  "activity.connectors.unknown": "{alias} (não instalado)",
   "activity.calls": "Chamadas",
   "activity.calls.shown": "as {shown} mais novas de {total}",
   "activity.empty.title": "Nenhuma chamada *ainda*",

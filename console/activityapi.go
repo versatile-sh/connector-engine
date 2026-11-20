@@ -210,7 +210,10 @@ func join(captures []Capture, f engineFacts) []joined {
 	out := make([]joined, 0, len(captures)+len(f.calls))
 	for i := range captures {
 		cp := &captures[i]
-		alias, fn, _ := strings.Cut(cp.Tool, toolSeparator)
+		alias, fn, found := strings.Cut(cp.Tool, toolSeparator)
+		if !found {
+			alias, fn = "", cp.Tool
+		}
 		conn := f.byAlias[alias]
 		var call *port.Call
 		switch {
@@ -222,7 +225,7 @@ func join(captures []Capture, f engineFacts) []joined {
 		if call != nil {
 			used[call.ID] = true
 		}
-		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: firstOf(fn, cp.Tool), Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
+		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
 		if cp.Outcome != OutcomePending && !cp.Done.IsZero() {
 			ms := cp.Done.Sub(cp.At).Milliseconds()
 			row.DurationMS = &ms

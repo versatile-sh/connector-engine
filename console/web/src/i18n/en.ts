@@ -323,7 +323,7 @@ export const en = {
   "activity.connectors.all": "All connectors",
   "activity.connectors.calls": "{count} calls",
   "activity.connectors.failed": "{count} failed",
-  "activity.connectors.removed": "{alias} (removed)",
+  "activity.connectors.unknown": "{alias} (not installed)",
   "activity.calls": "Calls",
   "activity.calls.shown": "newest {shown} of {total}",
   "activity.empty.title": "No calls *yet*",

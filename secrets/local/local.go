@@ -38,8 +38,8 @@ const (
 // Store is the file-backed SecretStore; its root key file is plaintext or wrapped by an unlock key.
 type Store struct {
 	*ring.Ring
-	dir    string
-	mu     sync.Mutex
+	dir      string
+	mu       sync.Mutex
 	root     []byte
 	unlock   []byte
 	restored bool

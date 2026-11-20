@@ -48,11 +48,13 @@ type bodyReader interface {
 	readBody(io.Reader) error
 }
 
+var engineHTTP = &http.Client{Timeout: 90 * time.Second}
+
 func (e *Engine) client() *http.Client {
 	if e.HTTP != nil {
 		return e.HTTP
 	}
-	return &http.Client{Timeout: 90 * time.Second}
+	return engineHTTP
 }
 
 func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, out any) error {
@@ -137,7 +139,7 @@ func (e *Engine) Call(ctx context.Context, method, path string, in, out any) err
 		return err
 	}
 	err = e.do(ctx, e.PublicURL, tok, method, path, in, out)
-	if ee, ok := err.(*EngineError); ok && ee.Status == http.StatusUnauthorized {
+	if ee := (*EngineError)(nil); errors.As(err, &ee) && ee.Status == http.StatusUnauthorized {
 		if tok, err = e.personToken(ctx, true); err != nil {
 			return err
 		}

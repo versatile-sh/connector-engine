@@ -154,15 +154,24 @@ func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	if err := c.State.CreateOwner(strings.TrimSpace(in.Username), in.Password); err != nil {
-		status := http.StatusBadRequest
-		if errors.Is(err, ErrOwnerExists) {
-			status = http.StatusConflict
-		}
-		writeError(w, status, err.Error())
+	err := c.State.CreateOwner(strings.TrimSpace(in.Username), in.Password)
+	switch {
+	case errors.Is(err, ErrOwnerExists):
+		writeError(w, http.StatusConflict, err.Error())
+	case err != nil:
+		c.fail(w, err)
+	default:
+		c.signIn(w, http.StatusCreated)
+	}
+}
+
+func (c *Console) signIn(w http.ResponseWriter, status int) {
+	csrf, err := c.Sessions.Start(w)
+	if err != nil {
+		c.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]string{"csrf": c.Sessions.Start(w)})
+	writeJSON(w, status, map[string]string{"csrf": csrf})
 }
 
 func (c *Console) login(w http.ResponseWriter, r *http.Request) {
@@ -184,12 +193,15 @@ func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 	case !ok:
 		writeError(w, http.StatusUnauthorized, "wrong username or password")
 	default:
-		writeJSON(w, http.StatusOK, map[string]string{"csrf": c.Sessions.Start(w)})
+		c.signIn(w, http.StatusOK)
 	}
 }
 
 func (c *Console) logout(w http.ResponseWriter, r *http.Request) {
-	c.Sessions.End(w, r)
+	if err := c.Sessions.End(w, r); err != nil {
+		c.fail(w, err)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 

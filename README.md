@@ -37,6 +37,21 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 | **Windows** | `irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 \| iex` | from the next release |
 | **Docker, no clone** (Linux) | `docker run -d --network host -v connector-engine:/var/lib/connector-engine --entrypoint /usr/local/bin/connector-engine-selfhosted ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain` | from the next release |
 
+Works today, with Docker:
+
+```sh
+git clone https://github.com/versatile-sh/connector-engine
+cd connector-engine
+make up
+```
+
+From the next release, without Docker:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh | sh
+connector-engine-selfhosted up --open
+```
+
 `make up` ends with:
 
 ```text

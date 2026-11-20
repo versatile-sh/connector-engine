@@ -387,7 +387,7 @@ On the first start of the new console, `OpenState` migrates in memory, and the n
 - Existing agent tokens already carry `on_behalf_of: owner`. The first Owner is person `owner`, so these tokens keep working and their approvals still reach the right person.
 - Backups. `decodeState` accepts both shapes and migrates the old one, so old backups restore into the new console. A backup made by the new console has `users` and no `owner`, so an older console refuses it ("it has no owner account"). This is a one-way door, and the backup format version changes so the refusal names it.
 - Setup files. They carry key slots as `feat/key-slots` defines them ([§16](#16-key-slots)). `credentials: shared | per_person` is added per connector, optional, default `shared`. Setups never hold users, invites, owners of keys or sign-ins.
-- A full backup restores the exact keys, each with its owner, and no slots. Waiting profiles from before key slots migrate to slots as `feat/key-slots` defines; a slot has no owner, so this migration needs nothing from multi-user.
+- A full backup restores the exact keys, each with its owner, and the unclaimed slots as they were; it makes no new slots. Waiting profiles from before key slots migrate to slots as `feat/key-slots` defines; a slot has no owner, so this migration needs nothing from multi-user.
 - Flags. `--person` now names the first Owner's person. `--service-person` (default `console`) is new and must match `bootstrap.roles`. `--managers-group` (default `managers`) is new. The person profile and its compose file change together.
 - The headless profile and `cmd/connector-engine` are untouched.
 
@@ -496,7 +496,7 @@ The in-process end-to-end test of PR 4 runs a real engine, like `console_test.go
 - A shared setup carries key profiles as **key slots**: named, narrow-only permission templates with per-connector modes and overrides, never credentials.
 - On import, the importer picks per slot: keep it as a slot (the default), apply it to an existing key, or discard it. Nothing binds by name any more.
 - A slot is claimed on the consent page (`/connect`: "Use permissions from: [slot] / Default", which consumes the slot), on manual key creation, or from "Unclaimed permission sets" on the Access page (apply to a key, or discard).
-- Waiting profiles migrate to slots. A full backup restores the exact keys and no slots.
+- Waiting profiles migrate to slots. A full backup restores the exact keys and the unclaimed slots as they were, and makes none.
 
 Multi-user adds one rule to each way in:
 

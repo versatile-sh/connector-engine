@@ -451,3 +451,14 @@ func TestADroppedSessionIsRestartedAfterALostAnswer(t *testing.T) {
 	want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "the next call")
 	want(t, w.Runtime.Starts, starts+1, "the session that lost the answer is not reused")
 }
+
+func TestADecisionAfterTheTimeoutIsRefusedBeforeTheSweep(t *testing.T) {
+	w, x := askWorld(t)
+	held := w.call(x, "s__search", `{}`)
+	w.Clock.Advance(601 * time.Second)
+	if _, err := w.Svc.DecideApproval(w.Ctx, w.alice, held.Approval.ID, port.DecisionApprove, "", "test"); !port.IsCode(err, port.CodeApprovalExpired) {
+		t.Fatalf("decide after expiry: %v", err)
+	}
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 0, "never forwarded")
+}

@@ -3,10 +3,10 @@ import { useState, type FormEvent } from "react";
 import { errorText, type DeviceView } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { renameDevice } from "../mutations";
-import { Bubble } from "../ui/Bubble";
+import { InlineConfirm } from "../ui/InlineConfirm";
 import { FIELD, button } from "../ui/styles";
+import { Tag } from "../ui/Tag";
 import { DEVICE_NAME_MAX } from "./device";
-import { InlineConfirm } from "./InlineConfirm";
 import type { useRemove } from "./useRemove";
 
 function Rename({ device, onDone }: { device: DeviceView; onDone(): void }) {
@@ -46,7 +46,7 @@ function Rename({ device, onDone }: { device: DeviceView; onDone(): void }) {
           {t("common.save")}
         </button>
       </div>
-      <p role="alert" className="w-full text-sm text-amber empty:hidden">
+      <p role="alert" className="w-full text-sm text-amber-400 empty:hidden">
         {rename.isError ? errorText(rename.error) : ""}
       </p>
     </form>
@@ -63,7 +63,7 @@ export function DeviceRow({ device, here, remove }: DeviceRowProps) {
   const asking = remove.asking(device.id);
   const date = (iso: string) => new Date(iso).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
   return (
-    <li className={`border-b border-line py-3 transition-opacity duration-300 last:border-b-0 ${remove.busy && asking ? "opacity-60" : ""}`}>
+    <li className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${remove.busy && asking ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
         {step === "renaming" ? (
           <Rename device={device} onDone={() => setStep("renamed")} />
@@ -72,7 +72,7 @@ export function DeviceRow({ device, here, remove }: DeviceRowProps) {
             <span title={device.name} className="min-w-0 truncate font-medium">
               {device.name}
             </span>
-            {here ? <Bubble tone="accent">{t("notify.devices.thisComputer")}</Bubble> : null}
+            {here ? <Tag tone="lime" dot>{t("notify.devices.thisComputer")}</Tag> : null}
           </span>
         )}
         <span className="min-w-0 grow font-mono text-xs text-muted @md:grow-0">{device.last_seen ? t("notify.devices.seen", { when: date(device.last_seen) }) : t("notify.devices.never")}</span>

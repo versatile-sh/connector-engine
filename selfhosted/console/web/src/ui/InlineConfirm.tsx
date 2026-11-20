@@ -1,9 +1,9 @@
 import { useT } from "../i18n/I18nProvider";
-import { button } from "../ui/styles";
+import { button } from "./styles";
 
 type InlineConfirmProps = { label: string; question: string; confirm: string; working: string; busy: boolean; error?: string | undefined; onCancel(): void; onConfirm(): void };
 
-/** The inline question that removes something for good, in place of its Remove button; Escape cancels. */
+/** The inline question that removes something for good, in place of its Remove button, in the amber note box with a reserved slot for the error; Escape cancels. */
 export function InlineConfirm({ label, question, confirm, working, busy, error, onCancel, onConfirm }: InlineConfirmProps) {
   const t = useT();
   return (
@@ -13,10 +13,10 @@ export function InlineConfirm({ label, question, confirm, working, busy, error, 
       onKeyDown={(event) => {
         if (event.key === "Escape") onCancel();
       }}
-      className="swap-in bubble mt-3 flex flex-wrap items-center justify-between gap-3 border border-amber/40 bg-amber/5 py-2.5 pr-2.5 pl-4"
+      className="swap-in mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-400/5 py-2.5 pr-2.5 pl-4"
     >
-      <p className="min-w-0 flex-1 basis-48 text-sm [overflow-wrap:anywhere]">{question}</p>
-      <div className="flex shrink-0 gap-2">
+      <p className="min-w-0 flex-1 basis-48 text-sm">{question}</p>
+      <div className="ml-auto flex shrink-0 gap-2">
         <button type="button" autoFocus disabled={busy} className={button({ variant: "quiet", size: "xs" })} onClick={onCancel}>
           {t("common.cancel")}
         </button>
@@ -24,7 +24,7 @@ export function InlineConfirm({ label, question, confirm, working, busy, error, 
           {busy ? working : confirm}
         </button>
       </div>
-      <p role="alert" className="w-full text-sm text-amber empty:hidden">
+      <p role="alert" className="w-full text-sm text-amber-400 empty:hidden">
         {error ?? ""}
       </p>
     </div>

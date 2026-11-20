@@ -10,7 +10,7 @@ export function ConnectorItems({ connector }: { connector: Connector }) {
   if ((connector.items ?? []).length === 0) return null;
   return (
     <>
-      <p role="alert" className="text-sm text-amber empty:hidden">
+      <p role="alert" className="text-sm text-amber-400 empty:hidden">
         {setAccess.isError ? errorText(setAccess.error) : ""}
       </p>
       <ItemSections

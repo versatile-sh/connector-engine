@@ -20,11 +20,11 @@ export function SkillCard({ skill, href, open, onOpen, onClose }: SkillCardProps
           event.preventDefault();
           onOpen();
         }}
-        className={`group bubble ${LIT_EDGE} flex h-full flex-col border border-line-strong bg-ink-raised p-5 transition-[border-color] duration-250 ease-(--ease-glide)`}
+        className={`group ${LIT_EDGE} flex h-full flex-col p-5`}
       >
         <div className="flex items-start gap-3">
-          <h2 className="min-w-0 flex-1 truncate text-base leading-snug font-medium">{skill.title}</h2>
-          <Icon name="expand" className="mt-0.5 size-4 text-muted transition-colors duration-300 group-hover:text-lime group-focus-visible:text-lime" />
+          <h2 className="min-w-0 flex-1 truncate leading-snug font-medium">{skill.title}</h2>
+          <Icon name="expand" className="mt-0.5 size-4 text-muted transition-colors duration-250 group-hover:text-lime group-focus-visible:text-lime" />
         </div>
         <SkillOverview skill={skill} compact />
       </a>

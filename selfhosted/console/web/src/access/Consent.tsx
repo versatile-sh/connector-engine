@@ -1,15 +1,15 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { api, errorCode, errorText } from "../api";
-import { Mark } from "../Brand";
 import type { MessageKey } from "../i18n";
 import { useT } from "../i18n/I18nProvider";
-import { LanguageSwitch } from "../LanguageSwitch";
+import { Frame } from "../Frame";
 import { decideConsent } from "../mutations";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
-import { ACCENT_BAR, SURFACE, button } from "../ui/styles";
+import { Display } from "../ui/Display";
+import { CAPTION, SURFACE, button } from "../ui/styles";
 
 type Destination = { kind: "loopback"; port?: string } | { kind: "app"; app: string } | { kind: "scheme"; scheme: string };
 
@@ -44,46 +44,43 @@ export function Consent({ id }: { id: string }) {
   const client = request.data?.client ?? "";
   const done = decide.isSuccess ? (decide.variables.approve ? t("consent.done", { client }) : t("consent.denied", { client })) : undefined;
   return (
-    <main className="grid min-h-dvh place-items-center px-6 py-10">
-      <section aria-labelledby="consent-title" className={`${SURFACE} arrive w-full max-w-lg p-6 sm:p-8`}>
-        <div className="mb-6 flex items-center justify-between">
-          <Mark className="size-9" />
-          <LanguageSwitch />
-        </div>
+    <Frame width="narrow">
+      <section aria-labelledby="consent-title" className={`${SURFACE} arrive p-6 sm:p-8`}>
         {request.isPending ? (
           <p role="status" className="text-muted">
             {t("app.loading")}
           </p>
         ) : request.isError ? (
           <>
-            <h1 id="consent-title" className="font-display text-2xl font-bold tracking-[-0.03em]">
+            <Display id="consent-title" size="title">
               {t("consent.expiredTitle")}
-            </h1>
-            <p className="mt-3 text-muted">{t("consent.expired")}</p>
+            </Display>
+            <p className="mt-3 text-pretty text-muted">{t("consent.expired")}</p>
           </>
         ) : (
           <>
-            <p className="bubble relative mb-5 flex items-start gap-2.5 border border-amber/40 bg-amber/5 py-3 pr-3 pl-5 text-sm">
-              <span aria-hidden="true" className={`${ACCENT_BAR} bg-amber`} />
-              <Icon name="shield" className="mt-0.5 size-4 text-amber" />
-              <span>
-                <strong className="font-semibold">{t("consent.warning")}</strong> {t("consent.selfNamed")}
+            <Notice live={false} className="mb-6">
+              <span className="flex items-start gap-2.5">
+                <Icon name="shield" className="mt-0.5 size-4 text-amber-400" />
+                <span>
+                  <strong className="font-medium text-amber-400">{t("consent.warning")}</strong> {t("consent.selfNamed")}
+                </span>
               </span>
-            </p>
-            <h1 id="consent-title" className="font-display text-2xl leading-tight font-bold tracking-[-0.03em] sm:text-3xl">
+            </Notice>
+            <Display id="consent-title" size="title" className="[overflow-wrap:anywhere]">
               {t("consent.title", { client })}
-            </h1>
-            <p className="mt-3 text-muted">{t("consent.body", { client })}</p>
-            <p className="mt-4 text-sm">
-              <span className="text-muted">{t("consent.goesTo")}</span> <strong className="font-semibold">{whereTo(request.data.destination, t)}</strong>
+            </Display>
+            <p className="mt-4 text-pretty text-muted">{t("consent.body", { client })}</p>
+            <p className="mt-5 text-sm">
+              <span className="text-muted">{t("consent.goesTo")}</span> <strong className="font-medium">{whereTo(request.data.destination, t)}</strong>
             </p>
-            <p className="mt-1 font-mono text-xs text-muted [overflow-wrap:anywhere]" translate="no">
+            <p className={`${CAPTION} mt-1 [overflow-wrap:anywhere]`} translate="no">
               {t("consent.returns", { target: request.data.redirect })}
             </p>
             {done ? (
-              <p role="status" className="mt-6 font-semibold">
+              <Notice tone="lime" className="mt-6">
                 {done}
-              </p>
+              </Notice>
             ) : (
               <form className="mt-6" onSubmit={onAllow}>
                 <Field
@@ -97,7 +94,7 @@ export function Consent({ id }: { id: string }) {
                   required
                 />
                 <div className="mt-1 flex flex-wrap gap-3">
-                  <button type="submit" className={button({ variant: "accent" })} disabled={decide.isPending}>
+                  <button type="submit" className={button()} disabled={decide.isPending}>
                     {t("consent.allow")}
                   </button>
                   <button type="button" className={button({ variant: "secondary" })} disabled={decide.isPending} onClick={() => answer(false)}>
@@ -106,14 +103,10 @@ export function Consent({ id }: { id: string }) {
                 </div>
               </form>
             )}
-            {decide.isError && !refusal ? (
-              <div className="mt-4">
-                <Notice>{errorText(decide.error)}</Notice>
-              </div>
-            ) : null}
+            {decide.isError && !refusal ? <Notice className="mt-4">{errorText(decide.error)}</Notice> : null}
           </>
         )}
       </section>
-    </main>
+    </Frame>
   );
 }

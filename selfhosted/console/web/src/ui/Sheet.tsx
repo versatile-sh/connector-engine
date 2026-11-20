@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Icon } from "./Icon";
 import { morph } from "./motion";
-import { ICON_BUTTON } from "./styles";
+import { ICON_BUTTON, TITLE } from "./styles";
 
 type SheetProps = { title: string; closeLabel: string; onClose(): void; children: ReactNode; wide?: boolean; origin?: RefObject<HTMLElement | null> };
 
-/** The one modal window, in the shape of a message sent; on a phone it fills the screen. It closes on its button, Escape or a click outside, and gives focus back to what opened it; given an `origin`, it grows out of that element and shrinks back into it. */
+/** The one modal window, centred, 16px corners, rising in; on a phone it fills the screen. It closes on its button, Escape or a click outside, and gives focus back to what opened it; given an `origin`, it grows out of that element and shrinks back into it. */
 export function Sheet({ title, closeLabel, onClose, children, wide = false, origin }: SheetProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const motion = useRef<Animation>(undefined);
@@ -19,8 +19,8 @@ export function Sheet({ title, closeLabel, onClose, children, wide = false, orig
         element.showModal();
         if (origin?.current) motion.current = morph(element, origin.current);
       }
+      const back = origin?.current ?? opener;
       return () => {
-        const back = origin?.current ?? opener;
         if (back instanceof HTMLElement) back.focus();
       };
     },
@@ -50,10 +50,10 @@ export function Sheet({ title, closeLabel, onClose, children, wide = false, orig
       onClick={(event) => {
         if (event.target === event.currentTarget) dismiss();
       }}
-      className={`sheet m-auto max-h-[calc(100dvh-2rem)] max-w-none flex-col overflow-hidden vignette-top bubble-sent border border-line-strong bg-ink-raised p-0 text-paper backdrop:bg-ink/70 backdrop:backdrop-blur-xs open:flex max-md:h-dvh max-md:max-h-none max-md:w-full max-md:border-0 ${wide ? "w-[min(52rem,calc(100vw-2rem))]" : "w-[min(30rem,calc(100vw-2rem))]"} ${origin ? "morph" : ""} ${closing ? "closing" : ""}`}
+      className={`sheet m-auto max-h-[calc(100dvh-2rem)] max-w-none flex-col overflow-hidden vignette-top rounded-2xl border border-line-strong bg-ink-raised p-0 text-paper backdrop:bg-ink-sunken/80 open:flex max-md:h-dvh max-md:max-h-none max-md:w-full max-md:rounded-none max-md:border-0 ${wide ? "w-[min(52rem,calc(100vw-2rem))]" : "w-[min(30rem,calc(100vw-2rem))]"} ${origin ? "morph" : ""} ${closing ? "closing" : ""}`}
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 pt-3 pr-3 pb-1 pl-6">
-        <h2 id={heading} className="min-w-0 font-serif text-2xl leading-tight font-normal tracking-[-0.01em] [overflow-wrap:anywhere]">{title}</h2>
+      <div className="flex shrink-0 items-center justify-between gap-3 pt-4 pr-3 pb-2 pl-6">
+        <h2 id={heading} className={`${TITLE} min-w-0 [overflow-wrap:anywhere]`}>{title}</h2>
         <button type="button" aria-label={closeLabel} className={ICON_BUTTON} onClick={dismiss}>
           <Icon name="close" className="size-4" />
         </button>

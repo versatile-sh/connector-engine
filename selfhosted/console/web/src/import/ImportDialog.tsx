@@ -1,12 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import type { ImportSource } from "../api";
 import { HubCard } from "../connectors/HubCard";
 import { useT } from "../i18n/I18nProvider";
+import { Collapse } from "../ui/Collapse";
 import { Field } from "../ui/Field";
 import { Arrow } from "../ui/Icon";
 import { Segmented } from "../ui/Segmented";
 import { Sheet } from "../ui/Sheet";
-import { button } from "../ui/styles";
+import { WELL, button } from "../ui/styles";
 import { Switch } from "../ui/Switch";
 import { Review } from "./Review";
 import { readSource, type SourceKind } from "./source";
@@ -20,6 +21,7 @@ export function ImportDialog({ initial, initialKind = "mcp", onClose }: { initia
   const [local, setLocal] = useState(false);
   const [secret, setSecret] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const switches = useId();
   const [reviewing, setReviewing] = useState<ImportSource | undefined>(first?.ok ? first.source : undefined);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -67,24 +69,22 @@ export function ImportDialog({ initial, initialKind = "mcp", onClose }: { initia
               }}
             />
           </div>
-          <div className={`grid transition-[grid-template-rows,opacity] duration-500 ease-(--ease-glide) ${kind === "mcp" ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`} inert={kind !== "mcp"}>
-            <div className="overflow-hidden">
-              <div className="bubble flex flex-col gap-4 border border-line p-4">
-                <Switch checked={local} onChange={setLocal} hint={t("import.localHint")}>
-                  {t("import.local")}
-                </Switch>
-                <div className="border-t border-line" />
-                <Switch checked={secret} onChange={setSecret} hint={t("import.secretHint")}>
-                  {t("import.secret")}
-                </Switch>
-              </div>
+          <Collapse id={switches} open={kind === "mcp"}>
+            <div className={`${WELL} flex flex-col gap-4 p-4`}>
+              <Switch checked={local} onChange={setLocal} hint={t("import.localHint")}>
+                {t("import.local")}
+              </Switch>
+              <div className="border-t border-line" />
+              <Switch checked={secret} onChange={setSecret} hint={t("import.secretHint")}>
+                {t("import.secret")}
+              </Switch>
             </div>
-          </div>
+          </Collapse>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button type="button" className={button({ variant: "quiet" })} onClick={onClose}>
               {t("common.cancel")}
             </button>
-            <button type="submit" className={button({ variant: "accent" })}>
+            <button type="submit" className={button({ variant: "primary" })}>
               {t("import.read")}
               <Arrow />
             </button>

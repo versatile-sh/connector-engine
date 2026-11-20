@@ -23,7 +23,7 @@ export function Field({ label, hint, error, mono = false, className = "", ...inp
       <div className={BOX}>
         <input id={id} aria-invalid={error ? true : undefined} aria-describedby={`${id}-note`} className={`${INPUT} ${mono ? "font-mono text-sm" : ""}`} {...input} />
       </div>
-      <p id={`${id}-note`} role={error ? "alert" : undefined} className={`mt-1.5 min-h-5 text-sm ${error ? "text-amber" : "text-muted"}`}>
+      <p id={`${id}-note`} role={error ? "alert" : undefined} className={`mt-1.5 min-h-5 text-sm ${error ? "text-amber-400" : "text-muted"}`}>
         {error ?? hint}
       </p>
     </div>

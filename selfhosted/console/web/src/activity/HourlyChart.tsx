@@ -1,7 +1,7 @@
 import type { HourCount } from "../api";
 import type { Locale } from "../i18n";
 import { useLocale, useT } from "../i18n/I18nProvider";
-import { CAPTION, SURFACE } from "../ui/styles";
+import { CAPTION, SURFACE, TITLE } from "../ui/styles";
 import { barsOf, type Bar } from "./activity";
 
 const HEIGHT = 120;
@@ -9,10 +9,10 @@ const STEP = 10;
 const GAP = 2.5;
 
 const SERIES = [
-  { key: "ok", fill: "fill-lime" },
-  { key: "failed", fill: "fill-amber" },
-  { key: "denied", fill: "fill-red-400" },
-  { key: "waiting", fill: "fill-paper/35" },
+  { key: "ok", fill: "fill-paper/45", swatch: "bg-paper/45", label: "outcome.ok" },
+  { key: "failed", fill: "fill-amber-400", swatch: "bg-amber-400", label: "outcome.error" },
+  { key: "denied", fill: "fill-red-400/80", swatch: "bg-red-400/80", label: "outcome.denied" },
+  { key: "waiting", fill: "fill-lime", swatch: "bg-lime", label: "outcome.pending" },
 ] as const;
 
 const whenOf = (bar: Bar, locale: Locale) =>
@@ -33,7 +33,7 @@ function Stack({ bar, x, max, label }: { bar: Bar; x: number; max: number; label
   );
 }
 
-/** The calls of the period as stacked bars, per hour over up to two days and per local day beyond, coloured by outcome; screen readers get the same numbers as a table. */
+/** The calls of the period as stacked bars, per hour over up to two days and per local day beyond, quiet paper for answered calls and colour only for failed, denied and waiting ones, with a legend; screen readers get the same numbers as a table. */
 export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
   const t = useT();
   const locale = useLocale();
@@ -48,7 +48,7 @@ export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
   return (
     <figure aria-labelledby="chart-title" className={`${SURFACE} min-w-0 p-5 sm:p-6`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <figcaption id="chart-title" className="text-lg leading-snug font-medium">
+        <figcaption id="chart-title" className={TITLE}>
           {title}
         </figcaption>
         <span className={CAPTION}>{t("activity.chart.summary", { total, max: total === 0 ? 0 : max, unit: t(daily ? "activity.chart.day" : "activity.chart.hour") })}</span>
@@ -66,6 +66,14 @@ export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
           </span>
         ))}
       </div>
+      <ul aria-hidden="true" className="mt-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[0.6875rem] text-muted">
+        {SERIES.map(({ key, swatch, label }) => (
+          <li key={key} className="flex items-center gap-1.5">
+            <span className={`size-2 rounded-sm ${swatch}`} />
+            {t(label)}
+          </li>
+        ))}
+      </ul>
       <table className="sr-only">
         <caption>{title}</caption>
         <thead>

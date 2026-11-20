@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "../ui/Icon";
-import { SURFACE } from "../ui/styles";
+import { SURFACE, TITLE } from "../ui/styles";
 
 type SectionProps = { id: string; icon: IconName; title: string; intro: string; action?: ReactNode; children: ReactNode };
 
@@ -13,10 +13,10 @@ export function Section({ id, icon, title, intro, action, children }: SectionPro
           <Icon name={icon} className="size-[1.1rem]" />
         </span>
         <div className="min-w-0 flex-1 basis-48">
-          <h2 id={id} className="text-lg leading-snug font-medium [overflow-wrap:anywhere]">
+          <h2 id={id} className={TITLE}>
             {title}
           </h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-muted">{intro}</p>
+          <p className="mt-0.5 max-w-2xl text-sm text-pretty text-muted">{intro}</p>
         </div>
         {action}
       </div>

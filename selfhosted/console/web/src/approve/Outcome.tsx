@@ -2,7 +2,7 @@ import type { ApprovalView } from "../api";
 import type { MessageKey } from "../i18n";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { Icon } from "../ui/Icon";
-import { ACCENT_BAR } from "../ui/styles";
+import { WELL } from "../ui/styles";
 
 const ALLOWED = new Set(["approved", "executing", "executed"]);
 
@@ -21,17 +21,16 @@ export function Outcome({ approval, first }: OutcomeProps) {
   const who = approval.decided_by ?? "";
   const decided = who && approval.channel ? t("approve.decidedByVia", { who, channel: approval.channel, when }) : who ? t("approve.decidedBy", { who, when }) : when ? t("approve.decidedAt", { when }) : "";
   return (
-    <div role="status" className="swap-in bubble relative flex items-start gap-3 border border-line-strong bg-ink-sunken py-4 pr-4 pl-5">
-      <span aria-hidden="true" className={`${ACCENT_BAR} ${approved ? "bg-lime" : "bg-line-strong"}`} />
-      <span aria-hidden="true" className={`grid size-9 shrink-0 place-items-center rounded-full ${approved ? "bg-lime text-ink" : "border border-line-strong text-muted"}`}>
+    <div role="status" className={`${WELL} swap-in flex items-start gap-3 p-4`}>
+      <span aria-hidden="true" className={`grid size-9 shrink-0 place-items-center rounded-full border border-line-strong ${approved ? "text-lime" : "text-muted"}`}>
         <Icon name={approved ? "check" : "close"} className="size-4" />
       </span>
       <div className="min-w-0">
-        {!first ? <p className="text-sm text-amber">{t("approve.first")}</p> : null}
+        {!first ? <p className="text-sm text-amber-400">{t("approve.first")}</p> : null}
         <p className="text-lg leading-snug font-medium">{key ? t(key) : approval.state}</p>
         {decided ? <p className="mt-0.5 font-mono text-xs text-muted [overflow-wrap:anywhere]">{decided}</p> : null}
         {approved || ended || approval.state === "denied" ? (
-          <p className="mt-2 text-sm text-muted [overflow-wrap:anywhere]">{t(approved ? "approve.resumes" : ended ? "approve.ended" : "approve.refused", { app: approval.app })}</p>
+          <p className="mt-2 text-sm text-pretty text-muted">{t(approved ? "approve.resumes" : ended ? "approve.ended" : "approve.refused", { app: approval.app })}</p>
         ) : null}
       </div>
     </div>

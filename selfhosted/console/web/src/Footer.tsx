@@ -42,7 +42,7 @@ function FooterWordmark() {
   );
 }
 
-/** The foot of every signed-in page, in the site's style: the thesis with its lime answer and blinking cursor, the way to the hub and the site, and the wordmark writing itself. */
+/** The foot of every signed-in page, in the site's style: the thesis in the sans with its lime answer and blinking cursor, the way to the hub and the site, and the wordmark writing itself. */
 export function Footer() {
   const t = useT();
   const hub = hubURL(useLocale());
@@ -51,12 +51,12 @@ export function Footer() {
       <div className="vignette-top border-t border-line bg-ink-raised">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-end justify-between gap-x-12 gap-y-6 px-5 py-10 sm:px-8">
           <div>
-            <p className="font-serif text-3xl leading-[1.05] sm:text-4xl">
+            <p className="text-2xl leading-tight font-medium tracking-[-0.01em] text-balance sm:text-3xl">
               {t("footer.thesis")}
-              <em className="block text-lime">
+              <span className="block text-lime">
                 {t("footer.answer")}
                 <span aria-hidden="true" className="blink ml-[0.08em] inline-block h-[0.09em] w-[0.42em] rounded-[0.03em] bg-lime align-baseline" />
-              </em>
+              </span>
             </p>
             <p className="mt-4 font-mono text-sm text-muted" translate="no">
               <span className="text-muted-light">$</span> versatile --anywhere --anything --your-way

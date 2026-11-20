@@ -5,12 +5,10 @@ import { useT } from "../i18n/I18nProvider";
 import { addChannel } from "../mutations";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
+import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
-import { PRESS, button } from "../ui/styles";
-import { Warning } from "../approve/Warning";
+import { OPTION_CARD, button } from "../ui/styles";
 import { SETUP, SETUPS, SLACK_MANIFEST, missingFields, settingsFor } from "./setup";
-
-const OPTION = `bubble flex flex-col items-start gap-0.5 border border-line-strong px-3.5 py-2.5 text-left hover:border-paper/50 aria-pressed:border-lime/60 aria-pressed:bg-lime/5 ${PRESS}`;
 
 function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
   const t = useT();
@@ -26,7 +24,7 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
   return (
     <form onSubmit={onSubmit} className="swap-in mt-5" aria-label={t(setup.title)}>
       {setup.interactive ? null : (
-        <Warning className="mb-4">{t(kind === "ntfy" ? "notify.add.ntfyWarning" : "notify.add.notifyOnly")}</Warning>
+        <Notice live={false} className="mb-4">{t(kind === "ntfy" ? "notify.add.ntfyWarning" : "notify.add.notifyOnly")}</Notice>
       )}
       <ol className="flex flex-col gap-2.5">
         {setup.steps.map((step, index) => (
@@ -34,7 +32,7 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
             <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full border border-line-strong font-mono text-xs text-muted">
               {index + 1}
             </span>
-            <span className="min-w-0 pt-0.5 [overflow-wrap:anywhere]">{t(step)}</span>
+            <span className="min-w-0 pt-0.5 text-pretty">{t(step)}</span>
           </li>
         ))}
       </ol>
@@ -57,10 +55,10 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
           />
         ))}
       </div>
-      <p role="alert" className="min-h-5 text-sm text-amber">
+      <p role="alert" className="min-h-5 text-sm text-amber-400">
         {save.isError ? errorText(save.error) : ""}
       </p>
-      <button type="submit" disabled={save.isPending} className={`${button({ variant: "accent" })} mt-2 w-full`}>
+      <button type="submit" disabled={save.isPending} className={`${button({ variant: "primary" })} mt-2 w-full`}>
         {save.isPending ? t("notify.add.saving") : t("notify.add.save")}
       </button>
     </form>
@@ -74,11 +72,11 @@ export function AddChannelDialog({ onClose }: { onClose(): void }) {
   return (
     <Sheet title={t("notify.add.title")} closeLabel={t("common.close")} onClose={onClose} wide>
       <div className="@container">
-        <p className="text-sm text-muted">{t("notify.add.pick")}</p>
+        <p className="text-sm text-pretty text-muted">{t("notify.add.pick")}</p>
         <div role="group" aria-label={t("notify.add.kind")} className="mt-3 grid grid-cols-2 gap-2 @xl:grid-cols-3">
           {SETUPS.map((setup) => (
-            <button key={setup.kind} type="button" aria-pressed={kind === setup.kind} className={OPTION} onClick={() => setKind(setup.kind)}>
-              <span className="text-sm font-semibold [overflow-wrap:anywhere]">{t(setup.title)}</span>
+            <button key={setup.kind} type="button" aria-pressed={kind === setup.kind} className={OPTION_CARD} onClick={() => setKind(setup.kind)}>
+              <span className="text-sm font-medium">{t(setup.title)}</span>
               <span className="font-mono text-xs text-muted">{t(setup.interactive ? "notify.add.buttons" : "notify.add.linkOnly")}</span>
             </button>
           ))}

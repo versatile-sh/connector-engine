@@ -101,7 +101,7 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 `selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`) and desktop notifications.
 
 - Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
-- Composition: every adapter, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or `cli.Main` (`cnctl`). `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
+- Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or `cli.Main` (`cnctl`). `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
 
 ```go
 // cmd/connector-engine: the core alone
@@ -116,4 +116,4 @@ func main() {
 ```
 
 - The console reaches the engine over HTTP only, like any other client.
-- Design record: [docs/SELFHOSTED-LAYOUT.md](docs/SELFHOSTED-LAYOUT.md).
+- Design record: [docs/internal/SELFHOSTED-LAYOUT.md](docs/internal/SELFHOSTED-LAYOUT.md).

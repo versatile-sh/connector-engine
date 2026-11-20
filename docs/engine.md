@@ -5,10 +5,13 @@ How to run `connector-engine` without Docker and drive it with `cnctl`. For the 
 ## Build and start
 
 ```sh
-go install github.com/versatile-sh/connector-engine/cmd/connector-engine@latest
-go install github.com/versatile-sh/connector-engine/cmd/cnctl@latest
-CN_OPERATOR_TOKEN=dev connector-engine --config config/connector-engine.yaml --adapters adapters.yaml
+go install github.com/versatile-sh/connector-engine/cmd/connector-engine@main
+go install github.com/versatile-sh/connector-engine/cmd/cnctl@main
+CN_OPERATOR_TOKEN=dev connector-engine --config examples/dev/connector-engine.yaml --adapters examples/dev/adapters.yaml
 ```
+
+- No release is tagged yet, so the commands install `main`.
+- `examples/dev/` is a minimal dev pair: memory store and secrets, local token issuer, listeners on `127.0.0.1`.
 
 - `scripts/smoke.sh` writes a working pair of files (dev mode, memory store, local token issuer) and drives the binary with `curl` and `cnctl`. Copy its heredocs as a starting point.
 - The engine prints `http=... grpc=... operator=...` once it listens.

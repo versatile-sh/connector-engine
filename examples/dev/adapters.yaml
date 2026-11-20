@@ -1,0 +1,8 @@
+apiVersion: acplug/v1
+kind: Adapters
+engine: connector-engine
+mode: dev
+ports:
+  store: {use: memory}
+  secrets: {use: memory}
+  auth: {use: builtin:local}

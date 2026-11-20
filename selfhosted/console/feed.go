@@ -54,7 +54,7 @@ func (f *engineFeed) Watch(ctx context.Context, fn func(surface.Event)) error {
 }
 
 func (f *engineFeed) stream(ctx context.Context, fn func(surface.Event)) error {
-	tok, err := f.c.Engine.personToken(ctx, false)
+	tok, err := f.c.Engine.personToken(ctx, f.c.Engine.service(), false)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (f *engineFeed) stream(ctx context.Context, fn func(surface.Event)) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
-		_, _ = f.c.Engine.personToken(ctx, true)
+		_, _ = f.c.Engine.personToken(ctx, f.c.Engine.service(), true)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("watch answered %d", resp.StatusCode)

@@ -59,7 +59,7 @@ func (c *Console) learnSeparator(ctx context.Context, agent string) string {
 	var list struct {
 		Functions []exposedFunction `json:"functions"`
 	}
-	if c.Engine.Call(ctx, http.MethodGet, "/v1/agents/"+esc(agent)+"/functions"+q("workspace", c.Engine.Workspace), nil, &list) != nil {
+	if c.Engine.Read(ctx, http.MethodGet, "/v1/agents/"+esc(agent)+"/functions"+q("workspace", c.Engine.Workspace), nil, &list) != nil {
 		return ""
 	}
 	for _, f := range list.Functions {

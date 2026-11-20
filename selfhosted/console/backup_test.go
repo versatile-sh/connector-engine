@@ -64,7 +64,7 @@ func durableEngine(t *testing.T, publicURL, dir string, store *storememory.Store
 	c.Mode = config.ModeDev
 	c.Server.Listen, c.Server.GRPCListen, c.Server.OperatorListen, c.Server.PublicURL, c.Server.Snapshot = "127.0.0.1:0", "", "127.0.0.1:0", publicURL, true
 	c.Auth.LocalIssuer.Enabled, c.Auth.AgentTokenMaxLifetime, c.Auth.Operator.TokenRef = true, 720*time.Hour, "env:CN_OPERATOR_TOKEN"
-	c.Bootstrap.Roles = []config.RoleRow{{Tenant: "local", Person: "owner", Role: "tenant_admin", Scope: "t/local"}}
+	c.Bootstrap.Roles = []config.RoleRow{{Tenant: "local", Person: "console", Role: "tenant_admin", Scope: "t/local"}}
 	c.Runtime.AllowPrivateHosts = true
 	c.Gateway.Skills = "tools"
 	c.Secrets.Adapter, c.Secrets.Dir = "localfile", filepath.Join(dir, "engine-secrets")
@@ -121,7 +121,7 @@ func openStack(t *testing.T, dir string, store *storememory.Store, tweaks ...fun
 	}
 	box := &sealed.Box{}
 	box.Unlock(keys)
-	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", ServicePerson: "console"}
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}

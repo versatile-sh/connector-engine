@@ -155,7 +155,7 @@ func newActivityRig(t *testing.T) *activityRig {
 		t.Fatal(err)
 	}
 	base := "http://" + lis.Addr().String()
-	c := &console.Console{Engine: &console.Engine{PublicURL: up.URL, OperatorURL: up.URL, Operator: "op", Tenant: "local", Workspace: "default", Person: "owner"},
+	c := &console.Console{Engine: &console.Engine{PublicURL: up.URL, OperatorURL: up.URL, Operator: "op", Tenant: "local", Workspace: "default", ServicePerson: "console"},
 		State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}}, MCPURL: base + "/mcp", Activity: act}
 	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
 	srv.Start()
@@ -607,7 +607,7 @@ func newRealRig(t *testing.T, tweaks ...func(*config.Config)) *realRig {
 		t.Fatal(err)
 	}
 	t.Cleanup(act.Close)
-	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", ServicePerson: "console"}
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}

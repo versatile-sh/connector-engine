@@ -72,7 +72,7 @@ func bootEngine(t *testing.T, publicURL string, tweaks ...func(*config.Config)) 
 	c.Auth.LocalIssuer.Enabled = true
 	c.Auth.AgentTokenMaxLifetime = 720 * time.Hour
 	c.Auth.Operator.TokenRef = "env:CN_OPERATOR_TOKEN"
-	c.Bootstrap.Roles = []config.RoleRow{{Tenant: "local", Person: "owner", Role: "tenant_admin", Scope: "t/local"}}
+	c.Bootstrap.Roles = []config.RoleRow{{Tenant: "local", Person: "console", Role: "tenant_admin", Scope: "t/local"}}
 	c.Runtime.AllowPrivateHosts = true
 	c.Approval.HoldWindow = 300 * time.Millisecond
 	c.Approval.SweepInterval = 100 * time.Millisecond
@@ -190,7 +190,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", ServicePerson: "console"}
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -331,7 +331,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{}})
 		if err != nil || res.IsError || textOf(res) != "ran "+n {
 			var d map[string]any
-			_ = eng.Call(context.Background(), "POST", "/v1/access:explain", map[string]any{"workspace": "default", "agent": "claude-code", "on_behalf_of": "owner", "connector": conn.ID, "function": n}, &d)
+			_ = eng.Read(context.Background(), "POST", "/v1/access:explain", map[string]any{"workspace": "default", "agent": "claude-code", "on_behalf_of": "owner", "connector": conn.ID, "function": n}, &d)
 			t.Logf("explain %v", d)
 			t.Fatalf("%s: %v %v", n, res, err)
 		}
@@ -378,7 +378,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 	m = console.Untrusted(m)
 	m.Remote.URL = up.URL + "/mcp"
-	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessOn}, true)
+	second, err := c.Install(console.WithActor(context.Background(), "owner"), m, map[string]console.Access{"search": console.AccessOn}, true)
 	if err != nil {
 		t.Fatalf("install from a listing manifest: %v", err)
 	}
@@ -588,7 +588,7 @@ func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", ServicePerson: "console"}
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -634,7 +634,7 @@ func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) 
 		t.Fatalf("keys after a revoke: %+v", agents.Agents)
 	}
 	var grants struct{ Items []port.Grant }
-	if err := eng.Call(context.Background(), http.MethodGet, "/v1/grants?scope_kind=agent&scope_id=claude-code", nil, &grants); err != nil || len(grants.Items) != 0 {
+	if err := eng.Read(context.Background(), http.MethodGet, "/v1/grants?scope_kind=agent&scope_id=claude-code", nil, &grants); err != nil || len(grants.Items) != 0 {
 		t.Fatalf("grants of a revoked agent: %+v %v", grants.Items, err)
 	}
 
@@ -662,7 +662,7 @@ func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+		eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", ServicePerson: "console"}
 		if err := eng.EnsureTenant(context.Background()); err != nil {
 			t.Fatal(err)
 		}
@@ -728,14 +728,14 @@ func TestAFailedStateWriteChangesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := state.PutAgent(console.Agent{Name: "a"}); err != nil {
+	if err := state.PutAgent(console.Agent{Name: "a", Owner: "owner"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(dir, 0o500); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
-	if err := state.PutAgent(console.Agent{Name: "b"}); err == nil {
+	if err := state.PutAgent(console.Agent{Name: "b", Owner: "owner"}); err == nil {
 		t.Skip("the directory stays writable for this user")
 	}
 	if ok, err := state.RevokeAgent("a", time.Now()); ok || err == nil {

@@ -178,8 +178,12 @@ func (c *Console) hostInspect(w http.ResponseWriter, r *http.Request) {
 func (c *Console) hostImport(w http.ResponseWriter, r *http.Request) {
 	passphrase, file, err := splitHostBody(r)
 	var out any
+	owner := c.State.HostOwner()
+	if err == nil && owner == "" {
+		err = ErrNoOwner
+	}
 	if err == nil {
-		out, err = c.importFile(r.Context(), file, passphrase, false, SetupOptions{})
+		out, err = c.importFile(WithActor(r.Context(), owner), file, passphrase, false, SetupOptions{})
 	}
 	if err != nil {
 		c.fail(w, err)

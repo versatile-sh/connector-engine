@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -35,9 +36,10 @@ type Owner struct {
 	Iterations int    `json:"iterations"`
 }
 
-// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, the OAuth client that owns it, when it connected, whether the owner has seen it since and when a replayed refresh token signed it out.
+// Agent is an access key: its owner's person, the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, the OAuth client, when it connected, whether it was seen since and when a replayed refresh token signed it out.
 type Agent struct {
 	Name        string    `json:"name"`
+	Owner       string    `json:"owner,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
 	ViaBrowser  bool      `json:"via_browser,omitempty"`
 	ClientID    string    `json:"client_id,omitempty"`
@@ -229,15 +231,32 @@ func (s *State) Agents() []Agent {
 	return out
 }
 
-// PutAgent records an agent and the expiry of its newest token, keeping how and when it was connected and clearing a sign-out.
+// ErrNameTaken refuses an access key name that another person's key already has.
+var ErrNameTaken = &statusError{status: http.StatusConflict, err: errors.New("this name is taken")}
+
+// PutAgent records an agent and the expiry of its newest token, keeping its owner and how and when it was connected and clearing a sign-out; a key needs an owner, and another owner than the key's is refused.
 func (s *State) PutAgent(a Agent) error {
 	return s.update(func(d *stateFile) error {
-		if old, ok := d.Agents[a.Name]; ok {
-			a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen = old.ViaBrowser, old.ClientID, old.ConnectedAt, old.Seen
+		old, ok := d.Agents[a.Name]
+		switch {
+		case ok && a.Owner != "" && a.Owner != old.Owner:
+			return ErrNameTaken
+		case ok:
+			a.Owner, a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen = old.Owner, old.ViaBrowser, old.ClientID, old.ConnectedAt, old.Seen
+		case a.Owner == "":
+			return invalid("the access key %s has no owner", a.Name)
 		}
 		put(&d.Agents, a.Name, a)
 		return nil
 	})
+}
+
+// KeyOwner returns the person owning the access key name, and false for a key the console does not know.
+func (s *State) KeyOwner(name string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	a, ok := s.data.Agents[name]
+	return a.Owner, ok && a.Owner != ""
 }
 
 // MarkBrowserConnected records that the OAuth client connected the agent through the browser sign-in at at, unseen by the owner so far.

@@ -165,7 +165,7 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	lost := out.State == port.ApprovalPending || out.Channel != channel || out.DecisionNote != note
 	if choice == surface.ChoiceAlways && !lost {
 		c.surf.markAlways(id)
-		go c.allowAfterRun(v)
+		go c.allowAfterRun(context.WithoutCancel(ctx), v)
 	}
 	if after, err := c.Approval(ctx, id); err == nil {
 		v = after
@@ -173,9 +173,9 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	return v, lost, nil
 }
 
-// allowAfterRun allows the approval's function or skill for the calling key only once its approved call has run, since replacing the row earlier would cancel that run, and records a failure on the approval.
-func (c *Console) allowAfterRun(v ApprovalView) {
-	ctx, cancel := context.WithTimeout(context.Background(), allowWait)
+// allowAfterRun allows the approval's function or skill for the calling key, as the actor who chose it, once the approved call has run, and records a failure on the approval.
+func (c *Console) allowAfterRun(ctx context.Context, v ApprovalView) {
+	ctx, cancel := context.WithTimeout(ctx, allowWait)
 	defer cancel()
 	for failures := 0; ctx.Err() == nil && failures < 20; {
 		a, err := c.record(ctx, v.ID)
@@ -242,6 +242,18 @@ func (c *Console) allowForKey(ctx context.Context, conn, agent, name string) err
 		return nil
 	}
 	return c.writeAccess(ctx, conn, name, AccessOn)
+}
+
+func (c *Console) asKeyOwner(ctx context.Context, id string) (context.Context, error) {
+	a, err := c.record(ctx, id)
+	if err != nil {
+		return ctx, err
+	}
+	owner, ok := c.State.KeyOwner(string(a.Agent))
+	if !ok {
+		owner = string(a.OnBehalfOf)
+	}
+	return WithActor(ctx, owner), nil
 }
 
 // Outcome is the surface outcome of a decided, expired or cancelled approval view.

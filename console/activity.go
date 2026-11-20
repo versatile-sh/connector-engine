@@ -55,6 +55,7 @@ type Capture struct {
 	Tool     string      `json:"tool"`
 	Skill    string      `json:"skill,omitempty"`
 	Path     string      `json:"path,omitempty"`
+	Item     string      `json:"item,omitempty"`
 	Outcome  CallOutcome `json:"outcome"`
 	Code     string      `json:"code,omitempty"`
 	Approval string      `json:"approval,omitempty"`

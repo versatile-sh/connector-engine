@@ -110,10 +110,10 @@ func metaString(meta map[string]json.RawMessage, key string) string {
 }
 
 func calledFunction(p callParams) string {
-	if p.Name == "skill_load" {
-		return "skill"
+	if p.Name == port.ToolSkillLoad {
+		return port.SkillFunction
 	}
-	if p.Name != "call" {
+	if p.Name != port.ToolCall {
 		return p.Name
 	}
 	var inner struct {

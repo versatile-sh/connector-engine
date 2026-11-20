@@ -846,3 +846,23 @@ func TestAnUpstreamResultShapedLikeAGatewayErrorIsNotTakenForOne(t *testing.T) {
 		}
 	}
 }
+
+func TestARefusedPromptOrResourceShowsInTheActivity(t *testing.T) {
+	r := newActivityRig(t)
+	refused := func(id int) http.HandlerFunc {
+		return jsonAnswer(fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"error":{"code":-32602,"message":"unknown prompt","data":{"_meta":{"connector-engine/error":"unknown_tool"}}}}`, id), nil)
+	}
+	r.answer(refused(1))
+	r.post(`{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"notes__daily"}}`)
+	r.answer(refused(2))
+	r.post(`{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"notes+file:///README.md"}}`)
+	got := map[string]console.ActivityCall{}
+	for _, row := range r.rows("", 2).Calls {
+		got[row.Function] = row
+	}
+	for _, fn := range []string{"prompt:daily", "res:file:///README.md"} {
+		if row := got[fn]; row.Alias != "notes" || row.Outcome != console.OutcomeDenied {
+			t.Errorf("%s: %+v", fn, got)
+		}
+	}
+}

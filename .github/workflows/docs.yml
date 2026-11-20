@@ -43,7 +43,7 @@ jobs:
           args: >-
             --offline --include-fragments --no-progress
             README.md ARCHITECTURE.md CONTRIBUTING.md SECURITY.md selfhosted/README.md
-            'docs/**/*.md'
+            'docs/**/*.md' 'deploy/**/*.md'
           jobSummary: false
       - name: Commands named in the docs, banner sizes
         run: bash scripts/check-docs.sh

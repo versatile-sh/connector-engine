@@ -27,9 +27,10 @@ type ServedFunction struct {
 	OverlayHash port.Hash
 }
 
-// FunctionList is what ListFunctions answers; ApprovalTools says approval_status and approval_cancel are listed too.
+// FunctionList is what ListFunctions answers: tools, skills, and whether approval_status and approval_cancel are listed too.
 type FunctionList struct {
 	Functions     []ServedFunction
+	Skills        []ServedSkill
 	ApprovalTools bool
 	TTL           time.Duration
 	Exposure      port.Exposure
@@ -69,11 +70,12 @@ type Outcome struct {
 	Findings       map[string]int
 }
 
-// CallRequest is one tools/call: the exposed name, the arguments and the projection paths of §10.5.
+// CallRequest is one tools/call, or a skill load when Skill is set and Name is the skill's alias, with the projection paths of §10.5.
 type CallRequest struct {
 	Name      string
 	Arguments json.RawMessage
 	Fields    []string
+	Skill     bool
 }
 
 func subjectOf(c port.Claims) port.Subject {
@@ -112,7 +114,7 @@ func (s *Service) boundConnectors(tx port.Tx, sub port.Subject) ([]port.Connecto
 	return out, nil
 }
 
-func (s *Service) resolve(ctx context.Context, sub port.Subject, name string) (target, bool, error) {
+func (s *Service) resolve(ctx context.Context, sub port.Subject, name string, skill bool) (target, bool, error) {
 	var t target
 	found := false
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) error {
@@ -120,9 +122,25 @@ func (s *Service) resolve(ctx context.Context, sub port.Subject, name string) (t
 		if err != nil {
 			return err
 		}
+		if skill {
+			if t.Conn, t.Fn, found, err = s.resolveSkill(tx, conns, name); err != nil || !found {
+				return err
+			}
+			if t.Bind, err = tx.GetBinding(t.Conn.ID, sub.Agent); err != nil {
+				return err
+			}
+			lv, err := tx.GetVersion(t.Conn.Listing)
+			t.Manifest = lv.Manifest
+			return err
+		}
 		aliases := map[port.ConnectorID]string{}
 		var entries []names.Entry
 		for _, c := range conns {
+			if isSkill, err := s.isSkill(tx, c); err != nil {
+				return err
+			} else if isSkill {
+				continue
+			}
 			aliases[c.ID] = c.Alias
 			fns, err := tx.ListFunctions(c.ID)
 			if err != nil {
@@ -221,11 +239,25 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 		}
 	}
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) error {
+		bound := map[string]bool{}
+		defer func() { markUnbound(out.Skills, bound) }()
 		for _, c := range conns {
+			skill, err := s.isSkill(tx, c)
+			if err != nil {
+				return err
+			}
+			if !skill {
+				bound[c.Listing.Listing.Name] = true
+			}
 			for fn, mode := range modes[c.ID] {
 				f, err := tx.GetFunction(c.ID, fn)
 				if err != nil {
 					return err
+				}
+				out.ApprovalTools = out.ApprovalTools || mode == port.ModeAsk || mode == port.ModeAskOnce
+				if skill {
+					out.Skills = append(out.Skills, servedSkill(c, f, mode))
+					continue
 				}
 				name, err := names.Exposed(c.Alias, fn, s.cfg.Separator, s.cfg.NameMax)
 				if err != nil {
@@ -240,7 +272,6 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 					sf.OverlayHash = o.OverlayHash
 				}
 				out.Functions = append(out.Functions, sf)
-				out.ApprovalTools = out.ApprovalTools || mode == port.ModeAsk || mode == port.ModeAskOnce
 			}
 		}
 		return nil
@@ -300,7 +331,7 @@ func (s *Service) Call(ctx context.Context, p port.Principal, req CallRequest) (
 }
 
 func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subject, req CallRequest, args json.RawMessage) (Outcome, error) {
-	t, found, err := s.resolve(ctx, sub, req.Name)
+	t, found, err := s.resolve(ctx, sub, req.Name, req.Skill)
 	if err != nil || !found {
 		return unknown(port.ReasonUnknownFunction), err
 	}
@@ -314,7 +345,7 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 		if _, err := s.Relist(ctx, sub.Tenant, t.Conn.ID); err != nil {
 			return Outcome{}, err
 		}
-		if t, _, err = s.resolve(ctx, sub, req.Name); err != nil {
+		if t, _, err = s.resolve(ctx, sub, req.Name, req.Skill); err != nil {
 			return Outcome{}, err
 		}
 		query.Class = t.Fn.Class

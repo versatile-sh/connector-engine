@@ -49,6 +49,7 @@ type Config struct {
 	ThresholdFunctions  int
 	SearchResultMax     int
 	SessionTimeout      time.Duration
+	Skills              bool
 	Logger              *slog.Logger
 }
 

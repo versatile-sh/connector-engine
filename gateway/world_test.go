@@ -14,6 +14,8 @@ import (
 	"github.com/agents-control/connector-engine/gateway"
 	"github.com/agents-control/connector-engine/index/lexical"
 	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/runtime/mux"
+	rtskill "github.com/agents-control/connector-engine/runtime/skill"
 	"github.com/agents-control/connector-engine/service"
 	st "github.com/agents-control/connector-engine/service/servicetest"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -64,7 +66,10 @@ func definitions() ([]port.RawDefinition, map[string]port.Hash) {
 func newWorld(t *testing.T, o options) *world {
 	t.Helper()
 	w := &world{t: t}
-	w.Env = st.New(t, func(_ *service.Config, d *service.Deps) { d.Filter = builtin.New() })
+	w.Env = st.New(t, func(_ *service.Config, d *service.Deps) {
+		d.Filter = builtin.New()
+		d.Runtime, _ = mux.New(d.Runtime, rtskill.New())
+	})
 	list, hashes := definitions()
 	w.hashes = hashes
 	w.Runtime.SetDefinitions(listing, list...)

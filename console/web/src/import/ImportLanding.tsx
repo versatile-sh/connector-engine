@@ -71,7 +71,7 @@ export function ImportLanding({ source }: { source: ImportSource }) {
         <>
           <LanguageSwitch className="self-end" />
           <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col pt-6">
-            <h1 className="text-lit font-serif text-4xl leading-none font-normal tracking-[-0.02em]">{t(preview.data?.skill ? "import.skillChoose" : "import.choose")}</h1>
+            <h1 className="text-lit serif-room font-serif text-4xl leading-none font-normal tracking-[-0.02em]">{t(preview.data?.skill ? "import.skillChoose" : "import.choose")}</h1>
             <p className="mt-2 text-muted">{t(preview.data?.skill ? "import.skillChooseIntro" : "import.chooseIntro")}</p>
             <div className="mt-4 flex-1">
               {preview.isPending ? (

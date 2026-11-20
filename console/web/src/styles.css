@@ -103,6 +103,11 @@ body {
   min-height: 100dvh;
 }
 
+@utility serif-room {
+  padding-block: 0.14em 0.1em;
+  margin-block: -0.14em -0.1em;
+}
+
 ::selection {
   background: var(--color-lime);
   color: var(--color-ink);

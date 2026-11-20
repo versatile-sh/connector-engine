@@ -88,7 +88,7 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
           <LanguageSwitch className="self-end" />
           <div className="flex flex-1 items-center justify-center py-8">
             <form className="ride-in w-full max-w-md" onSubmit={onSubmit} aria-labelledby="auth-title">
-              <h2 id="auth-title" className="text-lit font-serif text-5xl leading-none font-normal tracking-[-0.02em]">
+              <h2 id="auth-title" className="text-lit serif-room font-serif text-5xl leading-none font-normal tracking-[-0.02em]">
                 <Marked text={t(mode === "setup" ? "auth.setup.title" : "auth.login.title")} />
               </h2>
               <p className="mt-2 mb-7 text-muted">{t(mode === "setup" ? "auth.setup.intro" : "auth.login.intro")}</p>

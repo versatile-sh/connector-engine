@@ -61,8 +61,9 @@ export function useProfileLens(connector: Connector, profile: Profile, editable:
   const set = useMutation(setProfileAccess);
   const effects = useQuery(profileEffectsQuery(connector.id, profile.agent));
   const engine = new Map((effects.data ?? []).map((effect) => [effect.name, effect]));
-  const pending = (name: string) => (set.isPending && set.variables.name === name ? set.variables.access : undefined);
-  const choose = (name: string, access: Access) => set.mutate({ connector: connector.id, agent: profile.agent, name, access });
+  const refused = set.data?.items.find((item) => item.error)?.error;
+  const pending = (name: string) => (set.isPending && set.variables.names.includes(name) && set.variables.access !== "default" ? set.variables.access : undefined);
+  const choose = (name: string, access: Access) => set.mutate({ connector: connector.id, agent: profile.agent, names: [name], access });
   return {
     accessOf: (name, base) => pending(name) ?? profileAccess(profile, name, base).access,
     most: (base) => base,
@@ -72,7 +73,7 @@ export function useProfileLens(connector: Connector, profile: Profile, editable:
       return <ProfileFlags shown={access} overridden={overridden} following={profile.mode !== "off"} effect={engine.get(name)} onReset={overridden && editable ? () => choose(name, base) : undefined} />;
     },
     choose,
-    error: set.isError ? errorText(set.error) : effects.isError ? errorText(effects.error) : "",
+    error: set.isError ? errorText(set.error) : effects.isError ? errorText(effects.error) : (refused ?? ""),
     accepts: false,
   };
 }

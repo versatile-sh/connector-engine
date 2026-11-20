@@ -269,7 +269,7 @@ func seeded(t *testing.T) (*stack, console.AgentToken, port.Sealed) {
 	src.b.ok("POST", "/api/connectors/"+imported.Connector+"/headers", map[string]any{"headers": map[string]string{"X-Api-Key": apiKey}}, nil)
 	var tok console.AgentToken
 	src.b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
-	src.b.ok("PUT", "/api/connectors/"+imported.Connector+"/profiles/claude-code", map[string]string{"name": "search", "access": "off"}, nil)
+	src.b.ok("PUT", "/api/connectors/"+imported.Connector+"/profiles/claude-code", map[string]any{"names": []string{"search"}, "access": "off"}, nil)
 	src.b.ok("PUT", "/api/connectors/"+imported.Connector+"/new-keys", map[string]bool{"off": true}, nil)
 	var pv console.Preview
 	src.b.ok("POST", "/api/preview", map[string]any{"listing": catalogBase + "pdf.yaml"}, &pv)

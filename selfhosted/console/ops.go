@@ -149,15 +149,34 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 
 // SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature (write for destructive, so on is never capped to ask), replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every bound key the item rows of the connector.
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
-	defer c.lockConnector(conn)()
-	if err := c.writeAccess(ctx, conn, name, a); err != nil || port.ItemKind(name) == "" || a == AccessOff {
-		return err
-	}
-	bound, err := c.boundKeys(ctx, conn)
+	results, err := c.SetAccessAll(ctx, conn, []string{name}, a)
 	if err != nil {
 		return err
 	}
-	return c.bindAll(ctx, conn, func(ctx context.Context, conn string, a Agent) error {
+	return results[0].Err
+}
+
+// SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, and answers each name's result in order.
+func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string, a Access) ([]Result, error) {
+	if len(names) == 0 {
+		return nil, invalid("name at least one function or item")
+	}
+	defer c.lockConnector(conn)()
+	results := make([]Result, 0, len(names))
+	items := false
+	for _, name := range names {
+		err := c.writeAccess(ctx, conn, name, a)
+		results = append(results, Result{Name: name, Err: err})
+		items = items || err == nil && port.ItemKind(name) != ""
+	}
+	if !items || a == AccessOff {
+		return results, nil
+	}
+	bound, err := c.boundKeys(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	return results, c.bindAll(ctx, conn, func(ctx context.Context, conn string, a Agent) error {
 		if !bound[a.Name] {
 			return nil
 		}

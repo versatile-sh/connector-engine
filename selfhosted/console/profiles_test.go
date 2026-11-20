@@ -119,9 +119,35 @@ func (p profiled) profile(agent string) console.Profile {
 	return console.Profile{}
 }
 
+type itemResult struct {
+	Name  string `json:"name"`
+	Agent string `json:"agent"`
+	Code  string `json:"code"`
+	Error string `json:"error"`
+}
+
+func (p profiled) batch(method, path string, body any) map[string]string {
+	p.t.Helper()
+	var out struct {
+		Items []itemResult `json:"items"`
+		Keys  []itemResult `json:"keys"`
+	}
+	p.b.ok(method, path, body, &out)
+	codes := map[string]string{}
+	for _, r := range append(out.Items, out.Keys...) {
+		codes[r.Name+r.Agent] = r.Code
+		if r.Code == "" && r.Error != "" {
+			codes[r.Name+r.Agent] = "refused"
+		}
+	}
+	return codes
+}
+
 func (p profiled) narrow(agent, name string, access console.Access) {
 	p.t.Helper()
-	p.b.ok("PUT", "/api/connectors/"+p.conn+"/profiles/"+agent, map[string]any{"name": name, "access": access}, nil)
+	if codes := p.batch("PUT", "/api/connectors/"+p.conn+"/profiles/"+agent, map[string]any{"names": []string{name}, "access": access}); codes[name] != "" {
+		p.t.Fatalf("%s %s for %s: %s", name, access, agent, codes[name])
+	}
 }
 
 func (p profiled) mode(mode console.ProfileMode, keys ...string) {
@@ -215,8 +241,8 @@ func TestEachAccessKeyHasItsOwnPermissionsOnOneConnector(t *testing.T) {
 
 	t.Run("a key cannot be given more than the connector allows", func(t *testing.T) {
 		p.b.ok("PUT", "/api/connectors/"+p.conn+"/functions/file", map[string]string{"access": "ask"}, nil)
-		if status, raw := p.b.send("PUT", "/api/connectors/"+p.conn+"/profiles/alpha", map[string]any{"name": "file", "access": "on"}, nil); status != http.StatusBadRequest {
-			t.Fatalf("a wider override: %d %s", status, raw)
+		if codes := p.batch("PUT", "/api/connectors/"+p.conn+"/profiles/alpha", map[string]any{"names": []string{"file"}, "access": "on"}); codes["file"] != "refused" {
+			t.Fatalf("a wider override: %v", codes)
 		}
 		p.b.ok("PUT", "/api/connectors/"+p.conn+"/functions/file", map[string]string{"access": "on"}, nil)
 	})
@@ -371,7 +397,7 @@ func TestAKeyThatIsOffTakesNoOverride(t *testing.T) {
 	p.mint("beta")
 	p.mode(console.ProfileOff, "beta")
 	for _, access := range []console.Access{console.AccessOn, console.AccessAsk} {
-		if status, raw := p.b.send("PUT", "/api/connectors/"+p.conn+"/profiles/beta", map[string]any{"name": "lookup", "access": access}, nil); status != http.StatusBadRequest {
+		if status, raw := p.b.send("PUT", "/api/connectors/"+p.conn+"/profiles/beta", map[string]any{"names": []string{"lookup"}, "access": access}, nil); status != http.StatusBadRequest {
 			t.Errorf("%s on a key that is off: %d %s", access, status, raw)
 		}
 	}

@@ -68,6 +68,8 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("POST /api/import", c.authed(c.doImport))
 	mux.HandleFunc("PUT /api/connectors/{id}/functions/{name}", c.authed(c.setAccess))
 	mux.HandleFunc("PUT /api/connectors/{id}/items", c.authed(c.setItemAccess))
+	mux.HandleFunc("PUT /api/connectors/{id}/functions", c.authed(c.setAccessAll))
+	mux.HandleFunc("POST /api/connectors/{id}/profiles:copy", c.authed(c.copyProfile))
 	mux.HandleFunc("PUT /api/connectors/{id}/profiles", c.authed(c.setProfileMode))
 	mux.HandleFunc("GET /api/connectors/{id}/profiles/{agent}", c.authed(c.profileEffects))
 	mux.HandleFunc("PUT /api/connectors/{id}/profiles/{agent}", c.authed(c.setProfileAccess))

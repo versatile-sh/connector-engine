@@ -69,9 +69,25 @@ export const setProfileMode = mutationOptions({
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 
-/** Narrows one function or item for one access key, or clears the narrowing with the connector's own access; the name goes in the body since item names hold `/` and `:`. */
+/** What one function or item of a batch came to: done without an error. */
+export type ItemResult = { name: string; error?: string; code?: string };
+
+/** Sets many functions of a connector to off, on or ask for every key that follows it, in one request that answers each. */
+export const setFunctionsAccess = mutationOptions({
+  mutationFn: ({ connector, names, access }: { connector: string; names: readonly string[]; access: Access }) => api<{ items: ItemResult[] }>("PUT", `/api/connectors/${at(connector, "functions")}`, { names, access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Narrows many functions or items for one access key, or resets them to the connector's own access, in one request that answers each; names go in the body since item names hold `/` and `:`. */
 export const setProfileAccess = mutationOptions({
-  mutationFn: ({ connector, agent, name, access }: { connector: string; agent: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "profiles", agent)}`, { name, access }),
+  mutationFn: ({ connector, agent, names, access }: { connector: string; agent: string; names: readonly string[]; access: Access | "default" }) =>
+    api<{ items: ItemResult[] }>("PUT", `/api/connectors/${at(connector, "profiles", agent)}`, access === "default" ? { names, reset: true } : { names, access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Gives other access keys the profile one key has on a connector, in one request that answers each key. */
+export const copyProfile = mutationOptions({
+  mutationFn: ({ connector, from, keys }: { connector: string; from: string; keys: readonly string[] }) => api<{ keys: KeyResult[] }>("POST", `/api/connectors/${encodeURIComponent(connector)}/profiles:copy`, { from, keys }),
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 

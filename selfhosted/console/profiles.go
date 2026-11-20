@@ -92,7 +92,7 @@ func (c *Console) plainConnector(ctx context.Context, conn string) error {
 }
 
 // SetProfileMode sets the named access keys, or every key made so far when none is named, expired ones included, to a mode on a connector (off unbinds, follow binds without overrides, custom binds and keeps them) and answers each key's result in order.
-func (c *Console) SetProfileMode(ctx context.Context, conn string, names []string, mode ProfileMode) ([]KeyResult, error) {
+func (c *Console) SetProfileMode(ctx context.Context, conn string, names []string, mode ProfileMode) ([]Result, error) {
 	set, ok := map[ProfileMode]func(context.Context, string, Agent) error{ProfileOff: c.unbind, ProfileFollow: c.follow, ProfileCustom: c.bind}[mode]
 	if !ok {
 		return nil, invalid("mode %q is not off, follow or custom", mode)
@@ -119,55 +119,114 @@ func (c *Console) follow(ctx context.Context, conn string, a Agent) error {
 	return c.Engine.deleteGrants(ctx, slices.DeleteFunc(rows, func(g port.Grant) bool { return !isOverride(g) }))
 }
 
-// SetProfileAccess narrows one function or item for one access key below the connector's choice, or clears the narrowing when access is the connector's own choice; a wider access, or any access for a key that is off there, is refused.
+// SetProfileAccess narrows one function or item for one access key, as SetProfileAccessAll does for many.
 func (c *Console) SetProfileAccess(ctx context.Context, conn, agent, name string, access Access) error {
-	kind, item := itemKinds[port.ItemKind(name)]
-	if !access.Valid() || item && !validFor(kind, access) {
-		return invalid("access %q is not a choice for %s", access, name)
+	results, err := c.SetProfileAccessAll(ctx, conn, agent, []string{name}, access, false)
+	if err != nil {
+		return err
+	}
+	return results[0].Err
+}
+
+// SetProfileAccessAll narrows many functions or items for one access key below the connector's choice, or clears their overrides with reset or with the connector's own access, and answers each name's result in order; a wider access is refused for its name, and a key that is off there is refused whole.
+func (c *Console) SetProfileAccessAll(ctx context.Context, conn, agent string, names []string, access Access, reset bool) ([]Result, error) {
+	switch {
+	case len(names) == 0:
+		return nil, invalid("name at least one function or item")
+	case !reset && !access.Valid():
+		return nil, invalid("access %q is not off, on or ask", access)
 	}
 	if err := c.plainConnector(ctx, conn); err != nil {
-		return err
+		return nil, err
 	}
 	a, err := agentNamed(c.knownAgents(), agent)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer c.lockConnector(conn)()
-	return c.narrow(ctx, conn, a, name, access)
-}
-
-func (c *Console) narrow(ctx context.Context, conn string, a Agent, name string, access Access) error {
-	f, err := c.function(ctx, conn, name)
+	bound, err := c.boundKeys(ctx, conn)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if !bound[a.Name] {
+		return nil, invalid("%s is off on this connector; set it to custom first", a.Name)
+	}
+	fns, err := c.Engine.functions(ctx, conn)
+	if err != nil {
+		return nil, err
 	}
 	rows, err := c.workspaceGrants(ctx, conn)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	base := functionAccess(f, rows)
-	if access.mode().Rank() > base.mode().Rank() {
-		return invalid("%s is %s on this connector, and a key can only narrow it", name, base)
-	}
-	bound, err := c.boundKeys(ctx, conn)
+	own, err := c.Engine.grants(ctx, port.ScopeAgent, a.Name, conn)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if !bound[a.Name] {
-		return invalid("%s is off on this connector; set it to custom first", a.Name)
+	v := keyRows{conn: conn, agent: a.Name, fns: fns, workspace: rows, key: own}
+	results := make([]Result, 0, len(names))
+	for _, name := range names {
+		results = append(results, Result{Name: name, Err: c.narrow(ctx, v, name, access, reset)})
 	}
-	if access != base {
-		return c.writeOverride(ctx, conn, a.Name, f, access)
+	return results, nil
+}
+
+type keyRows struct {
+	conn, agent    string
+	fns            []port.Function
+	workspace, key []port.Grant
+}
+
+func (c *Console) narrow(ctx context.Context, v keyRows, name string, access Access, reset bool) error {
+	i := slices.IndexFunc(v.fns, func(f port.Function) bool { return f.Name == name && f.State != port.FunctionRemoved })
+	if i < 0 {
+		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 	}
-	keyRows, err := c.Engine.grants(ctx, port.ScopeAgent, a.Name, conn)
-	if err != nil {
-		return err
+	f := v.fns[i]
+	base := functionAccess(f, v.workspace)
+	if kind, item := itemKinds[port.ItemKind(name)]; !reset && item && !validFor(kind, access) {
+		return invalid("access %q is not a choice for %s", access, name)
 	}
-	return c.Engine.deleteGrants(ctx, slices.DeleteFunc(keyRows, func(g port.Grant) bool { return g.Selector != port.SelectorOf(name) }))
+	if !reset && access != base {
+		if access.mode().Rank() > base.mode().Rank() {
+			return invalid("%s is %s on this connector, and a key can only narrow it", name, base)
+		}
+		return c.writeOverride(ctx, v.conn, v.agent, f, access)
+	}
+	return c.Engine.deleteGrants(ctx, slices.DeleteFunc(slices.Clone(v.key), func(g port.Grant) bool { return g.Selector != port.SelectorOf(name) }))
 }
 
 func (c *Console) writeOverride(ctx context.Context, conn, agent string, f port.Function, access Access) error {
 	return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: agent, Agent: port.AgentID(agent), Connector: port.ConnectorID(conn), Selector: port.SelectorOf(f.Name), Mode: access.mode(), DefinitionHash: f.DefinitionHash})
+}
+
+// CopyProfile gives the named access keys the profile one key has on a connector, its mode and its overrides, and answers each key's result in order.
+func (c *Console) CopyProfile(ctx context.Context, conn, from string, names []string) ([]Result, error) {
+	if len(names) == 0 {
+		return nil, invalid("name at least one key to copy the profile to")
+	}
+	if err := c.plainConnector(ctx, conn); err != nil {
+		return nil, err
+	}
+	if _, err := agentNamed(c.knownAgents(), from); err != nil {
+		return nil, err
+	}
+	defer c.lockConnector(conn)()
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, "", conn)
+	if err != nil {
+		return nil, err
+	}
+	all, err := c.profiles(ctx, conn, rows)
+	if err != nil {
+		return nil, err
+	}
+	src := all[slices.IndexFunc(all, func(p Profile) bool { return p.Agent == from })]
+	return eachKey(c.knownAgents(), names, func(a Agent) error {
+		if a.Name == from {
+			return nil
+		}
+		return c.applyProfile(ctx, conn, a, src)
+	}), nil
 }
 
 func (c *Console) applyProfile(ctx context.Context, conn string, a Agent, p Profile) error {

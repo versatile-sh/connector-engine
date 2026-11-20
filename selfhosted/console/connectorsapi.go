@@ -51,26 +51,47 @@ func (c *Console) setSkillAccessAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	results, err := c.SetSkillAccessAll(r.Context(), r.PathValue("id"), in.Keys, in.Access)
-	c.replyKeys(w, results, err)
+	c.replyResults(w, "keys", "agent", results, err)
 }
 
-func (c *Console) replyKeys(w http.ResponseWriter, results []KeyResult, err error) {
+func (c *Console) replyResults(w http.ResponseWriter, list, field string, results []Result, err error) {
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
-	type keyReply struct {
-		Agent string `json:"agent"`
-		apiError
-	}
-	keys := make([]keyReply, len(results))
-	for i, k := range results {
-		keys[i].Agent = k.Agent
-		if k.Err != nil {
-			_, keys[i].apiError = c.refusal(k.Err)
+	out := make([]map[string]string, len(results))
+	for i, res := range results {
+		out[i] = map[string]string{field: res.Name}
+		if res.Err != nil {
+			_, refused := c.refusal(res.Err)
+			out[i]["error"], out[i]["code"] = refused.Error, refused.Code
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"keys": keys})
+	writeJSON(w, http.StatusOK, map[string]any{list: out})
+}
+
+func (c *Console) setAccessAll(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Names  []string `json:"names"`
+		Access Access   `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	results, err := c.SetAccessAll(r.Context(), r.PathValue("id"), in.Names, in.Access)
+	c.replyResults(w, "items", "name", results, err)
+}
+
+func (c *Console) copyProfile(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		From string   `json:"from"`
+		Keys []string `json:"keys"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	results, err := c.CopyProfile(r.Context(), r.PathValue("id"), in.From, in.Keys)
+	c.replyResults(w, "keys", "agent", results, err)
 }
 
 func (c *Console) setProfileMode(w http.ResponseWriter, r *http.Request) {
@@ -82,22 +103,20 @@ func (c *Console) setProfileMode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	results, err := c.SetProfileMode(r.Context(), r.PathValue("id"), in.Keys, in.Mode)
-	c.replyKeys(w, results, err)
+	c.replyResults(w, "keys", "agent", results, err)
 }
 
 func (c *Console) setProfileAccess(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Name   string `json:"name"`
-		Access Access `json:"access"`
+		Names  []string `json:"names"`
+		Access Access   `json:"access"`
+		Reset  bool     `json:"reset"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
-	if err := c.SetProfileAccess(r.Context(), r.PathValue("id"), r.PathValue("agent"), in.Name, in.Access); err != nil {
-		c.fail(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	results, err := c.SetProfileAccessAll(r.Context(), r.PathValue("id"), r.PathValue("agent"), in.Names, in.Access, in.Reset)
+	c.replyResults(w, "items", "name", results, err)
 }
 
 func (c *Console) profileEffects(w http.ResponseWriter, r *http.Request) {

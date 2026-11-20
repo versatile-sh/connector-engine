@@ -65,10 +65,13 @@ A connector keeps one credential that every key shares; keys differ only in perm
 
 | Console endpoint | Does |
 |---|---|
+| `PUT /api/connectors/{id}/functions` | `{"names": [...], "access": ...}` sets many functions for the default in one request; answers each name's result |
 | `PUT /api/connectors/{id}/profiles` | `{"mode": "off" \| "follow" \| "custom", "keys": [...]}`, every key when `keys` is empty; answers each key's result |
-| `PUT /api/connectors/{id}/profiles/{key}` | `{"name": ..., "access": ...}` narrows one function or item for one key, or removes the override with the default's value |
+| `PUT /api/connectors/{id}/profiles/{key}` | `{"names": [...], "access": ...}` narrows functions or items for one key, or `{"names": [...], "reset": true}` returns them to the default; answers each name's result |
+| `POST /api/connectors/{id}/profiles:copy` | `{"from": key, "keys": [...]}` gives other keys one key's mode and overrides; answers each key's result |
 | `GET /api/connectors/{id}/profiles/{key}` | the engine's answer for that key on each function and item |
 | `PUT /api/connectors/{id}/new-keys` | `{"off": true}` makes new keys start off |
+| `DELETE /api/connectors/{id}/waiting/{key}` | forgets a setup's profile waiting for a key not made yet |
 
 ## Approvals
 

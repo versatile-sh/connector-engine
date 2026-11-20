@@ -165,14 +165,14 @@ func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access
 	return results[0].Err
 }
 
-// KeyResult is what one access key's choice on a skill or a connector came to: set when Err is nil.
-type KeyResult struct {
-	Agent string
-	Err   error
+// Result is what one change of a batch came to, for an access key or a function or item: done when Err is nil.
+type Result struct {
+	Name string
+	Err  error
 }
 
 // SetSkillAccessAll sets one access on a skill for the named access keys, or every live key when none is named, and answers each key's result in order.
-func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []string, access Access) ([]KeyResult, error) {
+func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []string, access Access) ([]Result, error) {
 	if !access.Valid() {
 		return nil, invalid("access %q is not off, on or ask", access)
 	}
@@ -199,19 +199,19 @@ func agentNamed(agents []Agent, name string) (Agent, error) {
 	return Agent{}, noKey(name)
 }
 
-func eachKey(agents []Agent, names []string, set func(Agent) error) []KeyResult {
+func eachKey(agents []Agent, names []string, set func(Agent) error) []Result {
 	if len(names) == 0 {
 		for _, a := range agents {
 			names = append(names, a.Name)
 		}
 	}
-	results := make([]KeyResult, 0, len(names))
+	results := make([]Result, 0, len(names))
 	for _, name := range names {
 		a, err := agentNamed(agents, name)
 		if err == nil {
 			err = set(a)
 		}
-		results = append(results, KeyResult{Agent: name, Err: err})
+		results = append(results, Result{Name: name, Err: err})
 	}
 	return results
 }

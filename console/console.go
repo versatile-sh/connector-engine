@@ -41,6 +41,7 @@ type Console struct {
 	connects     connectStates
 	as           authServer
 	surf         surfaces
+	sep          separatorCache
 }
 
 // Handler returns every route behind the guard.

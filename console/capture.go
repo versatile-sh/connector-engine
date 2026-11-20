@@ -19,7 +19,6 @@ const (
 	detailMax      = 512
 	codeMax        = 64
 	rpcInvalidArgs = -32602
-	toolSeparator  = "__"
 )
 
 type captureKey struct{}

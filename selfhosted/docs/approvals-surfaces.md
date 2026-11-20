@@ -28,13 +28,13 @@ The owner also wants fewer questions. Every surface offers three answers:
 | mode `ask_once`: `approve_for_session` writes a session row | "Allow for this session" |
 | `Lookup` on (session, call_hash): an identical call attaches to the open record, or is answered by the terminal undelivered one | getting the result of exactly the call that was decided |
 | the `/mcp` endpoint and both MCP eras | elicitation, from the console's existing `/mcp` proxy |
-| the signed `connector.approval.requested` webhook | not used: the watch reaches the console without a sink configured in the engine. A product that runs a webhook sink can drive the same `surface` package from it |
+| the signed `connector.approval.requested` webhook | not used: the watch reaches the console without a sink configured in the engine. A product that runs a webhook sink can drive the same `selfhosted/surface` package from it |
 
 Everything new lives in three places:
 
-- `surface/`: the relay and the channel adapters. It does not import `service`, `core`, `store` or `gateway`.
-- `console/`: the decision use case, the settings, the `/approve` page API and the elicitation proxy.
-- `cli/notify`: the `cnctl notify` host helper.
+- `selfhosted/surface/`: the relay and the channel adapters. It does not import `service`, `core`, `store` or `gateway`.
+- `selfhosted/console/`: the decision use case, the settings, the `/approve` page API and the elicitation proxy.
+- `selfhosted/cli/notify`: the `cnctl notify` host helper.
 
 ## 3. Options considered
 
@@ -92,7 +92,7 @@ Skill loads are held like calls, with mode `ask_once` on the access key's agent 
 
 A session is the `session` claim of the agent token. The console mints one per access key, and one per hourly OAuth access token. "Allow for this session" therefore lasts until the app's current token renews: at most one hour for an app signed in through the browser. The UI says so.
 
-### 4.2 The relay and the universal channel interface (`surface/`)
+### 4.2 The relay and the universal channel interface (`selfhosted/surface/`)
 
 ```go
 type Channel interface {
@@ -127,7 +127,7 @@ Websockets use `golang.org/x/net/websocket`, which is already in the module grap
 
 Messages name the connector, the function, the app and the expiry. They never include arguments: those reach a third-party platform. The arguments appear only on the local `/approve` page and in the console.
 
-### 4.3 The feed (`console/feed.go`)
+### 4.3 The feed (`selfhosted/console/feed.go`)
 
 - A dedicated streaming client reads `/v1/approvals:watch` with the person token. It does not use `Engine.do`, which has a 90 s timeout and reads the whole body.
 - It reconnects with `after=<last sequence>` and mints the token again on a 401.
@@ -149,7 +149,7 @@ The console cannot reach the host's notification service. The host helper connec
 4. A click opens `/approve/<id>?t=<token>` in the browser.
 5. The page shows the connector, its icon, the function, the app, the expiry and an argument summary, with Allow once, Allow for this session, Always allow and Deny.
 
-### 4.5 MCP elicitation in the `/mcp` proxy (`console/elicit.go`)
+### 4.5 MCP elicitation in the `/mcp` proxy (`selfhosted/console/elicit.go`)
 
 It is off by default. The owner turns it on per app (access key or OAuth app) in Notifications. When it is off for the calling app, `/mcp` is today's `ReverseProxy`, unchanged behind `gateMCP` and `refuseRevoked`. The one exception is a session-era `initialize`, a POST with no `Mcp-Session-Id` and no 2026-07-28 protocol header. Its body is read without being changed, so the proxy remembers whether the session can elicit, and the owner can turn an app on after it has connected. Requests of the 2026-07-28 era from an app that is off, and bodies over 4 MiB, are never read.
 
@@ -163,7 +163,7 @@ For a `tools/call` from an app that is turned on and that declared the `elicitat
 4. The result is the engine's own answer to this call. Either the held request returns it, or the proxy re-sends the identical call, which `Lookup` attaches to the same record by call hash. A wrong match can therefore never return another call's result.
 5. Destructive functions, by their annotations, are never elicited. They stay on the console, popup and chat surfaces.
 
-**Verdict: elicitation lives outside the engine.** The proxy needs only the public `/mcp` contract, the approvals API and the approval `Lookup` by call hash. The evidence is in `console/elicit_test.go`: go-sdk clients of both eras answer the elicitation, the approval is decided, and the upstream runs once. The cost is two pieces of coupling, both stated here. First, the proxy parses MCP framing for `tools/call`, `initialize` and JSON-RPC responses. Second, binding before the hold window ends uses a list query, with the exact id as the fallback. If a future engine elicits by itself (option A, behind `approval.inChat`), the proxy feature is turned off and nothing else changes.
+**Verdict: elicitation lives outside the engine.** The proxy needs only the public `/mcp` contract, the approvals API and the approval `Lookup` by call hash. The evidence is in `selfhosted/console/elicit_test.go`: go-sdk clients of both eras answer the elicitation, the approval is decided, and the upstream runs once. The cost is two pieces of coupling, both stated here. First, the proxy parses MCP framing for `tools/call`, `initialize` and JSON-RPC responses. Second, binding before the hold window ends uses a list query, with the exact id as the fallback. If a future engine elicits by itself (option A, behind `approval.inChat`), the proxy feature is turned off and nothing else changes.
 
 ### 4.6 The `/approve` page and link tokens
 

@@ -68,12 +68,12 @@ An adapter implements one port from `port/ports.go` for one backend.
 
 1. Create the package under the port's directory, for example `source/<name>` for a `ListingSource`. It imports `port` and its own client libraries only.
 2. Translate backend errors into `port` error codes at the package edge.
-3. Add the adapter name to the port's `Builtins` in `config.AdaptersSpec` (`config/adapters.go`), with its capabilities.
-4. Open it in the builder in `app/build.go`, reading its settings from `connector-engine.yaml`. Add any new key with its default to `config/`.
+3. Register it in `app.Core()` (`app/core.go`): `Register(r, Sources, Adapter{Name: "<name>", Capabilities: ..., Settings: ...}, open)`. The factory reads its settings from `env.Config` and `env.Setting`, and references with `env.Ref`. Add any new key of `connector-engine.yaml` with its default to `config/`.
+4. Nothing else changes: `config` learns the name, capabilities and settings from the registration, and `app/build.go` opens whatever `adapters.yaml` selects.
 5. Test it against a local fake or a throwaway container. Stores must pass the shared suite: `storetest.Run`.
 6. Run `connector-engine adapters check` on a configuration that selects it.
 
-An adapter only the self-hosted build needs goes under `selfhosted/` and registers through `selfhosted/selfhosted.go` instead of `config`.
+An adapter only the self-hosted build needs goes under `selfhosted/` and registers in `selfhosted.Register`. An adapter outside this repository is one package with its own `Register(r *app.Registry)` and one line in its own main.
 
 ## Add an approval surface
 

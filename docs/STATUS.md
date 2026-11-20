@@ -89,6 +89,14 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 
 `runtime/grpc` failed once in a full `go test -race ./...` run on 2026-11-18 (and `internal/grpcdesc` once with "reflection: EOF" while another `go test` process ran). It did not reproduce in 5 isolated runs, 3 loaded runs, 2 more full runs and `-count=30` of both packages. Suspected: a reflection stream closed by a test server shutting down under load. Not fixed.
 
+`store/memory` can deadlock under concurrent reads and writes. Seen on 2026-11-20 as a hang of `TestAChatButtonDecidesAHeldCallAndTheCallResumes` in a `-count=3` run of `./console`. The chain:
+
+1. `Service.ListConnectors` (`service/connectors.go:560`) holds the store's read lock inside `Store.Read`.
+2. In that callback, `authorize` (`:570`) calls `TenantActive`, which takes a second, nested `Store.Read`.
+3. When a writer is already waiting, such as the outbox relay's `MarkDelivered` (`store/memory/memory.go:173`), Go's `sync.RWMutex` blocks the nested reader behind the writer, and both wait forever.
+
+The Postgres store, which the `person` profile runs, is not affected. Not fixed, because the approval-surfaces work does not change the engine. A fix lives in `service`: authorize before `Store.Read`, or pass the transaction down.
+
 ## Local console and packaging
 
 | Item | Level | Notes |

@@ -3,8 +3,10 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
-compose=(docker compose -f deploy/compose.yaml -f deploy/compose.check.yaml --profile person)
-port="${CONSOLE_PORT:-7465}"
+project="${CHECK_PROJECT:-connector-engine-check}"
+export CN_IMAGE="${CHECK_IMAGE:-connector-engine-check:local}"
+compose=(docker compose -p "$project" -f deploy/compose.yaml -f deploy/compose.check.yaml --profile person)
+port="${CHECK_PORT:-7466}"
 export CONSOLE_PORT="$port"
 base="http://127.0.0.1:$port"
 work="$(mktemp -d)"
@@ -14,7 +16,7 @@ keep="${CHECK_KEEP:-0}"
 cleanup() {
   if [ "$keep" != 1 ]; then
     "${compose[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
-    docker image rm connector-engine:local connector-engine-testmcp:local >/dev/null 2>&1 || true
+    docker image rm "$CN_IMAGE" connector-engine-testmcp:local >/dev/null 2>&1 || true
   fi
   rm -rf -- "$work"
 }
@@ -33,7 +35,7 @@ done
 curl -fsS -o /dev/null "$base/api/session" || fail "the console did not answer"
 
 step "published ports bind 127.0.0.1 only"
-ports="$(docker ps --filter label=com.docker.compose.project=connector-engine --format '{{.Names}} {{.Ports}}')"
+ports="$(docker ps --filter label=com.docker.compose.project=$project --format '{{.Names}} {{.Ports}}')"
 echo "$ports"
 if echo "$ports" | grep -E '0\.0\.0\.0:[0-9]+->|\[::\]:[0-9]+->' >/dev/null; then fail "a port is published beyond loopback"; fi
 echo "$ports" | grep -q "127.0.0.1:$port->$port" || fail "the console port is not on 127.0.0.1:$port"
@@ -120,7 +122,7 @@ for p in /api/session /api/connectors /api/agents /api/approvals; do
   if api GET "$p" | grep -qF "$optoken"; then fail "$p carries the operator token"; fi
 done
 
-cnctl() { docker run --rm --network host -e CN_ENDPOINT="$base/mcp" -e CN_AGENT_TOKEN="$token" --entrypoint /usr/local/bin/cnctl connector-engine:local tools "$@"; }
+cnctl() { docker run --rm --network host -e CN_ENDPOINT="$base/mcp" -e CN_AGENT_TOKEN="$token" --entrypoint /usr/local/bin/cnctl "$CN_IMAGE" tools "$@"; }
 
 step "cnctl tools list through the console's /mcp"
 out="$(cnctl list)"; echo "$out"

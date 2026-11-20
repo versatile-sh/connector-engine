@@ -152,6 +152,13 @@ type ConnectorRuntime interface {
 	Stop(ctx context.Context, h Handle) error
 }
 
+// ContentRuntime is the optional part of a ConnectorRuntime that lists a connector's prompts, resources and templates as items and serves them (§10.3).
+type ContentRuntime interface {
+	ListContent(ctx context.Context, h Handle) ([]RawDefinition, error)
+	Content(ctx context.Context, h Handle, item string, arguments json.RawMessage, deadline time.Time) (Result, error)
+	Complete(ctx context.Context, h Handle, item string, request json.RawMessage) (json.RawMessage, error)
+}
+
 // OAuthClient is the client of one issuer, however it was registered.
 type OAuthClient struct {
 	Issuer       string       `json:"issuer"`

@@ -150,6 +150,8 @@ var definitionKeys = []string{"name", "title", "description", "inputSchema", "ou
 
 var itemKeys = map[string][]string{
 	port.ItemInstructions: {"instructions"},
+	port.ItemPrompt:       {"name", "title", "description", "arguments"},
+	port.ItemResource:     {"uri", "uriTemplate", "name", "title", "description", "mimeType", "annotations"},
 }
 
 func keysOf(name string) ([]string, bool) {

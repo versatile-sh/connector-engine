@@ -201,7 +201,14 @@ func (s *Service) captureFunctions(ctx context.Context, c port.Connector, m port
 			return nil, meta, err
 		}
 	}
-	defs = append(defs, s.items(meta)...)
+	items, err := s.itemDefinitions(ctx, h.h, meta)
+	if err != nil {
+		if port.IsCode(err, port.CodeUnavailable) {
+			s.drop(h)
+		}
+		return nil, meta, upstream(err, "connector %s did not list its prompts and resources: %v", c.ID)
+	}
+	defs = append(defs, items...)
 	out := make([]port.Function, 0, len(defs))
 	for _, d := range defs {
 		f, err := s.functionOf(c, m, d, meta)
@@ -211,15 +218,6 @@ func (s *Service) captureFunctions(ctx context.Context, c port.Connector, m port
 		out = append(out, f)
 	}
 	return out, meta, nil
-}
-
-func (s *Service) items(meta port.ListMeta) []port.RawDefinition {
-	var out []port.RawDefinition
-	if s.cfg.RelayInstructions && meta.Instructions != "" {
-		raw, _ := json.Marshal(map[string]string{"instructions": meta.Instructions})
-		out = append(out, port.RawDefinition{Name: port.InstructionsItem, Raw: raw})
-	}
-	return out
 }
 
 func outputSchemaOf(f port.Function) json.RawMessage {

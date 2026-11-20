@@ -4,6 +4,7 @@ package mux
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"slices"
 	"sync"
 	"time"
@@ -19,7 +20,10 @@ type Runtime struct {
 	caps    port.RuntimeCapabilities
 }
 
-var _ port.ConnectorRuntime = (*Runtime)(nil)
+var (
+	_ port.ConnectorRuntime = (*Runtime)(nil)
+	_ port.ContentRuntime   = (*Runtime)(nil)
+)
 
 // New returns a Runtime over runtimes; a kind served by two of them goes to the first, and no runtime at all is refused.
 func New(runtimes ...port.ConnectorRuntime) (*Runtime, error) {
@@ -100,4 +104,48 @@ func (r *Runtime) Stop(ctx context.Context, h port.Handle) error {
 	delete(r.started, h)
 	r.mu.Unlock()
 	return rt.Stop(ctx, h)
+}
+
+var errNoContent = port.Errorf(port.CodeInvalidArgument, "the runtime of this handle serves no prompts or resources")
+
+func (r *Runtime) content(h port.Handle) (port.ContentRuntime, error) {
+	rt, err := r.of(h)
+	if err != nil {
+		return nil, err
+	}
+	c, ok := rt.(port.ContentRuntime)
+	if !ok {
+		return nil, errNoContent
+	}
+	return c, nil
+}
+
+// ListContent lists the prompts and resources of a started instance; a runtime that serves none lists nothing.
+func (r *Runtime) ListContent(ctx context.Context, h port.Handle) ([]port.RawDefinition, error) {
+	c, err := r.content(h)
+	if errors.Is(err, errNoContent) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return c.ListContent(ctx, h)
+}
+
+// Content gets a prompt or reads a resource of a started instance.
+func (r *Runtime) Content(ctx context.Context, h port.Handle, item string, arguments json.RawMessage, deadline time.Time) (port.Result, error) {
+	c, err := r.content(h)
+	if err != nil {
+		return port.Result{}, err
+	}
+	return c.Content(ctx, h, item, arguments, deadline)
+}
+
+// Complete asks a started instance to complete an argument of a prompt or resource template.
+func (r *Runtime) Complete(ctx context.Context, h port.Handle, item string, request json.RawMessage) (json.RawMessage, error) {
+	c, err := r.content(h)
+	if err != nil {
+		return nil, err
+	}
+	return c.Complete(ctx, h, item, request)
 }

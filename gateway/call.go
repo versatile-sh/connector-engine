@@ -49,15 +49,23 @@ func fieldsOf(fromArgs []string, meta mcp.Meta) []string {
 	return out
 }
 
-func (g *Gateway) forward(ctx context.Context, p port.Principal, d *deliveries, req service.CallRequest) (*mcp.CallToolResult, error) {
+func (g *Gateway) run(ctx context.Context, p port.Principal, d *deliveries, req service.CallRequest) (service.Outcome, error) {
 	out, err := g.core.Call(ctx, p, req)
 	if err != nil {
-		return nil, g.failure(err)
+		return out, g.failure(err)
 	}
 	if out, err = g.hold(ctx, p, out); err != nil {
-		return nil, g.failure(err)
+		return out, g.failure(err)
 	}
 	owed(d, out)
+	return out, nil
+}
+
+func (g *Gateway) forward(ctx context.Context, p port.Principal, d *deliveries, req service.CallRequest) (*mcp.CallToolResult, error) {
+	out, err := g.run(ctx, p, d, req)
+	if err != nil {
+		return nil, err
+	}
 	return g.answer(req.Name, out, p.Token)
 }
 

@@ -92,7 +92,7 @@ func (g *Gateway) instructed(ctx context.Context, req mcp.Request, res mcp.Resul
 	case *mcp.InitializeResult:
 		instructions = &r.Instructions
 	case *mcp.DiscoverResult:
-		instructions = &r.Instructions
+		instructions, r.CacheScope = &r.Instructions, "private"
 	default:
 		return
 	}

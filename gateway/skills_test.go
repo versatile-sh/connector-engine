@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	rtskill "github.com/agents-control/connector-engine/runtime/skill"
 	"github.com/agents-control/connector-engine/service"
 	st "github.com/agents-control/connector-engine/service/servicetest"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -38,30 +40,33 @@ func skillManifest() port.Manifest {
 
 func (w *world) installSkill(mode port.Mode, agents ...string) port.ConnectorID {
 	w.t.Helper()
-	m := skillManifest()
+	return installSkill(w.t, w.Env, w.admin, skillManifest(), "pdf", mode, agents...)
+}
+
+func installSkill(t *testing.T, e *st.Env, admin port.Principal, m port.Manifest, alias string, mode port.Mode, agents ...string) port.ConnectorID {
+	t.Helper()
 	sref := port.ListingRef{Name: m.Name}
-	op := w.Operator()
-	st.Ok(w.Svc.CreateListing(w.Ctx, op, service.CreateListingInput{Manifest: m}))
+	st.Ok(e.Svc.CreateListing(e.Ctx, e.Operator(), service.CreateListingInput{Manifest: m}))
 	for _, r := range []port.CatalogRule{
 		{SubjectKind: port.SubjectTenant, SubjectID: string(tenant), TargetKind: port.TargetListing, Target: sref.String(), Show: true, Install: true, Ceiling: port.CeilingFull},
 		{SubjectKind: port.SubjectWorkspace, SubjectID: string(workspace), TargetKind: port.TargetListing, Target: sref.String(), Show: true, Install: true, Ceiling: port.CeilingFull},
 	} {
-		st.Ok(w.Svc.PutCatalogRule(w.Ctx, w.admin, r))
+		st.Ok(e.Svc.PutCatalogRule(e.Ctx, admin, r))
 	}
-	conn := st.Ok(w.Svc.InstallConnector(w.Ctx, w.admin, service.InstallInput{Workspace: workspace, Alias: "pdf", Listing: sref})).Connector
-	fns := st.Ok(w.Svc.ListFunctionsOf(w.Ctx, w.admin, conn.ID))
+	conn := st.Ok(e.Svc.InstallConnector(e.Ctx, admin, service.InstallInput{Workspace: workspace, Alias: alias, Listing: sref})).Connector
+	fns := st.Ok(e.Svc.ListFunctionsOf(e.Ctx, admin, conn.ID))
 	if len(fns) != 1 || fns[0].State != port.FunctionQuarantined {
-		w.t.Fatalf("a skill lands as one quarantined function: %+v", fns)
+		t.Fatalf("a skill lands as one quarantined function: %+v", fns)
 	}
-	st.Ok(w.Svc.AcceptFunctions(w.Ctx, w.admin, conn.ID, map[string]port.Hash{rtskill.Function: fns[0].DefinitionHash}))
-	st.Ok(w.Svc.SetConnectorLevel(w.Ctx, w.admin, conn.ID, port.LevelCustom))
-	st.Ok(w.Svc.ClassifyFunction(w.Ctx, w.admin, conn.ID, rtskill.Function, port.ClassRead))
+	st.Ok(e.Svc.AcceptFunctions(e.Ctx, admin, conn.ID, map[string]port.Hash{rtskill.Function: fns[0].DefinitionHash}))
+	st.Ok(e.Svc.SetConnectorLevel(e.Ctx, admin, conn.ID, port.LevelCustom))
+	st.Ok(e.Svc.ClassifyFunction(e.Ctx, admin, conn.ID, rtskill.Function, port.ClassRead))
 	hash := fns[0].DefinitionHash
-	st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function, Mode: port.ModeAllow, DefinitionHash: hash}))
+	st.Ok(e.Svc.CreateGrant(e.Ctx, admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function, Mode: port.ModeAllow, DefinitionHash: hash}))
 	for _, a := range agents {
-		st.Ok(w.Svc.PutBinding(w.Ctx, w.admin, port.Binding{Connector: conn.ID, Agent: port.AgentID(a), AskRequester: true}))
-		st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a, Agent: port.AgentID(a), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function,
-			Mode: mode, DefinitionHash: hash, ExpiresAt: st.Epoch.Add(30 * 24 * time.Hour)}))
+		st.Ok(e.Svc.PutBinding(e.Ctx, admin, port.Binding{Connector: conn.ID, Agent: port.AgentID(a), AskRequester: true}))
+		st.Ok(e.Svc.CreateGrant(e.Ctx, admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a, Agent: port.AgentID(a), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function,
+			Mode: mode, DefinitionHash: hash, ExpiresAt: e.Clock.Now().Add(30 * 24 * time.Hour)}))
 	}
 	return conn.ID
 }
@@ -222,5 +227,110 @@ func TestTheSkillIndexStaysUnder4096Characters(t *testing.T) {
 	}
 	if gateway.SkillIndex("Base.", nil) != "Base." {
 		t.Fatal("an agent without skills gets an index")
+	}
+}
+
+func skillPromptsOn(c *gateway.Config) { c.Skills, c.SkillPrompts = true, true }
+
+func promptNames(t *testing.T, cs *mcp.ClientSession) []string {
+	t.Helper()
+	res, err := cs.ListPrompts(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, p := range res.Prompts {
+		out = append(out, p.Name)
+	}
+	return out
+}
+
+func TestASkillIsAPromptWhenThePromptsSurfaceIsOn(t *testing.T) {
+	for _, era := range []string{"2025-11-25", "2026-07-28"} {
+		w := newWorld(t, options{cfg: skillPromptsOn})
+		w.installSkill(port.ModeAllow, "a1")
+		cs, _ := w.agent("a1", "s1", era)
+		if got := promptNames(t, cs); !slices.Equal(got, []string{"pdf"}) {
+			t.Fatalf("%s: prompts %v", era, got)
+		}
+		res, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"})
+		if err != nil || len(res.Messages) != 1 || res.Messages[0].Role != "user" {
+			t.Fatalf("%s: %+v %v", era, res, err)
+		}
+		if body := res.Messages[0].Content.(*mcp.TextContent).Text; !strings.Contains(body, skillMD) || !strings.Contains(body, "skill_load") {
+			t.Fatalf("%s: %q", era, body)
+		}
+	}
+}
+
+func TestAnOffSkillIsNoPrompt(t *testing.T) {
+	w := newWorld(t, options{cfg: skillPromptsOn})
+	w.installSkill(port.ModeAllow)
+	w.bind("a1")
+	w.row(port.ScopeAgent, "a1", "*", port.ModeAllow)
+	cs, _ := w.agent("a1", "s1", "2025-11-25")
+	if got := promptNames(t, cs); len(got) != 0 {
+		t.Fatalf("prompts %v", got)
+	}
+	if _, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"}); rpcCode(err) != jsonrpc.CodeInvalidParams {
+		t.Fatalf("an off skill answers %v", err)
+	}
+}
+
+func TestASkillPromptOnAskHoldsThenReturnsOnce(t *testing.T) {
+	w := newWorld(t, options{cfg: skillPromptsOn})
+	w.installSkill(port.ModeAsk, "a1")
+	cs, _ := w.agent("a1", "s1", "2025-11-25")
+	_, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"})
+	var rpc *jsonrpc.Error
+	if !errors.As(err, &rpc) || rpc.Code != -32000 {
+		t.Fatalf("an ask skill prompt does not hold: %v", err)
+	}
+	var data struct {
+		ApprovalID port.ApprovalID `json:"approval_id"`
+	}
+	_ = json.Unmarshal(rpc.Data, &data)
+	st.Ok(w.Svc.DecideApproval(w.Ctx, w.alice, data.ApprovalID, port.DecisionApprove, "", "test"))
+	for range 2 {
+		if _, err := w.Worker.Sweep(w.Ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	res, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"})
+	if err != nil || !strings.Contains(res.Messages[0].Content.(*mcp.TextContent).Text, skillMD) {
+		t.Fatalf("after approval: %+v %v", res, err)
+	}
+	if _, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"}); rpcCode(err) != -32000 {
+		t.Fatalf("ask asks again after the answer was delivered: %v", err)
+	}
+}
+
+func TestAMetadataOnlySkillPromptGivesItsSource(t *testing.T) {
+	w := newWorld(t, options{cfg: skillPromptsOn})
+	m := skillManifest()
+	m.Skill.Redistribution, m.Skill.Licence = port.RedistributionMetadataOnly, port.SkillLicence{}
+	for i := range m.Skill.Files {
+		m.Skill.Files[i].Content = nil
+	}
+	installSkill(t, w.Env, w.admin, m, "pdf", port.ModeAllow, "a1")
+	cs, _ := w.agent("a1", "s1", "2025-11-25")
+	res, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body := res.Messages[0].Content.(*mcp.TextContent).Text; !strings.Contains(body, "https://github.com/example/skills") || strings.Contains(body, "Run scripts/fill.sh") {
+		t.Fatalf("%q", body)
+	}
+}
+
+func TestWithoutThePromptsSurfaceNoSkillIsAPrompt(t *testing.T) {
+	w := newWorld(t, options{cfg: skillsOn})
+	w.installSkill(port.ModeAllow, "a1")
+	cs, _ := w.agent("a1", "s1", "2025-11-25")
+	if cs.InitializeResult().Capabilities.Prompts != nil {
+		t.Fatal("prompts declared without a prompts surface")
+	}
+	if _, err := cs.ListPrompts(t.Context(), nil); rpcCode(err) != jsonrpc.CodeMethodNotFound {
+		t.Fatalf("prompts/list answers %v", err)
 	}
 }

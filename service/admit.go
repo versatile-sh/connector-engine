@@ -213,7 +213,7 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 	defer s.release(ctx, h)
 	cctx, cancel := context.WithDeadline(ctx, in.Deadline)
 	defer cancel()
-	res, err := s.d.Runtime.Call(cctx, h.h, in.Function, in.Args, in.Deadline)
+	res, err := s.run(cctx, h.h, in)
 	if port.IsCode(err, port.CodeUnavailable) {
 		s.drop(h)
 	}
@@ -223,6 +223,7 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 	case err != nil:
 		return invoked{Err: err}
 	}
+	res.Content = s.agentURIs(in.Conn.Alias, res.Content)
 	if len(in.Fields) > 0 && len(res.Structured) > 0 && !res.IsError {
 		pr, err := projection.Project(res.Structured, in.Fields)
 		if err != nil {
@@ -240,6 +241,17 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 	}
 	out.Bytes = len(out.Result.Content) + len(out.Result.Structured)
 	return out
+}
+
+func (s *Service) run(ctx context.Context, h port.Handle, in invocation) (port.Result, error) {
+	if port.ItemKind(in.Function) == "" {
+		return s.d.Runtime.Call(ctx, h, in.Function, in.Args, in.Deadline)
+	}
+	content, ok := s.d.Runtime.(port.ContentRuntime)
+	if !ok {
+		return port.Result{}, port.Errorf(port.CodeUnavailable, "the runtime serves no prompts or resources")
+	}
+	return content.Content(ctx, h, in.Function, in.Args, in.Deadline)
 }
 
 func (s *Service) forwardDirect(ctx context.Context, in admitInput, plan forwardPlan) (Outcome, error) {

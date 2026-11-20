@@ -2,9 +2,11 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -33,15 +35,25 @@ func quoted(text string) string {
 	return "> " + strings.Join(lines, "\n> ")
 }
 
-// RelayedInstructions is the engine's instructions followed by one quoted section per connector, each cut to 2,048 bytes and all to 8,192, with every cut marked.
-func RelayedInstructions(base string, relayed []service.ServedInstructions) string {
+// RelayedInstructions is the engine's instructions followed by one quoted section per instructions item, each cut to 2,048 bytes and all to 8,192, with every cut marked.
+func RelayedInstructions(base string, items []service.ServedItem) string {
+	var relayed []service.ServedItem
+	for _, it := range items {
+		if port.ItemKind(it.Item) == port.ItemInstructions {
+			relayed = append(relayed, it)
+		}
+	}
 	if len(relayed) == 0 {
 		return base
 	}
 	var b strings.Builder
 	b.WriteString(base + relayedHead)
 	for _, r := range relayed {
-		section := "\n\nFrom connector " + r.Alias + " (its tools are named " + r.Alias + "__*):\n" + quoted(clip(r.Text, maxConnectorInstructions))
+		var d struct {
+			Instructions string `json:"instructions"`
+		}
+		_ = json.Unmarshal(r.Definition, &d)
+		section := "\n\nFrom connector " + r.Alias + " (its tools are named " + r.Alias + "__*):\n" + quoted(clip(d.Instructions, maxConnectorInstructions))
 		if b.Len()-len(base)+len(section)+len(relayedMore) > maxRelayedInstructions {
 			b.WriteString(relayedMore)
 			break
@@ -66,6 +78,6 @@ func (g *Gateway) instructed(ctx context.Context, req mcp.Request, res mcp.Resul
 		return
 	}
 	if fl, err := g.core.ListFunctions(ctx, p); err == nil {
-		*instructions = RelayedInstructions(SkillIndex(*instructions, fl.Skills), fl.Instructions)
+		*instructions = RelayedInstructions(SkillIndex(*instructions, fl.Skills), fl.Items)
 	}
 }

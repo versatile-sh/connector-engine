@@ -70,9 +70,15 @@ export type Connector = {
   functions: FunctionView[] | null;
   items?: Item[] | null;
   profiles: Profile[];
-  waiting?: Profile[];
+  slots: SlotProfile[];
   new_keys_off?: boolean;
 };
+
+/** What one permission set holds for one connector: its mode and overrides, never a credential. */
+export type SlotProfile = { slot: string; connector: string; alias: string; mode: ProfileMode; overrides?: Record<string, Access> };
+
+/** One permission set waiting to be given to an access key, with what it holds on each connector. */
+export type SlotView = { name: string; connectors: SlotProfile[] };
 
 export type ProbedTool = {
   name: string;
@@ -336,16 +342,21 @@ export type Account = { username: string; last_export?: string };
 /** A full backup carries every credential; a setup carries none and can be shared. */
 export type BackupKind = "full" | "setup";
 
-/** One connector of a setup: where it comes from, each choice, and whether it is installed here already. */
+/** One key's profile in a setup; every distinct key becomes one permission set on import. */
+export type SetupProfile = { agent: string; mode: ProfileMode; overrides?: Record<string, Access> };
+
+/** One connector of a setup: where it comes from, whether it reaches the importer's own machine, each choice, the choices this console lowers to its proposal, and whether it is installed here already. */
 export type SetupConnector = {
   name: string;
   mcp?: string;
   listing?: string;
   transport?: string;
+  local?: boolean;
   functions: Record<string, Access> | null;
   items: Record<string, Access> | null;
   new_keys_off?: boolean;
-  profiles?: Profile[];
+  profiles?: SetupProfile[];
+  above?: Record<string, Access>;
   exists: boolean;
 };
 
@@ -359,8 +370,21 @@ export type BackupSummary = {
   created_at?: string;
   counts: { connectors?: number; skills?: number; keys?: number; oauth_clients?: number } | null;
   replaces: boolean;
-  setup?: { connectors: SetupConnector[] | null; skills: SetupSkill[] | null; notifications: string[] | null; stripped: string[] | null };
+  setup?: { connectors: SetupConnector[] | null; skills: SetupSkill[] | null; notifications: string[] | null; stripped: string[] | null; slots?: SlotView[] };
 };
 
-/** What importing a setup did: added, kept because installed, failed with why, and the connectors to sign in to. */
-export type SetupResult = { added: string[] | null; kept: string[] | null; failed: Record<string, string> | null; sign_ins: string[] | null };
+/** What importing a setup did: added, kept because installed, failed with why, the connectors to sign in to, the permission sets kept and, by connector, the choices lowered. */
+export type SetupResult = {
+  added: string[] | null;
+  kept: string[] | null;
+  failed: Record<string, string> | null;
+  sign_ins: string[] | null;
+  slots: string[] | null;
+  capped: Record<string, Record<string, Access>> | null;
+};
+
+/** What a review answers for one permission set of a setup: keep it to give to a key later, apply it to a key made already, or discard it. */
+export type SlotChoice = { action: "keep" } | { action: "apply"; key: string } | { action: "discard" };
+
+/** The `options` of a setup's import: each set's choice by name, and whether the keys made already get the connectors it adds. */
+export type SetupOptions = { slots?: Record<string, SlotChoice>; existing_keys?: boolean };

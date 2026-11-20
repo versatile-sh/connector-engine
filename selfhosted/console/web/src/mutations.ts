@@ -1,6 +1,6 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
-import { accountQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries";
+import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session, type SetupOptions } from "./api";
+import { accountQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
 
@@ -59,16 +59,28 @@ export const dismissGuide = mutationOptions({
   onError: (_error, _variables, _onMutate, { client }) => invalidate(client, sessionQuery.queryKey),
 });
 
-/** Allows or denies an AI app asking to connect by OAuth; allowing takes the owner's password. */
+/** Allows or denies an AI app asking to connect by OAuth; allowing takes the owner's password and may give the new key a permission set. */
 export const decideConsent = mutationOptions({
-  mutationFn: ({ request, approve, password }: { request: string; approve: boolean; password: string }) =>
-    api<{ redirect: string }>("POST", `/api/oauth/requests/${at(request)}`, approve ? { approve, password } : { approve }),
+  mutationFn: ({ request, approve, password, slot }: { request: string; approve: boolean; password: string; slot?: string | undefined }) =>
+    api<{ redirect: string }>("POST", `/api/oauth/requests/${at(request)}`, approve ? { approve, password, slot } : { approve }),
 });
 
-/** Makes an access key; its token is in this answer only. */
+/** Makes an access key, with a permission set's permissions when one is named; its token is in this answer only. */
 export const mintKey = mutationOptions({
-  mutationFn: (key: { name: string; ttl_hours: number }) => api<AgentToken>("POST", "/api/agents", key),
-  onSuccess: (_token, _key, _onMutate, { client }) => invalidate(client, keysQuery.queryKey, sessionQuery.queryKey),
+  mutationFn: (key: { name: string; ttl_hours: number; slot?: string | undefined }) => api<AgentToken>("POST", "/api/agents", key),
+  onSuccess: (_token, key, _onMutate, { client }) => invalidate(client, keysQuery.queryKey, sessionQuery.queryKey, ...(key.slot ? [slotsQuery.queryKey, connectorsQuery.queryKey] : [])),
+});
+
+/** Gives a permission set to an access key made already; the set is used up. */
+export const claimSlot = mutationOptions({
+  mutationFn: ({ slot, key }: { slot: string; key: string }) => api("POST", `/api/slots/${at(slot, "claim")}`, { key }),
+  onSettled: (_data, _error, _claim, _onMutate, { client }) => invalidate(client, slotsQuery.queryKey, connectorsQuery.queryKey, keysQuery.queryKey),
+});
+
+/** Discards a permission set no key has claimed. */
+export const discardSlot = mutationOptions({
+  mutationFn: (slot: string) => api("DELETE", `/api/slots/${at(slot)}`),
+  onSettled: (_data, _error, _slot, _onMutate, { client }) => invalidate(client, slotsQuery.queryKey, connectorsQuery.queryKey),
 });
 
 /** Revokes an access key for good. */
@@ -118,13 +130,6 @@ export const setProfileAccess = mutationOptions({
 export const copyProfile = mutationOptions({
   mutationFn: ({ connector, from, keys }: { connector: string; from: string; keys: readonly string[] }) => api<{ keys: KeyResult[] }>("POST", `/api/connectors/${encodeURIComponent(connector)}/profiles:copy`, { from, keys }),
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
-});
-
-/** Forgets a setup's profile waiting on a connector for an access key not made yet, in the cached list at once; the list is read again only when the console refuses. */
-export const dropWaiting = mutationOptions({
-  mutationFn: ({ connector, agent }: { connector: string; agent: string }) => api("DELETE", `/api/connectors/${at(connector, "waiting", agent)}`),
-  onMutate: ({ connector, agent }, { client }) => patchConnector(client, connector, (c) => ({ ...c, waiting: c.waiting?.filter((p) => p.agent !== agent) })),
-  onError: (_error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 
 /** Makes the access keys made from now on start off on a connector, or follow it, in the cached list at once; the list is read again only when the console refuses. */
@@ -271,14 +276,15 @@ export const exportBackup = mutationOptions({
   onSuccess: (_file, _request, _onMutate, { client }) => invalidate(client, accountQuery.queryKey),
 });
 
-/** A backup file and its passphrase, empty for a setup, as a form; a signed-in full import adds the owner's password. */
-export type BackupUpload = { file: Blob; passphrase: string; password?: string };
+/** A backup file and its passphrase, empty for a setup, as a form; a signed-in full import adds the owner's password, a setup's import the review's options. */
+export type BackupUpload = { file: Blob; passphrase: string; password?: string; options?: SetupOptions | undefined };
 
-const formOf = ({ file, passphrase, password }: BackupUpload) => {
+const formOf = ({ file, passphrase, password, options }: BackupUpload) => {
   const form = new FormData();
   form.append("file", file);
   form.append("passphrase", passphrase);
   if (password !== undefined) form.append("password", password);
+  if (options !== undefined) form.append("options", JSON.stringify(options));
   return form;
 };
 
@@ -290,11 +296,11 @@ export const inspectBackup = mutationOptions({
 /** What an import answered: a full backup answers its summary and the console restarts; a setup answers what it did. */
 export type ImportOutcome = { kind: "full"; summary: BackupSummary } | { kind: "setup"; result: SetupResult };
 
-/** Imports a backup file; after a setup, connectors, skills and the session are read again, while after a full backup nothing is, as the console is restarting. */
+/** Imports a backup file; after a setup, connectors, skills, permission sets and the session are read again, while after a full backup nothing is, as the console is restarting. */
 export const importBackup = mutationOptions({
   mutationFn: async (upload: BackupUpload): Promise<ImportOutcome> => {
     const answer = await api<BackupSummary | SetupResult>("POST", "/api/backup/import", formOf(upload));
     return "added" in answer ? { kind: "setup", result: answer } : { kind: "full", summary: answer };
   },
-  onSuccess: (outcome, _upload, _onMutate, { client }) => (outcome.kind === "setup" ? invalidate(client, connectorsQuery.queryKey, skillsQuery.queryKey, sessionQuery.queryKey) : undefined),
+  onSuccess: (outcome, _upload, _onMutate, { client }) => (outcome.kind === "setup" ? invalidate(client, connectorsQuery.queryKey, skillsQuery.queryKey, slotsQuery.queryKey, sessionQuery.queryKey) : undefined),
 });

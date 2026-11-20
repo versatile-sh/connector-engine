@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { profileHref } from "../connectors/profiles";
+import { modeText, profileHref } from "../connectors/profiles";
 import { useT } from "../i18n/I18nProvider";
 import { connectorsQuery } from "../queries";
 import { navigate } from "../router";
@@ -41,7 +41,7 @@ export function KeyConnectors({ agent }: { agent: string }) {
               {connector.title}
             </a>
             <Tag tone={profile.mode === "custom" ? "paper" : "muted"} dot={profile.mode === "off"}>
-              {profile.mode === "custom" ? t("keys.modeCustom", { count: Object.keys(profile.overrides).length }) : t(`profile.mode.${profile.mode}`)}
+              {modeText(profile, t)}
             </Tag>
           </li>
         ))}

@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { apiQueryOf, type ActivityFilter } from "./activity/activity";
-import { api, setCsrf, type Account, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type Session, type Skill } from "./api";
+import { api, setCsrf, type Account, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type Session, type Skill, type SlotView } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -29,6 +29,13 @@ export const profileEffectsQuery = (connector: string, agent: string) =>
     queryFn: () => api<{ effects: Effect[] }>("GET", `/api/connectors/${encodeURIComponent(connector)}/profiles/${encodeURIComponent(agent)}`),
     select: (data) => data.effects,
   });
+
+/** The permission sets no access key has claimed yet. */
+export const slotsQuery = queryOptions({
+  queryKey: ["slots"],
+  queryFn: () => api<{ slots: SlotView[] }>("GET", "/api/slots"),
+  select: (data) => data.slots,
+});
 
 /** Every installed skill with each access key's choice. */
 export const skillsQuery = queryOptions({

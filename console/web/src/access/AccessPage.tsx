@@ -91,6 +91,13 @@ export function AccessPage() {
         <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
         {endpoint ? <CopyBox label={t("keys.endpoint")} text={endpoint} tone="card" className="mt-5 max-w-xl" /> : null}
       </header>
+      {endpoint ? (
+        <section aria-label={t("clients.title")} className={`${SURFACE} mb-10 p-5`}>
+          <ClientPicker url={endpoint} />
+        </section>
+      ) : null}
+      <h2 className="font-display text-xl font-bold tracking-[-0.03em]">{t("keys.advanced")}</h2>
+      <p className="mt-1 mb-5 max-w-2xl text-sm text-muted">{t("keys.advancedIntro")}</p>
       {mint.data ? <Created key={mint.data.token} token={mint.data} /> : null}
       <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>

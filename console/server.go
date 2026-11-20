@@ -54,11 +54,17 @@ type Console struct {
 	icons   map[string]icon
 	oauthMu sync.Mutex
 	oauth   map[string]pendingOAuth
+
+	asMu       sync.Mutex
+	pending    map[string]authRequest
+	codes      map[string]authCode
+	registered []time.Time
+	refreshMu  sync.Mutex
 }
 
 // Handler returns every route behind the guard.
 func (c *Console) Handler() http.Handler {
-	c.icons, c.oauth = map[string]icon{}, map[string]pendingOAuth{}
+	c.icons, c.oauth, c.pending, c.codes = map[string]icon{}, map[string]pendingOAuth{}, map[string]authRequest{}, map[string]authCode{}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/session", c.session)
 	mux.HandleFunc("POST /api/setup", c.setup)
@@ -79,12 +85,23 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
 	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
 	mux.HandleFunc("GET /api/icon", c.authed(c.icon))
-	agent := c.refuseRevoked(c.agentProxy())
+	agent := c.gateMCP(c.refuseRevoked(c.agentProxy()))
 	for _, m := range []string{"GET", "POST", "DELETE"} {
 		mux.Handle(m+" /mcp", agent)
 	}
-	mux.Handle("GET /.well-known/oauth-protected-resource", agent)
-	mux.Handle("GET /.well-known/oauth-protected-resource/mcp", agent)
+	for _, p := range []string{"/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"} {
+		mux.HandleFunc("GET "+p, c.protectedResource)
+		mux.HandleFunc("OPTIONS "+p, c.preflight)
+	}
+	mux.HandleFunc("GET /.well-known/oauth-authorization-server", c.authServerMetadata)
+	mux.HandleFunc("OPTIONS /.well-known/oauth-authorization-server", c.preflight)
+	mux.HandleFunc("POST /oauth/register", c.register)
+	mux.HandleFunc("OPTIONS /oauth/register", c.preflight)
+	mux.HandleFunc("POST /oauth/token", c.token)
+	mux.HandleFunc("OPTIONS /oauth/token", c.preflight)
+	mux.HandleFunc("GET /oauth/authorize", c.authorize)
+	mux.HandleFunc("GET /api/oauth/requests/{id}", c.authed(c.consentInfo))
+	mux.HandleFunc("POST /api/oauth/requests/{id}", c.authed(c.consent))
 	mux.HandleFunc("GET /", c.spa)
 	return c.Guard.Wrap(mux)
 }
@@ -585,11 +602,25 @@ func bearerClaims(header string) (agent string, iat int64, ok bool) {
 func (c *Console) refuseRevoked(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if agent, iat, ok := bearerClaims(r.Header.Get("Authorization")); ok && c.State.Revoked(agent, iat) {
-			w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token", error_description="the access key was revoked"`)
+			w.Header().Set("WWW-Authenticate", c.challengeValue(c.origin(r), `error="invalid_token", error_description="the access key was revoked"`))
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "the access key was revoked"})
 			return
 		}
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (c *Console) gateMCP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if r.Method == http.MethodGet && strings.Contains(r.Header.Get("Accept"), "text/html") {
+			http.Redirect(w, r, "/access", http.StatusSeeOther)
+			return
+		}
+		c.challenge(w, r, "")
 	})
 }
 
@@ -601,9 +632,13 @@ func (c *Console) agentProxy() http.Handler {
 			pr.SetURL(target)
 			pr.Out.Header.Del("Cookie")
 			pr.Out.Header.Del(csrfHeader)
+			pr.Out.Header.Set("X-Forwarded-Host", pr.In.Host)
 		},
 		ModifyResponse: func(resp *http.Response) error {
 			resp.Header.Del("Set-Cookie")
+			if resp.StatusCode == http.StatusUnauthorized {
+				resp.Header.Set("WWW-Authenticate", c.challengeValue(c.base(resp.Request.Header.Get("X-Forwarded-Host")), `error="invalid_token"`))
+			}
 			return nil
 		},
 	}

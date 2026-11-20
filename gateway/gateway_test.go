@@ -143,7 +143,7 @@ func TestApprovalInsideTheHoldWindowReturnsTheResult(t *testing.T) {
 		defer wg.Done()
 		deadline := time.Now().Add(4 * time.Second)
 		for time.Now().Before(deadline) {
-			open := st.Ok(w.Svc.ListApprovals(w.Ctx, w.alice, port.ApprovalFilter{States: []port.ApprovalState{port.ApprovalPending}}))
+			open := st.Ok(w.Svc.ListApprovals(w.Ctx, w.alice, port.ApprovalFilter{States: []port.ApprovalState{port.ApprovalPending}}, 0))
 			if len(open) > 0 {
 				st.Ok(w.Svc.DecideApproval(w.Ctx, w.alice, open[0].ID, port.DecisionApprove, "", "test"))
 				break

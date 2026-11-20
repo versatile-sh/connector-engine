@@ -23,15 +23,19 @@ func TestListCallsIsAuditOnlyAndPerTenant(t *testing.T) {
 		}
 		return nil
 	})
-	got := st.Ok(w.Svc.ListCalls(w.Ctx, w.admin, port.CallFilter{}))
+	got := st.Ok(w.Svc.ListCalls(w.Ctx, w.admin, port.CallFilter{}, 0))
 	want(t, len(got), 2, "an admin lists every call")
-	got = st.Ok(w.Svc.ListCalls(w.Ctx, w.admin, port.CallFilter{Agent: "y"}))
+	got = st.Ok(w.Svc.ListCalls(w.Ctx, w.admin, port.CallFilter{Agent: "y"}, 0))
 	want(t, len(got) == 1 && got[0].ID == "k2", true, "filtered by agent")
-	_, err := w.Svc.ListCalls(w.Ctx, w.alice, port.CallFilter{})
+	got = st.Ok(w.Svc.ListCalls(w.Ctx, w.admin, port.CallFilter{}, 1))
+	want(t, len(got) == 1 && got[0].ID == "k2", true, "a limit keeps the newest")
+	got = st.Ok(w.Svc.ListCalls(w.Ctx, w.admin, port.CallFilter{Since: st.Epoch.Add(1)}, 0))
+	want(t, len(got) == 1 && got[0].ID == "k2", true, "since keeps the later ones")
+	_, err := w.Svc.ListCalls(w.Ctx, w.alice, port.CallFilter{}, 0)
 	want(t, port.IsCode(err, port.CodePermissionDenied), true, "a person without audit role may not list calls")
 	other := w.TenantAdmin("t2")
 	st.Ok(w.Svc.CreateTenant(w.Ctx, w.Operator(), "t2"))
-	want(t, len(st.Ok(w.Svc.ListCalls(w.Ctx, other, port.CallFilter{}))), 0, "another tenant sees none")
+	want(t, len(st.Ok(w.Svc.ListCalls(w.Ctx, other, port.CallFilter{}, 0))), 0, "another tenant sees none")
 }
 
 func TestListSourcesShowsTheLastSync(t *testing.T) {

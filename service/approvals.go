@@ -50,8 +50,8 @@ func (s *Service) mayRead(ctx context.Context, p port.Principal, keys []string, 
 	return s.named(keys, tombs, p, a) || s.authorize(ctx, p, authz.ApprovalRead, authz.Workspace(string(a.Tenant), string(a.Workspace))) == nil
 }
 
-// ListApprovals returns the approvals the caller may read: those that name them or their groups unless they were removed, or all for an admin or auditor.
-func (s *Service) ListApprovals(ctx context.Context, p port.Principal, f port.ApprovalFilter) ([]port.Approval, error) {
+// ListApprovals returns the approvals the caller may read, oldest first and the newest limit of them when limit is positive: those that name them or their groups unless they were removed, or all for an admin or auditor.
+func (s *Service) ListApprovals(ctx context.Context, p port.Principal, f port.ApprovalFilter, limit int) ([]port.Approval, error) {
 	if err := s.authorize(ctx, p, authz.ConnectorRead, s.tenantResource(p)); err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (s *Service) ListApprovals(ctx context.Context, p port.Principal, f port.Ap
 			out = append(out, a)
 		}
 	}
-	return out, nil
+	return newest(out, limit), nil
 }
 
 // GetApproval returns one record with its arguments opened for this reader (§13.1 getApproval).

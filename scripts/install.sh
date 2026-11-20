@@ -5,7 +5,7 @@
 #
 # Settings, all optional:
 #   CONNECTOR_ENGINE_VERSION      a release tag such as v0.1.0; default: the latest release
-#   CONNECTOR_ENGINE_PROFILE      person (default: engine, console, cnctl) or headless (engine, cnctl)
+#   CONNECTOR_ENGINE_PROFILE      person (default: vsh) or headless (connector-engine and vsh)
 #   CONNECTOR_ENGINE_INSTALL_DIR  where the binaries go; default: $HOME/.local/bin
 #   CONNECTOR_ENGINE_BASE_URL     where the release files are; default: the GitHub release
 set -eu
@@ -31,8 +31,8 @@ case "$(uname -m)" in
 esac
 
 case "$profile" in
-  person) archive="connector-engine_${os}_${arch}.tar.gz"; binaries="connector-engine-selfhosted connector-console cnctl" ;;
-  headless) archive="connector-engine-headless_${os}_${arch}.tar.gz"; binaries="connector-engine cnctl" ;;
+  person) archive="connector-engine_${os}_${arch}.tar.gz"; binaries="vsh" ;;
+  headless) archive="connector-engine-headless_${os}_${arch}.tar.gz"; binaries="connector-engine vsh" ;;
   *) fail "CONNECTOR_ENGINE_PROFILE must be person or headless, not $profile" ;;
 esac
 
@@ -91,7 +91,7 @@ esac
 say ""
 if [ "$profile" = person ]; then
   say "Next step: start it; it opens the console in your browser."
-  say "  connector-engine-selfhosted up --open"
+  say "  vsh up --open"
 else
   say "Next step: write connector-engine.yaml and adapters.yaml, then run"
   say "  connector-engine --config connector-engine.yaml --adapters adapters.yaml adapters check"

@@ -58,12 +58,14 @@ func TestAListingWhoseServerIsOnThisComputerIsRefused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	listing := bytes.Replace(raw, []byte("https://mcp.example.com/mcp"), []byte("http://localhost:7998/mcp"), 1)
-	if bytes.Equal(listing, raw) {
-		t.Fatal("the fixture's remote URL moved")
-	}
-	b := previewConsole(t, &console.Console{LoopbackHost: "host.docker.internal", Fetch: func(context.Context, string, int64) ([]byte, error) { return listing, nil }})
-	if status, body := b.send("POST", "/api/preview", map[string]any{"listing": "https://listings.example/notes.yaml"}, nil); status != http.StatusBadRequest {
-		t.Fatalf("a listing with a server at localhost: %d %s", status, body)
+	for _, remote := range []string{"http://localhost:7998/mcp", "https://HOST.docker.internal/mcp"} {
+		listing := bytes.Replace(raw, []byte("https://mcp.example.com/mcp"), []byte(remote), 1)
+		if bytes.Equal(listing, raw) {
+			t.Fatal("the fixture's remote URL moved")
+		}
+		b := previewConsole(t, &console.Console{LoopbackHost: "host.docker.internal", Fetch: func(context.Context, string, int64) ([]byte, error) { return listing, nil }})
+		if status, body := b.send("POST", "/api/preview", map[string]any{"listing": "https://listings.example/notes.yaml"}, nil); status != http.StatusBadRequest {
+			t.Fatalf("a listing with its server at %s: %d %s", remote, status, body)
+		}
 	}
 }

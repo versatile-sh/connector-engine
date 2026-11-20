@@ -277,12 +277,17 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 	}); err != nil {
 		return out, err
 	}
+	qs := make([]port.SearchQuery, len(all))
+	for i, b := range all {
+		qs[i] = port.SearchQuery{Subject: sub, Connector: b.c.ID}
+	}
+	answers, err := s.search(ctx, sub.Tenant, qs)
+	if err != nil {
+		return out, err
+	}
 	bound := map[string]bool{}
-	for _, b := range all {
-		decisions, err := s.d.Authorizer.Search(ctx, sub, b.c.ID)
-		if err != nil {
-			return out, err
-		}
+	for i, b := range all {
+		decisions := answers[i]
 		if !b.skill {
 			bound[b.c.Listing.Listing.Name] = true
 		}

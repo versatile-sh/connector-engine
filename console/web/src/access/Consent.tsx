@@ -6,7 +6,20 @@ import { LanguageSwitch } from "../LanguageSwitch";
 import { Notice } from "../ui/Notice";
 import { SURFACE, button } from "../ui/styles";
 
-type ConsentRequest = { client: string; redirect: string };
+type Destination = { kind: "loopback"; port?: string } | { kind: "app"; app: string } | { kind: "scheme"; scheme: string };
+
+type ConsentRequest = { client: string; redirect: string; destination: Destination };
+
+const whereTo = (destination: Destination, t: ReturnType<typeof useT>) => {
+  switch (destination.kind) {
+    case "loopback":
+      return destination.port ? t("consent.to.loopback", { port: destination.port }) : t("consent.to.loopbackAnyPort");
+    case "app":
+      return destination.app;
+    case "scheme":
+      return t("consent.to.scheme", { scheme: destination.scheme });
+  }
+};
 
 /** The owner's answer to an AI app asking to connect by OAuth: allow or deny, then the browser goes back to the app. */
 export function Consent({ id }: { id: string }) {
@@ -43,7 +56,10 @@ export function Consent({ id }: { id: string }) {
               {t("consent.title", { client })}
             </h1>
             <p className="mt-3 text-muted">{t("consent.body", { client })}</p>
-            <p className="mt-3 font-mono text-xs text-muted [overflow-wrap:anywhere]">
+            <p className="mt-4 text-sm">
+              <span className="text-muted">{t("consent.goesTo")}</span> <strong className="font-semibold">{whereTo(request.data.destination, t)}</strong>
+            </p>
+            <p className="mt-1 font-mono text-xs text-muted [overflow-wrap:anywhere]" translate="no">
               {t("consent.returns", { target: request.data.redirect })}
             </p>
             {done ? (

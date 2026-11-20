@@ -320,6 +320,13 @@ func TestTheHostkeyAdapterReportsHowItsRootKeyRests(t *testing.T) {
 	}
 	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:hostkey}", 1)
 	e := boot(t, cfg, adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
+	if doc := adaptersDocument(t, e); !strings.Contains(doc, "secrets.root_key_plaintext") {
+		t.Fatalf("/v1/adapters: %s", doc)
+	}
+}
+
+func adaptersDocument(t *testing.T, e *engine) string {
+	t.Helper()
 	req, _ := http.NewRequest(http.MethodGet, e.operator+"/v1/adapters", nil)
 	req.Header.Set("Authorization", "Bearer op-secret")
 	res, err := http.DefaultClient.Do(req)
@@ -328,7 +335,30 @@ func TestTheHostkeyAdapterReportsHowItsRootKeyRests(t *testing.T) {
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
-	if res.StatusCode != http.StatusOK || !strings.Contains(string(body), "secrets.root_key_plaintext") {
-		t.Fatalf("/v1/adapters: %d\n%s", res.StatusCode, body)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("/v1/adapters: %d %s", res.StatusCode, body)
+	}
+	return string(body)
+}
+
+func TestTheOnePasswordAdapterReadsItsTokenByReference(t *testing.T) {
+	connect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer op-connect" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		fmt.Fprintf(w, `{"fields":[{"id":"f","label":"unlock","value":%q}]}`, strings.Repeat("5a", 32))
+	}))
+	defer connect.Close()
+	cfg := devConfig(t)
+	cfg.Secrets.Adapter, cfg.Secrets.Dir = "onepassword", t.TempDir()
+	cfg.Secrets.OnePassword = config.OnePassword{ConnectURL: connect.URL, TokenRef: "env:OP_CONNECT_TOKEN", Vault: "v", Item: "i", Field: "unlock"}
+	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:onepassword}", 1)
+	e := boot(t, cfg, adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret", "OP_CONNECT_TOKEN": "op-connect"})
+	if doc := adaptersDocument(t, e); !strings.Contains(doc, `"onepassword"`) {
+		t.Fatalf("/v1/adapters: %s", doc)
+	}
+	if _, err := os.Stat(filepath.Join(cfg.Secrets.Dir, "root.key.wrapped")); err != nil {
+		t.Fatalf("the root key rests wrapped: %v", err)
 	}
 }

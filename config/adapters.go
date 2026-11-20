@@ -56,8 +56,8 @@ func (c Config) secretsDefault() []string {
 	switch c.Secrets.Adapter {
 	case "memory":
 		return []string{adapters.TierMemory}
-	case "hostkey":
-		return use(adapters.TierBuiltin, "hostkey")
+	case "hostkey", "onepassword":
+		return use(adapters.TierBuiltin, c.Secrets.Adapter)
 	}
 	return use(adapters.TierBuiltin, "localfile")
 }
@@ -76,9 +76,10 @@ func (c Config) AdaptersSpec() adapters.Spec {
 		PortStore: {Default: use(adapters.TierBuiltin, "postgres"), Builtins: []string{"postgres"}, Memory: true, Stateful: true,
 			Capabilities:  map[string][]string{"memory": {"store.volatile"}, "builtin:postgres": {"store.transactional_outbox", "store.row_level_security"}},
 			BuiltinConfig: map[string]map[string]adapters.ConfigKind{"builtin:postgres": {"databaseUrlRef": adapters.ConfigRef}}},
-		PortSecrets: {Default: c.secretsDefault(), Builtins: []string{"localfile", "hostkey"}, Memory: true, Stateful: true, Sensitive: true,
+		PortSecrets: {Default: c.secretsDefault(), Builtins: []string{"localfile", "hostkey", "onepassword"}, Memory: true, Stateful: true, Sensitive: true,
 			Capabilities: map[string][]string{"builtin:localfile": {"secrets.envelope", "secrets.crypto_shredding"}, "builtin:hostkey": {"secrets.envelope", "secrets.crypto_shredding"},
-				"memory": {"secrets.volatile"}}},
+				"builtin:onepassword": {"secrets.envelope", "secrets.crypto_shredding", "secrets.root_key_wrapped"},
+				"memory":              {"secrets.volatile"}}},
 		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Builtins: []string{"jwks", "local"}, Sensitive: true, Weak: []string{"builtin:local"}},
 		PortRuntime: {Default: c.runtimeDefault(), Builtins: []string{"remote", "declarative", "grpc", "skill"}, Memory: true, Multi: true},
 		PortSource:  {Default: c.sourceDefault(), Builtins: []string{"files", "official", "docker", "openapi", "reflection", "bsr", "skillcatalog"}, Memory: true, Multi: true},

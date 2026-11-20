@@ -320,12 +320,22 @@ type Credentials struct {
 	Clients           []OAuthClient `yaml:"clients"`
 }
 
-// Secrets is secrets.*; Dir is where the localfile and hostkey adapters keep their root key, UnlockSocket where hostkey waits for the host's unlock key.
+// Secrets is secrets.*; Dir is where the file-backed adapters keep their root key, UnlockSocket where hostkey waits for the host's unlock key.
 type Secrets struct {
 	Adapter      string        `yaml:"adapter"`
 	DataKeyCache time.Duration `yaml:"dataKeyCache"`
 	Dir          string        `yaml:"dir"`
 	UnlockSocket string        `yaml:"unlockSocket"`
+	OnePassword  OnePassword   `yaml:"onePassword"`
+}
+
+// OnePassword is secrets.onePassword: the Connect server, a reference to its token, and the vault id, item id and field label of the unlock key.
+type OnePassword struct {
+	ConnectURL string `yaml:"connectUrl"`
+	TokenRef   string `yaml:"tokenRef"`
+	Vault      string `yaml:"vault"`
+	Item       string `yaml:"item"`
+	Field      string `yaml:"field"`
 }
 
 // Container is runtime.container; no container runtime ships in this build (OD-20).

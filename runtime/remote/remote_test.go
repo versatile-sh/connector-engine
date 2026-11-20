@@ -32,9 +32,9 @@ func (u *upstream) authorizations() []string {
 	return append([]string(nil), u.auth...)
 }
 
-func newUpstream(t *testing.T, opts *mcp.StreamableHTTPOptions) *upstream {
+func newUpstream(t *testing.T, opts *mcp.StreamableHTTPOptions, versions ...string) *upstream {
 	t.Helper()
-	srv := mcp.NewServer(&mcp.Implementation{Name: "upstream", Version: "1"}, &mcp.ServerOptions{Instructions: "use with care"})
+	srv := mcp.NewServer(&mcp.Implementation{Name: "upstream", Version: "1"}, &mcp.ServerOptions{Instructions: "use with care", SupportedProtocolVersions: versions})
 	schema := map[string]any{"type": "object"}
 	no := false
 	for _, tool := range []*mcp.Tool{
@@ -165,5 +165,66 @@ func TestStartRefusesNonPublicAddressesUnlessAllowed(t *testing.T) {
 	}
 	if _, err := remote.New(credential.Applier{}, nil, egress.Guard{Hosts: []string{"127.0.0.1"}}).Start(ctx, port.Connector{}, m, port.SecretsRef{}); err != nil {
 		t.Fatalf("an operator-listed host is dialled: %v", err)
+	}
+}
+
+func insideAgentRequest(t *testing.T, era string, fn func(context.Context) error) {
+	t.Helper()
+	front := mcp.NewServer(&mcp.Implementation{Name: "gateway", Version: "1"}, nil)
+	front.AddTool(&mcp.Tool{Name: "run", InputSchema: map[string]any{"type": "object"}}, func(ctx context.Context, _ *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return &mcp.CallToolResult{}, fn(ctx)
+	})
+	srv := httptest.NewServer(mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return front }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}))
+	defer srv.Close()
+	ctx := context.Background()
+	cs, err := mcp.NewClient(&mcp.Implementation{Name: "agent", Version: "1"}, nil).Connect(ctx, &mcp.StreamableClientTransport{Endpoint: srv.URL}, &mcp.ClientSessionOptions{ProtocolVersion: era})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cs.Close()
+	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "run"})
+	if err != nil || res.IsError {
+		t.Fatalf("agent request on %s: %v %+v", era, err, res)
+	}
+}
+
+func TestReconnectsAfterRestartToEveryProtocolEra(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		opts     *mcp.StreamableHTTPOptions
+		versions []string
+		era      string
+	}{
+		{"only 2025-06-18", nil, []string{"2025-06-18"}, "2025-06-18"},
+		{"only 2025-03-26", &mcp.StreamableHTTPOptions{JSONResponse: true}, []string{"2025-03-26"}, "2025-03-26"},
+		{"only 2026-07-28", &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}, []string{"2026-07-28"}, "2026-07-28"},
+		{"both eras", &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true}, []string{"2026-07-28", "2025-06-18"}, "2026-07-28"},
+	} {
+		for _, agent := range []string{"2026-07-28", "2025-06-18"} {
+			t.Run(tc.name+" from a "+agent+" agent", func(t *testing.T) {
+				up := newUpstream(t, tc.opts, tc.versions...)
+				for boot := range 2 {
+					rt, m := runtimeFor(up.URL)
+					insideAgentRequest(t, agent, func(ctx context.Context) error {
+						h, err := rt.Start(ctx, port.Connector{}, m, port.SecretsRef{Credential: "c1"})
+						if err != nil {
+							t.Errorf("boot %d: %v", boot, err)
+							return nil
+						}
+						defer rt.Stop(ctx, h)
+						if _, meta, err := rt.ListFunctions(ctx, h); err != nil || meta.ProtocolVersion != tc.era {
+							t.Errorf("boot %d: list %v %+v", boot, err, meta)
+						}
+						if res, err := rt.Call(ctx, h, "plain", nil, time.Now().Add(5*time.Second)); err != nil || res.IsError {
+							t.Errorf("boot %d: call %v %+v", boot, err, res)
+						}
+						if _, err := rt.ListContent(ctx, h); err != nil {
+							t.Errorf("boot %d: content %v", boot, err)
+						}
+						return nil
+					})
+				}
+			})
+		}
 	}
 }

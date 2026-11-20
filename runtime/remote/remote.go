@@ -27,6 +27,10 @@ type page struct {
 	TTLMs      int64             `json:"ttlMs"`
 }
 
+type valueless struct{ context.Context }
+
+func (valueless) Value(any) any { return nil }
+
 type instance struct {
 	session *mcp.ClientSession
 	capture *capture
@@ -52,7 +56,7 @@ func (*Runtime) Describe() port.RuntimeCapabilities {
 	return port.RuntimeCapabilities{Kinds: []port.Kind{port.KindMCPRemote}, Isolation: "none", Egress: "listing host"}
 }
 
-// Start connects to the listing's remote address and negotiates the newest protocol era both sides speak.
+// Start connects to the listing's remote address, ignoring the caller's context values, and negotiates the newest era both sides speak.
 func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, secrets port.SecretsRef) (port.Handle, error) {
 	if m.Kind != port.KindMCPRemote || m.Remote == nil {
 		return "", port.Errorf(port.CodeInvalidManifest, "the remote runtime serves mcp_remote listings with a remote address")
@@ -70,7 +74,7 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	}
 	capt := &capture{next: credential.Transport{Base: base, Applier: r.applier, Ref: secrets, AllowHosts: []string{u.Host}}}
 	client := mcp.NewClient(&mcp.Implementation{Name: "connector-engine", Version: "0"}, nil)
-	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
+	session, err := client.Connect(valueless{ctx}, &mcp.StreamableClientTransport{
 		Endpoint:             m.Remote.URL,
 		HTTPClient:           &http.Client{Transport: capt},
 		DisableStandaloneSSE: true,

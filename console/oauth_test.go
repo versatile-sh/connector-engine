@@ -205,10 +205,11 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	var engineMeta struct {
 		AuthorizationServers []string `json:"authorization_servers"`
 	}
-	if r, err := http.Get(o.public + "/.well-known/oauth-protected-resource"); err == nil {
-		_ = json.NewDecoder(r.Body).Decode(&engineMeta)
-		r.Body.Close()
+	r, err := http.Get(o.public + "/.well-known/oauth-protected-resource")
+	if err != nil || r.StatusCode != http.StatusOK || json.NewDecoder(r.Body).Decode(&engineMeta) != nil {
+		t.Fatalf("the engine's own metadata: %v %v", r, err)
 	}
+	r.Body.Close()
 	if slices.Contains(engineMeta.AuthorizationServers, o.base) {
 		t.Fatalf("the engine's own metadata changed: %v", engineMeta)
 	}
@@ -335,6 +336,15 @@ func TestTheAuthorizationServerRefusesWhatTheSpecForbids(t *testing.T) {
 		if resp := o.startAuthorize(with("redirect_uri", redirect)); resp.StatusCode != http.StatusBadRequest || resp.Header.Get("Location") != "" {
 			t.Errorf("an unregistered redirect %s: %d %s", redirect, resp.StatusCode, resp.Header.Get("Location"))
 		}
+	}
+	status, vscode := o.register("https://insiders.vscode.dev/redirect", "https://vscode.dev/redirect", "http://127.0.0.1/", "http://127.0.0.1:33418/")
+	if uris, _ := vscode["redirect_uris"].([]any); status != http.StatusCreated || len(uris) != 2 {
+		t.Fatalf("the VS Code registration: %d %v", status, vscode)
+	}
+	vs := with("client_id", vscode["client_id"].(string))
+	vs.Set("redirect_uri", "http://127.0.0.1:51234/")
+	if resp := o.startAuthorize(vs); resp.StatusCode != http.StatusSeeOther || !strings.HasPrefix(resp.Header.Get("Location"), "/connect?request=") {
+		t.Errorf("VS Code's loopback server on a free port: %d %s", resp.StatusCode, resp.Header.Get("Location"))
 	}
 	if resp := o.startAuthorize(with("client_id", "nobody")); resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("an unknown client: %d", resp.StatusCode)

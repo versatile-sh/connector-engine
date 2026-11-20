@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { Profile } from "../api.ts";
-import { commonMode, overrideCount, profileAccess, profileHref, wider } from "./profiles.ts";
+import { commonMode, keysWithOverrides, overrideCount, profileAccess, profileHref, wider } from "./profiles.ts";
 
 const custom: Profile = { agent: "beta", mode: "custom", overrides: { lookup: "off", file: "ask" } };
 
@@ -50,6 +50,12 @@ describe("overrideCount", () => {
 
   test("is zero for a key that follows", () => {
     assert.equal(overrideCount({ agent: "alpha", mode: "follow" }), 0);
+  });
+});
+
+describe("keysWithOverrides", () => {
+  test("counts the keys that would lose overrides", () => {
+    assert.equal(keysWithOverrides([custom, { agent: "a", mode: "follow" }, { agent: "b", mode: "off" }]), 1);
   });
 });
 

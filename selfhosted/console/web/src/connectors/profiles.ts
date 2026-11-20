@@ -16,6 +16,9 @@ export const profileAccess = (profile: Profile, name: string, base: Access): { a
 /** How many functions and items a profile narrows. */
 export const overrideCount = (profile: Profile) => (profile.mode === "custom" ? Object.keys(profile.overrides).length : 0);
 
+/** How many of these keys would lose overrides if set to off or the default. */
+export const keysWithOverrides = (profiles: readonly Profile[]) => profiles.filter((profile) => overrideCount(profile) > 0).length;
+
 /** The mode every key shares when it is off or follow, or nothing when they differ, one is custom, or there is none. */
 export const commonMode = (profiles: readonly Profile[]): Exclude<ProfileMode, "custom"> | undefined => {
   const first = profiles[0]?.mode;

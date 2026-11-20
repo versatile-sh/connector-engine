@@ -1,14 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { errorText, type Connector, type Profile, type ProfileMode } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { dropWaiting, setNewKeysOff, setProfileMode } from "../mutations";
 import { navigate } from "../router";
 import { Choice } from "../ui/Choice";
+import { InlineConfirm } from "../ui/InlineConfirm";
 import { Select } from "../ui/Select";
 import { Switch } from "../ui/Switch";
 import { CAPTION, WELL, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
-import { commonMode, overrideCount, profileHref } from "./profiles";
+import { commonMode, keysWithOverrides, overrideCount, profileHref } from "./profiles";
 
 const MODES: readonly ProfileMode[] = ["off", "follow", "custom"];
 
@@ -69,9 +71,12 @@ export function DefaultBar({ connector }: { connector: Connector }) {
   const t = useT();
   const every = useMutation(setProfileMode);
   const newKeys = useMutation(setNewKeysOff);
+  const [asking, setAsking] = useState<"off" | "follow">();
+  const losing = keysWithOverrides(connector.profiles);
+  const setEvery = (mode: "off" | "follow") => every.mutate({ connector: connector.id, mode }, { onSuccess: () => setAsking(undefined) });
   const count = (mode: ProfileMode) => connector.profiles.filter((p) => p.mode === mode).length;
   const kept = every.data?.keys.filter((key) => key.error) ?? [];
-  const error = every.isError ? errorText(every.error) : newKeys.isError ? errorText(newKeys.error) : kept.length > 0 ? t("profile.everyKeyKept", { keys: kept.map((key) => key.agent).join(", ") }) : "";
+  const error = every.isError && !asking ? errorText(every.error) : newKeys.isError ? errorText(newKeys.error) : kept.length > 0 ? t("profile.everyKeyKept", { keys: kept.map((key) => key.agent).join(", ") }) : "";
   return (
     <div className={`${WELL} @container divide-y divide-line`}>
       {connector.profiles.length > 1 ? (
@@ -85,8 +90,22 @@ export function DefaultBar({ connector }: { connector: Connector }) {
             disabled={every.isPending}
             value={every.isPending && every.variables.mode !== "custom" ? every.variables.mode : commonMode(connector.profiles)}
             options={(["off", "follow"] as const).map((mode) => ({ value: mode, text: t(`profile.mode.${mode}`), hint: t(`profile.everyKeyHint.${mode}`) }))}
-            onChange={(mode) => every.mutate({ connector: connector.id, mode })}
+            onChange={(mode) => (losing > 0 ? setAsking(mode) : setEvery(mode))}
           />
+          {asking ? (
+            <div className="w-full">
+              <InlineConfirm
+                label={t("profile.everyKeyLabel", { connector: connector.title })}
+                question={t("profile.dropAllAsk", { count: losing, mode: t(`profile.mode.${asking}`) })}
+                confirm={t("profile.dropConfirm")}
+                working={t("profile.dropping")}
+                busy={every.isPending}
+                error={every.isError ? errorText(every.error) : undefined}
+                onCancel={() => setAsking(undefined)}
+                onConfirm={() => setEvery(asking)}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="px-4 py-3 sm:px-5">
@@ -108,13 +127,15 @@ type KeyBarProps = { connector: Connector; profile: Profile; mode: ProfileMode; 
 export function KeyBar({ connector, profile, mode, onCustom, onLeave }: KeyBarProps) {
   const t = useT();
   const set = useMutation(setProfileMode);
+  const [asking, setAsking] = useState<"off" | "follow">();
   const refused = set.data?.keys.find((key) => key.error)?.error;
-  const choose = (next: ProfileMode) => {
+  const overrides = overrideCount(profile);
+  const apply = (next: ProfileMode) => {
     if (next === "custom") onCustom();
     else onLeave();
-    if (next !== "custom" || profile.mode === "off") set.mutate({ connector: connector.id, mode: next, keys: [profile.agent] });
+    if (next !== "custom" || profile.mode === "off") set.mutate({ connector: connector.id, mode: next, keys: [profile.agent] }, { onSuccess: () => setAsking(undefined) });
   };
-  const overrides = overrideCount(profile);
+  const choose = (next: ProfileMode) => (next !== "custom" && overrides > 0 ? setAsking(next) : apply(next));
   return (
     <div className={`${WELL} @container px-4 py-3 sm:px-5`}>
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
@@ -136,8 +157,20 @@ export function KeyBar({ connector, profile, mode, onCustom, onLeave }: KeyBarPr
       <p key={mode} className="swap-in mt-2 max-w-2xl text-sm text-pretty text-muted">
         {t(`profile.note.${mode}`, { key: profile.agent })}
       </p>
+      {asking ? (
+        <InlineConfirm
+          label={t("profile.modeLabel", { key: profile.agent, connector: connector.title })}
+          question={t("profile.dropAsk", { count: overrides, key: profile.agent, mode: t(`profile.mode.${asking}`) })}
+          confirm={t("profile.dropConfirm")}
+          working={t("profile.dropping")}
+          busy={set.isPending}
+          error={set.isError ? errorText(set.error) : undefined}
+          onCancel={() => setAsking(undefined)}
+          onConfirm={() => apply(asking)}
+        />
+      ) : null}
       <p role="alert" className="mt-2 text-sm text-amber-400 empty:hidden">
-        {set.isError ? errorText(set.error) : (refused ?? "")}
+        {set.isError && !asking ? errorText(set.error) : (refused ?? "")}
       </p>
     </div>
   );

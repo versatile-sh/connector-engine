@@ -58,6 +58,7 @@ A connector keeps one credential that every key shares; keys differ only in perm
 - A row whose engine answer differs from the console's choice says so, with the engine's reason (for example `forced_ask` from the exposure check). The console reads it from `/v1/access:explain`.
 - Off unbinds the key, which drops its overrides; turning it back to custom starts from the default.
 - **Every key** sets all keys to off or the default in one request, which reports each key's result; either drops every key's overrides.
+- Off or the default asks first, in place, when it would drop overrides; with none to lose it applies at once.
 - **New keys start off** makes keys made from then on start off on this connector; by default they follow it. Renewing a key keeps its profile on every connector.
 - Always allow on a held call also removes the calling key's override of that function.
 - The **Access** page lists, for each key, every connector with its mode and a link to its profile.

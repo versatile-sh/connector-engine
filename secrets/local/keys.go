@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/versatile-sh/connector-engine/internal/atomicfile"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/secrets/internal/ring"
 )
@@ -81,11 +82,11 @@ func (s *Store) Restore(k Keys, then func() error) error {
 	}
 	err := s.write(nextFile, k.Root)
 	if err == nil {
-		err = writeFile(filepath.Join(s.dir, stateFile)+stagedExt, k.State)
+		err = atomicfile.Write(filepath.Join(s.dir, stateFile)+stagedExt, k.State)
 	}
 	for name, b := range k.Files {
 		if err == nil {
-			err = writeFile(filepath.Join(s.dir, name)+stagedExt, b)
+			err = atomicfile.Write(filepath.Join(s.dir, name)+stagedExt, b)
 		}
 	}
 	if err == nil {

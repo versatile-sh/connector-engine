@@ -80,22 +80,17 @@ func (c *Console) skillPreview(e skillcatalog.Entry) SkillPreview {
 		Digest:     e.Digest(), Files: fileViews(e.SkillFiles()), Keys: keys}
 }
 
-func (c *Console) manifestOf(ctx context.Context, conn port.Connector) (port.Manifest, error) {
-	var lv port.ListingVersion
-	ref := conn.Listing
-	err := c.Engine.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", c.Engine.Workspace, "owner", string(ref.Listing.Owner), "name", ref.Listing.Name, "version", ref.Version), nil, &lv)
-	return lv.Manifest, err
-}
-
 func (c *Console) skillFunction(ctx context.Context, conn string) (port.Function, error) {
-	var fns items[port.Function]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn)+"/functions", nil, &fns); err != nil {
+	fns, err := c.Engine.functions(ctx, conn)
+	if err != nil {
 		return port.Function{}, err
 	}
-	for _, f := range fns.Items {
-		if f.State != port.FunctionRemoved {
-			return f, nil
-		}
+	return liveFunction(conn, fns)
+}
+
+func liveFunction(conn string, fns []port.Function) (port.Function, error) {
+	if i := slices.IndexFunc(fns, func(f port.Function) bool { return f.State != port.FunctionRemoved }); i >= 0 {
+		return fns[i], nil
 	}
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "skill " + conn + " has no function"}
 }
@@ -105,52 +100,26 @@ func (c *Console) InstallSkill(ctx context.Context, m port.Manifest, a Access) (
 	if m.Kind != port.KindSkill || m.Skill == nil {
 		return "", invalid("the listing is not a skill")
 	}
-	lv, err := c.createListing(ctx, m)
-	if err != nil {
-		return "", err
-	}
-	ref := lv.Ref.Listing
-	if err := c.openToWorkspace(ctx, string(ref.Owner)+"/"+ref.Name); err != nil {
-		return "", err
-	}
-	alias, err := c.freeAlias(ctx, m.Skill.Name)
-	if err != nil {
-		return "", err
-	}
-	var view connectorView
-	if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors", map[string]any{"workspace": c.Engine.Workspace, "alias": alias, "listing": ref, "version": lv.Ref.Version}, &view); err != nil {
-		return "", err
-	}
-	conn := string(view.Connector.ID)
-	f, err := c.skillFunction(ctx, conn)
+	conn, fns, err := c.installListing(ctx, m, func(port.ListingRef) string { return m.Skill.Name })
 	if err != nil {
 		return conn, err
 	}
-	if f.State == port.FunctionQuarantined {
-		if err := c.Engine.Call(ctx, http.MethodPost, "/v1/connectors/"+esc(conn)+"/functions:accept", map[string]any{"seen": map[string]port.Hash{f.Name: f.DefinitionHash}}, nil); err != nil {
-			return conn, err
-		}
-	}
-	if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/level", map[string]any{"level": port.LevelCustom}, nil); err != nil {
+	f, err := liveFunction(conn, fns)
+	if err != nil {
 		return conn, err
 	}
-	if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/functions/"+esc(f.Name)+"/class", map[string]any{"class": port.ClassRead}, nil); err != nil {
+	if _, err := c.Engine.setClass(ctx, conn, f.Name, port.ClassRead); err != nil {
 		return conn, err
 	}
 	g := port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorFunction + f.Name, Mode: port.ModeAllow, DefinitionHash: f.DefinitionHash}
-	if err := c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil); err != nil {
+	if err := c.Engine.createGrant(ctx, g); err != nil {
 		return conn, err
 	}
-	for _, ag := range c.liveAgents() {
-		if err := c.bindSkill(ctx, conn, ag, a); err != nil {
-			return conn, err
-		}
-	}
-	return conn, nil
+	return conn, c.bindAll(ctx, conn, func(ctx context.Context, conn string, ag Agent) error { return c.bindSkill(ctx, conn, ag, a) })
 }
 
 func (c *Console) bindSkill(ctx context.Context, conn string, a Agent, access Access) error {
-	if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/bindings/"+esc(a.Name), map[string]any{"credential_policy": port.CredentialShared, "ask_requester": true}, nil); err != nil {
+	if err := c.Engine.bind(ctx, conn, a.Name); err != nil {
 		return err
 	}
 	return c.setKeyRow(ctx, conn, a, access)
@@ -161,22 +130,18 @@ func (c *Console) setKeyRow(ctx context.Context, conn string, a Agent, access Ac
 	if err != nil {
 		return err
 	}
-	var rows items[port.Grant]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/grants"+q("scope_kind", string(port.ScopeAgent), "scope_id", a.Name, "connector", conn), nil, &rows); err != nil {
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, a.Name, conn)
+	if err != nil {
 		return err
 	}
-	for _, g := range rows.Items {
-		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil && !IsCode(err, "not_found") {
-			return err
-		}
+	if err := c.Engine.deleteGrants(ctx, rows); err != nil {
+		return err
 	}
-	mode := map[Access]port.Mode{AccessOn: port.ModeAllow, AccessAsk: port.ModeAskOnce}[access]
-	if mode == "" {
+	if access == AccessOff {
 		return nil
 	}
-	g := port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a.Name, Agent: port.AgentID(a.Name), Connector: port.ConnectorID(conn), Selector: port.SelectorFunction + f.Name,
-		Mode: mode, DefinitionHash: f.DefinitionHash, ExpiresAt: a.ExpiresAt}
-	return c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil)
+	return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a.Name, Agent: port.AgentID(a.Name), Connector: port.ConnectorID(conn), Selector: port.SelectorFunction + f.Name,
+		Mode: access.mode(), DefinitionHash: f.DefinitionHash, ExpiresAt: a.ExpiresAt})
 }
 
 // SetSkillAccess writes the owner's choice for one access key on one skill: off removes its row, on allows, ask asks once per session.
@@ -189,13 +154,13 @@ func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access
 	if i < 0 {
 		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + agent}
 	}
-	var v connectorView
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn), nil, &v); err != nil {
+	v, err := c.Engine.connector(ctx, conn)
+	if err != nil {
 		return err
 	}
-	if skill, err := c.isSkill(ctx, v.Connector); err != nil {
+	if skill, err := c.isSkill(ctx, v); err != nil {
 		return err
-	} else if !skill || !v.Connector.RemovedAt.IsZero() {
+	} else if !skill || !v.RemovedAt.IsZero() {
 		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
 	}
 	return c.bindSkill(ctx, conn, agents[i], access)
@@ -203,19 +168,20 @@ func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access
 
 // Skills lists the workspace's installed skills with each access key's choice and the required connectors not installed.
 func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
-	var list items[connectorView]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
+	live, err := c.Engine.liveConnectors(ctx)
+	if err != nil {
 		return nil, err
 	}
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, "", "")
+	if err != nil {
+		return nil, err
+	}
+	agents := c.liveAgents()
 	installed := map[string]bool{}
 	var skills []SkillSummary
 	var requires [][]string
-	for _, v := range list.Items {
-		conn := v.Connector
-		if !conn.RemovedAt.IsZero() {
-			continue
-		}
-		m, err := c.manifestOf(ctx, conn)
+	for _, conn := range live {
+		m, err := c.Engine.manifest(ctx, conn)
 		if err != nil {
 			return nil, err
 		}
@@ -230,43 +196,28 @@ func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
 		if f, err := c.skillFunction(ctx, string(conn.ID)); err == nil {
 			sum.State = string(f.State)
 		}
-		for _, a := range c.liveAgents() {
+		for _, a := range agents {
 			sum.Keys = append(sum.Keys, a.Name)
-			access, err := c.keyAccess(ctx, string(conn.ID), a.Name)
-			if err != nil {
-				return nil, err
-			}
-			sum.Access = append(sum.Access, KeyAccess{Agent: a.Name, Access: access})
+			sum.Access = append(sum.Access, KeyAccess{Agent: a.Name, Access: skillAccess(rows, string(conn.ID), a.Name)})
 		}
 		skills = append(skills, sum)
 		requires = append(requires, s.Requires)
 	}
 	for i := range skills {
-		for _, r := range requires[i] {
-			if !installed[r] {
-				skills[i].Unbound = append(skills[i].Unbound, r)
-			}
-		}
+		skills[i].Unbound = port.Missing(requires[i], installed)
 	}
 	return skills, nil
 }
 
+func skillAccess(rows []port.Grant, conn, agent string) Access {
+	return accessOf(rows, func(g port.Grant) bool {
+		return string(g.Connector) == conn && g.ScopeID == agent && strings.HasPrefix(g.Selector, port.SelectorFunction)
+	})
+}
+
 func (c *Console) keyAccess(ctx context.Context, conn, agent string) (Access, error) {
-	var rows items[port.Grant]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/grants"+q("scope_kind", string(port.ScopeAgent), "scope_id", agent, "connector", conn), nil, &rows); err != nil {
-		return AccessOff, err
-	}
-	for _, g := range rows.Items {
-		if strings.HasPrefix(g.Selector, port.SelectorFunction) {
-			switch g.Mode {
-			case port.ModeAllow:
-				return AccessOn, nil
-			case port.ModeAsk, port.ModeAskOnce:
-				return AccessAsk, nil
-			}
-		}
-	}
-	return AccessOff, nil
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, agent, conn)
+	return skillAccess(rows, conn, agent), err
 }
 
 func (c *Console) rebindSkill(ctx context.Context, conn string, a Agent) error {
@@ -278,6 +229,6 @@ func (c *Console) rebindSkill(ctx context.Context, conn string, a Agent) error {
 }
 
 func (c *Console) isSkill(ctx context.Context, conn port.Connector) (bool, error) {
-	m, err := c.manifestOf(ctx, conn)
+	m, err := c.Engine.manifest(ctx, conn)
 	return m.Kind == port.KindSkill, err
 }

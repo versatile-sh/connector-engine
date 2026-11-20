@@ -1,13 +1,13 @@
 package console
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"regexp"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
+	"github.com/agents-control/connector-engine/internal/importer"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -17,16 +17,12 @@ var slugUnsafe = regexp.MustCompile(`[^a-z0-9-]+`)
 
 // ParseManifest reads a listing in the engine's Manifest format, YAML or JSON.
 func ParseManifest(data []byte) (port.Manifest, error) {
-	var generic any
-	if err := yaml.Unmarshal(data, &generic); err != nil {
+	raw, err := importer.YAMLToJSON(data)
+	if err != nil {
 		return port.Manifest{}, invalid("the listing is not YAML: %w", err)
 	}
-	raw, err := json.Marshal(generic)
-	if err != nil {
-		return port.Manifest{}, invalid("the listing has keys that are not strings: %w", err)
-	}
 	var m port.Manifest
-	dec := json.NewDecoder(strings.NewReader(string(raw)))
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
 		return port.Manifest{}, invalid("the listing is not an engine manifest: %w", err)

@@ -89,3 +89,10 @@ func readJSON(w http.ResponseWriter, r *http.Request, into any) bool {
 	}
 	return true
 }
+
+func nonNil[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}

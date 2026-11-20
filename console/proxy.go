@@ -1,0 +1,82 @@
+package console
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
+)
+
+type tokenClaims struct {
+	Agent    string  `json:"agent"`
+	Session  string  `json:"session"`
+	IssuedAt float64 `json:"iat"`
+}
+
+// bearerClaims reads the agent, session and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse or to label a call it answered.
+func bearerClaims(header string) (tokenClaims, bool) {
+	scheme, raw, found := strings.Cut(header, " ")
+	parts := strings.Split(strings.TrimSpace(raw), ".")
+	if !found || !strings.EqualFold(scheme, "Bearer") || len(parts) != 3 {
+		return tokenClaims{}, false
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return tokenClaims{}, false
+	}
+	var claims tokenClaims
+	if json.Unmarshal(payload, &claims) != nil || claims.Agent == "" {
+		return tokenClaims{}, false
+	}
+	return claims, true
+}
+
+func (c *Console) refuseRevoked(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if claims, ok := bearerClaims(r.Header.Get("Authorization")); ok && c.State.Revoked(claims.Agent, int64(claims.IssuedAt)) {
+			w.Header().Set("WWW-Authenticate", c.challengeValue(c.origin(r), `error="invalid_token", error_description="the access key was revoked"`))
+			writeError(w, http.StatusUnauthorized, "the access key was revoked")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (c *Console) gateMCP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if r.Method == http.MethodGet && strings.Contains(r.Header.Get("Accept"), "text/html") {
+			http.Redirect(w, r, "/access", http.StatusSeeOther)
+			return
+		}
+		c.challenge(w, r, "")
+	})
+}
+
+func (c *Console) agentProxy() http.Handler {
+	target, _ := url.Parse(c.Engine.PublicURL)
+	return &httputil.ReverseProxy{
+		FlushInterval: -1,
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Header.Del("Cookie")
+			pr.Out.Header.Del(csrfHeader)
+			pr.Out.Header.Set("X-Forwarded-Host", pr.In.Host)
+		},
+		ModifyResponse: func(resp *http.Response) error {
+			resp.Header.Del("Set-Cookie")
+			if resp.StatusCode == http.StatusUnauthorized {
+				resp.Header.Set("WWW-Authenticate", c.challengeValue(c.base(resp.Request.Header.Get("X-Forwarded-Host")), `error="invalid_token"`))
+			}
+			if calls, ok := resp.Request.Context().Value(captureKey{}).(*inflight); ok {
+				calls.wrap(resp)
+			}
+			return nil
+		},
+	}
+}

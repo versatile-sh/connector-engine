@@ -37,9 +37,9 @@ export function ClientPicker({ url, accessKey }: { url: string; accessKey?: stri
   const [chosen, setChosen] = useState<ClientId | undefined>();
   const guide = all.find((g) => g.id === chosen);
   return (
-    <div>
+    <div className="@container">
       <h3 className="text-base font-medium">{t("clients.title")}</h3>
-      <div role="group" aria-label={t("clients.title")} className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div role="group" aria-label={t("clients.title")} className="mt-3 grid grid-cols-2 gap-2 @md:grid-cols-3 @3xl:grid-cols-5">
         {all.map((g) => (
           <button key={g.id} type="button" aria-pressed={g.id === chosen} className={CARD} onClick={() => setChosen(g.id)}>
             <span className="text-sm font-semibold">{g.name}</span>

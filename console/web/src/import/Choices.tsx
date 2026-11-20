@@ -9,7 +9,7 @@ export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; acce
   const t = useT();
   if (tools.length === 0) return <p className="py-6 text-sm text-muted">{t("import.noTools")}</p>;
   return (
-    <ul>
+    <ul className="@container">
       {tools.map((tool) => (
         <FunctionRow
           key={tool.name}
@@ -28,14 +28,14 @@ export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; acce
 /** The shape of a preview while the server is read: an identity and a few function rows. */
 export function ChoicesSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <ul aria-hidden="true">
+    <ul aria-hidden="true" className="@container">
       {Array.from({ length: rows }, (_, row) => (
         <li key={row} className="flex items-center gap-6 border-b border-line py-4 last:border-b-0">
           <div className="flex-1">
             <div className="shimmer bubble-word h-4 w-40" />
             <div className="shimmer bubble-word mt-2 h-3 w-64 max-w-full" />
           </div>
-          <div className="shimmer bubble-word hidden h-8 w-64 sm:block" />
+          <div className="shimmer bubble-word hidden h-8 w-64 @lg:block" />
         </li>
       ))}
     </ul>

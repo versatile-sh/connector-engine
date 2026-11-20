@@ -4,7 +4,7 @@ import { PasteBox } from "../connectors/PasteBox";
 import { useT } from "../i18n/I18nProvider";
 import { navigate } from "../router";
 import { Arrow, Icon } from "../ui/Icon";
-import { ICON_BUTTON, button } from "../ui/styles";
+import { HAIRLINE, ICON_BUTTON, button } from "../ui/styles";
 import { useSetup, type SetupStep } from "./useSetup";
 
 function Reveal({ open, children }: { open: boolean; children: ReactNode }) {
@@ -33,7 +33,8 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
   if (!setup.ready || setup.hidden) return null;
   const current = setup.steps.find((step) => !step.done)?.id;
   return (
-    <section aria-labelledby="setup-title" className="arrive bubble mb-8 overflow-hidden border border-line-strong bg-ink-raised">
+    <section aria-labelledby="setup-title" className="arrive vignette-top bubble relative mb-8 overflow-hidden border border-line-strong bg-ink-raised">
+      <span aria-hidden="true" className={HAIRLINE} />
       <header className="flex items-center gap-4 px-5 pt-4 pb-3 sm:px-6">
         <div className="min-w-0 flex-1">
           <h2 id="setup-title" className="font-serif text-2xl leading-tight font-normal tracking-[-0.01em]">

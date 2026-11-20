@@ -8,7 +8,7 @@ import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
-import { SURFACE, button } from "../ui/styles";
+import { HAIRLINE, SURFACE, button } from "../ui/styles";
 import { ClientPicker } from "./ClientPicker";
 
 const intoView = (element: HTMLElement | null) => {
@@ -18,7 +18,8 @@ const intoView = (element: HTMLElement | null) => {
 function Created({ token }: { token: AgentToken }) {
   const t = useT();
   return (
-    <section ref={intoView} aria-labelledby="created-title" className="arrive bubble-sent mb-8 scroll-mt-24 border border-lime/50 bg-ink-raised p-5 sm:p-6">
+    <section ref={intoView} aria-labelledby="created-title" className="arrive vignette-top bubble-sent relative mb-8 scroll-mt-24 overflow-hidden border border-lime/50 bg-ink-raised p-5 sm:p-6">
+      <span aria-hidden="true" className={HAIRLINE} />
       <div className="flex items-start gap-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-lime text-ink">
           <Icon name="key" className="size-[1.1rem]" />

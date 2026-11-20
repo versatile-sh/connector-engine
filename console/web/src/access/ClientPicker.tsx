@@ -6,7 +6,7 @@ import { Segmented } from "../ui/Segmented";
 import { PRESS, button } from "../ui/styles";
 import { guides, type Block, type ClientId, type Guide } from "./clients";
 
-const CARD = `bubble flex min-h-16 flex-col items-start justify-center gap-0.5 border border-line-strong bg-ink-raised px-4 py-2.5 text-left hover:border-paper/40 aria-pressed:border-transparent aria-pressed:bg-lime aria-pressed:text-ink ${PRESS}`;
+const CARD = `bubble flex min-h-16 flex-col items-start justify-center gap-0.5 border border-line-strong bg-ink-raised px-4 py-2.5 text-left hover:border-paper/40 aria-pressed:border-paper/60 aria-pressed:bg-paper/10 ${PRESS}`;
 
 function Blocks({ guide }: { guide: Guide }) {
   const t = useT();

@@ -1,5 +1,21 @@
-/** Card surface shared by panels and tiles: a speech bubble with a hairline border. */
-export const SURFACE = "bubble border border-line-strong bg-ink-raised";
+/** Card surface shared by panels and tiles: a speech bubble with a hairline border and the site's light falling on its top edge. */
+export const SURFACE = "vignette-top bubble border border-line-strong bg-ink-raised";
+
+/** Small mono caption for machine facts: paths, counts, states. */
+export const CAPTION = "font-mono text-xs text-muted";
+
+/** Small mono uppercase label over a title, as the site's eyebrows. */
+export const EYEBROW = "font-mono text-[0.6875rem] tracking-[0.14em] text-muted uppercase";
+
+/** The site's text field box: ink fill, a paper hairline that brightens on focus and turns amber when invalid, the lime caret. */
+export const FIELD = "rounded-lg border border-paper/40 bg-ink text-paper caret-lime transition-colors duration-200 focus-within:border-paper/80 has-aria-invalid:border-amber/70";
+
+/** Hover light of a card, from the site's directory: the top edge glows lime and the border warms. The element needs no `group`. */
+export const LIT_EDGE =
+  "relative isolate before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-[radial-gradient(ellipse_75%_100%_at_50%_0%,rgb(198_244_50/0.1),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:border-lime/30 hover:before:opacity-100 focus-visible:border-lime/30 focus-visible:before:opacity-100";
+
+/** The lime hairline that lights the top edge of the panel holding the next step; its parent is `relative`. */
+export const HAIRLINE = "pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-lime/70 to-transparent";
 
 /** Press feedback for anything clickable that is drawn as a button. */
 export const PRESS = "transition-[background-color,border-color,color,opacity,transform,filter] duration-150 active:scale-[0.97]";
@@ -35,5 +51,5 @@ export const ICON_BUTTON = `grid size-9 shrink-0 place-items-center rounded-full
 /** The icon button on ink or on lime: it takes the colour of the text around it. */
 export const ICON_BUTTON_PLAIN = `grid size-9 shrink-0 place-items-center rounded-full hover:bg-current/15 ${PRESS}`;
 
-/** Class string of a small choice that stays pressed: a bubble that turns lime when on (`aria-pressed` or `aria-checked`). */
-export const CHIP = `bubble-word inline-flex h-8 shrink-0 items-center justify-center gap-2 border border-line-strong px-3 text-xs font-semibold whitespace-nowrap text-muted hover:border-paper/50 aria-checked:border-transparent aria-checked:bg-lime aria-checked:text-ink aria-pressed:border-transparent aria-pressed:bg-lime aria-pressed:text-ink ${PRESS}`;
+/** The site's chip, for a small choice that stays pressed: a pill that brightens to paper at 10% when on (`aria-pressed` or `aria-checked`), never lime. */
+export const CHIP = `inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-line-strong whitespace-nowrap text-muted select-none hover:text-paper aria-checked:border-paper/60 aria-checked:bg-paper/10 aria-checked:text-paper aria-pressed:border-paper/60 aria-pressed:bg-paper/10 aria-pressed:text-paper ${PRESS}`;

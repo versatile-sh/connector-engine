@@ -78,7 +78,7 @@ func (c *Console) toEngine(ctx context.Context, r *http.Request, body []byte, id
 
 func (c *Console) passAnswer(w http.ResponseWriter, r *http.Request, a engineAnswer) {
 	if a.err != nil {
-		http.Error(w, "the engine is unreachable", http.StatusBadGateway)
+		c.engineDown(w)
 		return
 	}
 	for _, h := range []string{"Content-Type", sessionHeader, "Cache-Control"} {

@@ -10,33 +10,33 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/plugkit/adapters"
-	"github.com/agents-control/plugkit/discovery"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/discovery"
 
-	"github.com/agents-control/connector-engine/artifact/digest"
-	"github.com/agents-control/connector-engine/auth/local"
-	"github.com/agents-control/connector-engine/authz/table"
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/credential"
-	"github.com/agents-control/connector-engine/gateway"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/hostkey"
-	"github.com/agents-control/connector-engine/server"
-	"github.com/agents-control/connector-engine/service"
-	"github.com/agents-control/connector-engine/service/worker"
-	"github.com/agents-control/connector-engine/telemetry"
+	"github.com/versatile-sh/connector-engine/artifact/digest"
+	"github.com/versatile-sh/connector-engine/auth/local"
+	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/credential"
+	"github.com/versatile-sh/connector-engine/gateway"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/service/worker"
+	"github.com/versatile-sh/connector-engine/telemetry"
 )
 
 type systemClock struct{}
 
 func (systemClock) Now() time.Time { return time.Now().UTC() }
 
-// Options adjust a boot; the zero value reads the process environment and logs to the default logger.
+// Options adjust a boot; the zero value reads no variable, logs to the default logger and composes the adapters of Core.
 type Options struct {
-	Lookup func(string) string
-	Clock  port.Clock
-	Log    *slog.Logger
-	Build  string
+	Lookup   func(string) string
+	Clock    port.Clock
+	Log      *slog.Logger
+	Build    string
+	Adapters *Registry
 }
 
 // App is a composed engine: the service and its adapters, ready to serve.
@@ -68,6 +68,10 @@ type App struct {
 
 // New builds the engine: it checks the configuration against the adapters file, opens the store, writes the bootstrap roles and wires the service.
 func New(ctx context.Context, cfg config.Config, file adapters.File, o Options) (*App, error) {
+	if o.Adapters == nil {
+		o.Adapters = Core()
+	}
+	cfg = cfg.With(o.Adapters.Builtins()...)
 	if err := adapters.Check(cfg.AdaptersSpec(), file).Err(); err != nil {
 		return nil, err
 	}
@@ -81,7 +85,7 @@ func New(ctx context.Context, cfg config.Config, file adapters.File, o Options) 
 		o.Log = slog.Default()
 	}
 	a := &App{Config: cfg, Adapters: file, Clock: o.Clock, log: o.Log, spec: cfg.AdaptersSpec(), build: o.Build}
-	if err := a.compose(ctx, builder{cfg: cfg, file: file, lookup: o.Lookup, clock: o.Clock, log: o.Log}); err != nil {
+	if err := a.compose(ctx, builder{cfg: cfg, file: file, lookup: o.Lookup, clock: o.Clock, log: o.Log, reg: o.Adapters}); err != nil {
 		a.Close()
 		return nil, err
 	}
@@ -101,16 +105,20 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	}
 	a.secrets = secrets
 	a.closers = append(a.closers, closeSecrets)
-	runtime, err := b.runtime(store, secrets)
+	runtime, closeRuntime, err := b.runtime(ctx, store, secrets)
 	if err != nil {
 		return fmt.Errorf("runtime: %w", err)
 	}
-	if a.sources, err = b.sources(); err != nil {
+	a.closers = append(a.closers, closeRuntime)
+	var closer func()
+	if a.sources, closer, err = b.sources(ctx); err != nil {
 		return err
 	}
-	if a.sink, err = b.sink(); err != nil {
+	a.closers = append(a.closers, closer)
+	if a.sink, closer, err = b.sink(ctx); err != nil {
 		return err
 	}
+	a.closers = append(a.closers, closer)
 	clients, err := b.clients()
 	if err != nil {
 		return err
@@ -133,10 +141,14 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		}
 	}
 	svcCfg := a.Config.Service()
-	if a.Filter, err = b.filter(); err != nil {
+	if a.Filter, closer, err = b.filter(ctx); err != nil {
 		return err
 	}
-	a.Index = b.index()
+	a.closers = append(a.closers, closer)
+	if a.Index, closer, err = b.index(ctx); err != nil {
+		return err
+	}
+	a.closers = append(a.closers, closer)
 	a.Service, err = service.New(service.Deps{
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
 		Authorizer: table.New(store, a.Clock, table.Settings{DestructiveMax: svcCfg.DestructiveMax, ForceAsk: svcCfg.ForceAsk}),
@@ -182,8 +194,8 @@ func (a *App) document() discovery.Document {
 			u, _ := adapters.ParseUse(s)
 			row := discovery.EmbeddedRow(name, u.Name)
 			row.Tier, row.Capabilities = u.Tier, a.spec.Ports[name].Capabilities[s]
-			if hk, ok := a.secrets.(*hostkey.Store); ok && name == config.PortSecrets {
-				row.Capabilities = append(slices.Clone(row.Capabilities), "secrets.root_key_"+string(hk.Form()))
+			if r, ok := a.secrets.(reporter); ok && name == config.PortSecrets {
+				row.Capabilities = append(slices.Clone(row.Capabilities), r.Capabilities()...)
 			}
 			if u.Tier == adapters.TierMemory {
 				row.Name = adapters.TierMemory

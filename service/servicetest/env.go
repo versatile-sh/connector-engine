@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/authz/table"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
-	"github.com/agents-control/connector-engine/service/worker"
-	"github.com/agents-control/connector-engine/store/memory"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/service/worker"
+	"github.com/versatile-sh/connector-engine/store/memory"
 )
 
 // Env is a Service wired over the memory store, the table authorizer and the fakes, with a worker on the same clock.

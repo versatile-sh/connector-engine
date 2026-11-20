@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 type tx struct {
@@ -49,7 +49,7 @@ func get[V any](t *tx, tb table[V], k string) (V, int64, error) {
 		var zero V
 		return zero, 0, port.Errorf(port.CodeNotFound, "%s not found", strings.ReplaceAll(k, "\x00", "/"))
 	}
-	v, err := dup(r.v)
+	v, err := tb.copy(r.v)
 	return v, r.rev, err
 }
 
@@ -60,7 +60,7 @@ func list[V any](t *tx, tb table[V], keep func(V) bool) ([]V, error) {
 		if !t.reads(tb.access, r.tenant) || (keep != nil && !keep(r.v)) {
 			continue
 		}
-		c, err := dup(r.v)
+		c, err := tb.copy(r.v)
 		if err != nil {
 			return nil, err
 		}

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agents-control/connector-engine/artifact/digest"
-	internal "github.com/agents-control/connector-engine/internal/digest"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/artifact/digest"
+	internal "github.com/versatile-sh/connector-engine/internal/digest"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func TestVerify(t *testing.T) {

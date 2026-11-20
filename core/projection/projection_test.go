@@ -3,8 +3,8 @@ package projection_test
 import (
 	"testing"
 
-	"github.com/agents-control/connector-engine/core/projection"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/projection"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 const schema = `{"type":"object","properties":{"items":{"type":"array","items":{"type":"object","properties":{"id":{"type":"integer"},"a/b":{"type":"string"}}}},"total":{"type":"integer"},"meta":{"anyOf":[{"type":"object","properties":{"x":{}}}]}}}`

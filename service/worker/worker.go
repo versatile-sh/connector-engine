@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agents-control/connector-engine/internal/safe"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/internal/safe"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 // Config holds approval.sweepInterval, the batch size, the executor count, the shutdown grace of running executions, the history retention and where Run reports failures.

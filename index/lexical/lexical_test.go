@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/agents-control/connector-engine/index/lexical"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/index/lexical"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var docs = []port.ToolDoc{

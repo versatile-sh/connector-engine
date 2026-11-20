@@ -5,9 +5,9 @@ import (
 	"context"
 	"slices"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Authorizer evaluates calls with core/evaluate over the store's rows and answers role questions from the role rows of the store.
@@ -22,7 +22,10 @@ func New(store port.Store, clock port.Clock, settings Settings) *Authorizer {
 	return &Authorizer{store: store, clock: clock, settings: settings}
 }
 
-var _ port.Authorizer = (*Authorizer)(nil)
+var (
+	_ port.Authorizer    = (*Authorizer)(nil)
+	_ port.BatchSearcher = (*Authorizer)(nil)
+)
 
 func subjectOf(q port.Query) port.Subject {
 	return port.Subject{Tenant: q.Tenant, Workspace: q.Workspace, Agent: q.Agent, AgentOwner: q.AgentOwner, OnBehalfOf: q.OnBehalfOf, Session: q.Session, Caller: q.Caller}
@@ -30,13 +33,9 @@ func subjectOf(q port.Query) port.Subject {
 
 func (a *Authorizer) facts(ctx context.Context, s port.Subject, connector port.ConnectorID, fn func(evaluate.Facts) error) error {
 	return a.store.Read(ctx, port.Scope{Tenant: s.Tenant}, func(tx port.Tx) error {
-		groups := map[port.PersonID][]port.GroupID{}
-		for _, p := range evaluate.People(s) {
-			g, err := groupsOf(tx, p)
-			if err != nil {
-				return err
-			}
-			groups[p] = g
+		groups, err := peopleGroups(tx, s, map[port.PersonID][]port.GroupID{})
+		if err != nil {
+			return err
 		}
 		f, err := LoadFacts(tx, a.clock.Now(), s, connector, groups, a.settings)
 		if err != nil {
@@ -44,6 +43,48 @@ func (a *Authorizer) facts(ctx context.Context, s port.Subject, connector port.C
 		}
 		return fn(f)
 	})
+}
+
+func peopleGroups(tx port.Tx, s port.Subject, known map[port.PersonID][]port.GroupID) (map[port.PersonID][]port.GroupID, error) {
+	groups := map[port.PersonID][]port.GroupID{}
+	for _, p := range evaluate.People(s) {
+		g, ok := known[p]
+		if !ok {
+			var err error
+			if g, err = groupsOf(tx, p); err != nil {
+				return nil, err
+			}
+			known[p] = g
+		}
+		groups[p] = g
+	}
+	return groups, nil
+}
+
+// SearchBatch answers Search for each query in one read of the tenant, loading the grant table and each person's groups once.
+func (a *Authorizer) SearchBatch(ctx context.Context, tenant port.TenantID, qs []port.SearchQuery) ([][]port.FunctionDecision, error) {
+	out := make([][]port.FunctionDecision, len(qs))
+	err := a.store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+		grants, err := tx.ListGrants(port.GrantFilter{})
+		if err != nil {
+			return err
+		}
+		known := map[port.PersonID][]port.GroupID{}
+		now := a.clock.Now()
+		for i, q := range qs {
+			groups, err := peopleGroups(tx, q.Subject, known)
+			if err != nil {
+				return err
+			}
+			f, err := loadFacts(tx, now, q.Subject, q.Connector, groups, a.settings, grants)
+			if err != nil {
+				return err
+			}
+			out[i] = evaluate.Search(f, q.Subject, now)
+		}
+		return nil
+	})
+	return out, err
 }
 
 // Evaluate runs steps 1 to 14 for one function; step 15(b) has no external point here.

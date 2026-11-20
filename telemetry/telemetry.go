@@ -10,9 +10,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/agents-control/connector-engine/gateway"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/gateway"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 // Metrics holds the registry and the instruments; labels are the tenant id and a closed set of outcomes or states, never an argument or a result.

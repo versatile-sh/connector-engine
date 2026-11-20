@@ -13,11 +13,11 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/credential"
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/runtime/remote"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/credential"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/runtime/remote"
 )
 
 type upstream struct {

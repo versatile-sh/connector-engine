@@ -5,7 +5,7 @@ import (
 	"cmp"
 	"slices"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // View is everything the predicate reads for one tenant.

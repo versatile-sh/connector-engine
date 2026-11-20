@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/source/skillcatalog"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/source/skillcatalog"
 )
 
 func TestARealCatalogParses(t *testing.T) {

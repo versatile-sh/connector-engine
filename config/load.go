@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 	"gopkg.in/yaml.v3"
 
-	"github.com/agents-control/connector-engine/core/approval"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/filter/builtin"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/filter/builtin"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 // Acknowledgements an adapters file may list; production refuses the matching setting without them.
@@ -85,7 +85,6 @@ var oneOf = map[string][]string{
 	"approval.proofOfReading":       {"off"},
 	"overlay.suggester":             {"none"},
 	"outbox.signing":                {"standard-webhooks"},
-	"secrets.adapter":               {"localfile", "memory", "hostkey", "onepassword"},
 	"credentials.fallback":          {"none"},
 	"exposure.onTrifecta":           {"warn", "force_ask"},
 	"apps.appOnlyFunctions":         {"refuse", "view_token"},
@@ -116,13 +115,18 @@ func (c Config) Mutations() []string {
 	return slices.DeleteFunc(slices.Clone(c.Manage.MCP.Operations), func(s string) bool { return s == ReadOnly })
 }
 
+// RefusalLevel is the level of a refusal: an error in production, a warning in dev.
+func (c Config) RefusalLevel() string {
+	if c.Mode == ModeProduction {
+		return adapters.LevelError
+	}
+	return adapters.LevelWarning
+}
+
 // Check validates the values and applies the refusals: in production each is an error unless acknowledged, in dev a warning.
 func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	var fs adapters.Findings
-	level := adapters.LevelWarning
-	if c.Mode == ModeProduction {
-		level = adapters.LevelError
-	}
+	level := c.RefusalLevel()
 	add := func(level, where, format string, args ...any) {
 		fs = append(fs, adapters.Finding{Level: level, Where: where, Message: fmt.Sprintf(format, args...)})
 	}
@@ -136,8 +140,8 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 			add(adapters.LevelError, "resultFilter.locales", "%q is not one of %s", l, strings.Join(builtin.Locales(), ", "))
 		}
 	}
-	if c.Secrets.Adapter == "hostkey" && c.Secrets.UnlockSocket == "" {
-		add(adapters.LevelError, "secrets.unlockSocket", "the hostkey adapter waits for the unlock key on this socket; it is empty")
+	if secrets := append([]string{"memory"}, c.names(PortSecrets)...); !slices.Contains(secrets, c.Secrets.Adapter) {
+		add(adapters.LevelError, "secrets.adapter", "%q is not one of %s, the secrets adapters of this build", c.Secrets.Adapter, strings.Join(secrets, ", "))
 	}
 	if op := c.Secrets.OnePassword; c.Secrets.Adapter == "onepassword" && (op.ConnectURL == "" || op.TokenRef == "" || op.Vault == "" || op.Item == "" || op.Field == "") {
 		add(adapters.LevelError, "secrets.onePassword", "the onepassword adapter needs connectUrl, tokenRef, vault, item and field")
@@ -161,10 +165,8 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
 	}
 	switch {
-	case acknowledged(AckPlaintextRootKey), c.Secrets.Adapter == "onepassword":
-	case c.Secrets.Adapter == "hostkey":
-		add(level, "secrets.adapter", "hostkey keeps a plaintext root key on a host without a keychain and until it is migrated; acknowledge %s to run with it", AckPlaintextRootKey)
-	default:
+	case acknowledged(AckPlaintextRootKey):
+	case c.Secrets.Adapter == "localfile", c.Secrets.Adapter == "memory":
 		add(level, "secrets.adapter", "%s keeps the root key in plaintext; acknowledge %s to run with it", c.Secrets.Adapter, AckPlaintextRootKey)
 	}
 	if c.Runtime.AllowPrivateHosts && !acknowledged(AckPrivateEgress) {
@@ -176,6 +178,7 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if c.Approval.SweepInterval <= 0 || c.Server.ShutdownGrace < 0 {
 		add(adapters.LevelError, "approval.sweepInterval", "durations are positive")
 	}
+	fs = append(fs, c.builtinFindings(acknowledged)...)
 	return append(fs, c.inert()...)
 }
 

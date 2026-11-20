@@ -2,12 +2,13 @@ package memory_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/store/memory"
-	"github.com/agents-control/connector-engine/store/storetest"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/store/memory"
+	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 
 func TestConformance(t *testing.T) {
@@ -61,5 +62,36 @@ func TestCallsFromOtherGoroutinesWaitTheirTurn(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestReadGrantsAndBindingsAreCopies(t *testing.T) {
+	s := memory.New()
+	ctx, scope := context.Background(), port.Scope{Tenant: "t1"}
+	ref := port.ListingRef{Name: "acme.dev/s"}
+	err := s.Write(ctx, scope, func(tx port.Tx) error {
+		return errors.Join(tx.PutGrant(port.Grant{ID: "g", Tenant: "t1", ScopeKind: port.ScopeAgent, ScopeID: "x", Listing: &ref, Selector: "*", Mode: port.ModeAsk}),
+			tx.PutBinding(port.Binding{Tenant: "t1", Connector: "c", Agent: "x", Approvers: []string{"ana"}}))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := func() (port.Grant, port.Binding) {
+		var g port.Grant
+		var b port.Binding
+		if err := s.Read(ctx, scope, func(tx port.Tx) (err error) {
+			gs, err1 := tx.ListGrants(port.GrantFilter{})
+			b, err = tx.GetBinding("c", "x")
+			g = gs[0]
+			return errors.Join(err, err1)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return g, b
+	}
+	g, b := read()
+	g.Listing.Name, b.Approvers[0] = "changed", "changed"
+	if g, b := read(); g.Listing.Name != "acme.dev/s" || b.Approvers[0] != "ana" {
+		t.Fatalf("a caller changed the stored rows: %v %v", g.Listing, b.Approvers)
 	}
 }

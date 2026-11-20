@@ -3,10 +3,10 @@ package table
 import (
 	"time"
 
-	"github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/core/exposure"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/core/exposure"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Settings are the installation keys the evaluation reads: permission.destructiveMax and exposure.onTrifecta.
@@ -50,6 +50,14 @@ func View(tx port.Tx, tenant port.TenantID, workspaces []port.WorkspaceID, group
 
 // LoadFacts reads everything lists for one agent on one connector; an absent connector yields facts that deny at step 1.
 func LoadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.ConnectorID, groups map[port.PersonID][]port.GroupID, set Settings) (evaluate.Facts, error) {
+	grants, err := tx.ListGrants(port.GrantFilter{})
+	if err != nil {
+		return evaluate.Facts{}, err
+	}
+	return loadFacts(tx, now, s, connector, groups, set, grants)
+}
+
+func loadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.ConnectorID, groups map[port.PersonID][]port.GroupID, set Settings, grants []port.Grant) (evaluate.Facts, error) {
 	c, err := tx.GetConnector(connector)
 	if port.IsCode(err, port.CodeNotFound) {
 		return evaluate.Facts{}, nil
@@ -84,9 +92,7 @@ func LoadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.Connect
 		return f, err
 	}
 	f.Paused = ok && p.Paused && (p.ExpiresAt.IsZero() || now.Before(p.ExpiresAt))
-	if f.Grants, err = tx.ListGrants(port.GrantFilter{}); err != nil {
-		return f, err
-	}
+	f.Grants = grants
 	e, ok, err := tx.GetExposure(s.Agent)
 	if err != nil {
 		return f, err

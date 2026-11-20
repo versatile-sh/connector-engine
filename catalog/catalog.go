@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/agents-control/plugkit/usage"
 	"github.com/invopop/jsonschema"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/usage"
 )
 
 // Type is one event type of the catalog; Number is its row, zero for a consumed type.

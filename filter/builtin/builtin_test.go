@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/filter/builtin"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/filter/builtin"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func brazil(t *testing.T) builtin.Filter {

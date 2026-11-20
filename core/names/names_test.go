@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func TestNames(t *testing.T) {

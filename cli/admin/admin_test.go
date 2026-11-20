@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/cli/admin"
-	"github.com/agents-control/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/cli/admin"
+	"github.com/versatile-sh/connector-engine/server"
 )
 
 type seen struct {

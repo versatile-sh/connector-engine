@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func purge[V any](tb table[V], tenant port.TenantID) int {

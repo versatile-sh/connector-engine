@@ -8,13 +8,13 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/core/projection"
-	"github.com/agents-control/connector-engine/internal/tokenscan"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service/internal/schemacheck"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/core/projection"
+	"github.com/versatile-sh/connector-engine/internal/tokenscan"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service/internal/schemacheck"
 )
 
 // ServedFunction is one entry of tools/list: the stored definition under its exposed name, with an accepted overlay's text.
@@ -277,12 +277,17 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 	}); err != nil {
 		return out, err
 	}
+	qs := make([]port.SearchQuery, len(all))
+	for i, b := range all {
+		qs[i] = port.SearchQuery{Subject: sub, Connector: b.c.ID}
+	}
+	answers, err := s.search(ctx, sub.Tenant, qs)
+	if err != nil {
+		return out, err
+	}
 	bound := map[string]bool{}
-	for _, b := range all {
-		decisions, err := s.d.Authorizer.Search(ctx, sub, b.c.ID)
-		if err != nil {
-			return out, err
-		}
+	for i, b := range all {
+		decisions := answers[i]
 		if !b.skill {
 			bound[b.c.Listing.Listing.Name] = true
 		}

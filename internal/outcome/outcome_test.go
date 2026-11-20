@@ -6,8 +6,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/agents-control/connector-engine/internal/outcome"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/internal/outcome"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func TestOf(t *testing.T) {

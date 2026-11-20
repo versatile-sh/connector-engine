@@ -3,11 +3,11 @@ package service_test
 import (
 	"testing"
 
-	"github.com/agents-control/connector-engine/credential"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
-	st "github.com/agents-control/connector-engine/service/servicetest"
-	srcmemory "github.com/agents-control/connector-engine/source/memory"
+	"github.com/versatile-sh/connector-engine/credential"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
+	st "github.com/versatile-sh/connector-engine/service/servicetest"
+	srcmemory "github.com/versatile-sh/connector-engine/source/memory"
 )
 
 func TestListCallsIsAuditOnlyAndPerTenant(t *testing.T) {

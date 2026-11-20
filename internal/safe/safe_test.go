@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/internal/safe"
+	"github.com/versatile-sh/connector-engine/internal/safe"
 )
 
 func TestRunReturnsTheErrorOfFn(t *testing.T) {

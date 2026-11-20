@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agents-control/connector-engine/catalog"
-	"github.com/agents-control/connector-engine/port"
-	sinkmemory "github.com/agents-control/connector-engine/sink/memory"
+	"github.com/versatile-sh/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/port"
+	sinkmemory "github.com/versatile-sh/connector-engine/sink/memory"
 )
 
 func TestEveryListChangingEventIsInTheCatalog(t *testing.T) {

@@ -5,11 +5,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/catalog"
-	"github.com/agents-control/connector-engine/core/approval"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func (s *Service) removeBinding(tx port.Tx, b port.Binding, by string) error {

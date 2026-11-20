@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/source/memory"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/source/memory"
 )
 
 func TestServesManifestsAsGivenAndPages(t *testing.T) {

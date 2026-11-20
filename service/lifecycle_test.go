@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
-	st "github.com/agents-control/connector-engine/service/servicetest"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
+	st "github.com/versatile-sh/connector-engine/service/servicetest"
 )
 
 func askWorld(t *testing.T) (*world, port.Principal) {

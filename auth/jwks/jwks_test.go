@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/auth/internal/wire"
-	"github.com/agents-control/connector-engine/auth/jwks"
-	"github.com/agents-control/connector-engine/auth/local"
-	"github.com/agents-control/connector-engine/port"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/versatile-sh/connector-engine/auth/internal/wire"
+	"github.com/versatile-sh/connector-engine/auth/jwks"
+	"github.com/versatile-sh/connector-engine/auth/local"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var (

@@ -32,10 +32,10 @@ function Pitch({ endpoint, waitingHost }: { endpoint: string; waitingHost?: stri
     <>
       <Wordmark onAccent className="self-start" />
       <div className="flex flex-1 flex-col justify-center pt-8 pb-2 lg:py-0">
-        <h1 className="font-display text-[2.25rem] leading-[1.04] font-bold tracking-[-0.04em] sm:text-5xl xl:text-6xl">
+        <h1 className="font-serif text-[2.75rem] leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl xl:text-7xl">
           <span className="block">{t(waitingHost ? "auth.linkLine1" : "auth.line1")}</span>
           <span className="block">{t(waitingHost ? "auth.linkLine2" : "auth.line2")}</span>
-          <span className="bubble-word mt-[0.34em] inline-block bg-ink px-[0.5em] py-[0.24em] font-mono text-[0.42em] leading-[1.15] font-medium tracking-[-0.02em] text-bubble">
+          <span className="bubble-word mt-[0.34em] inline-block bg-ink px-[0.5em] py-[0.24em] font-mono text-[0.42em] leading-[1.15] font-medium tracking-[-0.02em] text-lime">
             {waitingHost ?? t("auth.answer")}
           </span>
         </h1>
@@ -87,7 +87,7 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
           <LanguageSwitch className="self-end" />
           <div className="flex flex-1 items-center justify-center py-8">
             <form className="ride-in w-full max-w-md" onSubmit={onSubmit} aria-labelledby="auth-title">
-              <h2 id="auth-title" className="font-display text-3xl leading-[1.1] font-bold tracking-[-0.04em]">
+              <h2 id="auth-title" className="font-serif text-4xl leading-none font-normal tracking-[-0.02em]">
                 {t(mode === "setup" ? "auth.setup.title" : "auth.login.title")}
               </h2>
               <p className="mt-2 mb-7 text-muted">{t(mode === "setup" ? "auth.setup.intro" : "auth.login.intro")}</p>

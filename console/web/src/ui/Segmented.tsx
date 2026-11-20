@@ -21,7 +21,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
       <span
         aria-hidden="true"
         style={{ width: `calc((100% - 0.5rem) / ${options.length})`, translate: `${at * 100}% 0` }}
-        className="absolute inset-y-1 left-1 bg-fg [border-radius:inherit] transition-[translate] duration-500 ease-(--ease-glide)"
+        className="absolute inset-y-1 left-1 bg-paper [border-radius:inherit] transition-[translate] duration-500 ease-(--ease-glide)"
       />
       {options.map((option) => (
         <button
@@ -31,7 +31,7 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
           aria-pressed={value === option.value}
           disabled={disabled}
           onClick={() => option.value !== value && onChange(option.value)}
-          className={`relative z-10 h-full [border-radius:inherit] font-semibold whitespace-nowrap text-muted transition-colors duration-300 hover:text-fg aria-pressed:text-canvas ${SIZE[size].button}`}
+          className={`relative z-10 h-full [border-radius:inherit] font-semibold whitespace-nowrap text-muted transition-colors duration-300 hover:text-paper aria-pressed:text-ink ${SIZE[size].button}`}
         >
           {option.text}
         </button>

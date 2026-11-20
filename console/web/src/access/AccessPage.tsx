@@ -18,13 +18,13 @@ const intoView = (element: HTMLElement | null) => {
 function Created({ token }: { token: AgentToken }) {
   const t = useT();
   return (
-    <section ref={intoView} aria-labelledby="created-title" className="arrive bubble-sent mb-8 scroll-mt-24 border border-bubble/50 bg-card p-5 sm:p-6">
+    <section ref={intoView} aria-labelledby="created-title" className="arrive bubble-sent mb-8 scroll-mt-24 border border-lime/50 bg-ink-raised p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-bubble text-on-bubble">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-lime text-ink">
           <Icon name="key" className="size-[1.1rem]" />
         </span>
         <div className="min-w-0">
-          <h2 id="created-title" className="font-display text-xl font-bold tracking-[-0.03em]">
+          <h2 id="created-title" className="text-lg leading-snug font-medium">
             {t("keys.created", { name: token.agent })}
           </h2>
           <p className="text-sm text-muted">{t("keys.once")}</p>
@@ -63,7 +63,7 @@ export function AccessPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-8">
-        <h1 id="page-title" className="font-display text-4xl leading-none font-bold tracking-[-0.04em] sm:text-5xl">
+        <h1 id="page-title" className="font-serif text-5xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl">
           {t("keys.title")}
         </h1>
         <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
@@ -72,7 +72,7 @@ export function AccessPage() {
       {mint.data ? <Created key={mint.data.token} token={mint.data} /> : null}
       <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>
-          <h2 id="new-key" className="mb-3 font-display text-lg font-bold tracking-[-0.03em]">
+          <h2 id="new-key" className="mb-3 text-base font-medium">
             {t("keys.new")}
           </h2>
           <Field label={t("keys.name")} hint={t("keys.nameHint")} mono placeholder={t("keys.namePlaceholder")} value={name} onChange={(event) => setName(event.target.value)} required autoComplete="off" spellCheck={false} />
@@ -94,7 +94,7 @@ export function AccessPage() {
         </form>
         <section aria-labelledby="keys-title" className={`${SURFACE} p-5`}>
           <div className="mb-2 flex items-center gap-2.5">
-            <h2 id="keys-title" className="font-display text-lg font-bold tracking-[-0.03em]">
+            <h2 id="keys-title" className="text-base font-medium">
               {t("keys.list")}
             </h2>
             {keys.isSuccess ? <Bubble>{list.length}</Bubble> : null}
@@ -118,7 +118,7 @@ export function AccessPage() {
                 const expired = new Date(key.expires_at) < new Date();
                 return (
                   <li key={key.name} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-3 last:border-b-0">
-                    <span className={`size-2 shrink-0 rounded-full ${expired ? "bg-amber" : "bg-bubble"}`} aria-hidden="true" />
+                    <span className={`size-2 shrink-0 rounded-full ${expired ? "bg-amber" : "bg-lime"}`} aria-hidden="true" />
                     <code className="min-w-0 flex-1 truncate font-mono text-sm font-semibold" translate="no">
                       {key.name}
                     </code>

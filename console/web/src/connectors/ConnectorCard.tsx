@@ -6,7 +6,7 @@ import { Arrow } from "../ui/Icon";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { accessCounts, authState, serverHost } from "./summary";
 
-const BAR = { read: "bg-fg/55", write: "bg-fg", ask: "bg-bubble" } as const;
+const BAR = { read: "bg-paper/55", write: "bg-paper", ask: "bg-lime" } as const;
 
 /** One installed connector as a card that opens it: who it is, how its functions are set, and what it still needs. */
 export function ConnectorCard({ connector }: { connector: Connector }) {
@@ -24,17 +24,17 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
           event.preventDefault();
           navigate(href);
         }}
-        className="group bubble flex h-full flex-col border border-line-strong bg-card p-5 transition-[border-color,background-color,translate] duration-300 ease-(--ease-settle) hover:-translate-y-0.5 hover:border-fg/25 hover:bg-ink-raised focus-visible:-translate-y-0.5"
+        className="group bubble flex h-full flex-col border border-line-strong bg-ink-raised p-5 transition-[border-color,background-color,translate] duration-300 ease-(--ease-settle) hover:-translate-y-0.5 hover:border-paper/25 hover:bg-paper/4 focus-visible:-translate-y-0.5"
       >
         <div className="flex items-start gap-3.5">
           <ConnectorIcon src={connector.icon} title={connector.title} />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-display text-lg leading-snug font-bold tracking-[-0.03em]">{connector.title}</h2>
+            <h2 className="truncate text-base leading-snug font-medium">{connector.title}</h2>
             <p className="truncate font-mono text-xs text-muted" translate="no">
               {connector.publisher ?? serverHost(connector) ?? connector.listing}
             </p>
           </div>
-          <span className="mt-1 text-muted transition-[color,translate] duration-300 group-hover:translate-x-0.5 group-hover:text-accent">
+          <span className="mt-1 text-muted transition-[color,translate] duration-300 group-hover:translate-x-0.5 group-hover:text-lime">
             <Arrow />
           </span>
         </div>
@@ -63,7 +63,7 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
 /** The shape of a connector card while the list loads. */
 export function ConnectorCardSkeleton() {
   return (
-    <li aria-hidden="true" className="bubble border border-line bg-card p-5">
+    <li aria-hidden="true" className="bubble border border-line bg-ink-raised p-5">
       <div className="flex items-center gap-3.5">
         <div className="shimmer size-11 rounded-full" />
         <div className="flex-1">

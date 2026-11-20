@@ -15,7 +15,7 @@ export function LanguageSwitch({ className = "" }: { className?: string }) {
           lang={option.value}
           aria-pressed={locale === option.value}
           onClick={() => choose(option.value)}
-          className="h-full rounded-full px-2.5 text-muted transition-colors duration-200 hover:text-fg aria-pressed:bg-fg aria-pressed:text-canvas"
+          className="h-full rounded-full px-2.5 text-muted transition-colors duration-200 hover:text-paper aria-pressed:bg-paper aria-pressed:text-ink"
         >
           {option.short}
         </button>

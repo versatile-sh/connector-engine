@@ -30,14 +30,14 @@ const OAUTH: Record<string, MessageKey> = {
   failed: "oauth.failed",
 };
 
-const NAV_LINK = `bubble-word inline-flex h-9 shrink-0 items-center gap-2 px-3.5 text-sm font-semibold text-muted hover:bg-fg/8 hover:text-fg aria-[current=page]:bg-ink-lift aria-[current=page]:text-fg ${PRESS}`;
+const NAV_LINK = `bubble-word inline-flex h-9 shrink-0 items-center gap-2 px-3.5 text-sm font-semibold text-muted hover:bg-paper/8 hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${PRESS}`;
 
 function Endpoint({ url }: { url: string }) {
   const t = useT();
   const { result, copy } = useCopy();
   return (
-    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} className={`bubble-word hidden h-9 items-center gap-2 border border-line-strong px-3 font-mono text-xs text-muted hover:border-fg/50 hover:text-fg xl:inline-flex ${PRESS}`}>
-      <span className={`size-1.5 rounded-full ${result === "copied" ? "bg-bubble" : "bg-bubble/60"}`} aria-hidden="true" />
+    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} className={`bubble-word hidden h-9 items-center gap-2 border border-line-strong px-3 font-mono text-xs text-muted hover:border-paper/50 hover:text-paper xl:inline-flex ${PRESS}`}>
+      <span className={`size-1.5 rounded-full ${result === "copied" ? "bg-lime" : "bg-lime/60"}`} aria-hidden="true" />
       <span translate="no">{url.replace(/^https?:\/\//, "")}</span>
       <Icon name={result === "copied" ? "check" : "copy"} className="size-3.5" />
     </button>
@@ -52,7 +52,7 @@ function SetupProgress() {
     <button type="button" onClick={() => navigate("/")} className={`${button({ variant: "secondary", size: "sm" })} arrive hidden font-mono text-xs sm:inline-flex`}>
       <span aria-hidden="true" className="flex gap-1">
         {setup.steps.map((step) => (
-          <span key={step.id} className={`size-1.5 rounded-full transition-colors duration-500 ${step.done ? "bg-bubble" : "bg-line-strong"}`} />
+          <span key={step.id} className={`size-1.5 rounded-full transition-colors duration-500 ${step.done ? "bg-lime" : "bg-line-strong"}`} />
         ))}
       </span>
       {t("shell.setup", { done: setup.done, total: setup.total })}
@@ -79,10 +79,10 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
     <div className="relative isolate flex min-h-dvh flex-col overflow-x-clip">
       <div aria-hidden="true" className="backdrop-grid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[40rem]" />
       <div aria-hidden="true" className="backdrop-beam pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem]" />
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-card focus:px-3 focus:py-2">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-ink-raised focus:px-3 focus:py-2">
         {t("app.skip")}
       </a>
-      <header className="sticky top-0 z-30 border-b border-line bg-canvas/85 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-line bg-ink/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-5 sm:px-8">
           <a
             href="/"
@@ -149,7 +149,7 @@ function NavLinks({ section, waiting }: { section: Section; waiting: number }) {
     >
       {t(item.label)}
       {item.section === "approvals" && waiting > 0 ? (
-        <span className="arrive bubble-word bg-bubble px-1.5 py-px font-mono text-[0.6875rem] leading-4 text-on-bubble tabular-nums">
+        <span className="arrive bubble-word bg-lime px-1.5 py-px font-mono text-[0.6875rem] leading-4 text-ink tabular-nums">
           <span aria-hidden="true">{waiting}</span>
           <span className="sr-only">{t("nav.waiting", { count: waiting })}</span>
         </span>

@@ -19,9 +19,9 @@ function Tick({ step, current }: { step: SetupStep; current: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`grid size-7 shrink-0 place-items-center rounded-full border transition-colors duration-500 ${step.done ? "border-transparent bg-bubble text-on-bubble" : current ? "border-bubble text-accent" : "border-line-strong text-muted-light"}`}
+      className={`grid size-7 shrink-0 place-items-center rounded-full border transition-colors duration-500 ${step.done ? "border-transparent bg-lime text-ink" : current ? "border-lime text-lime" : "border-line-strong text-muted-light"}`}
     >
-      {step.done ? <Icon name="check" className="size-4" /> : current ? <span className="pulse size-2 rounded-full bg-bubble" /> : null}
+      {step.done ? <Icon name="check" className="size-4" /> : current ? <span className="pulse size-2 rounded-full bg-lime" /> : null}
     </span>
   );
 }
@@ -33,10 +33,10 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
   if (!setup.ready || setup.hidden) return null;
   const current = setup.steps.find((step) => !step.done)?.id;
   return (
-    <section aria-labelledby="setup-title" className="arrive bubble mb-8 overflow-hidden border border-line-strong bg-card">
+    <section aria-labelledby="setup-title" className="arrive bubble mb-8 overflow-hidden border border-line-strong bg-ink-raised">
       <header className="flex items-center gap-4 px-5 pt-4 pb-3 sm:px-6">
         <div className="min-w-0 flex-1">
-          <h2 id="setup-title" className="font-display text-xl font-bold tracking-[-0.03em]">
+          <h2 id="setup-title" className="font-serif text-2xl leading-tight font-normal tracking-[-0.01em]">
             {t("onboarding.title")}
           </h2>
           <p className="font-mono text-xs text-muted">{current ? t("onboarding.progress", { done: setup.done, total: setup.total }) : t("onboarding.allSet")}</p>
@@ -51,7 +51,7 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
         </button>
       </header>
       <div aria-hidden="true" className="mx-5 h-1 overflow-hidden rounded-full bg-line sm:mx-6">
-        <div className="h-full rounded-full bg-bubble transition-[width] duration-700 ease-(--ease-glide)" style={{ width: `${(setup.done / setup.total) * 100}%` }} />
+        <div className="h-full rounded-full bg-lime transition-[width] duration-700 ease-(--ease-glide)" style={{ width: `${(setup.done / setup.total) * 100}%` }} />
       </div>
       <ol className="px-5 py-3 sm:px-6">
         {setup.steps.map((step) => {
@@ -60,7 +60,7 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
             <li key={step.id} className="border-b border-line py-3 last:border-b-0">
               <div className="flex items-center gap-3">
                 <Tick step={step} current={open} />
-                <span className={`font-semibold transition-colors duration-300 ${step.done ? "text-muted" : "text-fg"}`}>{t(step.title)}</span>
+                <span className={`font-semibold transition-colors duration-300 ${step.done ? "text-muted" : "text-paper"}`}>{t(step.title)}</span>
                 {step.done ? <span className="sr-only">{t("onboarding.stepDone")}</span> : null}
               </div>
               {step.id === "connector" ? (

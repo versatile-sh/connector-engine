@@ -52,7 +52,7 @@ function Functions({ connector }: { connector: Connector }) {
     <section aria-labelledby="functions-title" className={`${SURFACE} min-w-0 p-5 sm:p-6`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <h2 id="functions-title" className="font-display text-xl font-bold tracking-[-0.03em]">
+          <h2 id="functions-title" className="text-lg leading-snug font-medium">
             {t("detail.functions")}
           </h2>
           <Bubble>{functions.length}</Bubble>
@@ -182,7 +182,7 @@ export function ConnectorDetail({ id }: { id: string }) {
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
         <div className="min-w-48 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-4xl leading-[1.05] font-bold tracking-[-0.04em] break-words">{connector.title}</h1>
+            <h1 className="font-serif text-5xl leading-none font-normal tracking-[-0.02em] break-words">{connector.title}</h1>
             {connector.blocked ? <Bubble tone="amber">{connector.blocked}</Bubble> : null}
           </div>
           {connector.publisher ? <p className="mt-1 text-sm text-muted">{t("import.by", { publisher: connector.publisher })}</p> : null}

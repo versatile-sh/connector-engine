@@ -10,7 +10,7 @@ export function CopyBox({ label, text, tone = "sunken", className = "" }: CopyBo
   const t = useT();
   const { result, copy } = useCopy();
   return (
-    <div className={`bubble border border-line-strong ${tone === "sunken" ? "bg-sunken" : "bg-card"} ${className}`}>
+    <div className={`bubble border border-line-strong ${tone === "sunken" ? "bg-ink-sunken" : "bg-ink-raised"} ${className}`}>
       <div className="flex items-center justify-between gap-3 border-b border-line py-1.5 pr-1.5 pl-4">
         <span className="min-w-0 truncate font-mono text-xs text-muted">{label}</span>
         <button type="button" onClick={() => void copy(text)} className={`${button({ variant: result === "copied" ? "accent" : "secondary", size: "xs" })} w-30`}>
@@ -18,7 +18,7 @@ export function CopyBox({ label, text, tone = "sunken", className = "" }: CopyBo
           <span aria-live="polite">{t(result === "copied" ? "common.copied" : result === "failed" ? "common.copyFailed" : "common.copy")}</span>
         </button>
       </div>
-      <pre className="no-scrollbar overflow-x-auto px-4 py-3 font-mono text-[0.8125rem] leading-relaxed whitespace-pre text-fg select-all">{text}</pre>
+      <pre className="no-scrollbar overflow-x-auto px-4 py-3 font-mono text-[0.8125rem] leading-relaxed whitespace-pre text-paper select-all">{text}</pre>
     </div>
   );
 }

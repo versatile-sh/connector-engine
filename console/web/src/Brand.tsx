@@ -19,7 +19,7 @@ export function Wordmark({ onAccent = false, className = "" }: { onAccent?: bool
       <Mark className={onAccent ? "size-8" : "size-7"} />
       <span className="flex flex-col">
         <span className="font-mono text-[0.9375rem] leading-none font-bold tracking-[-0.02em]">
-          <span className="text-bubble">~/</span>versatile.sh
+          <span className="text-lime">~/</span>versatile.sh
         </span>
         <span className={`mt-1 font-mono text-[0.6875rem] leading-none ${onAccent ? "text-paper/60" : "text-muted"}`}>{t("brand.label")}</span>
       </span>

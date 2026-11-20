@@ -8,8 +8,8 @@ type FieldProps = Omit<ComponentProps<"input">, "id" | "aria-invalid" | "aria-de
   className?: string;
 };
 
-const BOX = "bubble mt-1.5 flex h-11 items-center border border-muted-light bg-canvas transition-colors duration-200 focus-within:border-fg/50 has-aria-invalid:border-amber";
-const INPUT = "h-full min-w-0 flex-1 bg-transparent px-3.5 text-fg placeholder:text-muted-light focus-visible:outline-none";
+const BOX = "bubble mt-1.5 flex h-11 items-center border border-muted-light bg-ink transition-colors duration-200 focus-within:border-paper/50 has-aria-invalid:border-amber";
+const INPUT = "h-full min-w-0 flex-1 bg-transparent px-3.5 text-paper placeholder:text-muted-light focus-visible:outline-none";
 
 /** The one text field: a label, the input, and a note below that keeps its height whether it holds the hint or the error. */
 export function Field({ label, hint, error, mono = false, className = "", ...input }: FieldProps) {

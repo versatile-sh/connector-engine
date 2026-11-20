@@ -1,7 +1,6 @@
 package console
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -76,26 +75,14 @@ func (f *engineFeed) stream(ctx context.Context, fn func(surface.Event)) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("watch answered %d", resp.StatusCode)
 	}
-	sc := bufio.NewScanner(resp.Body)
-	sc.Buffer(make([]byte, 64<<10), 1<<20)
-	var data strings.Builder
-	for sc.Scan() {
-		line := sc.Text()
-		if v, ok := strings.CutPrefix(line, "data:"); ok {
-			data.WriteString(strings.TrimSpace(v))
-			continue
-		}
-		if line != "" || data.Len() == 0 {
-			continue
-		}
+	err = ReadEvents(resp.Body, func(data []byte) {
 		var ev port.Event
-		if err := json.Unmarshal([]byte(data.String()), &ev); err == nil {
+		if json.Unmarshal(data, &ev) == nil {
 			f.handle(ctx, ev, fn)
 			_ = f.c.State.SetCursor(ev.Sequence)
 		}
-		data.Reset()
-	}
-	if err := sc.Err(); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 	return fmt.Errorf("the watch stream ended")

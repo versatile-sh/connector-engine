@@ -22,6 +22,7 @@ type channelStatus struct {
 type surfaces struct {
 	mu      sync.Mutex
 	always  map[string]time.Time
+	shown   map[string]presented
 	status  map[string]channelStatus
 	changed chan struct{}
 	relay   *surface.Relay
@@ -43,6 +44,24 @@ func (s *surfaces) markAlways(id string) {
 		}
 	}
 	s.always[id] = now
+}
+
+const presentTTL = 5 * time.Minute
+
+func (s *surfaces) presented(key string) (presented, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	pr, ok := s.shown[key]
+	return pr, ok && time.Since(pr.at) < presentTTL
+}
+
+func (s *surfaces) present(key string, pr presented) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.shown == nil || len(s.shown) > 256 {
+		s.shown = map[string]presented{}
+	}
+	s.shown[key] = pr
 }
 
 func (s *surfaces) wasAlways(id string) bool {
@@ -164,8 +183,12 @@ func (c *Console) factory() ChannelFactory {
 func (c *Console) buildChannels() []surface.Channel {
 	var out []surface.Channel
 	for _, sc := range c.State.Channels() {
-		ch, err := c.factory()(sc.Kind, sc.Settings)
-		t := tracked{id: sc.ID, secrets: secretValues(sc.Kind, sc.Settings), surf: &c.surf}
+		settings, err := c.settingsOf(sc)
+		t := tracked{id: sc.ID, secrets: secretValues(sc.Kind, settings), surf: &c.surf}
+		var ch surface.Channel
+		if err == nil {
+			ch, err = c.factory()(sc.Kind, settings)
+		}
 		if err != nil {
 			c.surf.setStatus(sc.ID, "error", t.scrub(err))
 			continue

@@ -8,7 +8,14 @@ import (
 	"time"
 )
 
-// StoredChannel is one configured approval channel as the state file keeps it, secrets included.
+// NotifierSecrets keeps the secret settings of approval channels; the console's state file is the default and a sealed store can replace it.
+type NotifierSecrets interface {
+	Get(channel string) (map[string]string, error)
+	Put(channel string, secrets map[string]string) error
+	Delete(channel string) error
+}
+
+// StoredChannel is one configured approval channel as the state file keeps it, without its secrets.
 type StoredChannel struct {
 	ID        string            `json:"id"`
 	Kind      string            `json:"kind"`
@@ -27,11 +34,12 @@ type Device struct {
 }
 
 type notifyState struct {
-	Channels map[string]StoredChannel `json:"channels,omitempty"`
-	Devices  map[string]Device        `json:"devices,omitempty"`
-	Elicit   map[string]bool          `json:"elicit,omitempty"`
-	LinkKey  string                   `json:"link_key,omitempty"`
-	Cursor   int64                    `json:"cursor,omitempty"`
+	Channels map[string]StoredChannel     `json:"channels,omitempty"`
+	Devices  map[string]Device            `json:"devices,omitempty"`
+	Elicit   map[string]bool              `json:"elicit,omitempty"`
+	Secrets  map[string]map[string]string `json:"channel_secrets,omitempty"`
+	LinkKey  string                       `json:"link_key,omitempty"`
+	Cursor   int64                        `json:"cursor,omitempty"`
 }
 
 // Channels returns a copy of the configured approval channels.
@@ -169,4 +177,33 @@ func (s *State) SetCursor(seq int64) error {
 	}
 	s.data.Notify.Cursor = seq
 	return s.save()
+}
+
+// StateSecrets keeps channel secrets in the console's state file, written with mode 0600.
+type StateSecrets struct{ State *State }
+
+// Get returns a copy of a channel's secrets.
+func (s StateSecrets) Get(channel string) (map[string]string, error) {
+	s.State.mu.Lock()
+	defer s.State.mu.Unlock()
+	return maps.Clone(s.State.data.Notify.Secrets[channel]), nil
+}
+
+// Put stores a channel's secrets.
+func (s StateSecrets) Put(channel string, secrets map[string]string) error {
+	s.State.mu.Lock()
+	defer s.State.mu.Unlock()
+	if s.State.data.Notify.Secrets == nil {
+		s.State.data.Notify.Secrets = map[string]map[string]string{}
+	}
+	s.State.data.Notify.Secrets[channel] = maps.Clone(secrets)
+	return s.State.save()
+}
+
+// Delete forgets a channel's secrets.
+func (s StateSecrets) Delete(channel string) error {
+	s.State.mu.Lock()
+	defer s.State.mu.Unlock()
+	delete(s.State.data.Notify.Secrets, channel)
+	return s.State.save()
 }

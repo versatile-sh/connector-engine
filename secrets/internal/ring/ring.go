@@ -86,6 +86,12 @@ func NewRootKey() ([]byte, error) {
 	return k, err
 }
 
+// WrapRoot seals a root key under an unlock key, so the root can rest on disk without being plaintext.
+func WrapRoot(unlock, root []byte) ([]byte, error) { return encrypt(unlock, root, []byte("root")) }
+
+// UnwrapRoot opens what WrapRoot sealed; a wrong unlock key fails.
+func UnwrapRoot(unlock, wrapped []byte) ([]byte, error) { return decrypt(unlock, wrapped, []byte("root")) }
+
 func gcm(key []byte) (cipher.AEAD, error) {
 	b, err := aes.NewCipher(key)
 	if err != nil {

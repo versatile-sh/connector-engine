@@ -257,11 +257,12 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		}
 		for _, f := range m.Functions {
 			ro := f.Annotations != nil && f.Annotations.ReadOnlyHint != nil && *f.Annotations.ReadOnlyHint
+			de := !ro && (f.Annotations == nil || f.Annotations.DestructiveHint == nil || *f.Annotations.DestructiveHint)
 			prop := AccessAsk
 			if ro {
-				prop = AccessRead
+				prop = AccessOn
 			}
-			pv.Tools = append(pv.Tools, ProbedTool{Name: f.Name, Title: f.Title, Description: f.Description, ReadOnly: ro, Destructive: !ro, Proposed: prop})
+			pv.Tools = append(pv.Tools, ProbedTool{Name: f.Name, Title: f.Title, Description: f.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
 		}
 		if m.Remote != nil {
 			pv.RemoteURL = m.Remote.URL
@@ -310,7 +311,7 @@ func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
 	}
 	for name, a := range in.Choices {
 		if !a.Valid() {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "function " + name + ": access is off, read, write or ask"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "function " + name + ": access is off, on or ask"})
 			return
 		}
 	}

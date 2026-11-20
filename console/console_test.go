@@ -243,14 +243,21 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	var pv console.Preview
 	b.ok("POST", "/api/preview", map[string]any{"mcp": up.URL + "/mcp", "local": true}, &pv)
 	proposed := map[string]console.Access{}
+	kinds := map[string]port.Class{}
 	for _, tool := range pv.Tools {
-		proposed[tool.Name] = tool.Proposed
+		proposed[tool.Name], kinds[tool.Name] = tool.Proposed, tool.Kind
 	}
-	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessRead || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessAsk {
+	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessOn || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessAsk {
 		t.Fatalf("preview: %+v", pv)
 	}
+	if kinds["search"] != port.ClassRead || kinds["create"] != port.ClassWrite || kinds["purge"] != port.ClassDestructive || kinds["mystery"] != port.ClassDestructive {
+		t.Fatalf("preview kinds: %v", kinds)
+	}
+	if status, _ := b.send("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "write"}}, nil); status != http.StatusBadRequest {
+		t.Fatalf("the old write choice: %d", status)
+	}
 	var imported struct{ Connector string }
-	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "write", "mystery": "off"}}, &imported)
+	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "on", "mystery": "off"}}, &imported)
 
 	var list struct{ Connectors []console.ConnectorSummary }
 	b.ok("GET", "/api/connectors", nil, &list)
@@ -259,14 +266,18 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 	conn := list.Connectors[0]
 	got := map[string]console.Access{}
+	classes := map[string]port.Class{}
 	for _, f := range conn.Functions {
-		got[f.Name] = f.Access
+		got[f.Name], classes[f.Name] = f.Access, f.Class
 	}
-	want := map[string]console.Access{"search": "read", "create": "write", "purge": "ask", "mystery": "off"}
+	want := map[string]console.Access{"search": "on", "create": "on", "purge": "ask", "mystery": "off"}
 	for k, v := range want {
 		if got[k] != v {
 			t.Fatalf("access read back: %v, want %v", got, want)
 		}
+	}
+	if classes["search"] != port.ClassRead || classes["create"] != port.ClassWrite || classes["purge"] != port.ClassWrite {
+		t.Fatalf("classes by nature: %v", classes)
 	}
 
 	var tok console.AgentToken
@@ -326,12 +337,12 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 		t.Fatalf("the approved call did not run")
 	}
 
-	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/search", map[string]string{"access": "write"}, nil)
-	for _, n := range []string{"search", "create"} {
+	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/purge", map[string]string{"access": "on"}, nil)
+	for _, n := range []string{"search", "create", "purge"} {
 		before := up.count(n)
-		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{}})
+		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{"round": 2}})
 		if err != nil || res.IsError || up.count(n) != before+1 {
-			t.Fatalf("%s after a class raise with a bound agent: %v %v", n, res, err)
+			t.Fatalf("%s on, with a bound agent: %v %v", n, res, err)
 		}
 	}
 
@@ -345,7 +356,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 	m = console.Untrusted(m)
 	m.Remote.URL = up.URL + "/mcp"
-	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessRead})
+	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessOn})
 	if err != nil {
 		t.Fatalf("install from a listing manifest: %v", err)
 	}
@@ -355,7 +366,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 			continue
 		}
 		for _, f := range cv.Functions {
-			if want := map[string]console.Access{"search": "read"}[f.Name]; want != "" && f.Access != want || want == "" && f.Access != console.AccessAsk {
+			if want := map[string]console.Access{"search": "on"}[f.Name]; want != "" && f.Access != want || want == "" && f.Access != console.AccessAsk {
 				t.Errorf("listing install %s: %s", f.Name, f.Access)
 			}
 		}
@@ -429,12 +440,12 @@ func TestIconsAreImagesNeverSVG(t *testing.T) {
 	}
 }
 
-func TestOnlyReadOnlyHintProposesRead(t *testing.T) {
+func TestOnlyReadOnlyHintProposesOn(t *testing.T) {
 	no := false
 	cases := []struct {
 		ann  *mcp.ToolAnnotations
 		want console.Access
-	}{{nil, console.AccessAsk}, {&mcp.ToolAnnotations{ReadOnlyHint: true}, console.AccessRead}, {&mcp.ToolAnnotations{DestructiveHint: &no}, console.AccessAsk}}
+	}{{nil, console.AccessAsk}, {&mcp.ToolAnnotations{ReadOnlyHint: true}, console.AccessOn}, {&mcp.ToolAnnotations{DestructiveHint: &no}, console.AccessAsk}}
 	for _, c := range cases {
 		if _, _, got := console.Propose(c.ann); got != c.want {
 			t.Errorf("%+v: %s", c.ann, got)

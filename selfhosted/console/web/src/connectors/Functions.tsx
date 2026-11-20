@@ -15,12 +15,16 @@ import { accessCounts } from "./summary";
 
 const TONE = { on: "paper", ask: "lime", off: "muted" } as const;
 
-type FunctionsProps = { connector: Connector; lens: Lens; copy?: { text: string; open(): void } | undefined };
+type FunctionsProps = { connector: Connector; lens: Lens; scope: string; copy?: { text: string; open(): void } | undefined };
 
-/** A connector's functions in one card, its heading, counts, filter and tools inside, with each one's choice as the lens of a profile reads and writes it; while they can change, each row can be picked for the tools over the list. */
-export function Functions({ connector, lens, copy }: FunctionsProps) {
+const NONE: ReadonlySet<string> = new Set();
+
+/** A connector's functions in one card, its heading, counts, filter and tools inside, with each one's choice as the lens of a profile reads and writes it; while they can change, each row can be picked for the tools over the list, and the rows picked belong to the profile `scope` they were picked in. */
+export function Functions({ connector, lens, scope, copy }: FunctionsProps) {
   const t = useT();
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [picked, setPicked] = useState<{ scope: string; names: ReadonlySet<string> }>({ scope, names: NONE });
+  const selected = picked.scope === scope ? picked.names : NONE;
+  const setSelected = (names: ReadonlySet<string>) => setPicked({ scope, names });
   const functions = connector.functions ?? [];
   const counts = accessCounts(functions.map((fn) => ({ access: lens.accessOf(fn.name, fn.access) })));
   return (

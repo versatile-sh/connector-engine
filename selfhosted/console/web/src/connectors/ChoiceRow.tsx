@@ -9,7 +9,7 @@ export function ChoiceRow({ name, title, lead, flags, description, children }: C
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 @md:gap-x-6">
         <div className="min-w-0">
           <div className="flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1">
-            {lead}
+            {lead ? <span className="arrive inline-flex">{lead}</span> : null}
             <code className="min-w-0 font-mono text-sm font-medium text-paper [overflow-wrap:anywhere]" translate="no">
               {name}
             </code>

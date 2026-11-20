@@ -10,12 +10,16 @@ import { Display } from "../ui/Display";
 import { Arrow, Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
-import { CAPTION, PANEL, QUIET_LINK, SKELETON, SKELETON_LINE, button } from "../ui/styles";
+import { CAPTION, PANEL, QUIET_LINK, SKELETON, SKELETON_LINE, SUBTITLE, WELL, button } from "../ui/styles";
+import { tabId } from "../ui/Tabs";
 import { Tag } from "../ui/Tag";
 import { ConnectorChoices } from "./ConnectorChoices";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { Credentials } from "./Credentials";
+import { ProfileTabs } from "./ProfileBar";
 import { serverHost } from "./summary";
+
+const PROFILE_PANEL = "profile-panel";
 
 function Back() {
   const t = useT();
@@ -55,7 +59,7 @@ function Remove({ connector, remove, onClose }: { connector: Connector; remove: 
   );
 }
 
-/** One connector in full: who it is, every function and item with its access for the default or one key's profile, its one credential every key shares, and its removal behind a confirmation. */
+/** One connector in full: who it is, the tabs of its profiles over every function and item with its access for the default or one key, beside them the one credential every key shares and the connector's facts, and its removal behind a confirmation. */
 export function ConnectorDetail({ id }: { id: string }) {
   const t = useT();
   const { query } = useLocation();
@@ -87,6 +91,8 @@ export function ConnectorDetail({ id }: { id: string }) {
       </div>
     );
   }
+  const profile = connector.profiles.find((p) => p.agent === query.get("profile"));
+  const tabs = connector.profiles.length > 0;
   const host = serverHost(connector);
   const facts = [
     { label: t("detail.facts.prefix"), value: `${connector.alias}__*` },
@@ -125,20 +131,28 @@ export function ConnectorDetail({ id }: { id: string }) {
         </div>
       </header>
       <article className={`${PANEL} p-4 sm:p-8 xl:p-10`}>
+        {tabs ? <ProfileTabs connector={connector} agent={profile?.agent} panel={PROFILE_PANEL} className="mb-6" /> : null}
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
-          <ConnectorChoices connector={connector} agent={query.get("profile")} />
+          <div id={PROFILE_PANEL} role={tabs ? "tabpanel" : undefined} aria-labelledby={tabs ? tabId(PROFILE_PANEL, profile?.agent ?? "") : undefined} className="min-w-0">
+            <ConnectorChoices connector={connector} agent={profile?.agent} />
+          </div>
           <aside className="flex flex-col gap-6 lg:self-start lg:tall:sticky lg:tall:top-24">
             <Credentials connector={connector} />
-            <dl className="grid gap-4 text-sm">
-              {facts.map((fact) => (
-                <div key={fact.label} className="min-w-0">
-                  <dt className={CAPTION}>{fact.label}</dt>
-                  <dd className="mt-1 truncate font-mono text-xs leading-5 text-paper" title={fact.value} translate="no">
-                    {fact.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            <section aria-labelledby="facts-title" className={`${WELL} p-5`}>
+              <h2 id="facts-title" className={SUBTITLE}>
+                {t("detail.facts")}
+              </h2>
+              <dl className="mt-3 grid gap-4 text-sm">
+                {facts.map((fact) => (
+                  <div key={fact.label} className="min-w-0">
+                    <dt className={CAPTION}>{fact.label}</dt>
+                    <dd className="mt-1 truncate font-mono text-xs leading-5 text-paper" title={fact.value} translate="no">
+                      {fact.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
           </aside>
         </div>
       </article>

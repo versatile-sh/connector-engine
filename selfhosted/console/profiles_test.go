@@ -300,3 +300,20 @@ func TestEachAccessKeyHasItsOwnPermissionsOnOneConnector(t *testing.T) {
 		}
 	})
 }
+
+func TestAKeyThatHadExpiredFollowsAConnectorAddedMeanwhile(t *testing.T) {
+	p := profiledStack(t)
+	if err := p.c.State.PutAgent(console.Agent{Name: "old", ExpiresAt: time.Now().Add(-time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	var imported struct{ Connector string }
+	p.b.ok("POST", "/api/import", map[string]any{"mcp": newToolServer(t, "maps", "route").URL + "/mcp", "local": true}, &imported)
+	p.mint("old")
+	p.conn = imported.Connector
+	if pr := p.profile("old"); pr.Mode != console.ProfileFollow {
+		t.Fatalf("the renewed key on the new connector: %+v", pr)
+	}
+	if got := p.effects("old"); got["route"] != console.AccessOn {
+		t.Fatalf("the engine answers %v", got)
+	}
+}

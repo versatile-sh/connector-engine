@@ -160,7 +160,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 }
 
 func (c *Console) bindAll(ctx context.Context, conn string, bind func(context.Context, string, Agent) error) error {
-	for _, a := range c.State.Agents() {
+	for _, a := range c.liveAgents() {
 		if err := bind(ctx, conn, a); err != nil {
 			return err
 		}
@@ -280,7 +280,7 @@ func AliasBase(name string) string {
 	return ns[strings.LastIndex(ns, ".")+1:]
 }
 
-// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent; with a key already made it also finishes the first-run guide.
+// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every key made so far, expired ones included so that a renewal follows it; with a key already made it also finishes the first-run guide.
 func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
 	conn, fns, err := c.installListing(ctx, m, func(ref port.ListingRef) string { return AliasBase(ref.Name) })
 	if err != nil {
@@ -297,8 +297,10 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
-	if err := c.bindAll(ctx, conn, c.bind); err != nil {
-		return conn, err
+	for _, a := range c.State.Agents() {
+		if err := c.bind(ctx, conn, a); err != nil {
+			return conn, err
+		}
 	}
 	if len(c.State.Agents()) > 0 {
 		if err := c.State.DismissOnboarding(); err != nil {

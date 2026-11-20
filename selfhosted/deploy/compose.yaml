@@ -1,0 +1,53 @@
+name: connector-engine
+
+include:
+  - ../../deploy/compose.yaml
+
+x-image: &image
+  image: ${CN_IMAGE:-connector-engine:local}
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+
+x-secrets-ro: &secrets-ro secrets:/run/connector-engine:ro
+x-unlock: &unlock /run/connector-engine-unlock:uid=65532,gid=65532,mode=0700
+
+services:
+  engine:
+    <<: *image
+    profiles: [person]
+    entrypoint: ["/usr/local/bin/connector-engine-selfhosted"]
+    command: ["--config", "/etc/connector-engine/connector-engine.yaml", "--adapters", "/etc/connector-engine/adapters.yaml"]
+    volumes:
+      - ./profiles/person:/etc/connector-engine:ro
+      - *secrets-ro
+      - engine-data:/var/lib/connector-engine
+    tmpfs:
+      - *unlock
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: unless-stopped
+
+  console:
+    <<: *image
+    profiles: [person]
+    entrypoint: ["/usr/local/bin/connector-console", "serve"]
+    environment:
+      CONSOLE_LISTEN: 0.0.0.0:${CONSOLE_PORT:-7465}
+      CONSOLE_PUBLIC_URL: http://127.0.0.1:${CONSOLE_PORT:-7465}
+      CONSOLE_ENGINE_URL: http://engine:8080
+      CONSOLE_ENGINE_OPERATOR_URL: http://engine:8081
+      CONSOLE_UNLOCK_SOCKET: /run/connector-engine-unlock/unlock.sock
+    ports:
+      - "127.0.0.1:${CONSOLE_PORT:-7465}:${CONSOLE_PORT:-7465}"
+    volumes:
+      - *secrets-ro
+      - console-data:/var/lib/connector-console
+    tmpfs:
+      - *unlock
+    depends_on:
+      engine: {condition: service_started}
+    restart: unless-stopped
+
+volumes:
+  console-data:

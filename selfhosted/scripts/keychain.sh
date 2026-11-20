@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: scripts/keychain.sh unlock|migrate|revert|status|recovery|import, with COMPOSE, CNCTL and PROJECT set by make"
+usage="usage: selfhosted/scripts/keychain.sh unlock|migrate|revert|status|recovery|import, with COMPOSE, CNCTL and PROJECT set by make"
 op="${1:?$usage}"
 read -r -a compose <<<"${COMPOSE:?$usage}"
 cnctl="${CNCTL:-}"
@@ -10,7 +10,7 @@ protection=""
 
 deliver() {
   local cmd=(/usr/local/bin/connector-console unlock)
-  if [ "$1" = engine ]; then cmd=(/usr/local/bin/connector-engine --config /etc/connector-engine/connector-engine.yaml unlock); fi
+  if [ "$1" = engine ]; then cmd=(/usr/local/bin/connector-engine-selfhosted --config /etc/connector-engine/connector-engine.yaml unlock); fi
   "${compose[@]}" exec -T "$1" "${cmd[@]}" --op "$2"
 }
 

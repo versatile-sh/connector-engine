@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root"
 project="${CHECK_PROJECT:-connector-engine-check}"
 export CN_IMAGE="${CHECK_IMAGE:-connector-engine-check:local}"
-compose=(docker compose -p "$project" -f deploy/compose.yaml -f deploy/compose.check.yaml --profile person)
+compose=(docker compose -p "$project" -f selfhosted/deploy/compose.yaml -f selfhosted/deploy/compose.check.yaml --profile person)
 port="${CHECK_PORT:-7466}"
 export CONSOLE_PORT="$port"
 base="http://127.0.0.1:$port"

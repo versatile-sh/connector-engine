@@ -7,13 +7,32 @@ import (
 	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 )
 
+// Finding is one result of a check of the configuration.
+type Finding = adapters.Finding
+
+// Findings are what a Builtin's Check returns.
+type Findings = adapters.Findings
+
+// SettingKind is the value type of a setting an adapter accepts in adapters.yaml.
+type SettingKind = adapters.ConfigKind
+
+// Finding levels and the kinds of a setting in adapters.yaml; SettingRef values are references such as env:NAME.
+const (
+	LevelError    = adapters.LevelError
+	LevelWarning  = adapters.LevelWarning
+	SettingRef    = adapters.ConfigRef
+	SettingString = adapters.ConfigString
+	SettingBool   = adapters.ConfigBool
+	SettingNumber = adapters.ConfigNumber
+)
+
 // Builtin declares an adapter of a port: its name (selected as builtin:<Name>, or the memory tier when Name is memory), its capabilities, the settings it accepts and the checks it adds to connector-engine.yaml.
 type Builtin struct {
 	Port         string
 	Name         string
 	Capabilities []string
-	Settings     map[string]adapters.ConfigKind
-	Check        func(c Config, acknowledged func(string) bool) adapters.Findings
+	Settings     map[string]SettingKind
+	Check        func(c Config, acknowledged func(string) bool) Findings
 }
 
 // Selection is how adapters.yaml selects the adapter.
@@ -72,8 +91,8 @@ func (c Config) declare(ports map[string]adapters.PortSpec) {
 	}
 }
 
-func (c Config) builtinFindings(acknowledged func(string) bool) adapters.Findings {
-	var fs adapters.Findings
+func (c Config) builtinFindings(acknowledged func(string) bool) Findings {
+	var fs Findings
 	for _, b := range c.builtins {
 		if b.Check != nil {
 			fs = append(fs, b.Check(c, acknowledged)...)

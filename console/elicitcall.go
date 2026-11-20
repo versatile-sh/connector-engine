@@ -209,7 +209,7 @@ func (c *Console) correlate(ctx context.Context, agent, session, function string
 
 func (c *Console) elicitable(ctx context.Context, id, agent, session string) (ApprovalView, bool) {
 	v, err := c.Approval(ctx, id)
-	if err != nil || v.State != string(port.ApprovalPending) || v.App != agent || v.Session != session || v.Kind == port.ClassDestructive {
+	if err != nil || v.State != string(port.ApprovalPending) || v.App != agent || v.Session != session || !v.known || v.Kind == port.ClassDestructive {
 		return v, false
 	}
 	return v, c.surf.el.claim(id)

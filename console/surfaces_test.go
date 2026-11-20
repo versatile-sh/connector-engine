@@ -397,5 +397,8 @@ func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
 		t.Fatalf("skill_load after always: %+v %v", got.res, got.err)
 	}
 	r.eventually("the key turning on for the skill", func() bool { return r.allowed("agent", "claude-code", imported.Skill, "skill") })
+	if r.allowed("workspace", "default", imported.Skill, "skill") {
+		t.Fatal("always on a skill opened it to the whole workspace")
+	}
 
 }

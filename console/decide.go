@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/agents-control/connector-engine/port"
@@ -46,6 +47,7 @@ type ApprovalView struct {
 	DecidedAt      time.Time        `json:"decided_at,omitzero"`
 	Channel        string           `json:"channel,omitempty"`
 	approval       port.Approval
+	known          bool
 }
 
 type approvalDetail struct {
@@ -79,6 +81,7 @@ type presented struct {
 	skill     bool
 	kind      port.Class
 	title     string
+	known     bool
 	at        time.Time
 }
 
@@ -93,12 +96,14 @@ func (c *Console) present(ctx context.Context, a port.Approval) (presented, erro
 	}
 	pr := presented{connector: ref, at: time.Now()}
 	if m.Kind == port.KindSkill {
-		pr.skill, pr.kind, pr.title = true, port.ClassRead, firstOf(m.Title, ref.Alias)
+		pr.skill, pr.kind, pr.title, pr.known = true, port.ClassRead, firstOf(m.Title, ref.Alias), true
 	} else if f, err := c.function(ctx, string(a.Connector), a.Function); err == nil {
-		pr.kind = Nature(f)
+		pr.kind, pr.known = Nature(f), true
 		pr.title, _ = describe(f.Definition)
 	}
-	c.surf.present(key, pr)
+	if pr.known {
+		c.surf.present(key, pr)
+	}
 	return pr, nil
 }
 
@@ -122,7 +127,7 @@ func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error)
 	if err != nil {
 		return ApprovalView{}, err
 	}
-	v.Connector, v.Skill = pr.connector, pr.skill
+	v.Connector, v.Skill, v.known = pr.connector, pr.skill, pr.known
 	if pr.kind != "" {
 		v.Kind = pr.kind
 	}
@@ -136,7 +141,10 @@ func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error)
 		if a.Mode == port.ModeAskOnce {
 			v.Choices = append(v.Choices, surface.ChoiceSession)
 		}
-		v.Choices = append(v.Choices, surface.ChoiceAlways, surface.ChoiceDeny)
+		if v.known {
+			v.Choices = append(v.Choices, surface.ChoiceAlways)
+		}
+		v.Choices = append(v.Choices, surface.ChoiceDeny)
 	}
 	return v, nil
 }
@@ -155,8 +163,8 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	switch {
 	case decision == "":
 		return v, false, fmt.Errorf("the choice is once, session, always or deny")
-	case choice == surface.ChoiceSession && v.approval.Mode != port.ModeAskOnce:
-		return v, false, fmt.Errorf("this call cannot be allowed for the session; allow it once or always")
+	case !slices.Contains(v.Choices, choice):
+		return v, false, fmt.Errorf("%s is not offered for this call", choice)
 	}
 	var out port.Approval
 	if err := c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":decide", map[string]any{"decision": decision, "channel": channel, "note": note}, &out); err != nil {
@@ -189,9 +197,11 @@ func (c *Console) allowAfterRun(v ApprovalView) {
 		case <-time.After(allowPoll):
 		}
 	}
-	err := c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn)
+	var err error
 	if v.Skill {
 		err = c.SetSkillAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), AccessOn)
+	} else {
+		err = c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn)
 	}
 	if err != nil {
 		c.logger().Warn("always allow", "approval", v.ID, "error", err)

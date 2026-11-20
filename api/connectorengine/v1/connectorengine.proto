@@ -702,6 +702,8 @@ message ListApprovalsRequest {
   string session = 2;
   string agent = 3;
   string connector = 4;
+  google.protobuf.Timestamp since = 5;
+  int64 limit = 6;
 }
 
 message ListBindingsRequest {
@@ -715,6 +717,8 @@ message ListCallsRequest {
   string session = 2;
   string connector = 3;
   string state = 4;
+  google.protobuf.Timestamp since = 5;
+  int64 limit = 6;
 }
 
 message ListCredentialsRequest {

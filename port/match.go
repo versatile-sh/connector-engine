@@ -22,13 +22,14 @@ func (f GrantFilter) Match(g Grant) bool {
 // Match reports whether a passes the filter.
 func (f ApprovalFilter) Match(a Approval) bool {
 	return (len(f.States) == 0 || slices.Contains(f.States, a.State)) && (f.Session == "" || a.Session == f.Session) &&
-		(f.Agent == "" || a.Agent == f.Agent) && (f.Connector == "" || a.Connector == f.Connector) && (f.CallHash == "" || a.CallHash == f.CallHash)
+		(f.Agent == "" || a.Agent == f.Agent) && (f.Connector == "" || a.Connector == f.Connector) && (f.CallHash == "" || a.CallHash == f.CallHash) &&
+		!a.CreatedAt.Before(f.Since)
 }
 
 // Match reports whether c passes the filter.
 func (f CallFilter) Match(c Call) bool {
 	return (f.Agent == "" || c.Agent == f.Agent) && (f.Session == "" || c.Session == f.Session) &&
-		(f.Connector == "" || c.Connector == f.Connector) && (f.State == "" || c.State == f.State)
+		(f.Connector == "" || c.Connector == f.Connector) && (f.State == "" || c.State == f.State) && !c.StartedAt.Before(f.Since)
 }
 
 // Match reports whether c passes the filter.

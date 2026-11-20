@@ -1,6 +1,10 @@
-export type Access = "off" | "read" | "write" | "ask";
+/** The owner's choice for one function: hidden, allowed at once, or held for approval on every call. */
+export type Access = "off" | "on" | "ask";
 
-export const ACCESS: readonly Access[] = ["off", "read", "write", "ask"];
+export const ACCESS: readonly Access[] = ["off", "on", "ask"];
+
+/** What a function does by its own description; it is shown, never chosen. */
+export type Kind = "read" | "write" | "destructive";
 
 export type Session = {
   owner_exists: boolean;
@@ -14,6 +18,7 @@ export type FunctionView = {
   title?: string;
   description?: string;
   class: string;
+  kind: Kind;
   state: string;
   access: Access;
 };
@@ -41,6 +46,7 @@ export type ProbedTool = {
   description?: string;
   read_only: boolean;
   destructive: boolean;
+  kind: Kind;
   proposed: Access;
 };
 

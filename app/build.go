@@ -23,6 +23,7 @@ import (
 	rtmemory "github.com/agents-control/connector-engine/runtime/memory"
 	"github.com/agents-control/connector-engine/runtime/mux"
 	rtremote "github.com/agents-control/connector-engine/runtime/remote"
+	rtskill "github.com/agents-control/connector-engine/runtime/skill"
 	secretslocal "github.com/agents-control/connector-engine/secrets/local"
 	secretsmemory "github.com/agents-control/connector-engine/secrets/memory"
 	sinklog "github.com/agents-control/connector-engine/sink/log"
@@ -119,6 +120,8 @@ func (b builder) runtime(store port.Store, secrets port.SecretStore) (port.Conne
 			runtimes = append(runtimes, rtremote.New(applier, nil, b.guard(nil)))
 		case u.Name == "declarative":
 			runtimes = append(runtimes, rtdeclarative.New(applier, nil, b.guard(nil)))
+		case u.Name == "skill":
+			runtimes = append(runtimes, rtskill.New())
 		case u.Name == "grpc":
 			runtimes = append(runtimes, rtgrpc.New(rtgrpc.Options{Applier: applier, Insecure: b.cfg.GRPC.Insecure, Guard: b.guard(nil)}))
 		}

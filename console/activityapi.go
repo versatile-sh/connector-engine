@@ -103,7 +103,7 @@ type itemStream[T any] struct {
 func (s *itemStream[T]) readBody(r io.Reader) error {
 	d := json.NewDecoder(r)
 	if tok, err := d.Token(); err != nil || tok != json.Delim('{') {
-		return errors.Join(errors.New("the engine answered no object"), err)
+		return unreachable(errors.Join(errors.New("the engine answered no object"), err))
 	}
 	for d.More() {
 		tok, err := d.Token()
@@ -121,7 +121,7 @@ func (s *itemStream[T]) readBody(r io.Reader) error {
 			return err
 		}
 		if tok != json.Delim('[') {
-			return errors.New("the engine answered items that are not a list")
+			return unreachable(errors.New("the engine answered items that are not a list"))
 		}
 		for d.More() {
 			var v T
@@ -387,21 +387,21 @@ func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, erro
 		if v := qv.Get(name); v != "" {
 			t, err := time.Parse(time.RFC3339, v)
 			if err != nil {
-				return f, errors.New(name + " is an RFC 3339 time")
+				return f, invalid("%s is an RFC 3339 time", name)
 			}
 			*into = t.UTC()
 		}
 	}
 	if f.to.Before(f.from) {
-		return f, errors.New("from is before to")
+		return f, invalid("from is before to")
 	}
 	if f.to.Sub(f.from) > activityRetention+time.Hour {
-		return f, errors.New("the range is at most 30 days")
+		return f, invalid("the range is at most %d days", retentionDays)
 	}
 	switch f.outcome {
 	case "", OutcomeOK, OutcomeError, OutcomeDenied, OutcomePending, OutcomeRunning:
 	default:
-		return f, errors.New("outcome is ok, error, denied, pending or running")
+		return f, invalid("outcome is ok, error, denied, pending or running")
 	}
 	f.from = latest(f.from, floor)
 	f.to = latest(f.to, f.from)
@@ -415,27 +415,26 @@ func latest(a, b time.Time) time.Time {
 	return a
 }
 
-func (c *Console) activityOff(w http.ResponseWriter) bool {
-	if c.Activity == nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "this console keeps no activity"})
-		return true
+func (c *Console) withActivity(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if c.Activity == nil {
+			writeError(w, http.StatusServiceUnavailable, "this console keeps no activity")
+			return
+		}
+		next(w, r)
 	}
-	return false
 }
 
 func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	f, err := parseActivityFilter(r, c.Activity.Floor())
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		c.fail(w, err)
 		return
 	}
 	c.Activity.Flush()
 	captures, err := c.Activity.Captures(f.from)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot read the activity log"})
+		writeError(w, http.StatusInternalServerError, "cannot read the activity log")
 		return
 	}
 	facts, err := c.engineFacts(r.Context(), f.from.Add(-joinSkew), f.agent)
@@ -466,9 +465,6 @@ func detailOf(j joined) ActivityDetail {
 }
 
 func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	id := r.PathValue("id")
 	floor := c.Activity.Floor()
 	var captures []Capture
@@ -485,17 +481,17 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 		c.Activity.Flush()
 		cp, ok, err := c.Activity.Capture(id)
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot read the activity log"})
+			writeError(w, http.StatusInternalServerError, "cannot read the activity log")
 			return
 		}
 		if !ok {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such call in the activity"})
+			writeError(w, http.StatusNotFound, "no such call in the activity")
 			return
 		}
 		captures, since, agent = []Capture{cp}, cp.At.Add(-joinSkew), cp.Agent
 	}
 	if since.Before(floor) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such call in the activity"})
+		writeError(w, http.StatusNotFound, "no such call in the activity")
 		return
 	}
 	facts, err := c.engineFacts(r.Context(), since, agent)
@@ -509,7 +505,7 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such call in the activity"})
+	writeError(w, http.StatusNotFound, "no such call in the activity")
 }
 
 type activitySettingsView struct {
@@ -520,17 +516,11 @@ type activitySettingsView struct {
 }
 
 func (c *Console) activitySettings(w http.ResponseWriter, _ *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	s := c.Activity.Settings()
-	writeJSON(w, http.StatusOK, activitySettingsView{RecordArguments: s.RecordArguments, RecordResults: s.RecordResults, RetentionDays: int(activityRetention / (24 * time.Hour)), ClearedAt: s.ClearedAt})
+	writeJSON(w, http.StatusOK, activitySettingsView{RecordArguments: s.RecordArguments, RecordResults: s.RecordResults, RetentionDays: retentionDays, ClearedAt: s.ClearedAt})
 }
 
 func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	var in struct {
 		RecordArguments *bool `json:"record_arguments"`
 		RecordResults   *bool `json:"record_results"`
@@ -539,22 +529,19 @@ func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if in.RecordArguments == nil || in.RecordResults == nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "give record_arguments and record_results"})
+		writeError(w, http.StatusBadRequest, "give record_arguments and record_results")
 		return
 	}
 	if err := c.Activity.SetRecording(*in.RecordArguments, *in.RecordResults); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot save the activity settings"})
+		writeError(w, http.StatusInternalServerError, "cannot save the activity settings")
 		return
 	}
 	c.activitySettings(w, r)
 }
 
 func (c *Console) deleteActivity(w http.ResponseWriter, _ *http.Request) {
-	if c.activityOff(w) {
-		return
-	}
 	if err := c.Activity.DeleteAll(); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot delete the activity"})
+		writeError(w, http.StatusInternalServerError, "cannot delete the activity")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

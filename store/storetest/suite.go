@@ -2,11 +2,13 @@
 package storetest
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -51,6 +53,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"inbox":                     inbox,
 		"scope validation":          scopeValidation,
 		"records":                   records,
+		"skill version":             skillVersion,
 		"roles and groups":          rolesAndGroups,
 		"calls clients and syncs":   callsClientsAndSyncs,
 		"purge tenant":              purgeTenant,
@@ -606,6 +609,26 @@ func inbox(e *env) {
 func scopeValidation(e *env) {
 	e.code(e.read(port.Scope{}, func(port.Tx) error { return nil }), port.CodeInvalidArgument)
 	e.code(e.write(port.Scope{}, func(port.Tx) error { return nil }), port.CodeInvalidArgument)
+}
+
+func skillVersion(e *env) {
+	ref := port.VersionRef{Listing: port.ListingRef{Owner: "ta", Name: "io.x/pdf"}, Version: strings.Repeat("a", 40)}
+	content := []byte{'#', '!', 0x00, 0xff, '\n'}
+	m := port.Manifest{Owner: "ta", Name: "io.x/pdf", Version: ref.Version, Kind: port.KindSkill, Skill: &port.Skill{Name: "pdf", Redistribution: port.RedistributionBundled,
+		Files: []port.SkillFile{{Path: "scripts/run.sh", Bytes: int64(len(content)), SHA256: "s", Content: content}}}}
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		return tx.PutVersion(port.ListingVersion{Ref: ref, Manifest: m, Status: port.ListingActive, ImportedAt: t0})
+	}))
+	e.must(e.read(scopeA, func(tx port.Tx) error {
+		lv, err := tx.GetVersion(ref)
+		if err != nil {
+			return err
+		}
+		if lv.Manifest.Kind != port.KindSkill || lv.Manifest.Skill == nil || !bytes.Equal(lv.Manifest.Skill.Files[0].Content, content) {
+			e.t.Fatalf("a skill version did not round trip: %+v", lv.Manifest.Skill)
+		}
+		return nil
+	}))
 }
 
 func records(e *env) {

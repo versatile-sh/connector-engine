@@ -24,6 +24,8 @@ const (
 	maxClientName       = 64
 )
 
+var appSchemes = map[string]string{"cursor": "Cursor", "vscode": "VS Code"}
+
 var browserSchemes = []string{"https", "javascript", "data", "file", "blob", "about", "ftp", "ws", "wss", "mailto", "tel", "sms", "view-source", "chrome", "chrome-extension", "edge", "moz-extension", "intent", "filesystem", "jar", "vbscript", "resource"}
 
 type authRequest struct {
@@ -301,13 +303,37 @@ func redirectTarget(redirect string) string {
 	return u.Scheme + "://" + u.Host
 }
 
+// Destination is where a consent sends the browser back, in plain words: an app on this computer at a port, an app known by its scheme, or any app that opens a scheme.
+type Destination struct {
+	Kind   string `json:"kind"`
+	Port   string `json:"port,omitempty"`
+	App    string `json:"app,omitempty"`
+	Scheme string `json:"scheme,omitempty"`
+}
+
+// DestinationOf names where a registered redirect URI leads: kind loopback with its port, app with a known app's name, or scheme.
+func DestinationOf(redirect string) Destination {
+	u, err := url.Parse(redirect)
+	if err != nil {
+		return Destination{Kind: "scheme"}
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme == "http" && loopbackName(u.Hostname()) {
+		return Destination{Kind: "loopback", Port: u.Port()}
+	}
+	if app, ok := appSchemes[scheme]; ok {
+		return Destination{Kind: "app", App: app}
+	}
+	return Destination{Kind: "scheme", Scheme: scheme}
+}
+
 func (c *Console) consentInfo(w http.ResponseWriter, r *http.Request) {
 	req, ok := c.pendingRequest(r.PathValue("id"), false)
 	if !ok {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"client": req.client.Name, "redirect": redirectTarget(req.redirect)})
+	writeJSON(w, http.StatusOK, map[string]any{"client": req.client.Name, "redirect": redirectTarget(req.redirect), "destination": DestinationOf(req.redirect)})
 }
 
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {

@@ -113,9 +113,12 @@ func (o *oauthRig) approve(authURL string) *url.URL {
 		o.t.Fatalf("authorize: %d %s", resp.StatusCode, loc)
 	}
 	id := loc.Query().Get("request")
-	var info struct{ Client, Redirect string }
+	var info struct {
+		Client, Redirect string
+		Destination      console.Destination
+	}
 	o.b.ok("GET", "/api/oauth/requests/"+id, nil, &info)
-	if info.Client != "Claude Code" || info.Redirect != "http://127.0.0.1:33418" {
+	if info.Client != "Claude Code" || info.Redirect != "http://127.0.0.1:33418" || info.Destination != (console.Destination{Kind: "loopback", Port: "33418"}) {
 		o.t.Fatalf("consent info: %+v", info)
 	}
 	if status, _ := o.b.send("POST", "/api/oauth/requests/"+id, map[string]bool{"approve": true}, map[string]string{"X-CSRF-Token": ""}); status != http.StatusForbidden {
@@ -308,6 +311,35 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	if status, out := o.token(renew, ""); status != http.StatusBadRequest || out["error"] != "invalid_grant" {
 		t.Fatalf("a refresh after a revoke: %d %v", status, out)
 	}
+}
+
+func (o *oauthRig) requestConsent(clientID, redirect string) string {
+	o.t.Helper()
+	resp := o.startAuthorize(url.Values{"response_type": {"code"}, "client_id": {clientID}, "redirect_uri": {redirect}, "state": {"s1"},
+		"code_challenge": {challengeOf(strings.Repeat("v", 50))}, "code_challenge_method": {"S256"}})
+	loc, _ := url.Parse(resp.Header.Get("Location"))
+	if resp.StatusCode != http.StatusSeeOther || loc.Path != "/connect" {
+		o.t.Fatalf("authorize %s: %d %s", redirect, resp.StatusCode, loc)
+	}
+	return "/api/oauth/requests/" + loc.Query().Get("request")
+}
+
+func TestTheConsentPage(t *testing.T) {
+	o := newOAuthRig(t)
+	redirects := []string{callback, "cursor://anysphere.cursor-mcp/oauth/callback", "vscode://vscode.github-authentication/did-authenticate", "myapp:/oauth"}
+	_, reg := o.register(redirects...)
+	clientID, _ := reg["client_id"].(string)
+
+	t.Run("says where the access goes in plain words", func(t *testing.T) {
+		want := []console.Destination{{Kind: "loopback", Port: "33418"}, {Kind: "app", App: "Cursor"}, {Kind: "app", App: "VS Code"}, {Kind: "scheme", Scheme: "myapp"}}
+		for i, redirect := range redirects {
+			var info struct{ Destination console.Destination }
+			o.b.ok("GET", o.requestConsent(clientID, redirect), nil, &info)
+			if info.Destination != want[i] {
+				t.Errorf("%s: %+v, want %+v", redirect, info.Destination, want[i])
+			}
+		}
+	})
 }
 
 func TestTheAuthorizationServerRefusesWhatTheSpecForbids(t *testing.T) {

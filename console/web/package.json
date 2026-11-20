@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"src/**/*.test.ts\"",
+    "test": "node --import ./resolve-ts.mjs --test \"src/**/*.test.ts\"",
     "dev": "vite"
   },
   "dependencies": {

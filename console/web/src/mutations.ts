@@ -75,10 +75,10 @@ export const connectOAuth = mutationOptions({
     api<{ url: string }>("POST", `/api/connectors/${at(connector, "oauth")}`, { client_id: clientID, client_secret: clientSecret }),
 });
 
-/** Removes a connector with its functions, items and credentials. */
+/** Removes a connector with its functions, items and credentials; skills name the connectors they need, so they are read again too. */
 export const removeConnector = mutationOptions({
   mutationFn: (id: string) => api("DELETE", `/api/connectors/${at(id)}`),
-  onSuccess: (_data, _id, _onMutate, { client }) => invalidate(client, sessionQuery.queryKey, connectorsQuery.queryKey),
+  onSuccess: (_data, _id, _onMutate, { client }) => invalidate(client, sessionQuery.queryKey, connectorsQuery.queryKey, skillsQuery.queryKey),
 });
 
 /** What POST /api/import takes: the previewed source with the owner's choices for a connector, or the access and digest for a skill. */
@@ -96,10 +96,10 @@ export const setSkillAccess = mutationOptions({
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, skillsQuery.queryKey),
 });
 
-/** Removes an installed skill. */
+/** Removes an installed skill; the session is read again, as after any install or removal. */
 export const removeSkill = mutationOptions({
   mutationFn: (id: string) => api("DELETE", `/api/skills/${at(id)}`),
-  onSuccess: (_data, _id, _onMutate, { client }) => invalidate(client, skillsQuery.queryKey),
+  onSuccess: (_data, _id, _onMutate, { client }) => invalidate(client, skillsQuery.queryKey, sessionQuery.queryKey),
 });
 
 /** Answers a held call, with the page's link token when there is no session. The record it answers replaces the cached one; signed in, the held list is read again, and connectors and skills too after Always. */

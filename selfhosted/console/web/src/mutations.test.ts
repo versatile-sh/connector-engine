@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, test } from "node:test";
 import { MutationObserver, QueryClient, type QueryKey, type UseMutationOptions } from "@tanstack/react-query";
 import * as mutations from "./mutations.ts";
-import { activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries.ts";
+import { accountQuery, activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries.ts";
 
 const KNOWN: readonly QueryKey[] = [
   sessionQuery.queryKey,
@@ -13,6 +13,7 @@ const KNOWN: readonly QueryKey[] = [
   activityQuery({ range: "24h" }).queryKey,
   activitySettingsQuery.queryKey,
   notificationsQuery.queryKey,
+  accountQuery.queryKey,
 ];
 
 const realFetch = globalThis.fetch;
@@ -55,6 +56,10 @@ describe("mutations", () => {
     { name: "pairDevice", run: () => staleAfter(mutations.pairDevice, "Linux · Firefox"), stale: ["notifications"] },
     { name: "renameDevice", run: () => staleAfter(mutations.renameDevice, { id: "d1", name: "Desk" }), stale: ["notifications"] },
     { name: "revokeDevice", run: () => staleAfter(mutations.revokeDevice, "d1"), stale: ["notifications"] },
+    { name: "changePassword", run: () => staleAfter(mutations.changePassword, { current: "old", password: "new password" }), stale: [] },
+    { name: "renameOwner", run: () => staleAfter(mutations.renameOwner, "owner"), stale: ["account"] },
+    { name: "exportBackup", run: () => staleAfter(mutations.exportBackup, { mode: "setup" }), stale: ["account"] },
+    { name: "inspectBackup", run: () => staleAfter(mutations.inspectBackup, { file: new Blob(["x"]), passphrase: "" }), stale: [] },
   ];
 
   for (const { name, run, stale } of cases) {
@@ -83,6 +88,22 @@ describe("mutations", () => {
     test("caches the record it answers", async () => {
       const { client } = await staleAfter(mutations.decideApproval, { id: "a1", choice: "once" });
       assert.deepEqual(client.getQueryData(approvalQuery("a1", null).queryKey), { id: "a1", state: "approved" });
+    });
+  });
+
+  describe("importBackup", () => {
+    describe("with a setup", () => {
+      test("refreshes connectors, skills and session", async () => {
+        globalThis.fetch = async () => new Response(JSON.stringify({ added: ["github"], kept: [], failed: {}, sign_ins: [] }), { status: 200 });
+        assert.deepEqual((await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "" })).stale.sort(), ["connectors", "session", "skills"]);
+      });
+    });
+
+    describe("with a full backup", () => {
+      test("makes nothing stale", async () => {
+        globalThis.fetch = async () => new Response(JSON.stringify({ kind: "full", counts: {}, replaces: true }), { status: 200 });
+        assert.deepEqual((await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "p" })).stale, []);
+      });
     });
   });
 

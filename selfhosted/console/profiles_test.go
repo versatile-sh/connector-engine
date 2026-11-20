@@ -7,9 +7,12 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
 )
 
@@ -51,15 +54,31 @@ func toolsOf(t *testing.T, tok console.AgentToken) []string {
 	return names
 }
 
-func callsOK(t *testing.T, tok console.AgentToken, tool string) bool {
-	t.Helper()
+func callsOK(tok console.AgentToken, tool string) bool {
 	cs, err := mcp.NewClient(&mcp.Implementation{Name: "agent", Version: "1"}, nil).Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: tok.MCPURL, HTTPClient: &http.Client{Transport: bearer(tok.Token)}}, nil)
 	if err != nil {
-		t.Fatal(err)
+		return false
 	}
 	defer cs.Close()
 	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "notes__" + tool, Arguments: map[string]any{}})
 	return err == nil && !res.IsError && textOf(res) == "found"
+}
+
+func (p profiled) heldFor(agent string) string {
+	p.t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		var out struct{ Approvals []port.Approval }
+		p.b.ok("GET", "/api/approvals", nil, &out)
+		for _, a := range out.Approvals {
+			if string(a.Agent) == agent {
+				return string(a.ID)
+			}
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	p.t.Fatalf("no call of %s is held", agent)
+	return ""
 }
 
 type profiled struct {
@@ -132,7 +151,7 @@ func (p profiled) effects(agent string) map[string]console.Access {
 
 func profiledStack(t *testing.T) profiled {
 	t.Helper()
-	s := freshOwner(t, personRelays)
+	s := freshOwner(t, personRelays, func(c *config.Config) { c.Approval.HoldWindow = 10 * time.Second })
 	var imported struct{ Connector string }
 	s.b.ok("POST", "/api/import", map[string]any{"mcp": newPromptServer(t).URL + "/mcp", "local": true, "choices": map[string]string{"lookup": "on", "file": "on", "prompt:summarise": "on"}}, &imported)
 	return profiled{stack: s, conn: imported.Connector}
@@ -150,7 +169,7 @@ func TestEachAccessKeyHasItsOwnPermissionsOnOneConnector(t *testing.T) {
 		if got := toolsOf(t, beta); !slices.Equal(got, []string{"file"}) {
 			t.Fatalf("beta lists %v", got)
 		}
-		if !callsOK(t, alpha, "lookup") || callsOK(t, beta, "lookup") {
+		if !callsOK(alpha, "lookup") || callsOK(beta, "lookup") {
 			t.Fatal("lookup ran for beta or failed for alpha")
 		}
 		if pr := p.profile("beta"); pr.Mode != console.ProfileCustom || pr.Overrides["lookup"] != console.AccessOff || len(pr.Overrides) != 1 {
@@ -161,7 +180,7 @@ func TestEachAccessKeyHasItsOwnPermissionsOnOneConnector(t *testing.T) {
 		}
 	})
 
-	t.Run("key B in custom asks on a function key A runs at once", func(t *testing.T) {
+	t.Run("key B in custom waits for approval where key A runs at once", func(t *testing.T) {
 		p.narrow("beta", "lookup", console.AccessAsk)
 		p.narrow("beta", "prompt:summarise", console.AccessOff)
 		if got := p.effects("beta"); got["lookup"] != console.AccessAsk || got["file"] != console.AccessOn || got["prompt:summarise"] != console.AccessOff {
@@ -172,6 +191,23 @@ func TestEachAccessKeyHasItsOwnPermissionsOnOneConnector(t *testing.T) {
 		}
 		if got := toolsOf(t, beta); !slices.Equal(got, []string{"file", "lookup"}) {
 			t.Fatalf("beta lists %v", got)
+		}
+		ran := make(chan bool, 1)
+		go func() { ran <- callsOK(beta, "lookup") }()
+		held := p.heldFor("beta")
+		if !callsOK(alpha, "lookup") {
+			t.Fatal("alpha's call waited too")
+		}
+		p.b.ok("POST", "/api/approvals/"+held+"/decide", map[string]string{"choice": "always"}, nil)
+		if !<-ran {
+			t.Fatal("beta's held call did not run once approved")
+		}
+		deadline := time.Now().Add(10 * time.Second)
+		for p.profile("beta").Overrides["lookup"] != "" {
+			if time.Now().After(deadline) {
+				t.Fatalf("always allow left beta's override: %+v", p.profile("beta"))
+			}
+			time.Sleep(50 * time.Millisecond)
 		}
 	})
 
@@ -197,7 +233,7 @@ func TestEachAccessKeyHasItsOwnPermissionsOnOneConnector(t *testing.T) {
 		if got := toolsOf(t, beta); len(got) != 0 {
 			t.Fatalf("beta lists %v", got)
 		}
-		if callsOK(t, beta, "file") {
+		if callsOK(beta, "file") {
 			t.Fatal("an unbound key ran a tool")
 		}
 		if pr := p.profile("beta"); pr.Mode != console.ProfileOff || len(pr.Overrides) != 0 {

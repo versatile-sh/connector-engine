@@ -158,10 +158,20 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 
 // SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, and answers each name's result in order.
 func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string, a Access) ([]Result, error) {
-	if len(names) == 0 {
+	switch {
+	case len(names) == 0:
 		return nil, invalid("name at least one function or item")
+	case !a.Valid():
+		return nil, invalid("access %q is not off, on or ask", a)
 	}
-	defer c.lockConnector(conn)()
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	results := make([]Result, 0, len(names))
 	items := false
 	for _, name := range names {
@@ -311,6 +321,11 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 	if err != nil {
 		return conn, err
 	}
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return conn, err
+	}
+	defer unlock()
 	for _, f := range fns {
 		a, ok := choices[f.Name]
 		if kind, item := itemKinds[port.ItemKind(f.Name)]; !ok && item {
@@ -356,8 +371,13 @@ func (c *Console) openToWorkspace(ctx context.Context, target string) error {
 	return nil
 }
 
-// Remove uninstalls a connector and forgets its new-key default and waiting profiles; with a key made, the first-run guide was finished and stays so.
+// Remove uninstalls a connector under its lock and forgets its new-key default, its waiting profiles and the lock; with a key made, the first-run guide was finished and stays so.
 func (c *Console) Remove(ctx context.Context, conn string) error {
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if len(c.State.Agents()) > 0 {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return err
@@ -366,6 +386,7 @@ func (c *Console) Remove(ctx context.Context, conn string) error {
 	if err := c.Engine.removeConnector(ctx, conn); err != nil {
 		return err
 	}
+	c.writing.Delete(conn)
 	return c.State.ForgetConnector(conn)
 }
 
@@ -384,7 +405,7 @@ func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
 
 var agentSelectors = []string{port.SelectorAll, port.ItemInstructions + port.SelectorAll, port.ItemPrompt + port.SelectorAll, port.ItemResource + port.SelectorAll}
 
-// RevokeAgent refuses every token minted so far for the agent, then unbinds it from every connector and deletes the grants scoped to it; a key and a connector existed, so the first-run guide stays finished.
+// RevokeAgent refuses every token minted so far for the agent, then under each connector's lock unbinds it and deletes its rows there, and last deletes the rows left; a key and a connector existed, so the first-run guide stays finished.
 func (c *Console) RevokeAgent(ctx context.Context, name string) error {
 	ok, err := c.State.RevokeAgent(name, time.Now())
 	if err != nil {
@@ -401,11 +422,27 @@ func (c *Console) RevokeAgent(ctx context.Context, name string) error {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return err
 		}
-		if err := c.Engine.unbind(ctx, string(conn.ID), name); err != nil {
+		if err := c.revokeOn(ctx, string(conn.ID), name); err != nil {
 			return err
 		}
 	}
 	rows, err := c.Engine.grants(ctx, port.ScopeAgent, name, "")
+	if err != nil {
+		return err
+	}
+	return c.Engine.deleteGrants(ctx, rows)
+}
+
+func (c *Console) revokeOn(ctx context.Context, conn, name string) error {
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if err := c.Engine.unbind(ctx, conn, name); err != nil {
+		return err
+	}
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, name, conn)
 	if err != nil {
 		return err
 	}

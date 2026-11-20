@@ -68,3 +68,16 @@ func TestManyFunctionsChangeInOneRequest(t *testing.T) {
 		}
 	})
 }
+
+func TestABatchHasABoundedSize(t *testing.T) {
+	p := profiledStack(t)
+	names := make([]string, 1001)
+	for i := range names {
+		names[i] = "lookup"
+	}
+	for _, path := range []string{"/api/connectors/" + p.conn + "/functions", "/api/connectors/" + p.conn + "/profiles"} {
+		if status, raw := p.b.send("PUT", path, map[string]any{"names": names, "keys": names, "access": "ask", "mode": "off"}, nil); status != 400 {
+			t.Errorf("%s: %d %s", path, status, raw)
+		}
+	}
+}

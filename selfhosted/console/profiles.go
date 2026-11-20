@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/versatile-sh/connector-engine/core/grant"
@@ -39,11 +38,29 @@ type Effect struct {
 
 func isOverride(g port.Grant) bool { return grant.Specificity(g.Selector) == 2 }
 
-func (c *Console) lockConnector(conn string) func() {
-	m, _ := c.writing.LoadOrStore(conn, &sync.Mutex{})
-	mu := m.(*sync.Mutex)
-	mu.Lock()
-	return mu.Unlock
+const maxBatch = 1000
+
+func checkBatch(names []string) error {
+	if len(names) > maxBatch {
+		return invalid("a batch names at most %d entries", maxBatch)
+	}
+	return nil
+}
+
+func (c *Console) lockConnector(ctx context.Context, conn string) (func(), error) {
+	for {
+		held, _ := c.writing.LoadOrStore(conn, make(chan struct{}, 1))
+		ch := held.(chan struct{})
+		select {
+		case ch <- struct{}{}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		if now, ok := c.writing.Load(conn); ok && now == held {
+			return func() { <-ch }, nil
+		}
+		<-ch
+	}
 }
 
 func (c *Console) boundKeys(ctx context.Context, conn string) (map[string]bool, error) {
@@ -97,10 +114,17 @@ func (c *Console) SetProfileMode(ctx context.Context, conn string, names []strin
 	if !ok {
 		return nil, invalid("mode %q is not off, follow or custom", mode)
 	}
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	defer c.lockConnector(conn)()
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	return eachKey(c.knownAgents(), names, func(a Agent) error { return set(ctx, conn, a) }), nil
 }
 
@@ -136,6 +160,9 @@ func (c *Console) SetProfileAccessAll(ctx context.Context, conn, agent string, n
 	case !reset && !access.Valid():
 		return nil, invalid("access %q is not off, on or ask", access)
 	}
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
@@ -143,7 +170,11 @@ func (c *Console) SetProfileAccessAll(ctx context.Context, conn, agent string, n
 	if err != nil {
 		return nil, err
 	}
-	defer c.lockConnector(conn)()
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	bound, err := c.boundKeys(ctx, conn)
 	if err != nil {
 		return nil, err
@@ -205,13 +236,20 @@ func (c *Console) CopyProfile(ctx context.Context, conn, from string, names []st
 	if len(names) == 0 {
 		return nil, invalid("name at least one key to copy the profile to")
 	}
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
 	if _, err := agentNamed(c.knownAgents(), from); err != nil {
 		return nil, err
 	}
-	defer c.lockConnector(conn)()
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	rows, err := c.Engine.grants(ctx, port.ScopeAgent, "", conn)
 	if err != nil {
 		return nil, err
@@ -320,7 +358,11 @@ func (c *Console) join(ctx context.Context, conn port.Connector, a Agent, known 
 		}
 		return c.rebindSkill(ctx, id, a)
 	}
-	defer c.lockConnector(id)()
+	unlock, err := c.lockConnector(ctx, id)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	bound, err := c.boundKeys(ctx, id)
 	switch {
 	case err != nil:

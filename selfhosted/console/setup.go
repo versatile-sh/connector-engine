@@ -317,7 +317,11 @@ func validChoice(name string, a Access) bool {
 }
 
 func (c *Console) adoptProfiles(ctx context.Context, conn string, sc SetupConnector) error {
-	defer c.lockConnector(conn)()
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if err := c.State.SetNewKeysOff(conn, sc.NewKeysOff); err != nil {
 		return err
 	}

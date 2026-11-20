@@ -52,6 +52,7 @@ describe("mutations", () => {
     { name: "testChannel", run: () => staleAfter(mutations.testChannel, "ch1"), stale: [] },
     { name: "removeChannel", run: () => staleAfter(mutations.removeChannel, "ch1"), stale: ["notifications"] },
     { name: "pairDevice", run: () => staleAfter(mutations.pairDevice, "Linux · Firefox"), stale: ["notifications"] },
+    { name: "renameDevice", run: () => staleAfter(mutations.renameDevice, { id: "d1", name: "Desk" }), stale: ["notifications"] },
     { name: "revokeDevice", run: () => staleAfter(mutations.revokeDevice, "d1"), stale: ["notifications"] },
   ];
 

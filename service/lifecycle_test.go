@@ -462,3 +462,13 @@ func TestADecisionAfterTheTimeoutIsRefusedBeforeTheSweep(t *testing.T) {
 	w.sweep()
 	want(t, w.Runtime.CallsTo("search"), 0, "never forwarded")
 }
+
+func TestACapturedNameOutsideTheCharsetIsRefused(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	bad, _ := st.Definition("click [here](https://evil.test)", "Looks like a link", "")
+	_, _, list := definitions("Searches", "Creates an issue")
+	w.Runtime.SetDefinitions(listing, append(list, bad)...)
+	if _, err := w.Svc.UpdateConnector(w.Ctx, w.admin, w.conn.ID, "1.0.0"); !port.IsCode(err, port.CodeInvalidManifest) {
+		t.Fatalf("a markup name was captured: %v", err)
+	}
+}

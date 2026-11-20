@@ -41,28 +41,10 @@ func (r *Runtime) Start(_ context.Context, _ port.Connector, m port.Manifest, _ 
 	return r.started.Add(m), nil
 }
 
-// FileView is a skill file without its bytes, as a listing or a load result names it.
-type FileView struct {
-	Path   string `json:"path"`
-	Bytes  int64  `json:"bytes"`
-	SHA256 string `json:"sha256"`
-}
-
-// Meta is what a skill function definition carries under port.SkillMetaKey; its digest pins the whole folder.
-type Meta struct {
-	Digest         string              `json:"digest"`
-	Redistribution port.Redistribution `json:"redistribution"`
-	HasScripts     bool                `json:"has_scripts"`
-	Licence        port.SkillLicence   `json:"licence"`
-	Source         port.SkillSource    `json:"source"`
-	Requires       []string            `json:"requires,omitempty"`
-	Files          []FileView          `json:"files"`
-}
-
-func views(files []port.SkillFile) []FileView {
-	out := make([]FileView, len(files))
+func views(files []port.SkillFile) []port.SkillFileView {
+	out := make([]port.SkillFileView, len(files))
 	for i, f := range files {
-		out[i] = FileView{Path: f.Path, Bytes: f.Bytes, SHA256: f.SHA256}
+		out[i] = port.SkillFileView{Path: f.Path, Bytes: f.Bytes, SHA256: f.SHA256}
 	}
 	return out
 }
@@ -76,7 +58,7 @@ func Definition(m port.Manifest) (port.RawDefinition, error) {
 		"inputSchema": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{
 			"path": map[string]any{"type": "string", "description": "A file of the skill folder; SKILL.md when empty."}}},
 		"annotations": map[string]any{"readOnlyHint": true, "openWorldHint": &no},
-		"_meta": map[string]any{port.SkillMetaKey: Meta{Digest: listing.SkillDigest(s.Files), Redistribution: s.Redistribution, HasScripts: s.HasScripts,
+		"_meta": map[string]any{port.SkillMetaKey: port.SkillMeta{Digest: listing.SkillDigest(s.Files), Redistribution: s.Redistribution, HasScripts: s.HasScripts,
 			Licence: s.Licence, Source: s.Source, Requires: s.Requires, Files: views(s.Files)}},
 	}
 	raw, err := json.Marshal(def)
@@ -91,19 +73,6 @@ func (r *Runtime) ListFunctions(_ context.Context, h port.Handle) ([]port.RawDef
 	}
 	d, err := Definition(m)
 	return []port.RawDefinition{d}, port.ListMeta{}, err
-}
-
-// Loaded is the structured result of a load: the file named, its bytes as text or base64, and the folder's files.
-type Loaded struct {
-	Skill          string              `json:"skill"`
-	Path           string              `json:"path"`
-	Bytes          int64               `json:"bytes"`
-	SHA256         string              `json:"sha256"`
-	Encoding       string              `json:"encoding,omitempty"`
-	Content        string              `json:"content,omitempty"`
-	Redistribution port.Redistribution `json:"redistribution"`
-	Source         string              `json:"source,omitempty"`
-	Files          []FileView          `json:"files"`
 }
 
 // Call returns one file of the folder as data; nothing of the folder is ever run.
@@ -127,7 +96,7 @@ func (r *Runtime) Call(_ context.Context, h port.Handle, function string, argume
 	if in.Path == "" {
 		in.Path = listing.SkillEntry
 	}
-	out := Loaded{Skill: s.Name, Path: in.Path, Redistribution: s.Redistribution, Source: firstOf(s.Source.URL, s.Source.Repository), Files: views(s.Files)}
+	out := port.SkillLoaded{Skill: s.Name, Path: in.Path, Redistribution: s.Redistribution, Source: firstOf(s.Source.URL, s.Source.Repository), Files: views(s.Files)}
 	var f *port.SkillFile
 	for i := range s.Files {
 		if s.Files[i].Path == in.Path {
@@ -150,7 +119,7 @@ func (r *Runtime) Call(_ context.Context, h port.Handle, function string, argume
 	return result(out, header(m, out, ""), body, false)
 }
 
-func header(m port.Manifest, l Loaded, note string) string {
+func header(m port.Manifest, l port.SkillLoaded, note string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Skill %s, file %s, served by the connector gateway as pinned data.", m.Skill.Name, l.Path)
 	if note != "" {
@@ -170,7 +139,7 @@ func header(m port.Manifest, l Loaded, note string) string {
 	return b.String()
 }
 
-func result(l Loaded, head, body string, isError bool) (port.Result, error) {
+func result(l port.SkillLoaded, head, body string, isError bool) (port.Result, error) {
 	blocks := []map[string]string{{"type": "text", "text": head}}
 	if body != "" {
 		blocks = append(blocks, map[string]string{"type": "text", "text": body})

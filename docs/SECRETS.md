@@ -15,6 +15,8 @@ Every secret the engine keeps (credentials, held call arguments, results, client
 
 The console seals its own secrets (notifier tokens) through `console/sealed`, a `port.SecretStore` under key scope `console`, with the same adapter: `hostkey` in the `person` profile (`CONSOLE_UNLOCK_SOCKET`), `secrets/local` otherwise. Owner passwords, session cookies and refresh tokens stay hashes.
 
+The local token issuer keeps its Ed25519 signing keys in `local-issuer.json` beside the ring, each seed sealed under the installation key, so tokens it minted survive a restart, a reboot and `make keychain-migrate`. At boot it rotates a signing key older than `auth.localIssuer.rotateEvery` (30 days by default). The retired key stays in the published key set for `max(1h, auth.agentTokenMaxLifetime)`, until every token it signed has expired. With `secrets: memory` the key is made at start and never stored, as before.
+
 ## How the unlock key reaches the container
 
 The engine and the console run in Docker and cannot reach the host keychain. The host reads the key and pipes it into the running container:

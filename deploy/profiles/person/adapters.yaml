@@ -2,7 +2,7 @@ apiVersion: acplug/v1
 kind: Adapters
 engine: connector-engine
 mode: production
-acknowledge: [local_token_issuer, long_lived_agent_tokens, plaintext_root_key]
+acknowledge: [local_token_issuer, long_lived_agent_tokens, plaintext_root_key, private_egress]
 ports:
   store: {use: builtin:postgres, config: {databaseUrlRef: "file:/run/connector-engine/database-url"}}
   secrets: {use: builtin:hostkey}

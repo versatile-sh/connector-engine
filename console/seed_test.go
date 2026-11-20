@@ -116,7 +116,7 @@ func TestSeedPlayground(t *testing.T) {
 	password := rand.Text()
 	b.ok("POST", "/api/setup", map[string]string{"username": "owner", "password": password}, &setup)
 	b.csrf = setup.CSRF
-	fmt.Printf("Seeding %d skills, %d connectors and %d keys; each key is bound to every one, so this takes a few minutes.\n", len(seedSkills), len(seedConnectors), len(seedKeys))
+	fmt.Printf("Seeding %d skills, %d connectors and %d keys; each key is bound to every one, so this takes about nine minutes.\n", len(seedSkills), len(seedConnectors), len(seedKeys))
 	skills := make([]string, len(seedSkills))
 	for i, name := range seedSkills {
 		link := catalogBase + "seed/" + name + ".yaml"
@@ -135,11 +135,10 @@ func TestSeedPlayground(t *testing.T) {
 		b.ok("POST", "/api/agents", map[string]any{"name": name, "ttl_hours": 720}, nil)
 		fmt.Printf("key %d/%d: %s\n", i+1, len(seedKeys), name)
 	}
-	for i, id := range skills {
-		choice := []map[string]any{{"access": "on"}, {"access": "ask"}, {"access": "on", "keys": []string{"cursor", "codex"}}}[i%3]
+	for i, choice := range []map[string]any{{"access": "on"}, {"access": "ask"}, {"access": "on", "keys": []string{"cursor", "codex"}}} {
 		start := time.Now()
-		b.ok("PUT", "/api/skills/"+id+"/keys", choice, nil)
-		fmt.Printf("skill %d/%d keys set in %s\n", i+1, len(skills), time.Since(start).Round(time.Millisecond))
+		b.ok("PUT", "/api/skills/"+skills[i]+"/keys", choice, nil)
+		fmt.Printf("skill %s: keys set in %s\n", seedSkills[i], time.Since(start).Round(time.Millisecond))
 	}
 	fmt.Printf("\nThe seeded console is at %s\nSign in as owner with the password %s (shown only here)\nCtrl-C stops it and forgets everything.\n\n", base, password)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)

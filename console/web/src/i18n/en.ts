@@ -199,7 +199,6 @@ export const en = {
   "consent.title": "Allow {client} to use your connectors?",
   "consent.body": "{client} will see the connectors installed here, with the permissions you set for each function. You can revoke it any time under Connect an AI app.",
   "consent.returns": "Then you go back to {target}",
-  "consent.from": "client from {host}",
   "consent.allow": "Allow",
   "consent.deny": "Deny",
   "consent.done": "Done. You can go back to {client}.",

@@ -201,7 +201,6 @@ export const ptBR: Record<MessageKey, string> = {
   "consent.title": "Permitir que {client} acesse seus conectores?",
   "consent.body": "{client} vai ver os conectores instalados aqui, com as permissões que você definiu para cada função. Você pode revogar quando quiser em Conecte um app de IA.",
   "consent.returns": "Depois você volta para {target}",
-  "consent.from": "cliente de {host}",
   "consent.allow": "Permitir",
   "consent.deny": "Negar",
   "consent.done": "Pronto. Pode voltar para o {client}.",

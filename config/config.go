@@ -1,4 +1,4 @@
-// Package config holds connector-engine.yaml with every key of §14 and its default, and adapters.yaml through plugkit/adapters.
+// Package config holds connector-engine.yaml with every key and its default, and adapters.yaml through plugkit/adapters.
 package config
 
 import (
@@ -10,7 +10,7 @@ import (
 	"github.com/agents-control/connector-engine/filter/builtin"
 )
 
-// Modes of the engine; production refuses what §14 lists unless acknowledged.
+// Modes of the engine; production refuses unsafe settings unless acknowledged.
 const (
 	ModeProduction = "production"
 	ModeDev        = "dev"
@@ -46,7 +46,7 @@ type Config struct {
 	Retention    Retention    `yaml:"retention"`
 }
 
-// Server holds the addresses the binary listens on; it is not a key of §14.
+// Server holds the addresses the binary listens on; it is not a key.
 type Server struct {
 	Listen         string        `yaml:"listen"`
 	GRPCListen     string        `yaml:"grpcListen"`
@@ -80,7 +80,7 @@ type Operator struct {
 	TokenRef string `yaml:"tokenRef"`
 }
 
-// Auth is auth.*: issuers, audiences, token lifetime and the opt-ins of §4.3.
+// Auth is auth.*: issuers, audiences, token lifetime and the opt-ins.
 type Auth struct {
 	Issuers               []Issuer      `yaml:"issuers"`
 	Audience              string        `yaml:"audience"`
@@ -343,7 +343,7 @@ type OnePassword struct {
 	Field      string `yaml:"field"`
 }
 
-// Container is runtime.container; no container runtime ships in this build (OD-20).
+// Container is runtime.container; no container runtime ships in this build.
 type Container struct {
 	CPU      int           `yaml:"cpu"`
 	Memory   string        `yaml:"memory"`
@@ -379,7 +379,7 @@ type Retention struct {
 	Calls           time.Duration `yaml:"calls"`
 }
 
-// Default returns every key of §14 at its default, and the keys of the binary at theirs.
+// Default returns every key at its default, and the keys of the binary at theirs.
 func Default() Config {
 	return Config{
 		Mode:   ModeProduction,

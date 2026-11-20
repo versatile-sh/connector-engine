@@ -1,4 +1,4 @@
-// Package worker drives the timers of §8.3, the sweep of §10.3 C12, the periodic re-list of §9 and the fan-outs of §4.4 and §5.5.
+// Package worker drives the timers, the sweep C12, the periodic re-list and the fan-outs.
 package worker
 
 import (

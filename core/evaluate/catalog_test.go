@@ -52,24 +52,24 @@ func same(t *testing.T, where string, got []string, want ...string) {
 func TestListingHiddenForTheTenant(t *testing.T) {
 	i := fixture()
 	i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilFull))
-	same(t, "03-engine §5.5 V2: the store of a tenant shows only what its admin enabled", i.Store("t1", "w", "admin", ""), "/github", "t1/crm")
-	same(t, "03-engine §5.5: search", i.Store("t1", "w", "admin", "slack"))
+	same(t, "V2: the store of a tenant shows only what its admin enabled", i.Store("t1", "w", "admin", ""), "/github", "t1/crm")
+	same(t, "search", i.Store("t1", "w", "admin", "slack"))
 	if _, err := i.GetListing("t1", "w", "admin", "/slack"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("03-engine §5.5: getListing of a hidden listing: %v, want not_found", err)
+		t.Fatalf("getListing of a hidden listing: %v, want not_found", err)
 	}
 	if err := i.Install("t1", "w", "admin", "/slack", "sl"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("03-engine §5.5: install of a hidden listing: %v, want not_found", err)
+		t.Fatalf("install of a hidden listing: %v, want not_found", err)
 	}
 	w := open(t, i, "t1", "w", "/github")
 	wantList(t, "before the rule is withdrawn", w, "x", "s1", "s__create_issue", "s__delete_repo", "s__search")
 	i.Rules = i.Rules[:len(i.Rules)-1]
-	wantList(t, "03-engine §7.2 row 48: tools/list after the tenant withdrew the listing", w, "x", "s1")
-	same(t, "03-engine §7.2 row 48: find", w.Find("x", "", "s1", Model, 10, "search"))
-	if d := wantCall(t, "03-engine §7.2 row 48: tools/call", w, "x", "s1", "search", UnknownTool); d.Reason != "not_in_catalog" || d.Step != 2 {
-		t.Fatalf("03-engine §7.1 step 2: reason %s at step %d, want not_in_catalog at step 2", d.Reason, d.Step)
+	wantList(t, "row 48: tools/list after the tenant withdrew the listing", w, "x", "s1")
+	same(t, "row 48: find", w.Find("x", "", "s1", Model, 10, "search"))
+	if d := wantCall(t, "row 48: tools/call", w, "x", "s1", "search", UnknownTool); d.Reason != "not_in_catalog" || d.Step != 2 {
+		t.Fatalf("step 2: reason %s at step %d, want not_in_catalog at step 2", d.Reason, d.Step)
 	}
 	if err := i.Install("t1", "w", "admin", "/github", "again"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("03-engine §5.5: install after the withdrawal: %v", err)
+		t.Fatalf("install after the withdrawal: %v", err)
 	}
 }
 
@@ -80,13 +80,13 @@ func TestWorkspaceCannotWidenATenantCeiling(t *testing.T) {
 		want    map[string]Outcome
 		modes   map[string]Mode
 	}{
-		{"03-engine §7.2 rows 49 and 50: tenant ceiling read", CeilRead,
+		{"rows 49 and 50: tenant ceiling read", CeilRead,
 			map[string]Outcome{"search": Forwarded, "create_issue": UnknownTool, "delete_repo": UnknownTool},
 			map[string]Mode{"search": Allow, "create_issue": Deny, "delete_repo": Deny}},
-		{"03-engine §7.2 row 51: tenant ceiling write", CeilWrite,
+		{"row 51: tenant ceiling write", CeilWrite,
 			map[string]Outcome{"search": Forwarded, "create_issue": Held, "delete_repo": Held},
 			map[string]Mode{"search": Allow, "create_issue": AskOnce, "delete_repo": Ask}},
-		{"03-engine §7.2 row 52: tenant ceiling full", CeilFull,
+		{"row 52: tenant ceiling full", CeilFull,
 			map[string]Outcome{"search": Forwarded, "create_issue": Forwarded, "delete_repo": Held},
 			map[string]Mode{"search": Allow, "create_issue": Allow, "delete_repo": AskOnce}},
 	} {
@@ -97,7 +97,7 @@ func TestWorkspaceCannotWidenATenantCeiling(t *testing.T) {
 				show("t1", WorkspaceSubject, "w", ListingTarget, "/github", CeilFull))
 			w := open(t, i, "t1", "w", "/github")
 			for f, want := range tc.want {
-				d := wantCall(t, "§7.1 step 11: workspace * allow and agent * allow under the ceiling", w, "x", "s1", f, want)
+				d := wantCall(t, "step 11: workspace * allow and agent * allow under the ceiling", w, "x", "s1", f, want)
 				if d.Mode != tc.modes[f] {
 					t.Fatalf("%s: %v, want %v", f, d.Mode, tc.modes[f])
 				}
@@ -110,20 +110,20 @@ func TestTenantGrantLayer(t *testing.T) {
 	i := fixture()
 	i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilFull))
 	w := open(t, i, "t1", "w", "/github")
-	wantCall(t, "03-engine §7.1 step 6: no tenant row, the layer is skipped", w, "x", "s1", "create_issue", Forwarded)
+	wantCall(t, "step 6: no tenant row, the layer is skipped", w, "x", "s1", "create_issue", Forwarded)
 	w.PutGrant(&Grant{Scope: Tenant, ScopeID: "t1", Listing: "/github", Selector: "fn:delete_repo", Mode: Deny})
-	if d := wantCall(t, "03-engine §7.2 row 53: tenant fn:F deny", w, "x", "s1", "delete_repo", UnknownTool); d.Step != 6 {
+	if d := wantCall(t, "row 53: tenant fn:F deny", w, "x", "s1", "delete_repo", UnknownTool); d.Step != 6 {
 		t.Fatalf("step %d, want 6", d.Step)
 	}
-	if d := wantCall(t, "03-engine §7.2 row 57, 02-options §16.6: a tenant fn: deny row leaves the other functions of the listing alone", w, "x", "s1", "create_issue", Forwarded); d.Layers[0] != "skip" {
-		t.Fatalf("tenant layer %s, want skip (03-engine §7.1 step 6: no tenant row matches F)", d.Layers[0])
+	if d := wantCall(t, "row 57, a tenant fn: deny row leaves the other functions of the listing alone", w, "x", "s1", "create_issue", Forwarded); d.Layers[0] != "skip" {
+		t.Fatalf("tenant layer %s, want skip", d.Layers[0])
 	}
-	wantCall(t, "03-engine §7.2 row 57: the same for a read function", w, "x", "s1", "search", Forwarded)
+	wantCall(t, "row 57: the same for a read function", w, "x", "s1", "search", Forwarded)
 	if err := w.PutGrant(&Grant{Scope: Tenant, ScopeID: "t1", Listing: "/github", Selector: "*", Mode: Ask}); err != nil {
 		t.Fatal(err)
 	}
-	wantCall(t, "03-engine §7.1 step 10: tenant * ask under workspace and agent allow", w, "x", "s1", "create_issue", Held)
-	wantCall(t, "03-engine §7.1 M2: the tenant fn: row is more specific than its * row", w, "x", "s1", "delete_repo", UnknownTool)
+	wantCall(t, "step 10: tenant * ask under workspace and agent allow", w, "x", "s1", "create_issue", Held)
+	wantCall(t, "M2: the tenant fn: row is more specific than its * row", w, "x", "s1", "delete_repo", UnknownTool)
 }
 
 func TestTenantRowAcrossWorkspacesAndVersions(t *testing.T) {
@@ -152,42 +152,42 @@ func TestTenantRowAcrossWorkspacesAndVersions(t *testing.T) {
 	}
 	for _, c := range []string{conn, "lab-gh"} {
 		if d := at(c); d.Mode != Ask || d.Layers[0] != "ask" {
-			t.Fatalf("03-engine §6.4 G8, §7.2 row 58: a tenant fn: ask row answers in %s whatever hash that workspace pins: %v %s", c, d.Mode, d.Reason)
+			t.Fatalf("G8, row 58: a tenant fn: ask row answers in %s whatever hash that workspace pins: %v %s", c, d.Mode, d.Reason)
 		}
 	}
 	w.ConfirmGrant(Tenant, "t1", "lab-gh", "create_issue")
 	for _, g := range w.Grants {
 		if g.Scope == Tenant && g.Hash != "" {
-			t.Fatal("03-engine §6.4 G8: a tenant row has no hash and confirmGrant has nothing to confirm on it")
+			t.Fatal("G8: a tenant row has no hash and confirmGrant has nothing to confirm on it")
 		}
 	}
 	i.Rules = append(i.Rules, hide("t1", WorkspaceSubject, "lab", ListingTarget, "/github"))
 	w.PutGrant(&Grant{Scope: Tenant, ScopeID: "t1", Listing: "/github", Selector: "fn:delete_repo", Mode: Deny})
 	w.Update(conn, "2.0.0", []Function{{Name: "delete_repo", Hash: "c2", Class: Destructive}})
 	w.Accept(conn, "delete_repo")
-	if d := wantCall(t, "03-engine §5.1, §7.2 row 59: a tenant deny row names (owner, name) and survives the update of a connector", w, "x", "s1", "delete_repo", UnknownTool); d.Step != 6 {
+	if d := wantCall(t, "row 59: a tenant deny row names (owner, name) and survives the update of a connector", w, "x", "s1", "delete_repo", UnknownTool); d.Step != 6 {
 		t.Fatalf("step %d, want 6", d.Step)
 	}
 	if out, d := w.Call(Request{Agent: "x", Session: "s1", Connector: "lab-gh", Function: "search", Now: 10}); out != UnknownTool || d.Reason != "not_in_catalog" {
-		t.Fatalf("03-engine §5.1: a hide rule names (owner, name) and survives the update to version %s: %v %s", w.Connectors["lab-gh"].Version, out, d.Reason)
+		t.Fatalf("a hide rule names (owner, name) and survives the update to version %s: %v %s", w.Connectors["lab-gh"].Version, out, d.Reason)
 	}
 }
 
 func TestCatalogPolicyOfATenantIsRefused(t *testing.T) {
 	i := fixture()
 	if err := i.PutCatalogPolicy("t1", TenantSubject, "t1", false); !errors.Is(err, ErrPolicyRefused) {
-		t.Fatalf("03-engine §5.5: a catalog policy with subject tenant and default visible: %v, want refused", err)
+		t.Fatalf("a catalog policy with subject tenant and default visible: %v, want refused", err)
 	}
-	same(t, "03-engine §5.5 V2: the tenant still sees only what a rule shows", i.Store("t1", "w", "admin", ""), "t1/crm")
+	same(t, "V2: the tenant still sees only what a rule shows", i.Store("t1", "w", "admin", ""), "t1/crm")
 	i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", SourceTarget, "official", CeilWrite))
-	same(t, "03-engine §5.5: a whole source is opened by a rule, which states its ceiling", i.Store("t1", "w", "admin", ""), "/github", "t1/crm")
+	same(t, "a whole source is opened by a rule, which states its ceiling", i.Store("t1", "w", "admin", ""), "/github", "t1/crm")
 	if _, c, _ := i.Visible("t1", "w", nil, "/github"); c != CeilWrite {
 		t.Fatalf("ceiling %v, want write", c)
 	}
 	if err := i.PutCatalogPolicy("t1", WorkspaceSubject, "lab", true); err != nil {
 		t.Fatal(err)
 	}
-	same(t, "03-engine §5.5 V3: a workspace policy of hidden", i.Store("t1", "lab", "admin", ""))
+	same(t, "V3: a workspace policy of hidden", i.Store("t1", "lab", "admin", ""))
 }
 
 func TestListingStatus(t *testing.T) {
@@ -199,7 +199,7 @@ func TestListingStatus(t *testing.T) {
 		}
 		return i, i.Tenant("t1"), i.Tenant("t2")
 	}
-	t.Run("03-engine §5.5 V1, §7.2 row 60: the operator quarantines one listing", func(t *testing.T) {
+	t.Run("V1, row 60: the operator quarantines one listing", func(t *testing.T) {
 		i, w1, w2 := setup()
 		if out, _ := call(w1, "x", "s1", "create_issue"); out != Forwarded {
 			t.Fatal("before the quarantine")
@@ -221,7 +221,7 @@ func TestListingStatus(t *testing.T) {
 		i.Listings["/github"].Status = ListingActive
 		wantCall(t, "restoreListing: the connector works again", w1, "x", "s1", "search", Forwarded)
 	})
-	t.Run("03-engine §5.5 V1: a deprecated listing keeps working and takes no new install", func(t *testing.T) {
+	t.Run("V1: a deprecated listing keeps working and takes no new install", func(t *testing.T) {
 		i, w1, _ := setup()
 		i.Listings["/github"].Status = ListingDeprecated
 		wantCall(t, "an installed connector", w1, "x", "s1", "search", Forwarded)
@@ -230,7 +230,7 @@ func TestListingStatus(t *testing.T) {
 			t.Fatalf("install of a deprecated listing: %v, want listing_deprecated", err)
 		}
 	})
-	t.Run("03-engine §5.5 V1, §7.2 row 61: the operator withdraws one listing from one tenant", func(t *testing.T) {
+	t.Run("V1, row 61: the operator withdraws one listing from one tenant", func(t *testing.T) {
 		i, w1, w2 := setup()
 		i.WithheldListing[[2]string{"t1", "/github"}] = true
 		if d := wantCall(t, "the tenant it was withdrawn from", w1, "x", "s1", "search", UnknownTool); d.Reason != "not_in_catalog" {
@@ -241,7 +241,7 @@ func TestListingStatus(t *testing.T) {
 		i.Rules = append(i.Rules, show("t1", WorkspaceSubject, "w", ListingTarget, "/github", CeilFull))
 		wantCall(t, "no rule of the tenant brings it back", w1, "x", "s1", "search", UnknownTool)
 	})
-	t.Run("03-engine §5.5 V1: the operator withdraws one listing from everyone", func(t *testing.T) {
+	t.Run("V1: the operator withdraws one listing from everyone", func(t *testing.T) {
 		i, w1, w2 := setup()
 		i.Listings["/github"].Status = ListingWithdrawn
 		for _, w := range []*World{w1, w2} {
@@ -256,7 +256,7 @@ func TestPrivateListingWithTheNameOfAnOperatorListing(t *testing.T) {
 	i := fixture()
 	i.AddListing(&Listing{Owner: "t1", Name: "github", Source: "official", Publisher: "io.github", Functions: []Function{{Name: "search", Hash: "p1", Class: Read}}})
 	i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilFull))
-	same(t, "03-engine §5.1: two listings of one name are two entries, told apart by the owner", i.Store("t1", "w", "admin", "github"), "/github", "t1/github")
+	same(t, "two listings of one name are two entries, told apart by the owner", i.Store("t1", "w", "admin", "github"), "/github", "t1/github")
 	same(t, "the other tenant sees neither", i.Store("t2", "w", "admin", "github"))
 	w := open(t, i, "t1", "w", "/github")
 	if err := i.Install("t1", "w", "admin", "t1/github", "mine"); err != nil {
@@ -272,13 +272,13 @@ func TestPrivateListingWithTheNameOfAnOperatorListing(t *testing.T) {
 		return out
 	}
 	w.PutGrant(&Grant{Scope: Tenant, ScopeID: "t1", Listing: "/github", Selector: "*", Mode: Deny})
-	wantCall(t, "03-engine §7.2 row 62: a tenant row on the operator listing", w, "x", "s1", "search", UnknownTool)
+	wantCall(t, "row 62: a tenant row on the operator listing", w, "x", "s1", "search", UnknownTool)
 	if private() != Forwarded {
-		t.Fatal("03-engine §5.1, §7.2 row 62: a tenant row on (installation, github) reached the private listing (t1, github)")
+		t.Fatal("row 62: a tenant row on (installation, github) reached the private listing (t1, github)")
 	}
 	i.Rules = append(i.Rules, hide("t1", TenantSubject, "t1", PublisherTarget, "io.github"), hide("t1", TenantSubject, "t1", SourceTarget, "official"))
 	if private() != Forwarded {
-		t.Fatal("03-engine §5.5 V5: a rule on a publisher or a source covered a private listing, which declares both itself")
+		t.Fatal("V5: a rule on a publisher or a source covered a private listing, which declares both itself")
 	}
 	i.Rules = append(i.Rules, hide("t1", TenantSubject, "t1", ListingTarget, "t1/github"))
 	if private() != UnknownTool {
@@ -302,12 +302,12 @@ func TestPersonRemovedWhileRequesterOfAPendingApproval(t *testing.T) {
 	}
 	w.RemovePerson("u1")
 	if out, d := w.ExecuteApproved(r); out != UnknownTool || d.Reason != "person_removed" || d.Step != 1 {
-		t.Fatalf("03-engine §8.2 A9, §7.2 row 63: the re-check of an approval whose requester was removed: %v %s at step %d", out, d.Reason, d.Step)
+		t.Fatalf("A9, row 63: the re-check of an approval whose requester was removed: %v %s at step %d", out, d.Reason, d.Step)
 	}
 	if out, d := w.Call(r); out != UnknownTool || d.Reason != "person_removed" {
-		t.Fatalf("03-engine §7.1 step 1: a run that still acts for the removed person: %v %s", out, d.Reason)
+		t.Fatalf("step 1: a run that still acts for the removed person: %v %s", out, d.Reason)
 	}
-	if d := wantCall(t, "03-engine §7.1 step 1: an agent the removed person owns", w, "a1", "s2", "search", UnknownTool); d.Reason != "person_removed" {
+	if d := wantCall(t, "step 1: an agent the removed person owns", w, "a1", "s2", "search", UnknownTool); d.Reason != "person_removed" {
 		t.Fatalf("reason %s", d.Reason)
 	}
 	wantCall(t, "the workspace agent, for nobody", w, "x", "s1", "create_issue", Forwarded)
@@ -326,18 +326,18 @@ func TestListingHiddenWithBindingsAndPendingApprovals(t *testing.T) {
 	}
 	i.Rules = append(i.Rules, hide("t1", WorkspaceSubject, "w", ListingTarget, "/github"))
 	if out, d := w.ExecuteApproved(r); out != UnknownTool || d.Reason != "not_in_catalog" {
-		t.Fatalf("03-engine §8.2 A9: the re-check of an approved record after the listing was hidden: %v %s", out, d.Reason)
+		t.Fatalf("A9: the re-check of an approved record after the listing was hidden: %v %s", out, d.Reason)
 	}
-	wantList(t, "03-engine §5.5: the list", w, "x", "s1")
+	wantList(t, "the list", w, "x", "s1")
 	if !w.Bindings[[2]string{conn, "x"}] || !w.sessionRow(r, w.Connectors[conn].Functions["create_issue"]) {
-		t.Fatal("03-engine §5.5: the binding and the session row stay while the listing is hidden")
+		t.Fatal("the binding and the session row stay while the listing is hidden")
 	}
 	i.Rules = i.Rules[:len(i.Rules)-1]
-	wantCall(t, "03-engine §5.5: the rule returns and the session row answers again", w, "x", "s1", "create_issue", Forwarded)
+	wantCall(t, "the rule returns and the session row answers again", w, "x", "s1", "create_issue", Forwarded)
 }
 
 func TestCatalogRuleRankAndTenantFilter(t *testing.T) {
-	t.Run("03-engine §5.5 V5: a listing rule on a group answers before a publisher rule on the person", func(t *testing.T) {
+	t.Run("V5: a listing rule on a group answers before a publisher rule on the person", func(t *testing.T) {
 		i := fixture()
 		i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilFull))
 		i.Tenant("t1").Groups["u1"] = []string{"g1"}
@@ -350,7 +350,7 @@ func TestCatalogRuleRankAndTenantFilter(t *testing.T) {
 			t.Fatalf("ceiling %v, want the group rule's read", c)
 		}
 	})
-	t.Run("03-engine §4.1 H3: two tenants hold a workspace, a group and a person of the same name", func(t *testing.T) {
+	t.Run("H3: two tenants hold a workspace, a group and a person of the same name", func(t *testing.T) {
 		for _, tc := range []struct {
 			name string
 			rule *CatalogRule
@@ -384,22 +384,22 @@ func TestListingShownOnlyToNamedSubjects(t *testing.T) {
 	i.Rules = append(i.Rules, named(show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilWrite)))
 	w := open2(t, i)
 	w.Groups["u1"], w.Groups["u2"] = []string{"g1"}, []string{"g2"}
-	same(t, "03-engine §5.5 V8: nobody is named yet", i.Store("t1", "w", "u1", "github"))
+	same(t, "V8: nobody is named yet", i.Store("t1", "w", "u1", "github"))
 	i.Rules = append(i.Rules, show("t1", GroupSubject, "g1", ListingTarget, "/github", CeilFull))
-	same(t, "03-engine §5.5 V8: a member of the named group", i.Store("t1", "w", "u1", "github"), "/github")
-	same(t, "03-engine §5.5 V8: a person nobody named does not inherit", i.Store("t1", "w", "u2", "github"))
+	same(t, "V8: a member of the named group", i.Store("t1", "w", "u1", "github"), "/github")
+	same(t, "V8: a person nobody named does not inherit", i.Store("t1", "w", "u2", "github"))
 	if _, c, _ := i.Visible("t1", "w", []string{"u1"}, "/github"); c != CeilWrite {
-		t.Fatalf("03-engine §5.5 V6: naming a group does not raise the tenant ceiling: %v", c)
+		t.Fatalf("V6: naming a group does not raise the tenant ceiling: %v", c)
 	}
 	for u, want := range map[string]Outcome{"u1": Forwarded, "u2": UnknownTool, "": UnknownTool} {
 		if out, _ := w.Call(Request{Agent: "x", User: u, Session: "s1", Connector: conn, Function: "search", Now: 10}); out != want {
-			t.Fatalf("03-engine §7.2 row 64: a workspace agent acting for %q: %v, want %v", u, out, want)
+			t.Fatalf("row 64: a workspace agent acting for %q: %v, want %v", u, out, want)
 		}
 	}
 	i.Rules = append(i.Rules, show("t1", WorkspaceSubject, "w", ListingTarget, "/github", CeilFull))
-	same(t, "03-engine §5.5 V8: naming the workspace shows it to its members", i.Store("t1", "w", "u2", "github"), "/github")
+	same(t, "V8: naming the workspace shows it to its members", i.Store("t1", "w", "u2", "github"), "/github")
 	i.Rules[len(i.Rules)-1].Named = true
-	same(t, "03-engine §5.5 V8: a workspace rule for named people only", i.Store("t1", "w", "u2", "github"))
+	same(t, "V8: a workspace rule for named people only", i.Store("t1", "w", "u2", "github"))
 	same(t, "the named group still sees it", i.Store("t1", "w", "u1", "github"), "/github")
 }
 
@@ -433,11 +433,11 @@ func TestAgentOfAUserWhoMayNotSeeTheListing(t *testing.T) {
 	i.Rules = append(i.Rules,
 		hide("t1", UserSubject, "u1", ListingTarget, "/github"),
 		hide("t1", GroupSubject, "interns", SourceTarget, "official"))
-	same(t, "03-engine §5.5 V4: the store for u1", i.Store("t1", "w", "u1", ""), "t1/crm")
-	same(t, "03-engine §5.5 V4: the store for u2", i.Store("t1", "w", "u2", ""), "/github", "t1/crm")
-	same(t, "03-engine §5.5 V4: the store for u3, hidden through a group", i.Store("t1", "w", "u3", ""), "t1/crm")
-	wantList(t, "03-engine §7.2 row 54: tools/list of the agent u1 owns", w, "a1", "s1")
-	if d := wantCall(t, "03-engine §7.2 row 54: tools/call by the agent u1 owns", w, "a1", "s1", "search", UnknownTool); d.Reason != "not_in_catalog" {
+	same(t, "V4: the store for u1", i.Store("t1", "w", "u1", ""), "t1/crm")
+	same(t, "V4: the store for u2", i.Store("t1", "w", "u2", ""), "/github", "t1/crm")
+	same(t, "V4: the store for u3, hidden through a group", i.Store("t1", "w", "u3", ""), "t1/crm")
+	wantList(t, "row 54: tools/list of the agent u1 owns", w, "a1", "s1")
+	if d := wantCall(t, "row 54: tools/call by the agent u1 owns", w, "a1", "s1", "search", UnknownTool); d.Reason != "not_in_catalog" {
 		t.Fatalf("reason %s", d.Reason)
 	}
 	wantCall(t, "the agent u2 owns", w, "a2", "s1", "search", Forwarded)
@@ -445,18 +445,18 @@ func TestAgentOfAUserWhoMayNotSeeTheListing(t *testing.T) {
 	for _, u := range []string{"u1", "u3"} {
 		r := Request{Agent: "x", User: u, Session: "s1", Connector: conn, Function: "search", Now: 10}
 		if out, d := w.Call(r); out != UnknownTool || d.Reason != "not_in_catalog" {
-			t.Fatalf("03-engine §7.2 row 55: the workspace agent acting for %s: %v %s", u, out, d.Reason)
+			t.Fatalf("row 55: the workspace agent acting for %s: %v %s", u, out, d.Reason)
 		}
 		if listed(w, r) {
-			t.Fatalf("03-engine §7.2 row 55: listed for %s", u)
+			t.Fatalf("row 55: listed for %s", u)
 		}
 	}
 	delete(w.Bindings, [2]string{conn, "a1"})
 	if err := w.Bind(conn, "a1"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("03-engine §5.5: binding the agent of u1 to a connector u1 may not see: %v, want not_found", err)
+		t.Fatalf("binding the agent of u1 to a connector u1 may not see: %v, want not_found", err)
 	}
 	if err := i.Install("t1", "w", "u1", "/github", "mine"); !errors.Is(err, ErrNotFound) {
-		t.Fatalf("03-engine §5.5: install by u1: %v, want not_found", err)
+		t.Fatalf("install by u1: %v, want not_found", err)
 	}
 }
 
@@ -474,8 +474,8 @@ func TestTwoTenantsWithTheSameNames(t *testing.T) {
 	w1, w2 := i.Tenant("t1"), i.Tenant("t2")
 	w1.PutGrant(&Grant{Scope: Workspace, ScopeID: "w", Connector: conn, Selector: "*", Mode: Allow})
 	w1.PutGrant(&Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "*", Mode: Allow})
-	wantList(t, "03-engine §15.3 tenancy: tenant t1", w1, "x", "s1", "s__create_issue", "s__delete_repo", "s__search")
-	wantList(t, "03-engine §15.3 tenancy: tenant t2 has the same connector, agent and session names and no rows", w2, "x", "s1")
+	wantList(t, "tenancy: tenant t1", w1, "x", "s1", "s__create_issue", "s__delete_repo", "s__search")
+	wantList(t, "tenancy: tenant t2 has the same connector, agent and session names and no rows", w2, "x", "s1")
 	wantCall(t, "tenant t2", w2, "x", "s1", "search", UnknownTool)
 	w1.UpstreamChanged(conn, "search", "a2")
 	if w2.Connectors[conn].Functions["search"].State != Active {
@@ -483,7 +483,7 @@ func TestTwoTenantsWithTheSameNames(t *testing.T) {
 	}
 	i.Rules = append(i.Rules, hide("t1", TenantSubject, "t1", ListingTarget, "/github"))
 	if show, _, _ := i.Visible("t2", "w", nil, "/github"); !show {
-		t.Fatal("03-engine §5.5: a rule of tenant t1 changed what tenant t2 sees")
+		t.Fatal("a rule of tenant t1 changed what tenant t2 sees")
 	}
 	w2.PutGrant(&Grant{Scope: Workspace, ScopeID: "w", Connector: conn, Selector: "*", Mode: Allow})
 	w2.PutGrant(&Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "*", Mode: Allow})
@@ -493,10 +493,10 @@ func TestTwoTenantsWithTheSameNames(t *testing.T) {
 
 func TestPrivateListingOfATenant(t *testing.T) {
 	i := fixture()
-	same(t, "03-engine §5.5 V1: the owner tenant sees its private listing", i.Store("t1", "w", "admin", "crm"), "t1/crm")
-	same(t, "03-engine §5.5 V1: another tenant does not", i.Store("t2", "w", "admin", ""))
+	same(t, "V1: the owner tenant sees its private listing", i.Store("t1", "w", "admin", "crm"), "t1/crm")
+	same(t, "V1: another tenant does not", i.Store("t2", "w", "admin", ""))
 	i.Rules = append(i.Rules, show("t2", TenantSubject, "t2", ListingTarget, "t1/crm", CeilFull), show("t2", TenantSubject, "t2", SourceTarget, "private", CeilFull))
-	same(t, "03-engine §5.5 V1: a rule of tenant t2 cannot reach the private listing of t1", i.Store("t2", "w", "admin", ""))
+	same(t, "V1: a rule of tenant t2 cannot reach the private listing of t1", i.Store("t2", "w", "admin", ""))
 	if _, err := i.GetListing("t2", "w", "admin", "t1/crm"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("getListing from another tenant: %v, want not_found", err)
 	}
@@ -509,10 +509,10 @@ func TestPrivateListingOfATenant(t *testing.T) {
 }
 
 func TestCatalogResolution(t *testing.T) {
-	t.Run("03-engine §5.5 V2: a new tenant sees nothing with catalog.tenantDefault = none", func(t *testing.T) {
+	t.Run("V2: a new tenant sees nothing with catalog.tenantDefault = none", func(t *testing.T) {
 		same(t, "store", fixture().Store("t9", "w", "admin", ""))
 	})
-	t.Run("03-engine §5.5 V2: catalog.tenantDefault = starter writes the starter set as rules of a tenant when it is created", func(t *testing.T) {
+	t.Run("V2: catalog.tenantDefault = starter writes the starter set as rules of a tenant when it is created", func(t *testing.T) {
 		i := fixture()
 		i.TenantDefault = "starter"
 		i.CreateTenant("t9")
@@ -521,7 +521,7 @@ func TestCatalogResolution(t *testing.T) {
 			t.Fatalf("ceiling %v, want read", c)
 		}
 		i.Listings["/github"].Starter = true
-		same(t, "03-engine §5.5 V2: a listing marked starter afterwards is not enabled for a tenant that exists", i.Store("t9", "w", "admin", ""), "/notes")
+		same(t, "V2: a listing marked starter afterwards is not enabled for a tenant that exists", i.Store("t9", "w", "admin", ""), "/notes")
 		same(t, "a tenant that reached the engine without createTenant has no starter rule", i.Store("t8", "w", "admin", ""))
 		i.CreateTenant("t10")
 		same(t, "a tenant created after the mark gets it", i.Store("t10", "w", "admin", ""), "/github", "/notes")
@@ -538,20 +538,20 @@ func TestCatalogResolution(t *testing.T) {
 		i.Listings["/notes"].Starter = false
 		same(t, "removing the mark takes nothing from a tenant that has the rule", i.Store("t10", "w", "admin", ""), "/github", "/notes")
 	})
-	t.Run("03-engine §5.5 V1: the operator withholds a source and a tenant rule cannot bring it back", func(t *testing.T) {
+	t.Run("V1: the operator withholds a source and a tenant rule cannot bring it back", func(t *testing.T) {
 		i := fixture()
 		i.Withheld[[2]string{"t1", "official"}] = true
 		i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", SourceTarget, "official", CeilFull), show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilFull))
 		same(t, "store", i.Store("t1", "w", "admin", "github"))
 	})
-	t.Run("03-engine §5.5 V5: a listing rule answers before a publisher rule and a source rule", func(t *testing.T) {
+	t.Run("V5: a listing rule answers before a publisher rule and a source rule", func(t *testing.T) {
 		i := fixture()
 		i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", SourceTarget, "official", CeilFull), hide("t1", TenantSubject, "t1", ListingTarget, "/github"))
 		same(t, "store", i.Store("t1", "w", "admin", "github"))
 		i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", SourceTarget, "docker", CeilFull), hide("t1", TenantSubject, "t1", PublisherTarget, "com.slack"), show("t1", TenantSubject, "t1", ListingTarget, "/slack", CeilRead))
 		same(t, "store", i.Store("t1", "w", "admin", "slack"), "/slack")
 	})
-	t.Run("03-engine §5.5 V5: equal rank, hide wins and the lower ceiling wins", func(t *testing.T) {
+	t.Run("V5: equal rank, hide wins and the lower ceiling wins", func(t *testing.T) {
 		i := fixture()
 		i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilFull))
 		i.Tenant("t1").Groups["u1"] = []string{"g1", "g2"}
@@ -562,9 +562,9 @@ func TestCatalogResolution(t *testing.T) {
 		i.Rules = append(i.Rules, hide("t1", GroupSubject, "g2", ListingTarget, "/github"))
 		same(t, "store", i.Store("t1", "w", "u1", "github"))
 		i.Rules = append(i.Rules, show("t1", UserSubject, "u1", ListingTarget, "/github", CeilFull))
-		same(t, "03-engine §5.5 V5: a rule on the user answers before a rule on a group", i.Store("t1", "w", "u1", "github"), "/github")
+		same(t, "V5: a rule on the user answers before a rule on a group", i.Store("t1", "w", "u1", "github"), "/github")
 	})
-	t.Run("03-engine §5.5 V3: a workspace whose default is hidden sees only what a rule shows it", func(t *testing.T) {
+	t.Run("V3: a workspace whose default is hidden sees only what a rule shows it", func(t *testing.T) {
 		i := fixture()
 		i.Rules = append(i.Rules, show("t1", TenantSubject, "t1", SourceTarget, "official", CeilFull), show("t1", TenantSubject, "t1", SourceTarget, "docker", CeilFull))
 		i.WorkspaceHidden[[2]string{"t1", "lab"}] = true
@@ -580,10 +580,10 @@ func TestCatalogResolution(t *testing.T) {
 		lab.PutGrant(&Grant{Scope: Workspace, ScopeID: "lab", Connector: "moved", Selector: "*", Mode: Allow})
 		lab.PutGrant(&Grant{Scope: Agent, ScopeID: "x", Connector: "moved", Selector: "*", Mode: Allow})
 		if out, d := lab.Call(Request{Agent: "x", Session: "s1", Connector: "moved", Function: "search", Now: 10}); out != UnknownTool || d.Reason != "not_in_catalog" {
-			t.Fatalf("03-engine §7.2 row 56: a connector in a workspace that may not see its listing: %v %s", out, d.Reason)
+			t.Fatalf("row 56: a connector in a workspace that may not see its listing: %v %s", out, d.Reason)
 		}
 	})
-	t.Run("03-engine §5.5 V6: visible and not installable", func(t *testing.T) {
+	t.Run("V6: visible and not installable", func(t *testing.T) {
 		i := fixture()
 		r := show("t1", TenantSubject, "t1", ListingTarget, "/github", CeilFull)
 		r.Install = false
@@ -711,12 +711,12 @@ func TestTenantAllowListOfFunctions(t *testing.T) {
 		}
 	}
 	tenant("fn:search", Inherit)
-	wantCall(t, "03-engine §6.4 G10: an inherit row with no broader tenant row changes nothing", w, "x", "s1", "create_issue", Forwarded)
+	wantCall(t, "G10: an inherit row with no broader tenant row changes nothing", w, "x", "s1", "create_issue", Forwarded)
 	tenant("*", Deny)
-	if d := wantCall(t, "03-engine §7.2 row 65: * deny with fn:search inherit, the listed function", w, "x", "s1", "search", Forwarded); d.Layers[0] != "skip" {
+	if d := wantCall(t, "row 65: * deny with fn:search inherit, the listed function", w, "x", "s1", "search", Forwarded); d.Layers[0] != "skip" {
 		t.Fatalf("tenant layer %s, want skip: the function is left to the workspace and the agent, with no prompt added", d.Layers[0])
 	}
-	if d := wantCall(t, "03-engine §7.2 row 66: a function the list does not name", w, "x", "s1", "create_issue", UnknownTool); d.Step != 6 || d.Reason != "denied_by_row" {
+	if d := wantCall(t, "row 66: a function the list does not name", w, "x", "s1", "create_issue", UnknownTool); d.Step != 6 || d.Reason != "denied_by_row" {
 		t.Fatalf("step %d reason %s, want 6 denied_by_row", d.Step, d.Reason)
 	}
 	wantList(t, "tools/list is the allow list", w, "x", "s1", conn+"__search")
@@ -724,16 +724,16 @@ func TestTenantAllowListOfFunctions(t *testing.T) {
 	for _, f := range []string{"search", "search_all", "issue_create"} {
 		w.Accept(conn, f)
 	}
-	wantCall(t, "03-engine §7.2 row 67: the listed function at a new, accepted hash (an inherit row has no hash)", w, "x", "s1", "search", Forwarded)
+	wantCall(t, "row 67: the listed function at a new, accepted hash (an inherit row has no hash)", w, "x", "s1", "search", Forwarded)
 	for _, f := range []string{"search_all", "issue_create"} {
-		if d := wantCall(t, "03-engine §7.2 row 67: a new or renamed function a workspace admin accepted is outside the company's list: "+f, w, "x", "s1", f, UnknownTool); d.Step != 6 {
+		if d := wantCall(t, "row 67: a new or renamed function a workspace admin accepted is outside the company's list:"+f, w, "x", "s1", f, UnknownTool); d.Step != 6 {
 			t.Fatalf("%s refused at step %d, want 6", f, d.Step)
 		}
 	}
 	w.PutGrant(&Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "fn:search", Mode: Ask, Hash: "a2"})
-	wantCall(t, "03-engine §6.4 G10: inherit grants nothing, the agent row still answers", w, "x", "s1", "search", Held)
+	wantCall(t, "G10: inherit grants nothing, the agent row still answers", w, "x", "s1", "search", Held)
 	w.PutGrant(&Grant{Scope: Workspace, ScopeID: "w", Connector: conn, Selector: "*", Mode: Deny})
-	if d := wantCall(t, "03-engine §6.4 G10: inherit never widens the workspace", w, "x", "s1", "search", UnknownTool); d.Step != 7 {
+	if d := wantCall(t, "G10: inherit never widens the workspace", w, "x", "s1", "search", UnknownTool); d.Step != 7 {
 		t.Fatalf("step %d, want 7", d.Step)
 	}
 	if err := i.Install("t1", "lab", "admin", "/github", "lab-gh"); err != nil {
@@ -746,12 +746,12 @@ func TestTenantAllowListOfFunctions(t *testing.T) {
 	}
 	for f, want := range map[string]Outcome{"search": Forwarded, "create_issue": UnknownTool, "delete_repo": UnknownTool} {
 		if out, _ := w.Call(Request{Agent: "x", Session: "s1", Connector: "lab-gh", Function: f, Now: 10}); out != want {
-			t.Fatalf("03-engine §6.4 G10: the list holds in every workspace, whatever hash it pins: %s in lab: %v, want %v", f, out, want)
+			t.Fatalf("G10: the list holds in every workspace, whatever hash it pins: %s in lab: %v, want %v", f, out, want)
 		}
 	}
 	tenant("fn:search", Ask)
 	if out, _ := w.Call(Request{Agent: "x", Session: "s1", Connector: "lab-gh", Function: "search", Now: 10}); out != Held {
-		t.Fatalf("03-engine §6.4 G1: writing ask over the inherit row replaces it: %v", out)
+		t.Fatalf("G1: writing ask over the inherit row replaces it: %v", out)
 	}
 }
 
@@ -767,21 +767,21 @@ func TestNamedAudienceWithTwoPeopleConsidered(t *testing.T) {
 		return out
 	}
 	if out := at(""); out != Forwarded {
-		t.Fatalf("03-engine §5.5 V8: the agent of a named owner, acting for nobody: %v", out)
+		t.Fatalf("V8: the agent of a named owner, acting for nobody: %v", out)
 	}
 	if out := at("u2"); out != UnknownTool {
-		t.Fatalf("03-engine §5.5 V8: the owner of the agent is named and the person acted for is not; each must be named: %v", out)
+		t.Fatalf("V8: the owner of the agent is named and the person acted for is not; each must be named: %v", out)
 	}
 	if show, _, _ := i.Visible("t1", "w", []string{"u1", "u2"}, "/github"); show {
-		t.Fatal("03-engine §5.5 V8: visible although one of the two people considered is not named")
+		t.Fatal("V8: visible although one of the two people considered is not named")
 	}
 	w.AgentOwner["x"] = "u2"
 	if out := at("u1"); out != UnknownTool {
-		t.Fatalf("03-engine §5.5 V8: the person acted for is named and the owner of the agent is not: %v", out)
+		t.Fatalf("V8: the person acted for is named and the owner of the agent is not: %v", out)
 	}
 	i.Rules = append(i.Rules, show("t1", UserSubject, "u2", ListingTarget, "/github", CeilFull))
 	if out := at("u1"); out != Forwarded {
-		t.Fatalf("03-engine §5.5 V8: both people are named: %v", out)
+		t.Fatalf("V8: both people are named: %v", out)
 	}
 }
 
@@ -796,7 +796,7 @@ func TestListingStatusAcrossVersions(t *testing.T) {
 		}
 		return i, w
 	}
-	t.Run("03-engine §5.5 V1: a version imported after the listing was quarantined or withdrawn does not bring it back", func(t *testing.T) {
+	t.Run("V1: a version imported after the listing was quarantined or withdrawn does not bring it back", func(t *testing.T) {
 		for status, reason := range map[ListingStatus]string{ListingQuarantined: "listing_quarantined", ListingWithdrawn: "not_in_catalog"} {
 			i, w := setup()
 			i.Listings["/github"].Status = status
@@ -816,7 +816,7 @@ func TestListingStatusAcrossVersions(t *testing.T) {
 			wantCall(t, "restoreListing on the listing restores every version that has no status of its own", w, "x", "s1", "search", Forwarded)
 		}
 	})
-	t.Run("03-engine §5.5 V1: one version quarantined, the listing shows the newest version that exists", func(t *testing.T) {
+	t.Run("V1: one version quarantined, the listing shows the newest version that exists", func(t *testing.T) {
 		i, w := setup()
 		i.Import("/github", "2.0.0")
 		i.Listings["/github"].Versions["2.0.0"] = ListingQuarantined
@@ -835,7 +835,7 @@ func TestListingStatusAcrossVersions(t *testing.T) {
 		i.Listings["/github"].Versions["1.0.0"] = ListingWithdrawn
 		same(t, "no version left: the listing is absent", i.Store("t1", "w", "admin", "github"))
 	})
-	t.Run("03-engine §5.5 V1: the newest version deprecated", func(t *testing.T) {
+	t.Run("V1: the newest version deprecated", func(t *testing.T) {
 		i, w := setup()
 		i.Listings["/github"].Versions["1.0.0"] = ListingDeprecated
 		wantCall(t, "an installed connector keeps working", w, "x", "s1", "search", Forwarded)

@@ -1,4 +1,4 @@
-// Package grant holds the rules of the grant table: row legality, keys, levels and matching inside one layer (§6, §7.1 M1 to M5).
+// Package grant holds the rules of the grant table: row legality, keys, levels and matching inside one layer.
 package grant
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Specificity ranks a selector: 2 for fn: and an exact item, 1 for class: and an item kind's wildcard, 0 for * (§7.1 M2).
+// Specificity ranks a selector: 2 for fn: and an exact item, 1 for class: and an item kind's wildcard, 0 for *.
 func Specificity(selector string) int {
 	kind := port.ItemKind(selector)
 	switch {
@@ -20,7 +20,7 @@ func Specificity(selector string) int {
 	return 0
 }
 
-// Covers reports whether a selector covers the function by name, by effective class or as *; an item is covered only by its name or its kind's wildcard (§7.1 M1).
+// Covers reports whether a selector covers the function by name, by effective class or as *; an item is covered only by its name or its kind's wildcard.
 func Covers(selector string, f port.Function) bool {
 	if kind := port.ItemKind(f.Name); kind != "" {
 		return selector == f.Name || selector == kind+port.SelectorAll
@@ -28,13 +28,13 @@ func Covers(selector string, f port.Function) bool {
 	return selector == port.SelectorAll || selector == port.SelectorClass+string(f.Class.Effective()) || selector == port.SelectorFunction+f.Name
 }
 
-// Policy bounds settings-made allow rows of the agent and user scopes; a zero AlwaysMax skips the bound (§6.1).
+// Policy bounds settings-made allow rows of the agent and user scopes; a zero AlwaysMax skips the bound.
 type Policy struct {
 	Now       time.Time
 	AlwaysMax time.Duration
 }
 
-// Validate refuses a row the rules of §6.1 and §6.4 G5, G8, G9 and G10 forbid, with code row_refused.
+// Validate refuses a row the rules and G5, G8, G9 and G10 forbid, with code row_refused.
 func Validate(g port.Grant, p Policy) error {
 	refuse := func(why string) error { return port.Errorf(port.CodeRowRefused, "%s", why) }
 	sel := g.Selector
@@ -66,7 +66,7 @@ func Validate(g port.Grant, p Policy) error {
 	case g.Listing != nil || g.Connector == "":
 		return refuse("a row below the tenant names a connector")
 	case Specificity(sel) == 2 && g.DefinitionHash == "":
-		return refuse("an fn: row carries the definition_hash the grantor saw (§6.1)")
+		return refuse("an fn: row carries the definition_hash the grantor saw")
 	}
 	switch g.ScopeKind {
 	case port.ScopeWorkspace, port.ScopeAgent, port.ScopeUser:
@@ -80,7 +80,7 @@ func Validate(g port.Grant, p Policy) error {
 	}
 	if p.AlwaysMax > 0 && g.Mode == port.ModeAllow && g.Origin == port.OriginSettings && g.ScopeKind != port.ScopeWorkspace {
 		if g.ExpiresAt.IsZero() || g.ExpiresAt.After(p.Now.Add(p.AlwaysMax)) {
-			return refuse("an allow row of an agent or a person expires within permission.alwaysMaxDuration (§6.1)")
+			return refuse("an allow row of an agent or a person expires within permission.alwaysMaxDuration")
 		}
 	}
 	return nil
@@ -91,16 +91,16 @@ func validClass(sel string) bool {
 	return ok && (c == string(port.ClassRead) || c == string(port.ClassWrite) || c == string(port.ClassDestructive))
 }
 
-// LevelModes is the expansion of level write, configured as permission.levelWrite.* (§6.2).
+// LevelModes is the expansion of level write, configured as permission.levelWrite.*.
 type LevelModes struct {
 	Write       port.Mode
 	Destructive port.Mode
 }
 
-// DefaultLevelModes is the recommended expansion of level write: write ask_once, destructive ask (OD-4).
+// DefaultLevelModes is the recommended expansion of level write: write ask_once, destructive ask.
 var DefaultLevelModes = LevelModes{Write: port.ModeAskOnce, Destructive: port.ModeAsk}
 
-// Expand returns the class rows a level writes on base's layer; custom writes none (§6.2).
+// Expand returns the class rows a level writes on base's layer; custom writes none.
 func Expand(base port.Grant, level port.Level, m LevelModes) []port.Grant {
 	modes := map[port.Level][3]port.Mode{
 		port.LevelOff:   {port.ModeDeny, port.ModeDeny, port.ModeDeny},
@@ -120,7 +120,7 @@ func Expand(base port.Grant, level port.Level, m LevelModes) []port.Grant {
 	return out
 }
 
-// SetLevel returns the rows of one layer a level deletes and the rows it writes: level rows and same-key rows go (§6.4 G3).
+// SetLevel returns the rows of one layer a level deletes and the rows it writes: level rows and same-key rows go.
 func SetLevel(layer []port.Grant, base port.Grant, level port.Level, m LevelModes) (removed, added []port.Grant) {
 	added = Expand(base, level, m)
 	keys := map[string]bool{}
@@ -135,7 +135,7 @@ func SetLevel(layer []port.Grant, base port.Grant, level port.Level, m LevelMode
 	return removed, added
 }
 
-// Answer is what one layer yields for a function (§7.1 steps 6 to 9).
+// Answer is what one layer yields for a function.
 type Answer struct {
 	Found  bool
 	Mode   port.Mode
@@ -143,12 +143,12 @@ type Answer struct {
 	Row    *port.Grant
 }
 
-// Live reports whether a row is unexpired and, when counted, under max_uses (§7.1 M1).
+// Live reports whether a row is unexpired and, when counted, under max_uses.
 func Live(g port.Grant, now time.Time) bool {
 	return (g.ExpiresAt.IsZero() || now.Before(g.ExpiresAt)) && (g.MaxUses == 0 || g.Uses < g.MaxUses)
 }
 
-// Match applies M1 to M5 to the rows of one layer; an inherit answer is no answer (§6.4 G10).
+// Match applies M1 to M5 to the rows of one layer; an inherit answer is no answer.
 func Match(rows []port.Grant, f port.Function, now time.Time) Answer {
 	var best *port.Grant
 	top := -1
@@ -178,12 +178,12 @@ func strictness(m port.Mode) int {
 	return m.Rank()
 }
 
-// Stale reports whether an fn: allow or ask_once row was written at another hash than the function's (§7.1 M4, M5).
+// Stale reports whether an fn: allow or ask_once row was written at another hash than the function's.
 func Stale(g port.Grant, f port.Function) bool {
 	return (g.Mode == port.ModeAllow || g.Mode == port.ModeAskOnce) && g.DefinitionHash != f.DefinitionHash
 }
 
-// SessionRow builds the session row of A4: fn:F allow at the current hash, ending at the earlier of exp and now plus max (§6.4 G5).
+// SessionRow builds the session row of A4: fn:F allow at the current hash, ending at the earlier of exp and now plus max.
 func SessionRow(a port.Approval, now, tokenExp time.Time, max time.Duration) port.Grant {
 	exp := now.Add(max)
 	if !tokenExp.IsZero() && tokenExp.Before(exp) {
@@ -196,7 +196,7 @@ func SessionRow(a port.Approval, now, tokenExp time.Time, max time.Duration) por
 	}
 }
 
-// Capped lists the functions a row with mode allow covers whose effective class is destructive (§6.2 warning).
+// Capped lists the functions a row with mode allow covers whose effective class is destructive.
 func Capped(g port.Grant, fns []port.Function) []string {
 	var out []string
 	for _, f := range fns {
@@ -207,7 +207,7 @@ func Capped(g port.Grant, fns []port.Function) []string {
 	return out
 }
 
-// Confirm moves an fn: row to the function's current hash; a tenant row is never stale and has nothing to confirm (§9).
+// Confirm moves an fn: row to the function's current hash; a tenant row is never stale and has nothing to confirm.
 func Confirm(g port.Grant, f port.Function) (port.Grant, error) {
 	if g.ScopeKind == port.ScopeTenant || g.Selector != port.SelectorOf(f.Name) {
 		return g, port.Errorf(port.CodeInvalidArgument, "only an fn: row below the tenant on %s is confirmed", f.Name)

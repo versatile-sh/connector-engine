@@ -9,7 +9,7 @@ Status: design, Phase 1. Nothing moves until the in-flight console branches (`re
 | # | Invariant | Checked by |
 | --- | --- | --- |
 | I1 | Dependency direction is core ← `selfhosted/`. No package outside `selfhosted/` imports a package under it, including test imports. | `scripts/check-layering.sh` in `make test` (see [Verification](#verification)) |
-| I2 | `cmd/connector-engine` (the headless binary that products such as adaptable.chat embed) links no self-hosted package and behaves as today. | `go list -deps ./cmd/connector-engine` has no `/selfhosted/` path |
+| I2 | `cmd/connector-engine` (the headless binary that products embed) links no self-hosted package and behaves as today. | `go list -deps ./cmd/connector-engine` has no `/selfhosted/` path |
 | I3 | The module builds with `GOFLAGS=-mod=mod GOPRIVATE= GOPROXY=off` and no plugkit checkout. Outsiders can `go install github.com/versatile-sh/connector-engine/cmd/connector-engine@latest`. | the offline build in [Verification](#verification) |
 | I4 | User-facing entry points stay: `make up`, `make down`, `make unlock`, `make keychain-*`, `make notify`, `make check`, the image `connector-engine:local`, the compose project `connector-engine` and its volume names. | `make check` on project `connector-engine-check`, port 7466 |
 | I5 | Wire-visible names stay: `SchemaID` and the other `https://agents-control.dev/...` URIs, the `connector-engine` engine name, the `connector-engine/error` meta code, the adapter names in adapters files (`builtin:hostkey`). | unchanged golden tests |
@@ -201,7 +201,7 @@ func Commands() map[string]cli.Command
 | Failure mode | forgetting an extension fails at compile time or at the first `adapters check` | a missing blank import silently drops an adapter |
 | Extensibility | a third build (for example a product with its own vault adapter) writes its own main | same, through blank imports |
 
-Choice: **Option A**. It keeps one composition root per binary, explicit and testable. It adds no global state. B saves about ten lines, and it hides the composition the owner asked to be visible.
+Choice: **Option A**. It keeps one composition root per binary, explicit and testable. It adds no global state. B saves about ten lines, and it hides the composition that should stay visible.
 
 ### Decision on configuration keys
 
@@ -230,7 +230,7 @@ The engine imports 4 plugkit packages directly. Their closure is **7 packages**,
 | `host` | `adapters`, `outbox` |
 | `api/acplug/v1` (generated protobuf) | `outbox` |
 
-The owner approved publishing 4 packages. Publishing 7 needs the same approval for `conform`, `host` and `api/acplug/v1`. Trimming them out would change upstream `adapters` and `outbox` (plugin hosting, the gRPC sink), which breaks the byte-for-byte sync. The recommendation is to copy all 7 unchanged.
+Publishing 4 packages was approved. Publishing 7 needs the same approval for `conform`, `host` and `api/acplug/v1`. Trimming them out would change upstream `adapters` and `outbox` (plugin hosting, the gRPC sink), which breaks the byte-for-byte sync. The recommendation is to copy all 7 unchanged.
 
 Licence: plugkit's `LICENSE` is MIT, `Copyright (c) 2026 agents.control`, the same as this repository. MIT allows the redistribution. The copy keeps that file verbatim at `internal/plugkit/LICENSE`.
 
@@ -265,9 +265,9 @@ The module path becomes `github.com/versatile-sh/connector-engine`, in one dedic
 - `go mod edit -module github.com/versatile-sh/connector-engine`.
 - Rewrite every Go import, the `go_package` option in `api/connectorengine/v1/connectorengine.proto`, and the paths in docs, the Makefile and scripts. The pattern is anchored on `github.com/agents-control/connector-engine`, so the plugkit paths and the `agents-control.dev` URIs are untouched.
 - **Regenerate** `api/connectorengine/v1/*.pb.go` (protoc-gen-go v1.36.12, protoc v7.36.1, as the file header records). Do not edit it with sed: the raw descriptor holds `go_package` as a length-prefixed string (`Z` tag, length `S` = 83), and the new path is 2 bytes shorter.
-- `~/Projects/Versatile/mcp-catalog/scripts/validate` imports the module; the coordinator updates it after the commit lands.
+- Downstream tools that import the module switch to the new path after the commit lands.
 
-Event schema URIs (`catalog.SchemaID`, `https://agents-control.dev/...`) **stay**. They are identifiers on the wire, not fetch locations. adaptable.chat and other consumers match them exactly. A new name would need a schema version bump with a period that accepts both. That decision is separate from going public.
+Event schema URIs (`catalog.SchemaID`, `https://agents-control.dev/...`) **stay**. They are identifiers on the wire, not fetch locations. Consumers match them exactly. A new name would need a schema version bump with a period that accepts both. That decision is separate from going public.
 
 ## Binaries, image and compose
 
@@ -302,7 +302,7 @@ Makefile:
 - `make test` runs `go test -race ./...`, the web typecheck in `selfhosted/console/web`, `scripts/check-layering.sh`, the headless `adapters check` through `./cmd/connector-engine`, and the person `adapters check` through `./selfhosted/cmd/connector-engine`.
 - `vendor` stays for offline image builds. It no longer needs private access.
 
-Path-bound files to update in the move: `Dockerfile` (`COPY console/web`, the build paths), `.dockerignore` (`console/web/dist/app`), the `//go:embed` in `console/web` (relative, moves with the package), the compose mounts, `scripts/console-check.sh` (compose files, `connector-engine-testmcp:local`), `scripts/keychain.sh` (called by `selfhosted.mk`), `config/profiles_test.go` (reads `deploy/profiles/*`: the person half moves to `selfhosted/`, next to the code that can register `hostkey`), `docs/STATUS.md` and `README.md` paths.
+Path-bound files to update in the move: `Dockerfile` (`COPY console/web`, the build paths), `.dockerignore` (`console/web/dist/app`), the `//go:embed` in `console/web` (relative, moves with the package), the compose mounts, `scripts/console-check.sh` (compose files, `connector-engine-testmcp:local`), `scripts/keychain.sh` (called by `selfhosted.mk`), `config/profiles_test.go` (reads `deploy/profiles/*`: the person half moves to `selfhosted/`, next to the code that can register `hostkey`), `docs/internal/STATUS.md` and `README.md` paths.
 
 ## Migration order (Phase 2)
 
@@ -316,7 +316,7 @@ Base: `origin/main` after the console branches merge. One worktree, one PR, each
 6. **Move**: `git mv` of every self-hosted path in the table above into `selfhosted/`. The commit holds renames plus import-line edits only (`git diff -M --stat` shows renames at 90% similarity or more).
 7. **Self-hosted mains**: `selfhosted/selfhosted.go`, `selfhosted/cmd/{connector-engine,cnctl}`. The core mains drop the self-hosted extensions. Dockerfile, compose, Makefile and `selfhosted.mk`.
 8. **Layering guard**: `scripts/check-layering.sh` wired into `make test`.
-9. **Docs**: `selfhosted/README.md`, move `SECRETS.md` and `approvals-surfaces.md`, update `README.md`, `docs/STATUS.md` and `docs/PLAN.md` paths, this document's status.
+9. **Docs**: `selfhosted/README.md`, move `SECRETS.md` and `approvals-surfaces.md`, update `README.md`, `docs/internal/STATUS.md` and `docs/internal/PLAN.md` paths, this document's status.
 
 ## Verification
 
@@ -344,8 +344,8 @@ The offline build runs with the plugkit checkout moved aside, so a stray `replac
 | --- | --- |
 | The module rename and the move touch most files and conflict with in-flight branches | start Phase 2 only after they merge; steps 1 and 6 are mechanical and easy to redo on a new base |
 | A sed on generated protobuf corrupts the descriptor | regenerate `connectorengine.pb.go`; the plugkit rewrite touches import specs only |
-| The owner's live stack on port 7465 runs the old compose file | volume and project names stay; after merge, `make up` rebuilds and the person `engine` switches entrypoint; the unlock socket and the keychain item `service=connector-engine` are unchanged. Phase 2 never touches the 7465 stack |
+| A live install on port 7465 runs the old compose file | volume and project names stay; after merge, `make up` rebuilds and the person `engine` switches entrypoint; the unlock socket and the keychain item `service=connector-engine` are unchanged. Phase 2 never touches the 7465 stack |
 | Docker Compose older than 2.20 rejects `include` | `selfhosted/README.md` states the minimum; the check fails fast with Compose's own error |
-| The closure publishes 7 plugkit packages, not 4 | owner approval for `conform`, `host` and `api/acplug/v1` before step 2 |
+| The closure publishes 7 plugkit packages, not 4 | maintainer approval for `conform`, `host` and `api/acplug/v1` before step 2 |
 | The plugkit copy drifts from upstream | `UPSTREAM.md` pins the commit; `sync-plugkit.sh` is the only way to change `internal/plugkit` |
 | A future core change imports `selfhosted/` again | `check-layering.sh` in `make test` fails the build |

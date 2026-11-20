@@ -98,7 +98,7 @@ type GrantRef struct {
 	Grant string `json:"grant"`
 }
 
-// ExposureWarning is event 13: the functions forming each leg of the trifecta check (§15.2).
+// ExposureWarning is event 13: the functions forming each leg of the trifecta check.
 type ExposureWarning struct {
 	Agent   string   `json:"agent"`
 	Exposed bool     `json:"exposed"`
@@ -341,19 +341,19 @@ type OverlaySuggested struct {
 	OverlayVersion int    `json:"overlay_version"`
 }
 
-// SessionEnded is the consumed fact behind endSession (§12.2).
+// SessionEnded is the consumed fact behind endSession.
 type SessionEnded struct {
 	Tenant  string `json:"tenant"`
 	Session string `json:"session"`
 }
 
-// AgentRemoved is the consumed fact behind removeAgent (§12.2).
+// AgentRemoved is the consumed fact behind removeAgent.
 type AgentRemoved struct {
 	Tenant string `json:"tenant"`
 	Agent  string `json:"agent"`
 }
 
-// PersonRemoved is the consumed fact behind removePerson: a workspace, or every workspace of the tenant (§12.2).
+// PersonRemoved is the consumed fact behind removePerson: a workspace, or every workspace of the tenant.
 type PersonRemoved struct {
 	Tenant    string `json:"tenant"`
 	Person    string `json:"person"`

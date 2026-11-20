@@ -1,4 +1,4 @@
-// Package names builds the exposed names <alias>__<function> and the lookup table that resolves them without splitting (§10.1).
+// Package names builds the exposed names <alias>__<function> and the lookup table that resolves them without splitting.
 package names
 
 import (
@@ -9,7 +9,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Defaults of gateway.separator and gateway.toolNameMax (§14).
+// Defaults of gateway.separator and gateway.toolNameMax.
 const (
 	Separator = "__"
 	MaxLength = 64
@@ -98,7 +98,7 @@ func (t Table) Resolve(name string) (Entry, bool) {
 	return e, ok
 }
 
-// Names lists the exposed names in a deterministic order (§10.2 L4).
+// Names lists the exposed names in a deterministic order.
 func (t Table) Names() []string { return slices.Clone(t.order) }
 
 // ResourceURI returns <alias>+<uri>, the URI an agent sees for a connector's resource; an alias must start with a letter to lead a URI scheme (RFC 3986).

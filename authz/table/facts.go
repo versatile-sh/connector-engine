@@ -15,7 +15,7 @@ type Settings struct {
 	ForceAsk       bool
 }
 
-// View loads the catalog facts of §5.5 for one tenant: listings, version statuses, offers, rules, hidden workspaces and groups.
+// View loads the catalog facts for one tenant: listings, version statuses, offers, rules, hidden workspaces and groups.
 func View(tx port.Tx, tenant port.TenantID, workspaces []port.WorkspaceID, groups map[port.PersonID][]port.GroupID) (catalog.View, error) {
 	v := catalog.View{Tenant: tenant, Listings: map[port.ListingRef]port.Listing{}, Versions: map[port.VersionRef]port.ListingStatus{}, Hidden: map[port.WorkspaceID]bool{}, Groups: groups}
 	listings, err := tx.ListListings()
@@ -48,7 +48,7 @@ func View(tx port.Tx, tenant port.TenantID, workspaces []port.WorkspaceID, group
 	return v, nil
 }
 
-// LoadFacts reads everything §7.4 lists for one agent on one connector; an absent connector yields facts that deny at step 1.
+// LoadFacts reads everything lists for one agent on one connector; an absent connector yields facts that deny at step 1.
 func LoadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.ConnectorID, groups map[port.PersonID][]port.GroupID, set Settings) (evaluate.Facts, error) {
 	c, err := tx.GetConnector(connector)
 	if port.IsCode(err, port.CodeNotFound) {

@@ -75,7 +75,7 @@ func (s *Service) storeCredential(ctx context.Context, by string, c port.Connect
 	return cred, err
 }
 
-// CreateCredential stores a sealed credential for an owner of a connector; the answer carries metadata only (§11.1).
+// CreateCredential stores a sealed credential for an owner of a connector; the answer carries metadata only.
 func (s *Service) CreateCredential(ctx context.Context, p port.Principal, in CredentialInput) (port.Credential, error) {
 	c, err := s.connectorOf(ctx, p, in.Connector, authz.ConnectorRead)
 	if err != nil {
@@ -93,7 +93,7 @@ type ConnectStart struct {
 	URL   string `json:"url"`
 }
 
-// BeginConnect starts an authorization for the signed-in person; CompleteConnect refuses any other person (§11.3).
+// BeginConnect starts an authorization for the signed-in person; CompleteConnect refuses any other person.
 func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector port.ConnectorID, owner port.OwnerKind) (ConnectStart, error) {
 	var out ConnectStart
 	if s.d.Broker == nil || s.d.Registrar == nil {
@@ -170,7 +170,7 @@ func (s *Service) CompleteConnect(ctx context.Context, p port.Principal, state, 
 		Issuer: pend.Request.Client.Issuer, Resource: pend.Request.Resource, Secret: secret, Scopes: tokens.Scopes, ExpiresAt: tokens.ExpiresAt}, pend.Request.Client.Registration)
 }
 
-// RefreshCredential refreshes one credential under its revision; invalid_grant (unauthenticated) moves it to needs_reauth (§11.3).
+// RefreshCredential refreshes one credential under its revision; invalid_grant (unauthenticated) moves it to needs_reauth.
 func (s *Service) RefreshCredential(ctx context.Context, tenant port.TenantID, id port.CredentialID) error {
 	var cred port.Credential
 	if err := s.d.Store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) (err error) {
@@ -250,7 +250,7 @@ func (s *Service) revokeUpstream(ctx context.Context, creds []port.Credential) {
 	}
 }
 
-// RevokeCredential revokes a credential at its issuer where possible and clears its sealed secret (§11.3 Disconnect).
+// RevokeCredential revokes a credential at its issuer where possible and clears its sealed secret.
 func (s *Service) RevokeCredential(ctx context.Context, p port.Principal, id port.CredentialID) error {
 	var cred port.Credential
 	if err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) (err error) {

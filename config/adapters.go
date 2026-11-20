@@ -106,7 +106,7 @@ func (c Config) validateAdapters(f adapters.File) adapters.Findings {
 	return fs
 }
 
-// LoadAdapters reads adapters.yaml (nil data is the env form and the defaults) and checks it with the rules of §14.
+// LoadAdapters reads adapters.yaml (nil data is the env form and the defaults) and checks it with the rules.
 func (c Config) LoadAdapters(data []byte, environ []string) (adapters.File, error) {
 	spec := c.AdaptersSpec()
 	f, err := adapters.Load(spec, data, environ)

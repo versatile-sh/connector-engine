@@ -1,4 +1,4 @@
-// Package server holds the operation table every inbound surface (HTTP, gRPC, OpenAPI, management MCP) is built from (§13.1).
+// Package server holds the operation table every inbound surface (HTTP, gRPC, OpenAPI, management MCP) is built from.
 package server
 
 import (
@@ -73,7 +73,7 @@ func watch[I any](id, path, rpc string, fn func(context.Context, *Env, port.Prin
 // Operations returns the operation table.
 func Operations() []Operation { return operations }
 
-// Reads reports whether the operation only reads: a list, get or explain, or lintListing (§13.2).
+// Reads reports whether the operation only reads: a list, get or explain, or lintListing.
 func (o Operation) Reads() bool {
 	return o.ID == "lintListing" || strings.HasPrefix(o.ID, "list") || strings.HasPrefix(o.ID, "get") || strings.HasPrefix(o.ID, "explain")
 }

@@ -82,117 +82,117 @@ func onBehalf(r *Request) { r.User = "u" }
 
 func truthTable() []truthRow {
 	return []truthRow{
-		{name: "03-engine §7.2 row 1: W allow, A allow -> allow, listed, forwarded", class: Write,
+		{name: "row 1: W allow, A allow -> allow, listed, forwarded", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)}, mode: Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 2: W allow, A none -> deny no_agent_grant (§7.1 step 8), hidden, unknown tool", class: Write,
+		{name: "row 2: W allow, A none -> deny no_agent_grant, hidden, unknown tool", class: Write,
 			grants: []*Grant{ws("*", Allow)}, mode: Deny, reason: "no_agent_grant", call: UnknownTool},
-		{name: "03-engine §7.2 row 3: W none, A allow -> deny no_workspace_grant (§7.1 step 7)", class: Write,
+		{name: "row 3: W none, A allow -> deny no_workspace_grant", class: Write,
 			grants: []*Grant{ag("*", Allow)}, mode: Deny, reason: "no_workspace_grant", call: UnknownTool},
-		{name: "03-engine §7.2 row 4: W allow, A ask -> ask, listed, held every time", class: Write,
+		{name: "row 4: W allow, A ask -> ask, listed, held every time", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Ask)}, mode: Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 5: W allow, A ask, session row -> ask (§7.1 step 14: a session row never relaxes ask)", class: Write,
+		{name: "row 5: W allow, A ask, session row -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Ask), sess("s1", "x")}, mode: Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 6: W allow, A ask_once, no session row -> ask_once, held the first time", class: Write,
+		{name: "row 6: W allow, A ask_once, no session row -> ask_once, held the first time", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", AskOnce)}, mode: AskOnce, listed: true, call: Held},
-		{name: "03-engine §7.2 row 7: W allow, A ask_once, session row -> allow (§7.1 step 14), forwarded", class: Write,
+		{name: "row 7: W allow, A ask_once, session row -> allow, forwarded", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", AskOnce), sess("s1", "x")}, mode: Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 8: W ask, A allow -> ask (§7.1 step 10: the workspace ceiling wins)", class: Write,
+		{name: "row 8: W ask, A allow -> ask", class: Write,
 			grants: []*Grant{ws("*", Ask), ag("*", Allow)}, mode: Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 9: W deny, A allow -> deny", class: Write,
+		{name: "row 9: W deny, A allow -> deny", class: Write,
 			grants: []*Grant{ws("*", Deny), ag("*", Allow)}, mode: Deny, reason: "denied_by_row", call: UnknownTool},
-		{name: "03-engine §7.2 row 10: W allow, A allow, U deny -> deny", class: Write,
+		{name: "row 10: W allow, A allow, U deny -> deny", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow), us("*", Deny)}, req: onBehalf, mode: Deny, reason: "denied_by_row", call: UnknownTool},
-		{name: "03-engine §7.2 row 11: W allow, A allow, U ask -> ask", class: Write,
+		{name: "row 11: W allow, A allow, U ask -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow), us("*", Ask)}, req: onBehalf, mode: Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 12: U has other rows for C, none matches F -> the user layer is skipped (§7.1 step 9: a layer that only narrows has no opinion on F)", class: Write,
+		{name: "row 12: U has other rows for C, none matches F -> the user layer is skipped", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow), us("fn:other", Deny)}, req: onBehalf, mode: Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 13: W ask_once, A allow, U ask_once, session row -> allow", class: Write,
+		{name: "row 13: W ask_once, A allow, U ask_once, session row -> allow", class: Write,
 			grants: []*Grant{ws("*", AskOnce), ag("*", Allow), us("*", AskOnce), sess("s1", "x")}, req: onBehalf, mode: Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 14: quarantined, W allow, A allow, session row -> deny quarantined (§7.1 step 3)", class: Write,
+		{name: "row 14: quarantined, W allow, A allow, session row -> deny quarantined", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow), sess("s1", "x")},
 			setup:  func(w *World) { w.Connectors[conn].Functions[fn].State = Quarantined },
 			mode:   Deny, reason: "quarantined", call: UnknownTool},
-		{name: "03-engine §7.2 row 15: agent fn:F allow at an old hash and * ask -> deny grant_stale (§7.1 M4, no fall-through)", class: Write,
+		{name: "row 15: agent fn:F allow at an old hash and * ask -> deny grant_stale", class: Write,
 			grants: []*Grant{ws("*", Allow), stale(ag("fn:"+fn, Allow)), ag("*", Ask)}, mode: Deny, reason: "grant_stale", call: UnknownTool},
-		{name: "03-engine §7.2 row 16: class destructive, W allow, agent level write -> ask (§6.2 third column)", class: Destructive,
+		{name: "row 16: class destructive, W allow, agent level write -> ask", class: Destructive,
 			grants: []*Grant{ws("*", Allow)},
 			setup:  func(w *World) { w.SetLevel(Agent, "x", conn, WriteLevel) },
 			mode:   Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 17: class read, workspace level write, agent level read -> allow", class: Read,
+		{name: "row 17: class read, workspace level write, agent level read -> allow", class: Read,
 			setup: func(w *World) { w.SetLevel(Workspace, "w", conn, WriteLevel); w.SetLevel(Agent, "x", conn, ReadLevel) },
 			mode:  Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 18: class write, workspace level write, agent level read -> deny", class: Write,
+		{name: "row 18: class write, workspace level write, agent level read -> deny", class: Write,
 			setup: func(w *World) { w.SetLevel(Workspace, "w", conn, WriteLevel); w.SetLevel(Agent, "x", conn, ReadLevel) },
 			mode:  Deny, reason: "denied_by_row", call: UnknownTool},
-		{name: "03-engine §7.2 row 19: external point denies without arguments -> deny external_deny (§7.1 step 15a), hidden", class: Write,
+		{name: "row 19: external point denies without arguments -> deny external_deny, hidden", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  func(w *World) { w.External = func(Query) Mode { return Deny } },
 			mode:   Deny, reason: "external_deny", call: UnknownTool},
-		{name: "03-engine §7.2 row 20: external point says allow, table says ask -> ask (§7.1 step 15: allow never loosens)", class: Write,
+		{name: "row 20: external point says allow, table says ask -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Ask)},
 			setup:  func(w *World) { w.External = func(Query) Mode { return Allow } },
 			mode:   Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 21 (audit: unclassified under * allow): -> ask_once (§7.1 step 12)", class: Unclassified,
+		{name: "row 21 (audit: unclassified under * allow): -> ask_once", class: Unclassified,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)}, mode: AskOnce, listed: true, call: Held},
-		{name: "03-engine §7.2 row 22: unclassified, * allow in both layers, session row -> allow", class: Unclassified,
+		{name: "row 22: unclassified, * allow in both layers, session row -> allow", class: Unclassified,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow), sess("s1", "x")}, mode: Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 23: class destructive, agent fn:F allow at the current hash -> ask_once (§6.2: the row is not refused, the cap is step 12)", class: Destructive,
+		{name: "row 23: class destructive, agent fn:F allow at the current hash -> ask_once", class: Destructive,
 			grants: []*Grant{ws("*", Allow), ag("fn:"+fn, Allow)}, mode: AskOnce, listed: true, call: Held},
-		{name: "03-engine §7.2 row 24 (audit: class raised after a grant): fn:F allow written at class read, class then destructive -> ask_once (§6.4 G7, §7.1 step 12)", class: Read,
+		{name: "row 24 (audit: class raised after a grant): fn:F allow written at class read, class then destructive -> ask_once", class: Read,
 			grants: []*Grant{ws("*", Allow), ag("fn:"+fn, Allow), sess("s1", "x")},
 			setup:  func(w *World) { w.Classify(conn, fn, Destructive) },
 			mode:   AskOnce, listed: true, call: Held},
-		{name: "03-engine §7.2 row 25 (audit: fn deny at an old hash): agent fn:F deny at old hash and * allow -> deny (§7.1 M5)", class: Write,
+		{name: "row 25 (audit: fn deny at an old hash): agent fn:F deny at old hash and * allow -> deny", class: Write,
 			grants: []*Grant{ws("*", Allow), stale(ag("fn:"+fn, Deny)), ag("*", Allow)}, mode: Deny, reason: "denied_by_row", call: UnknownTool},
-		{name: "03-engine §7.2 row 26: agent fn:F ask at old hash and * allow -> ask (§7.1 M5)", class: Write,
+		{name: "row 26: agent fn:F ask at old hash and * allow -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow), stale(ag("fn:"+fn, Ask)), ag("*", Allow)}, mode: Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 27: agent fn:F ask_once at old hash and * allow -> deny grant_stale (§7.1 M4)", class: Write,
+		{name: "row 27: agent fn:F ask_once at old hash and * allow -> deny grant_stale", class: Write,
 			grants: []*Grant{ws("*", Allow), stale(ag("fn:"+fn, AskOnce)), ag("*", Allow)}, mode: Deny, reason: "grant_stale", call: UnknownTool},
-		{name: "03-engine §7.2 row 28 (audit: two agents in one session): session row of agent x, request by agent x2 with ask_once -> ask_once (§6.4 G5, §7.1 step 14)", class: Write,
+		{name: "row 28 (audit: two agents in one session): session row of agent x, request by agent x2 with ask_once -> ask_once", class: Write,
 			grants: []*Grant{ws("*", Allow), row(Agent, "x2", "*", AskOnce), sess("s1", "x")},
 			req:    func(r *Request) { r.Agent = "x2" },
 			mode:   AskOnce, listed: true, call: Held},
-		{name: "03-engine §7.2 row 29 (audit: equal specificity): two agent rows class:write, allow and ask -> ask (§7.1 M3)", class: Write,
+		{name: "row 29 (audit: equal specificity): two agent rows class:write, allow and ask -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow)},
 			setup: func(w *World) {
 				w.Grants = append(w.Grants, ag("class:write", Allow), ag("class:write", Ask))
 			},
 			mode: Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 30: a pause for (S, A, C) -> deny paused (§7.1 step 5)", class: Write,
+		{name: "row 30: a pause for (S, A, C) -> deny paused", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  func(w *World) { w.Pauses[[3]string{"s1", "x", conn}] = true },
 			mode:   Deny, reason: "paused", call: UnknownTool},
-		{name: "03-engine §7.2 row 31: force_ask, F in leg (c) of a true exposure check -> ask (§7.1 step 13)", class: Write,
+		{name: "row 31: force_ask, F in leg (c) of a true exposure check -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  forceAsk,
 			mode:   Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 32: force_ask, agent ask_once, session row -> ask (§7.1 step 13 runs before step 14)", class: Write,
+		{name: "row 32: force_ask, agent ask_once, session row -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", AskOnce), sess("s1", "x")},
 			setup:  forceAsk,
 			mode:   Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 33: app-only function, caller model -> deny app_only (§7.1 step 4)", class: Write,
+		{name: "row 33: app-only function, caller model -> deny app_only", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  func(w *World) { w.Connectors[conn].Functions[fn].Visibility = []Caller{View} },
 			mode:   Deny, reason: "app_only", call: UnknownTool},
-		{name: "03-engine §7.2 row 34: app-only function, caller view -> allow, listed to the view", class: Write,
+		{name: "row 34: app-only function, caller view -> allow, listed to the view", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  func(w *World) { w.Connectors[conn].Functions[fn].Visibility = []Caller{View} },
 			req:    func(r *Request) { r.Caller = View },
 			mode:   Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 35: model-only function, caller view -> deny model_only (§7.1 step 4)", class: Write,
+		{name: "row 35: model-only function, caller view -> deny model_only", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  func(w *World) { w.Connectors[conn].Functions[fn].Visibility = []Caller{Model} },
 			req:    func(r *Request) { r.Caller = View },
 			mode:   Deny, reason: "model_only", call: UnknownTool},
-		{name: "03-engine §7.2 row 36: session ended -> deny session_ended (§7.1 step 1), even with a session row", class: Write,
+		{name: "row 36: session ended -> deny session_ended, even with a session row", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow), sess("s1", "x")},
 			setup:  func(w *World) { w.EndedSessions["s1"] = true },
 			mode:   Deny, reason: "session_ended", call: UnknownTool},
-		{name: "03-engine §7.2 row 37: connector disabled -> deny connector_disabled (§7.1 step 1)", class: Write,
+		{name: "row 37: connector disabled -> deny connector_disabled", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  func(w *World) { w.Connectors[conn].Enabled = false },
 			mode:   Deny, reason: "connector_disabled", call: UnknownTool},
-		{name: "03-engine §7.2 row 38: agent fn:F allow with max_uses 1 and uses 1, and * ask -> ask from * (§7.1 M1)", class: Write,
+		{name: "row 38: agent fn:F allow with max_uses 1 and uses 1, and * ask -> ask from *", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Ask)},
 			setup: func(w *World) {
 				g := ag("fn:"+fn, Allow)
@@ -200,30 +200,30 @@ func truthTable() []truthRow {
 				w.PutGrant(g)
 			},
 			mode: Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 41: external point answers ask on a table allow -> ask (§7.1 step 15)", class: Write,
+		{name: "row 41: external point answers ask on a table allow -> ask", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup:  func(w *World) { w.External = func(Query) Mode { return Ask } },
 			mode:   Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 42 (owner case vii): a new function, not yet accepted -> deny quarantined (§5.3, §9, §7.1 step 3)", class: Write,
+		{name: "row 42 (owner case vii): a new function, not yet accepted -> deny quarantined", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)},
 			setup: func(w *World) {
 				delete(w.Connectors[conn].Functions, fn)
 				w.UpstreamAdded(conn, &Function{Name: fn, Hash: h1, Class: Read})
 			},
 			mode: Deny, reason: "quarantined", call: UnknownTool},
-		{name: "03-engine §7.2 row 43: W allow, A allow, U ask_once, session row -> allow", class: Write,
+		{name: "row 43: W allow, A allow, U ask_once, session row -> allow", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow), us("*", AskOnce), sess("s1", "x")}, req: onBehalf, mode: Allow, listed: true, call: Forwarded},
-		{name: "03-engine §7.2 row 44: class destructive, workspace level write, agent * allow -> ask (§7.1 step 10)", class: Destructive,
+		{name: "row 44: class destructive, workspace level write, agent * allow -> ask", class: Destructive,
 			grants: []*Grant{ag("*", Allow)},
 			setup:  func(w *World) { w.SetLevel(Workspace, "w", conn, WriteLevel) },
 			mode:   Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 45 (owner case viii): unclassified, workspace level write, agent level read -> deny", class: Unclassified,
+		{name: "row 45 (owner case viii): unclassified, workspace level write, agent level read -> deny", class: Unclassified,
 			setup: func(w *World) { w.SetLevel(Workspace, "w", conn, WriteLevel); w.SetLevel(Agent, "x", conn, ReadLevel) },
 			mode:  Deny, reason: "denied_by_row", call: UnknownTool},
-		{name: "03-engine §7.2 row 46 (owner case viii): unclassified, workspace level write, agent level write -> ask", class: Unclassified,
+		{name: "row 46 (owner case viii): unclassified, workspace level write, agent level write -> ask", class: Unclassified,
 			setup: func(w *World) { w.SetLevel(Workspace, "w", conn, WriteLevel); w.SetLevel(Agent, "x", conn, WriteLevel) },
 			mode:  Ask, listed: true, call: Held},
-		{name: "03-engine §7.2 row 47: class write, * allow in both layers -> allow, forwarded with no prompt (§7.3)", class: Write,
+		{name: "row 47: class write, * allow in both layers -> allow, forwarded with no prompt", class: Write,
 			grants: []*Grant{ws("*", Allow), ag("*", Allow)}, mode: Allow, listed: true, call: Forwarded},
 	}
 }
@@ -290,11 +290,11 @@ func TestRow39CountedGrantUnderTwoConcurrentCalls(t *testing.T) {
 			if o == Forwarded {
 				forwarded++
 			} else if o != UnknownTool {
-				t.Fatalf("03-engine §7.2 row 39: the losing call got %v, want unknown tool (no_agent_grant)", o)
+				t.Fatalf("row 39: the losing call got %v, want unknown tool (no_agent_grant)", o)
 			}
 		}
 		if forwarded != 1 || g.Uses != 1 {
-			t.Fatalf("03-engine §6.4 G6: forwarded %d, uses %d, want 1 and 1", forwarded, g.Uses)
+			t.Fatalf("G6: forwarded %d, uses %d, want 1 and 1", forwarded, g.Uses)
 		}
 	}
 }
@@ -311,15 +311,15 @@ func TestRow40ExternalPointWithArgumentConditions(t *testing.T) {
 	}
 	r := req()
 	if !listed(w, r) {
-		t.Fatal("03-engine §7.2 row 40: listed, because the query without arguments is not denied (§7.1 step 15a)")
+		t.Fatal("row 40: listed, because the query without arguments is not denied")
 	}
 	r.Arguments = "bad"
 	if got, d := w.Call(r); got != UnknownTool || d.Reason != "external_deny" {
-		t.Fatalf("03-engine §7.2 row 40: call with the denied arguments got %v %s, want unknown tool external_deny (§7.1 step 15b)", got, d.Reason)
+		t.Fatalf("row 40: call with the denied arguments got %v %s, want unknown tool external_deny", got, d.Reason)
 	}
 	r.Arguments = "good"
 	if got, _ := w.Call(r); got != Forwarded {
-		t.Fatalf("03-engine §7.2 row 40: call with other arguments got %v, want forwarded", got)
+		t.Fatalf("row 40: call with other arguments got %v, want forwarded", got)
 	}
 }
 
@@ -363,75 +363,75 @@ func fnRow(agent, function string, mode Mode, hash string) *Grant {
 }
 
 func TestOwnerCases(t *testing.T) {
-	t.Run("(i) only function F of server S for agent X: 02-options §16.1, 03-engine §7.2 rows 1 and 2", func(t *testing.T) {
+	t.Run("(i) only function F of server S for agent X: rows 1 and 2", func(t *testing.T) {
 		w := catalog()
 		w.PutGrant(ws("*", Allow))
 		w.PutGrant(fnRow("x", "create_issue", Allow, "b1"))
-		wantList(t, "§16.1 tools/list", w, "x", "s1", "s__create_issue")
-		wantCall(t, "§16.1", w, "x", "s1", "create_issue", Forwarded)
+		wantList(t, "tools/list", w, "x", "s1", "s__create_issue")
+		wantCall(t, "tools/call", w, "x", "s1", "create_issue", Forwarded)
 		for _, f := range []string{"search", "delete_repo", "export"} {
-			if d := wantCall(t, "§16.1", w, "x", "s1", f, UnknownTool); d.Reason != "no_agent_grant" {
-				t.Fatalf("§16.1: %s refused for %s, want no_agent_grant", f, d.Reason)
+			if d := wantCall(t, "tools/call", w, "x", "s1", f, UnknownTool); d.Reason != "no_agent_grant" {
+				t.Fatalf("%s refused for %s, want no_agent_grant", f, d.Reason)
 			}
 		}
-		wantList(t, "§16.1 another agent with a binding and no rows (§6.3)", w, "y", "s1")
+		wantList(t, "another agent with a binding and no rows", w, "y", "s1")
 	})
 
-	t.Run("(ii) all functions enabled, each use asks: 02-options §16.2, 03-engine §7.2 rows 4 and 5", func(t *testing.T) {
+	t.Run("(ii) all functions enabled, each use asks: rows 4 and 5", func(t *testing.T) {
 		w := catalog()
 		w.PutGrant(ws("*", Allow))
 		w.PutGrant(row(Agent, "x", "*", Ask))
-		wantList(t, "§16.2 tools/list", w, "x", "s1", "s__create_issue", "s__delete_repo", "s__export", "s__search")
+		wantList(t, "tools/list", w, "x", "s1", "s__create_issue", "s__delete_repo", "s__export", "s__search")
 		for _, f := range []string{"search", "create_issue", "delete_repo", "export"} {
-			wantCall(t, "§16.2 first use", w, "x", "s1", f, Held)
+			wantCall(t, "first use", w, "x", "s1", f, Held)
 			if w.ApproveForSession(Request{Agent: "x", Session: "s1", Connector: conn, Function: f, Now: 10}) {
-				t.Fatalf("§16.2: approve for this session offered for %s in mode ask (§8.2 A4 guard)", f)
+				t.Fatalf("approve for this session offered for %s in mode ask", f)
 			}
-			wantCall(t, "§16.2 second use", w, "x", "s1", f, Held)
+			wantCall(t, "second use", w, "x", "s1", f, Held)
 		}
 	})
 
-	t.Run("(iii) read-only for agent Y: 02-options §16.3, 03-engine §7.2 rows 17, 18 and 45", func(t *testing.T) {
+	t.Run("(iii) read-only for agent Y: rows 17, 18 and 45", func(t *testing.T) {
 		w := catalog()
 		w.SetLevel(Workspace, "w", conn, WriteLevel)
 		w.SetLevel(Agent, "y", conn, ReadLevel)
-		wantList(t, "§16.3 tools/list", w, "y", "s1", "s__search")
-		wantCall(t, "§16.3", w, "y", "s1", "search", Forwarded)
+		wantList(t, "tools/list", w, "y", "s1", "s__search")
+		wantCall(t, "tools/call", w, "y", "s1", "search", Forwarded)
 		for _, f := range []string{"create_issue", "delete_repo", "export"} {
-			wantCall(t, "§16.3", w, "y", "s1", f, UnknownTool)
+			wantCall(t, "tools/call", w, "y", "s1", f, UnknownTool)
 		}
 		for _, f := range w.Connectors[conn].Functions {
 			f.Class = Unclassified
 		}
-		wantList(t, "§16.3 unreviewed connector: read-only is empty", w, "y", "s1")
+		wantList(t, "unreviewed connector: read-only is empty", w, "y", "s1")
 	})
 
-	t.Run("(iv) ask once per session: 02-options §16.4, 03-engine §7.2 rows 6, 7 and 28, §6.4 G5", func(t *testing.T) {
+	t.Run("(iv) ask once per session: rows 6, 7 and 28, G5", func(t *testing.T) {
 		w := catalog()
 		w.PutGrant(ws("*", Allow))
 		w.PutGrant(fnRow("x", "create_issue", AskOnce, "b1"))
 		w.PutGrant(fnRow("z", "create_issue", AskOnce, "b1"))
-		wantCall(t, "§16.4 first call in s1", w, "x", "s1", "create_issue", Held)
+		wantCall(t, "first call in s1", w, "x", "s1", "create_issue", Held)
 		r := Request{Agent: "x", Session: "s1", Connector: conn, Function: "create_issue", Now: 10, TokenExp: 5000}
 		if !w.ApproveForSession(r) {
-			t.Fatal("§16.4: approve for this session refused in mode ask_once")
+			t.Fatal("approve for this session refused in mode ask_once")
 		}
 		g := w.Grants[len(w.Grants)-1]
 		if g.Scope != Session || g.Agent != "x" || g.ExpiresAt != 5000 {
-			t.Fatalf("§6.4 G5: session row %+v, want agent x and expiry at the token's exp 5000", g)
+			t.Fatalf("G5: session row %+v, want agent x and expiry at the token's exp 5000", g)
 		}
-		wantCall(t, "§16.4 second call in s1", w, "x", "s1", "create_issue", Forwarded)
-		wantCall(t, "§16.4 first call in s2", w, "x", "s2", "create_issue", Held)
-		wantCall(t, "§6.4 G5 another agent in s1", w, "z", "s1", "create_issue", Held)
+		wantCall(t, "second call in s1", w, "x", "s1", "create_issue", Forwarded)
+		wantCall(t, "first call in s2", w, "x", "s2", "create_issue", Held)
+		wantCall(t, "G5 another agent in s1", w, "z", "s1", "create_issue", Held)
 		if out, _ := w.Call(Request{Agent: "x", Session: "s1", Connector: conn, Function: "create_issue", Now: 5000}); out != Held {
-			t.Fatalf("§6.4 G5: after the session row expired the call got %v, want held", out)
+			t.Fatalf("G5: after the session row expired the call got %v, want held", out)
 		}
 		w.PutGrant(ws("fn:create_issue", Ask))
 		w.Grants[len(w.Grants)-1].Hash = "b1"
-		wantCall(t, "§16.4 the workspace later sets fn:create_issue to ask", w, "x", "s1", "create_issue", Held)
+		wantCall(t, "the workspace later sets fn:create_issue to ask", w, "x", "s1", "create_issue", Held)
 	})
 
-	t.Run("(v) a workspace ceiling an agent row tries to widen: 03-engine §7.1 step 10, §7.2 rows 3, 8 and 9", func(t *testing.T) {
+	t.Run("(v) a workspace ceiling an agent row tries to widen: step 10, rows 3, 8 and 9", func(t *testing.T) {
 		for _, tc := range []struct {
 			ceiling *Grant
 			want    Outcome
@@ -442,18 +442,18 @@ func TestOwnerCases(t *testing.T) {
 			}
 			w.PutGrant(row(Agent, "x", "*", Allow))
 			w.PutGrant(fnRow("x", "search", Allow, "a1"))
-			wantCall(t, "§7.1 step 10", w, "x", "s1", "search", tc.want)
+			wantCall(t, "step 10", w, "x", "s1", "search", tc.want)
 		}
 		w := catalog()
 		w.PutGrant(ws("*", Deny))
 		w.PutGrant(ws("fn:search", Allow))
 		w.Grants[len(w.Grants)-1].Hash = "a1"
 		w.PutGrant(row(Agent, "x", "*", Allow))
-		wantCall(t, "§6.4 G4: inside one layer a more specific row may be looser", w, "x", "s1", "search", Forwarded)
-		wantCall(t, "§6.4 G4", w, "x", "s1", "create_issue", UnknownTool)
+		wantCall(t, "G4: inside one layer a more specific row may be looser", w, "x", "s1", "search", Forwarded)
+		wantCall(t, "G4", w, "x", "s1", "create_issue", UnknownTool)
 	})
 
-	t.Run("(vi) a definition change after a grant: 03-engine §9, §7.1 M4 and M5, §7.2 rows 14, 25, 26, 27", func(t *testing.T) {
+	t.Run("(vi) a definition change after a grant: M4 and M5, rows 14, 25, 26, 27", func(t *testing.T) {
 		w := catalog()
 		w.PutGrant(ws("*", Allow))
 		w.PutGrant(row(Agent, "x", "*", Allow))
@@ -464,33 +464,33 @@ func TestOwnerCases(t *testing.T) {
 		wantCall(t, "before the change", w, "x", "s1", "create_issue", Forwarded)
 		w.UpstreamChanged(conn, "create_issue", "b2")
 		w.UpstreamChanged(conn, "search", "a2")
-		if d := wantCall(t, "§9 hash changed", w, "x", "s1", "create_issue", UnknownTool); d.Reason != "quarantined" {
-			t.Fatalf("§9: reason %s, want quarantined", d.Reason)
+		if d := wantCall(t, "hash changed", w, "x", "s1", "create_issue", UnknownTool); d.Reason != "quarantined" {
+			t.Fatalf("reason %s, want quarantined", d.Reason)
 		}
 		w.Accept(conn, "create_issue")
 		w.Accept(conn, "search")
-		if d := wantCall(t, "§7.1 M4 after acceptance, before confirmGrant", w, "x", "s1", "create_issue", UnknownTool); d.Reason != "grant_stale" {
-			t.Fatalf("§7.1 M4: reason %s, want grant_stale", d.Reason)
+		if d := wantCall(t, "M4 after acceptance, before confirmGrant", w, "x", "s1", "create_issue", UnknownTool); d.Reason != "grant_stale" {
+			t.Fatalf("M4: reason %s, want grant_stale", d.Reason)
 		}
-		if d := wantCall(t, "§7.1 M5 after acceptance the fn deny row still answers", w, "x", "s1", "search", UnknownTool); d.Reason != "denied_by_row" {
-			t.Fatalf("§7.1 M5: reason %s, want denied_by_row", d.Reason)
+		if d := wantCall(t, "M5 after acceptance the fn deny row still answers", w, "x", "s1", "search", UnknownTool); d.Reason != "denied_by_row" {
+			t.Fatalf("M5: reason %s, want denied_by_row", d.Reason)
 		}
 		w.ConfirmGrant(Agent, "x", conn, "create_issue")
-		wantCall(t, "§9 after confirmGrant the session row is gone, so the call is held again", w, "x", "s1", "create_issue", Held)
+		wantCall(t, "after confirmGrant the session row is gone, so the call is held again", w, "x", "s1", "create_issue", Held)
 	})
 
-	t.Run("(vii) a new function in an update: 03-engine §5.3, §5.4, §9, §7.2 row 42", func(t *testing.T) {
+	t.Run("(vii) a new function in an update: row 42", func(t *testing.T) {
 		w := catalog()
 		w.PutGrant(ws("*", Allow))
 		w.PutGrant(row(Agent, "x", "*", Allow))
 		w.UpstreamAdded(conn, &Function{Name: "list_repos", Hash: "e1", Class: Read})
-		wantList(t, "§9 new function: not reachable through * rows", w, "x", "s1", "s__create_issue", "s__delete_repo", "s__export", "s__search")
-		wantCall(t, "§9 new function", w, "x", "s1", "list_repos", UnknownTool)
+		wantList(t, "new function: not reachable through * rows", w, "x", "s1", "s__create_issue", "s__delete_repo", "s__export", "s__search")
+		wantCall(t, "new function", w, "x", "s1", "list_repos", UnknownTool)
 		w.Accept(conn, "list_repos")
-		wantCall(t, "§9 after acceptFunction", w, "x", "s1", "list_repos", Forwarded)
+		wantCall(t, "after acceptFunction", w, "x", "s1", "list_repos", Forwarded)
 	})
 
-	t.Run("(viii) an unclassified function: 03-engine §5.2, §6.2, §7.1 step 12, §7.2 rows 21, 45, 46", func(t *testing.T) {
+	t.Run("(viii) an unclassified function: step 12, rows 21, 45, 46", func(t *testing.T) {
 		for _, tc := range []struct {
 			where string
 			setup func(*World)
@@ -511,33 +511,33 @@ func TestOwnerCases(t *testing.T) {
 		w.PutGrant(ws("*", Allow))
 		w.PutGrant(row(Agent, "x", "*", Allow))
 		if _, d := call(w, "x", "s1", "export"); d.Mode != Ask {
-			t.Fatalf("§7.1 step 12 with permission.destructiveMax = ask: %v, want ask", d.Mode)
+			t.Fatalf("step 12 with permission.destructiveMax = ask: %v, want ask", d.Mode)
 		}
 	})
 
-	t.Run("enable all with destructive and unclassified functions present: 03-engine §7.3, 02-options §16.5", func(t *testing.T) {
+	t.Run("enable all with destructive and unclassified functions present:", func(t *testing.T) {
 		w := catalog()
 		w.Connectors[conn].Functions["purge"] = &Function{Name: "purge", Hash: "p1", Class: Read, State: Quarantined}
 		w.Connectors[conn].Functions["panel"] = &Function{Name: "panel", Hash: "v1", Class: Read, Visibility: []Caller{View}}
 		w.PutGrant(ws("*", Allow))
 		w.PutGrant(row(Agent, "x", "*", Allow))
-		wantList(t, "§7.3 tools/list", w, "x", "s1", "s__create_issue", "s__delete_repo", "s__export", "s__search")
-		wantCall(t, "§7.3 class read", w, "x", "s1", "search", Forwarded)
-		wantCall(t, "§7.3 class write", w, "x", "s1", "create_issue", Forwarded)
-		wantCall(t, "§7.3 quarantined", w, "x", "s1", "purge", UnknownTool)
-		wantCall(t, "§7.3 app-only, called by the model", w, "x", "s1", "panel", UnknownTool)
+		wantList(t, "tools/list", w, "x", "s1", "s__create_issue", "s__delete_repo", "s__export", "s__search")
+		wantCall(t, "class read", w, "x", "s1", "search", Forwarded)
+		wantCall(t, "class write", w, "x", "s1", "create_issue", Forwarded)
+		wantCall(t, "quarantined", w, "x", "s1", "purge", UnknownTool)
+		wantCall(t, "app-only, called by the model", w, "x", "s1", "panel", UnknownTool)
 		for _, f := range []string{"delete_repo", "export"} {
-			if d := wantCall(t, "§7.3 destructive or unclassified, first use", w, "x", "s1", f, Held); d.Mode != AskOnce {
-				t.Fatalf("§7.3: %s is %v, want ask_once", f, d.Mode)
+			if d := wantCall(t, "destructive or unclassified, first use", w, "x", "s1", f, Held); d.Mode != AskOnce {
+				t.Fatalf("%s is %v, want ask_once", f, d.Mode)
 			}
 			if !w.ApproveForSession(Request{Agent: "x", Session: "s1", Connector: conn, Function: f, Now: 10}) {
-				t.Fatalf("§7.3: approve for this session refused for %s", f)
+				t.Fatalf("approve for this session refused for %s", f)
 			}
-			wantCall(t, "§7.3 after approve for this session", w, "x", "s1", f, Forwarded)
-			wantCall(t, "§7.3 in another session", w, "x", "s2", f, Held)
+			wantCall(t, "after approve for this session", w, "x", "s1", f, Forwarded)
+			wantCall(t, "in another session", w, "x", "s2", f, Held)
 		}
 		w.Classify(conn, "search", Destructive)
-		wantCall(t, "§6.4 G7 class raised after the grant", w, "x", "s1", "search", Held)
+		wantCall(t, "G7 class raised after the grant", w, "x", "s1", "search", Held)
 	})
 }
 
@@ -547,10 +547,10 @@ func TestLevelOverHandWrittenRows(t *testing.T) {
 	w.PutGrant(row(Agent, "x", "class:write", Allow))
 	w.PutGrant(fnRow("x", "delete_repo", Ask, "c1"))
 	w.SetLevel(Agent, "x", conn, ReadLevel)
-	wantCall(t, "03-engine §6.4 G3: the hand-written class:write row has the key of the expanded one and is replaced", w, "x", "s1", "create_issue", UnknownTool)
-	wantCall(t, "03-engine §6.4 G3: the hand-written fn: row is kept", w, "x", "s1", "delete_repo", Held)
+	wantCall(t, "G3: the hand-written class:write row has the key of the expanded one and is replaced", w, "x", "s1", "create_issue", UnknownTool)
+	wantCall(t, "G3: the hand-written fn: row is kept", w, "x", "s1", "delete_repo", Held)
 	w.SetLevel(Agent, "x", conn, Custom)
-	wantList(t, "03-engine §6.4 G3: level custom deletes the level rows and keeps the fn: row", w, "x", "s1", "s__delete_repo")
+	wantList(t, "G3: level custom deletes the level rows and keeps the fn: row", w, "x", "s1", "s__delete_repo")
 }
 
 func TestUserLayerOnlyNarrows(t *testing.T) {
@@ -563,15 +563,15 @@ func TestUserLayerOnlyNarrows(t *testing.T) {
 	r := req()
 	r.User = "u"
 	if d := w.Evaluate(r, true); d.Mode != Allow || d.Layers[3] != "skip" {
-		t.Fatalf("03-engine §7.1 step 9: an exhausted user row is no candidate and the layer has no opinion: got %v %s, layer %s", d.Mode, d.Reason, d.Layers[3])
+		t.Fatalf("step 9: an exhausted user row is no candidate and the layer has no opinion: got %v %s, layer %s", d.Mode, d.Reason, d.Layers[3])
 	}
 	w.PutGrant(us("*", Deny))
 	if d := w.Evaluate(r, true); d.Mode != Deny || d.Step != 9 || d.Reason != "denied_by_row" {
-		t.Fatalf("03-engine §6.4 G4: only F is written as * deny with fn:F allow; the exhausted fn: row leaves the * deny row: got %v at step %d, %s", d.Mode, d.Step, d.Reason)
+		t.Fatalf("G4: only F is written as * deny with fn:F allow; the exhausted fn: row leaves the * deny row: got %v at step %d, %s", d.Mode, d.Step, d.Reason)
 	}
 	g.Uses = 0
 	if d := w.Evaluate(r, true); d.Mode != Allow {
-		t.Fatalf("03-engine §7.1 M2: the fn: row answers before the * row: got %v %s", d.Mode, d.Reason)
+		t.Fatalf("M2: the fn: row answers before the * row: got %v %s", d.Mode, d.Reason)
 	}
 }
 
@@ -582,24 +582,24 @@ func TestRowsRefusedAtWriteTime(t *testing.T) {
 		g    *Grant
 		ok   bool
 	}{
-		{"03-engine §6.4 G8: a tenant row never says allow", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: Allow}, false},
-		{"03-engine §6.4 G8: a tenant fn: row may say ask_once, as a class: or * row may", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: AskOnce}, true},
-		{"03-engine §6.4 G8: a tenant row carries no max_uses", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: AskOnce, MaxUses: 1}, false},
-		{"03-engine §6.4 G8: a tenant fn: ask_once row carries no max_uses", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: AskOnce, MaxUses: 2}, false},
-		{"03-engine §6.4 G8: a tenant row names a listing, never a connector", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Connector: conn, Selector: "*", Mode: Ask}, false},
-		{"03-engine §6.4 G10: a tenant fn: row may say inherit", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Inherit}, true},
-		{"03-engine §6.4 G10: inherit is refused on a tenant * row", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: Inherit}, false},
-		{"03-engine §6.4 G10: inherit is refused on a tenant class: row", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "class:write", Mode: Inherit}, false},
-		{"03-engine §6.4 G10: an inherit row carries no hash", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Inherit, Hash: h1}, false},
-		{"03-engine §6.4 G10: inherit is refused outside the tenant scope", &Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "fn:" + fn, Mode: Inherit, Hash: h1}, false},
-		{"03-engine §6.4 G10: inherit is refused on a user row", &Grant{Scope: User, ScopeID: "u", Connector: conn, Selector: "fn:" + fn, Mode: Inherit, Hash: h1}, false},
-		{"03-engine §6.4 G8: a tenant row carries no hash", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Deny, Hash: h1}, false},
-		{"03-engine §6.4 G8: a tenant row carries no expiry", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: Ask, ExpiresAt: 50}, false},
-		{"03-engine §6.4 G8: tenant fn: deny", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Deny}, true},
-		{"03-engine §6.4 G8: tenant class: ask_once", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "class:write", Mode: AskOnce}, true},
-		{"03-engine §6.4 G9: a deny row is never counted", &Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "fn:" + fn, Mode: Deny, MaxUses: 3}, false},
-		{"03-engine §6.4 G9: an ask row is never counted", &Grant{Scope: User, ScopeID: "u", Connector: conn, Selector: "*", Mode: Ask, MaxUses: 1}, false},
-		{"03-engine §6.4 G9: a deny row may expire (a temporary block)", &Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "*", Mode: Deny, ExpiresAt: 50}, true},
+		{"G8: a tenant row never says allow", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: Allow}, false},
+		{"G8: a tenant fn: row may say ask_once, as a class: or * row may", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: AskOnce}, true},
+		{"G8: a tenant row carries no max_uses", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: AskOnce, MaxUses: 1}, false},
+		{"G8: a tenant fn: ask_once row carries no max_uses", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: AskOnce, MaxUses: 2}, false},
+		{"G8: a tenant row names a listing, never a connector", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Connector: conn, Selector: "*", Mode: Ask}, false},
+		{"G10: a tenant fn: row may say inherit", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Inherit}, true},
+		{"G10: inherit is refused on a tenant * row", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: Inherit}, false},
+		{"G10: inherit is refused on a tenant class: row", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "class:write", Mode: Inherit}, false},
+		{"G10: an inherit row carries no hash", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Inherit, Hash: h1}, false},
+		{"G10: inherit is refused outside the tenant scope", &Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "fn:" + fn, Mode: Inherit, Hash: h1}, false},
+		{"G10: inherit is refused on a user row", &Grant{Scope: User, ScopeID: "u", Connector: conn, Selector: "fn:" + fn, Mode: Inherit, Hash: h1}, false},
+		{"G8: a tenant row carries no hash", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Deny, Hash: h1}, false},
+		{"G8: a tenant row carries no expiry", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "*", Mode: Ask, ExpiresAt: 50}, false},
+		{"G8: tenant fn: deny", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "fn:" + fn, Mode: Deny}, true},
+		{"G8: tenant class: ask_once", &Grant{Scope: Tenant, ScopeID: "t", Listing: svc, Selector: "class:write", Mode: AskOnce}, true},
+		{"G9: a deny row is never counted", &Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "fn:" + fn, Mode: Deny, MaxUses: 3}, false},
+		{"G9: an ask row is never counted", &Grant{Scope: User, ScopeID: "u", Connector: conn, Selector: "*", Mode: Ask, MaxUses: 1}, false},
+		{"G9: a deny row may expire (a temporary block)", &Grant{Scope: Agent, ScopeID: "x", Connector: conn, Selector: "*", Mode: Deny, ExpiresAt: 50}, true},
 	} {
 		if err := w.PutGrant(tc.g); (err == nil) != tc.ok {
 			t.Fatalf("%s: %v", tc.name, err)
@@ -617,14 +617,14 @@ func TestHeldCallReservesAtExecution(t *testing.T) {
 	}
 	for i := 0; i < 2; i++ {
 		if out, _ := w.Call(req()); out != Held || g.Uses != 0 {
-			t.Fatalf("03-engine §6.4 G6: opening an approval reserves nothing: %v, uses %d", out, g.Uses)
+			t.Fatalf("G6: opening an approval reserves nothing: %v, uses %d", out, g.Uses)
 		}
 	}
 	if out, _ := w.ExecuteApproved(req()); out != Forwarded || g.Uses != 1 {
-		t.Fatalf("03-engine §6.4 G6: A8 reserves: %v, uses %d", out, g.Uses)
+		t.Fatalf("G6: A8 reserves: %v, uses %d", out, g.Uses)
 	}
 	if out, d := w.ExecuteApproved(req()); out != UnknownTool || d.Reason != "no_agent_grant" {
-		t.Fatalf("03-engine §6.4 G6: the second approved call finds the row exhausted: %v %s", out, d.Reason)
+		t.Fatalf("G6: the second approved call finds the row exhausted: %v %s", out, d.Reason)
 	}
 }
 
@@ -768,10 +768,10 @@ func TestListCallSymmetrySweep(t *testing.T) {
 												r.Arguments = args
 												out, dc := w.Call(r)
 												if !isListed && out != UnknownTool {
-													t.Fatalf("hidden from tools/list and not refused on tools/call (03-engine §7.1): %s: %v", where, out)
+													t.Fatalf("hidden from tools/list and not refused on tools/call: %s: %v", where, out)
 												}
 												if isListed && ei < 4 && out == UnknownTool {
-													t.Fatalf("listed and refused without an argument condition (03-engine §7.1): %s: %s", where, dc.Reason)
+													t.Fatalf("listed and refused without an argument condition: %s: %s", where, dc.Reason)
 												}
 												switch out {
 												case Forwarded:
@@ -784,37 +784,37 @@ func TestListCallSymmetrySweep(t *testing.T) {
 													}
 												}
 												if out != UnknownTool && (!co.visible || (co.name == "hidden from person u" && r.User == "u")) {
-													t.Fatalf("listed or called although the listing is not visible (03-engine §7.1 step 2): %s", where)
+													t.Fatalf("listed or called although the listing is not visible: %s", where)
 												}
 												if out != UnknownTool && (to.name == "T * deny" || to.name == "T fn deny" || to.name == "T * deny, fn:other inherit") {
-													t.Fatalf("a tenant deny row did not refuse (03-engine §7.1 step 6): %s", where)
+													t.Fatalf("a tenant deny row did not refuse: %s", where)
 												}
 												if out != UnknownTool && mode(co.ceiling, class) == Deny {
-													t.Fatalf("called above the catalog ceiling (03-engine §7.1 step 11): %s", where)
+													t.Fatalf("called above the catalog ceiling: %s", where)
 												}
 												if out == Forwarded && (mode(co.ceiling, class) == Ask || (mode(co.ceiling, class) == AskOnce && !ownSession)) {
-													t.Fatalf("forwarded above the catalog ceiling (03-engine §7.1 step 11): %s", where)
+													t.Fatalf("forwarded above the catalog ceiling: %s", where)
 												}
 												if out == Forwarded {
 													if state != Active || gopt.name == "paused" || gopt.name == "session ended" || gopt.name == "connector disabled" || gopt.name == "no binding" {
-														t.Fatalf("forwarded through a closed gate (03-engine §7.1 steps 1, 3, 5): %s", where)
+														t.Fatalf("forwarded through a closed gate: %s", where)
 													}
 													if class.Effective() == Destructive && so.name != "own session row" {
-														t.Fatalf("destructive or unclassified forwarded with no approval in the session (03-engine §7.1 step 12): %s", where)
+														t.Fatalf("destructive or unclassified forwarded with no approval in the session: %s", where)
 													}
 													for _, l := range dc.Layers {
 														if l == "ask" || l == "deny" || l == "none" || l == "" {
-															t.Fatalf("forwarded although a layer answered %s (03-engine §7.1 step 10): %s", l, where)
+															t.Fatalf("forwarded although a layer answered %s: %s", l, where)
 														}
 														if l == "ask_once" && so.name != "own session row" {
-															t.Fatalf("ask_once relaxed without this agent's session row (03-engine §7.1 step 14): %s", where)
+															t.Fatalf("ask_once relaxed without this agent's session row: %s", where)
 														}
 													}
 													if gopt.name == "force_ask" {
-														t.Fatalf("forwarded under force_ask (03-engine §7.1 step 13): %s", where)
+														t.Fatalf("forwarded under force_ask: %s", where)
 													}
 													if eo.name == "external deny" || eo.name == "external ask" || (eo.name == "external deny on arguments" && args == "bad") {
-														t.Fatalf("forwarded against the external point (03-engine §7.1 step 15): %s", where)
+														t.Fatalf("forwarded against the external point: %s", where)
 													}
 												}
 											}
@@ -825,7 +825,7 @@ func TestListCallSymmetrySweep(t *testing.T) {
 													o.apply(wb, &rb)
 												}
 												if b := wb.Evaluate(rb, false); b.Mode != d.Mode || b.Reason != d.Reason {
-													t.Fatalf("a tenant fn: inherit row under * deny changed the answer the other layers give (03-engine §6.4 G10): %s: %v %s, want %v %s", where, d.Mode, d.Reason, b.Mode, b.Reason)
+													t.Fatalf("a tenant fn: inherit row under * deny changed the answer the other layers give: %s: %v %s, want %v %s", where, d.Mode, d.Reason, b.Mode, b.Reason)
 												}
 												n.inherit++
 											}

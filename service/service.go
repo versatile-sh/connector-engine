@@ -1,4 +1,4 @@
-// Package service holds the use cases of §13.1 and the gateway-facing Call and ListFunctions; every mutation is one store transaction.
+// Package service holds the use cases and the gateway-facing Call and ListFunctions; every mutation is one store transaction.
 package service
 
 import (
@@ -133,7 +133,7 @@ func (s *Service) authorize(ctx context.Context, p port.Principal, action, resou
 	return nil
 }
 
-// TenantActive refuses a tenant that was never created, is removing or is removed; the agent endpoint asks it on every request (§10.2 L1).
+// TenantActive refuses a tenant that was never created, is removing or is removed; the agent endpoint asks it on every request.
 func (s *Service) TenantActive(ctx context.Context, t port.TenantID) error {
 	var state port.TenantState
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: t}, func(tx port.Tx) error {

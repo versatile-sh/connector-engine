@@ -14,7 +14,7 @@ func TestEveryTypeHasASchema(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(catalog.Published) != 40 || len(catalog.Consumed) != 3 || len(all) != 43 {
-		t.Fatalf("§12: %d published, %d consumed, want 40 and 3", len(catalog.Published), len(catalog.Consumed))
+		t.Fatalf("%d published, %d consumed, want 40 and 3", len(catalog.Published), len(catalog.Consumed))
 	}
 	seen := map[string]bool{}
 	for i, typ := range all {
@@ -23,7 +23,7 @@ func TestEveryTypeHasASchema(t *testing.T) {
 		}
 		seen[typ.Name] = true
 		if !typ.Consumed && (typ.Number != i+1 || !strings.HasPrefix(typ.Name, "connector.")) {
-			t.Fatalf("§12.1 row %d is %d %s", i+1, typ.Number, typ.Name)
+			t.Fatalf("row %d is %d %s", i+1, typ.Number, typ.Name)
 		}
 		var s struct {
 			ID         string                     `json:"$id"`
@@ -35,7 +35,7 @@ func TestEveryTypeHasASchema(t *testing.T) {
 			t.Fatalf("%s has no usable JSON Schema: %s (%v)", typ.Name, typ.Schema, err)
 		}
 		if strings.Contains(string(typ.Schema), `"arguments"`) || strings.Contains(string(typ.Schema), `"result"`) {
-			t.Fatalf("§12: arguments and results are never in an event: %s", typ.Name)
+			t.Fatalf("arguments and results are never in an event: %s", typ.Name)
 		}
 	}
 	for _, name := range []string{"connector.overlay.changed", "connector.overlay.suggested", "connector.connector.blocked_changed"} {
@@ -63,7 +63,7 @@ func TestCallFinishedCarriesUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.Usage["count"] != "call" || s.Properties["duration_ms"]["x-usage"] == nil || s.Properties["agent"]["x-usage"] == nil || s.Properties["on_behalf_of"]["x-usage"] == nil {
-		t.Fatalf("§12.1 event 20: one call, attributed to the agent and the person acted for: %s", typ.Schema)
+		t.Fatalf("event 20: one call, attributed to the agent and the person acted for: %s", typ.Schema)
 	}
 	other, _, _ := catalog.Get("connector.call.started")
 	if strings.Contains(string(other.Schema), "x-usage") {

@@ -1,4 +1,4 @@
-// Package table is the built-in port.Authorizer: the table evaluator of §7.1 over the store, and the role table of §4.2.
+// Package table is the built-in port.Authorizer: the table evaluator over the store, and the role table.
 package table
 
 import (
@@ -46,7 +46,7 @@ func (a *Authorizer) facts(ctx context.Context, s port.Subject, connector port.C
 	})
 }
 
-// Evaluate runs §7.1 steps 1 to 14 for one function; step 15(b) has no external point here.
+// Evaluate runs steps 1 to 14 for one function; step 15(b) has no external point here.
 func (a *Authorizer) Evaluate(ctx context.Context, q port.Query) (port.AccessDecision, error) {
 	var d evaluate.Decision
 	err := a.facts(ctx, subjectOf(q), q.Connector, func(f evaluate.Facts) error {
@@ -106,7 +106,7 @@ var selfActions = []string{authz.GrantUser, authz.CredentialOwn}
 var tenantActions = []string{authz.ConnectorRead, authz.ApprovalDecide}
 var systemActions = []string{authz.SessionEnd, authz.AgentRemove, authz.PersonRemove}
 
-// Allowed answers a role question of §4.2 from the assignments: an agent is never allowed, the operator acts as system.
+// Allowed answers a role question from the assignments: an agent is never allowed, the operator acts as system.
 func (a *Authorizer) Allowed(ctx context.Context, p port.Permission) (bool, error) {
 	if p.Principal.Kind == port.PrincipalAgent || p.Principal.Kind == port.PrincipalView || p.Principal.Claims.Agent != "" {
 		return false, nil

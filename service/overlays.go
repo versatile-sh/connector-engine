@@ -10,7 +10,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// OverlayTarget names what an overlay applies to: one connector, or a listing in every workspace of the tenant (§9.1).
+// OverlayTarget names what an overlay applies to: one connector, or a listing in every workspace of the tenant.
 type OverlayTarget struct {
 	Connector port.ConnectorID `json:"connector"`
 	Listing   *port.ListingRef `json:"listing,omitempty"`
@@ -72,7 +72,7 @@ func (s *Service) ListOverlays(ctx context.Context, p port.Principal, t OverlayT
 	return out, err
 }
 
-// SuggestOverlay asks the DescriptionSuggester for a text and stores it as an untrusted suggestion (§9.1).
+// SuggestOverlay asks the DescriptionSuggester for a text and stores it as an untrusted suggestion.
 func (s *Service) SuggestOverlay(ctx context.Context, p port.Principal, id port.ConnectorID, function string) (port.Overlay, error) {
 	var out port.Overlay
 	t := OverlayTarget{Connector: id}
@@ -133,7 +133,7 @@ func (s *Service) ProposeOverlay(ctx context.Context, p port.Principal, t Overla
 }
 
 // ActivateOverlay is acceptOverlay and restoreOverlay: a version becomes the served text, pinned to the upstream hash the admin saw,
-// which for a connector is its current one (§9.1).
+// which for a connector is its current one.
 func (s *Service) ActivateOverlay(ctx context.Context, p port.Principal, t OverlayTarget, function string, version int, upstreamSeen port.Hash) (port.Overlay, error) {
 	var out port.Overlay
 	err := s.overlayTx(ctx, p, t, "ActivateOverlay", func(tx port.Tx) error {

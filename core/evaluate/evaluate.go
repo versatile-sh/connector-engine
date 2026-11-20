@@ -1,4 +1,4 @@
-// Package evaluate runs the sixteen steps of §7.1 for one function: Evaluate for a call, Search for a list.
+// Package evaluate runs the sixteen steps for one function: Evaluate for a call, Search for a list.
 package evaluate
 
 import (
@@ -10,7 +10,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Facts is what the evaluation reads for one agent on one connector (§7.4); DestructiveMax is ask_once unless it says ask.
+// Facts is what the evaluation reads for one agent on one connector; DestructiveMax is ask_once unless it says ask.
 type Facts struct {
 	Connector      *port.Connector
 	Functions      map[string]port.Function
@@ -57,7 +57,7 @@ func People(s port.Subject) []port.PersonID {
 	return out
 }
 
-// Evaluate runs §7.1 steps 1 to 15 for one function; step 15(b) runs only when r.Call is set.
+// Evaluate runs steps 1 to 15 for one function; step 15(b) runs only when r.Call is set.
 func Evaluate(f Facts, r Request) Decision {
 	c := f.Connector
 	switch {
@@ -184,7 +184,7 @@ func Evaluate(f Facts, r Request) Decision {
 	return d
 }
 
-// Search evaluates every function of the connector without arguments, in name order: what tools/list lists (§7.1, §10.2 L3).
+// Search evaluates every function of the connector without arguments, in name order: what tools/list lists.
 func Search(f Facts, s port.Subject, now time.Time) []port.FunctionDecision {
 	names := make([]string, 0, len(f.Functions))
 	for n := range f.Functions {
@@ -198,7 +198,7 @@ func Search(f Facts, s port.Subject, now time.Time) []port.FunctionDecision {
 	return out
 }
 
-// SessionGranted reports whether an unexpired session row of this agent covers fn:F at the current hash (§7.1 step 14).
+// SessionGranted reports whether an unexpired session row of this agent covers fn:F at the current hash.
 func SessionGranted(rows []port.Grant, s port.Subject, connector port.ConnectorID, fn port.Function, now time.Time) bool {
 	for _, g := range rows {
 		if g.ScopeKind == port.ScopeSession && g.ScopeID == string(s.Session) && g.Agent == s.Agent && g.Connector == connector &&

@@ -228,73 +228,96 @@ func (s *Service) ListAgentFunctions(ctx context.Context, p port.Principal, sub 
 	return out, err
 }
 
+type boundFunction struct {
+	f port.Function
+	o *port.Overlay
+}
+
+type boundConnector struct {
+	c     port.Connector
+	skill bool
+	fns   map[string]boundFunction
+}
+
+func (s *Service) loadBound(tx port.Tx, sub port.Subject) ([]boundConnector, error) {
+	conns, err := s.boundConnectors(tx, sub)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]boundConnector, 0, len(conns))
+	for _, c := range conns {
+		b := boundConnector{c: c, fns: map[string]boundFunction{}}
+		if b.skill, err = s.isSkill(tx, c); err != nil {
+			return nil, err
+		}
+		fns, err := tx.ListFunctions(c.ID)
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range fns {
+			bf := boundFunction{f: f}
+			if port.ItemKind(f.Name) == "" && !b.skill {
+				if bf.o, err = s.servedOverlay(tx, c, f); err != nil {
+					return nil, err
+				}
+			}
+			b.fns[f.Name] = bf
+		}
+		out = append(out, b)
+	}
+	return out, nil
+}
+
 func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionList, error) {
 	out := FunctionList{TTL: s.cfg.ListTTL}
-	var conns []port.Connector
+	var all []boundConnector
 	if err := s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) (err error) {
-		conns, err = s.boundConnectors(tx, sub)
+		all, err = s.loadBound(tx, sub)
 		return err
 	}); err != nil {
 		return out, err
 	}
-	modes := map[port.ConnectorID]map[string]port.Mode{}
-	for _, c := range conns {
-		decisions, err := s.d.Authorizer.Search(ctx, sub, c.ID)
+	bound := map[string]bool{}
+	for _, b := range all {
+		decisions, err := s.d.Authorizer.Search(ctx, sub, b.c.ID)
 		if err != nil {
 			return out, err
 		}
-		modes[c.ID] = map[string]port.Mode{}
+		if !b.skill {
+			bound[b.c.Listing.Listing.Name] = true
+		}
 		for _, d := range decisions {
-			if d.Decision.Mode != port.ModeDeny {
-				modes[c.ID][d.Function] = d.Decision.Mode
+			if bf, ok := b.fns[d.Function]; ok && d.Decision.Mode != port.ModeDeny {
+				s.serve(&out, b, bf, d.Decision.Mode)
 			}
 		}
 	}
-	err := s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) error {
-		bound := map[string]bool{}
-		defer func() { markUnbound(out.Skills, bound) }()
-		for _, c := range conns {
-			skill, err := s.isSkill(tx, c)
-			if err != nil {
-				return err
-			}
-			if !skill {
-				bound[c.Listing.Listing.Name] = true
-			}
-			for fn, mode := range modes[c.ID] {
-				f, err := tx.GetFunction(c.ID, fn)
-				if err != nil {
-					return err
-				}
-				if port.ItemKind(fn) != "" {
-					s.serveItem(&out, c, f, mode)
-					continue
-				}
-				out.ApprovalTools = out.ApprovalTools || mode == port.ModeAsk || mode == port.ModeAskOnce
-				if skill {
-					out.Skills = append(out.Skills, servedSkill(c, f, mode))
-					continue
-				}
-				name, err := names.Exposed(c.Alias, fn, s.cfg.Separator, s.cfg.NameMax)
-				if err != nil {
-					continue
-				}
-				o, err := s.servedOverlay(tx, c, f)
-				if err != nil {
-					return err
-				}
-				sf := ServedFunction{Name: name, Connector: c.ID, Function: fn, Definition: served(name, f, o), Mode: mode}
-				if o != nil {
-					sf.OverlayHash = o.OverlayHash
-				}
-				out.Functions = append(out.Functions, sf)
-			}
-		}
-		return nil
-	})
+	markUnbound(out.Skills, bound)
 	slices.SortFunc(out.Functions, func(a, b ServedFunction) int { return cmp.Compare(a.Name, b.Name) })
 	slices.SortFunc(out.Items, func(a, b ServedItem) int { return cmp.Compare(a.Name, b.Name) })
-	return out, err
+	return out, nil
+}
+
+func (s *Service) serve(out *FunctionList, b boundConnector, bf boundFunction, mode port.Mode) {
+	c, f := b.c, bf.f
+	if port.ItemKind(f.Name) != "" {
+		s.serveItem(out, c, f, mode)
+		return
+	}
+	out.ApprovalTools = out.ApprovalTools || mode == port.ModeAsk || mode == port.ModeAskOnce
+	if b.skill {
+		out.Skills = append(out.Skills, servedSkill(c, f, mode))
+		return
+	}
+	name, err := names.Exposed(c.Alias, f.Name, s.cfg.Separator, s.cfg.NameMax)
+	if err != nil {
+		return
+	}
+	sf := ServedFunction{Name: name, Connector: c.ID, Function: f.Name, Definition: served(name, f, bf.o), Mode: mode}
+	if bf.o != nil {
+		sf.OverlayHash = bf.o.OverlayHash
+	}
+	out.Functions = append(out.Functions, sf)
 }
 
 func schemaOf(f port.Function, key string) json.RawMessage {

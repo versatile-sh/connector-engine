@@ -3,6 +3,7 @@ import { useT } from "../i18n/I18nProvider";
 import { navigate } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Arrow } from "../ui/Icon";
+import { LIT_EDGE } from "../ui/styles";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { accessCounts, authState, serverHost } from "./summary";
 
@@ -24,7 +25,7 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
           event.preventDefault();
           navigate(href);
         }}
-        className="group bubble flex h-full flex-col border border-line-strong bg-ink-raised p-5 transition-[border-color,background-color,translate] duration-300 ease-(--ease-settle) hover:-translate-y-0.5 hover:border-paper/25 hover:bg-paper/4 focus-visible:-translate-y-0.5"
+        className={`group bubble ${LIT_EDGE} flex h-full flex-col border border-line-strong bg-ink-raised p-5 transition-[border-color,translate] duration-300 ease-(--ease-settle) hover:-translate-y-0.5 focus-visible:-translate-y-0.5`}
       >
         <div className="flex items-start gap-3.5">
           <ConnectorIcon src={connector.icon} title={connector.title} />

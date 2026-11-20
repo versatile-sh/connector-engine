@@ -189,6 +189,21 @@ svg {
   background: radial-gradient(ellipse 48% 62% at 50% 0%, color-mix(in srgb, var(--color-paper) 13%, transparent), transparent 72%);
 }
 
+.vignette-top {
+  background-image: radial-gradient(ellipse 90% 130% at 50% 0%, rgb(245 245 242 / 0.08), transparent 65%);
+}
+
+.text-lit {
+  background-image: radial-gradient(ellipse 62% 130% at 50% 0%, #fff 8%, var(--color-paper) 42%, #7c838e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.light-lamp {
+  background: linear-gradient(to right, transparent, rgb(245 245 242 / 0.75), transparent);
+}
+
 .no-scrollbar {
   scrollbar-width: none;
 }

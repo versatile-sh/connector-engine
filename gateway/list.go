@@ -45,6 +45,9 @@ func (g *Gateway) list(ctx context.Context, req *mcp.ListToolsRequest) (mcp.Resu
 	if fl.ApprovalTools {
 		tools = append(tools, approvalTools...)
 	}
+	if g.cfg.Skills {
+		tools = append(tools, skillTools...)
+	}
 	return &mcp.ListToolsResult{Tools: tools, Cacheable: mcp.Cacheable{TTLMs: int(fl.TTL.Milliseconds()), CacheScope: "private"}}, nil
 }
 

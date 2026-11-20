@@ -116,6 +116,9 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		var lv port.ListingVersion
 		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", c.Engine.Workspace, "owner", string(conn.Listing.Listing.Owner), "name", conn.Listing.Listing.Name, "version", conn.Listing.Version), nil, &lv); err == nil {
 			m := lv.Manifest
+			if m.Kind == port.KindSkill {
+				continue
+			}
 			s.Title, s.Description, s.Icon, s.Publisher = firstOf(m.Title, m.Name), m.Description, m.Icon, m.Publisher.Name
 			if m.Remote != nil {
 				s.RemoteURL = m.Remote.URL
@@ -399,7 +402,7 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// BindAgent binds the agent to every connector and records it until ttl from now, at most the console's longest; with a connector installed it also finishes the first-run guide.
+// BindAgent binds the agent to every connector, keeping its skill choices (off for a new key), and records it until ttl from now, at most the console's longest; with a connector installed it also finishes the first-run guide.
 func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
@@ -415,11 +418,18 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration)
 	}
 	installed := false
 	for _, v := range list.Items {
-		if v.Connector.RemovedAt.IsZero() {
-			installed = true
-			if err := c.bind(ctx, string(v.Connector.ID), a); err != nil {
-				return Agent{}, err
-			}
+		if !v.Connector.RemovedAt.IsZero() {
+			continue
+		}
+		installed = true
+		bind := c.bind
+		if skill, err := c.isSkill(ctx, v.Connector); err != nil {
+			return Agent{}, err
+		} else if skill {
+			bind = c.rebindSkill
+		}
+		if err := bind(ctx, string(v.Connector.ID), a); err != nil {
+			return Agent{}, err
 		}
 	}
 	if err := c.State.PutAgent(a); err != nil {
@@ -460,11 +470,20 @@ func (c *Console) Approvals(ctx context.Context) ([]port.Approval, error) {
 	return out.Items, err
 }
 
-// Decide approves or denies one waiting call as the owner.
+// Decide approves or denies one waiting call as the owner; approving an ask-once call, such as a skill load, approves it for the rest of its session.
 func (c *Console) Decide(ctx context.Context, id string, approve bool) error {
 	d := port.DecisionDeny
 	if approve {
 		d = port.DecisionApprove
+		var detail struct {
+			Approval port.Approval `json:"approval"`
+		}
+		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &detail); err != nil {
+			return err
+		}
+		if detail.Approval.Mode == port.ModeAskOnce {
+			d = port.DecisionApproveForSession
+		}
 	}
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":decide", map[string]any{"decision": d, "channel": "console"}, nil)
 }

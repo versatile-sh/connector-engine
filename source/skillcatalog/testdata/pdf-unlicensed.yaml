@@ -1,0 +1,46 @@
+kind: skill
+id: pdf-unlicensed
+name: pdf
+title: PDF forms
+description: Fills and reads PDF forms.
+category: documents
+source:
+  repository: "example/skills"
+  path: "skills/pdf/SKILL.md"
+  commit: "0123456789abcdef0123456789abcdef01234567"
+  url: https://github.com/example/skills/tree/0123456789abcdef0123456789abcdef01234567/skills/pdf
+license:
+  spdx: "NONE"
+  from: SKILL.md
+  redistributable: false
+stars: 1234
+updated_at: "2026-11-20T02:15:08Z"
+score: 0.7
+files_count: 3
+bytes: 320
+has_scripts: true
+trust_level: "unreviewed"
+files:
+  - path: SKILL.md
+    bytes: 226
+    sha256: d004d247392a431ca6fd4635a27308bd7539a718f3a3775cc402737a155e9bd8
+    url: https://raw.githubusercontent.com/example/skills/0123456789abcdef0123456789abcdef01234567/skills/pdf/SKILL.md
+  - path: reference/fields.md
+    bytes: 32
+    sha256: 2c9af43df7165754afc1a7a237df4d432537f64d0a1ed12134f7b079ee9de268
+    url: https://raw.githubusercontent.com/example/skills/0123456789abcdef0123456789abcdef01234567/skills/pdf/reference/fields.md
+  - path: scripts/fill.sh
+    bytes: 62
+    sha256: ec801c8c621666c65a5a1da06b9baf737b27da6267a33ff750594e809ff8dee7
+    url: https://raw.githubusercontent.com/example/skills/0123456789abcdef0123456789abcdef01234567/skills/pdf/scripts/fill.sh
+alternates:
+  - name: "pdf"
+    repository: "other/skills"
+    path: "pdf/SKILL.md"
+    commit: "89abcdef0123456789abcdef0123456789abcdef"
+    url: "https://github.com/other/skills/tree/89abcdef0123456789abcdef0123456789abcdef/pdf"
+    license: "MIT"
+    stars: 10
+    score: 0.5
+    similarity: 1.0
+    reason: "identical content"

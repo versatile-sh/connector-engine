@@ -23,6 +23,7 @@ import (
 	rtmemory "github.com/agents-control/connector-engine/runtime/memory"
 	"github.com/agents-control/connector-engine/runtime/mux"
 	rtremote "github.com/agents-control/connector-engine/runtime/remote"
+	rtskill "github.com/agents-control/connector-engine/runtime/skill"
 	secretslocal "github.com/agents-control/connector-engine/secrets/local"
 	secretsmemory "github.com/agents-control/connector-engine/secrets/memory"
 	sinklog "github.com/agents-control/connector-engine/sink/log"
@@ -34,6 +35,7 @@ import (
 	"github.com/agents-control/connector-engine/source/openapi"
 	"github.com/agents-control/connector-engine/source/reflection"
 	"github.com/agents-control/connector-engine/source/registry"
+	"github.com/agents-control/connector-engine/source/skillcatalog"
 	"github.com/agents-control/connector-engine/store/memory"
 	"github.com/agents-control/connector-engine/store/postgres"
 )
@@ -119,6 +121,8 @@ func (b builder) runtime(store port.Store, secrets port.SecretStore) (port.Conne
 			runtimes = append(runtimes, rtremote.New(applier, nil, b.guard(nil)))
 		case u.Name == "declarative":
 			runtimes = append(runtimes, rtdeclarative.New(applier, nil, b.guard(nil)))
+		case u.Name == "skill":
+			runtimes = append(runtimes, rtskill.New())
 		case u.Name == "grpc":
 			runtimes = append(runtimes, rtgrpc.New(rtgrpc.Options{Applier: applier, Insecure: b.cfg.GRPC.Insecure, Guard: b.guard(nil)}))
 		}
@@ -179,6 +183,8 @@ func (b builder) sources() (map[string]port.ListingSource, error) {
 				Guard: b.guard(hostsOf(b.cfg.Sources.BSR.URL)), Now: b.clock.Now}))
 		case u.Name == "openapi":
 			add(openapi.New(openapi.Config{Dir: b.cfg.Sources.OpenAPI.Dir, URLs: b.cfg.Sources.OpenAPI.URLs, Guard: b.guard(hostsOf(b.cfg.Sources.OpenAPI.URLs...)), Now: b.clock.Now}))
+		case u.Name == "skillcatalog":
+			add(skillcatalog.New(skillcatalog.Config{URLs: b.cfg.Sources.SkillCatalog.URLs, Guard: b.guard(nil), Now: b.clock.Now}))
 		case u.Name == "reflection":
 			add(reflection.New(reflection.Config{Targets: b.cfg.Sources.Reflection.Targets, Guard: b.guard(b.cfg.Sources.Reflection.Targets), Insecure: b.cfg.Sources.Reflection.Insecure, Now: b.clock.Now}))
 		}

@@ -26,7 +26,11 @@ func (g *Gateway) middleware(next mcp.MethodHandler) mcp.MethodHandler {
 		if refusedMethods[method] {
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound, Message: "method not found"}
 		}
-		return next(ctx, method, req)
+		res, err := next(ctx, method, req)
+		if g.cfg.Skills && err == nil {
+			g.instructed(ctx, req, res)
+		}
+		return res, err
 	}
 }
 

@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { api, setCsrf, type Agent, type Approval, type Connector, type Session } from "./api";
+import { api, setCsrf, type Agent, type Approval, type Connector, type Session, type Skill } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -19,6 +19,13 @@ export const connectorsQuery = queryOptions({
   queryKey: ["connectors"],
   queryFn: () => api<{ connectors: Connector[] }>("GET", "/api/connectors"),
   select: (data) => data.connectors,
+});
+
+/** Every installed skill with each access key's choice. */
+export const skillsQuery = queryOptions({
+  queryKey: ["skills"],
+  queryFn: () => api<{ skills: Skill[] }>("GET", "/api/skills"),
+  select: (data) => data.skills,
 });
 
 /** The access keys an AI app connects with. */

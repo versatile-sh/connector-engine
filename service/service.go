@@ -41,6 +41,7 @@ type Service struct {
 	handles map[string]*started
 	flights singleflight.Group
 	connect map[string]pendingConnect
+	kinds   sync.Map
 }
 
 // New returns a Service; it refuses missing required ports.

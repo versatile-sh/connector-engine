@@ -10,6 +10,7 @@ import { Consent } from "./access/Consent";
 import { useT } from "./i18n/I18nProvider";
 import { ImportLanding } from "./import/ImportLanding";
 import { sessionQuery } from "./queries";
+import { SkillsPage } from "./skills/SkillsPage";
 import { useLocation } from "./router";
 import type { ImportSource } from "./api";
 import { Shell, type Section } from "./Shell";
@@ -22,7 +23,8 @@ const linkedSource = (path: string, query: URLSearchParams): ImportSource | unde
   return listing ? { listing } : mcp ? { mcp } : undefined;
 };
 
-const sectionOf = (path: string): Section => (path === "/access" || path === "/agents" ? "access" : path === "/approvals" ? "approvals" : "connectors");
+const sectionOf = (path: string): Section =>
+  path === "/access" || path === "/agents" ? "access" : path === "/approvals" ? "approvals" : path === "/skills" ? "skills" : "connectors";
 
 function Splash({ failure, onRetry }: { failure?: string; onRetry?: () => void }) {
   const t = useT();
@@ -59,7 +61,7 @@ export function App() {
   const detail = path.startsWith("/connectors/") ? decodeURIComponent(path.slice("/connectors/".length)) : undefined;
   return (
     <Shell section={section} endpoint={mcp_url}>
-      {section === "access" ? <AccessPage /> : section === "approvals" ? <ApprovalsPage /> : detail ? <ConnectorDetail id={detail} /> : <ConnectorsPage />}
+      {section === "access" ? <AccessPage /> : section === "approvals" ? <ApprovalsPage /> : section === "skills" ? <SkillsPage /> : detail ? <ConnectorDetail id={detail} /> : <ConnectorsPage />}
     </Shell>
   );
 }

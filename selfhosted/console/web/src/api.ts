@@ -6,6 +6,36 @@ export const ACCESS: readonly Access[] = ["off", "on", "ask"];
 /** What a function does by its own description; it is shown, never chosen. */
 export type Kind = "read" | "write" | "destructive";
 
+/** A console user's role, in rank order: a Member uses the gateway, an Admin also manages connectors and policy, an Owner everything. */
+export type Role = "owner" | "admin" | "member";
+
+/** One thing the signed-in user may do, as the server's capability table names it; the console shows what the session lists and never works it out from the role. */
+export type Capability =
+  | "people.manage"
+  | "people.read"
+  | "people.reset"
+  | "backup.full"
+  | "connectors.manage"
+  | "skills.manage"
+  | "setup.manage"
+  | "activity.settings"
+  | "activity.delete"
+  | "keys.any"
+  | "approvals.any"
+  | "activity.any"
+  | "keys.own"
+  | "approvals.own"
+  | "activity.own"
+  | "notifications.own"
+  | "signin.own"
+  | "account.own";
+
+/** Who is signed in: their engine person id, their name and their role. */
+export type SessionUser = { person: string; username: string; role: Role };
+
+/** Whose row a key, a held call or a call is: the person and their name, empty once that person was removed. */
+export type RowOwner = { person: string; username: string };
+
 export type Session = {
   owner_exists: boolean;
   signed_in: boolean;
@@ -13,6 +43,9 @@ export type Session = {
   mcp_url: string;
   onboarding_dismissed?: boolean;
   key_protection?: KeyProtection;
+  user?: SessionUser;
+  can?: Capability[];
+  people?: number;
 };
 
 /** How the root keys of the engine and the console rest: waiting for the host's unlock key, a plaintext file, or wrapped by a key in the OS keychain. */
@@ -72,7 +105,15 @@ export type Connector = {
   profiles: Profile[];
   slots: SlotProfile[];
   new_keys_off?: boolean;
+  credential_mode?: CredentialMode;
+  credential_modes?: CredentialMode[];
+  signed_in?: boolean;
+  signed_in_count?: number;
+  people_count?: number;
 };
+
+/** Whose credential a connector's calls use: one for everyone, or each person's own sign-in. */
+export type CredentialMode = "shared" | "per_person";
 
 /** What one permission set holds for one connector: its mode and overrides, never a credential. */
 export type SlotProfile = { slot: string; connector: string; alias: string; mode: ProfileMode; overrides?: Record<string, Access> };
@@ -148,7 +189,7 @@ export type Preview = {
 
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
 
-export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string };
+export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string; owner?: RowOwner };
 
 export type AgentToken = { agent: string; token: string; expires_at: string };
 
@@ -163,6 +204,8 @@ export type Approval = {
   created_at: string;
   expires_at: string;
   mode?: string;
+  owner?: RowOwner;
+  choices?: string[];
 };
 
 /** What a call came to: answered, failed, refused as unknown, held for approval, or still running. */
@@ -184,6 +227,7 @@ export type ActivityCall = {
   approval?: string;
   approval_state?: string;
   captured: boolean;
+  owner?: RowOwner;
 };
 
 export type ActivityDetail = ActivityCall & {
@@ -388,3 +432,24 @@ export type SlotChoice = { action: "keep" } | { action: "apply"; key: string } |
 
 /** The `options` of a setup's import: each set's choice by name, and whether the keys made already get the connectors it adds. */
 export type SetupOptions = { slots?: Record<string, SlotChoice>; existing_keys?: boolean };
+
+/** One user of this console as the People tab lists them: when they joined, how many keys they hold, and whether they are the viewer. */
+export type Person = { person: string; username: string; role: Role; created_at: string; keys: number; you: boolean };
+
+/** What a link is for: joining with a role, or setting a new password for one user. */
+export type LinkPurpose = "join" | "reset";
+
+/** A join or reset link that has not been used yet; its token is never shown again. */
+export type PendingLink = { id: string; purpose: LinkPurpose; role: Role; person: string; created_by: string; created_at: string; expires_at: string };
+
+/** One entry of the console's own record of changes to people and access: who did what to whom. */
+export type AuditEntry = { at: string; actor: string; action: string; target: string; detail?: Record<string, string> };
+
+/** What GET /api/people answers: the people, the links still waiting and the newest changes, newest first. */
+export type PeopleData = { people: Person[]; invites: PendingLink[]; audit: AuditEntry[] };
+
+/** A join or reset link just made: shown once, with when it stops working. */
+export type NewLink = { id: string; link: string; expires_at: string };
+
+/** What a join or reset link says before it is used: what it is for, who made it, the role it gives and, for a reset, whose password it sets. */
+export type LinkFacts = { purpose: LinkPurpose; role: Role; invited_by: string; username: string; expires_at: string };

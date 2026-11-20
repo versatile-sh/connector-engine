@@ -9,7 +9,7 @@ const snapshot = () => window.location.pathname + window.location.search;
 
 /** Reads the current path and query from the browser history. */
 export function useLocation() {
-  const href = useSyncExternalStore(subscribe, snapshot);
+  const href = useSyncExternalStore(subscribe, snapshot, snapshot);
   const url = new URL(href, window.location.origin);
   return { path: url.pathname, query: url.searchParams };
 }

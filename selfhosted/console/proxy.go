@@ -78,5 +78,18 @@ func (c *Console) agentProxy() http.Handler {
 			}
 			return nil
 		},
+		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, _ error) { c.engineDown(w) },
 	}
+}
+
+// engineDown answers an agent request the engine did not take with 503, a Retry-After and a JSON-RPC error that says the gateway is locked or not answering.
+func (c *Console) engineDown(w http.ResponseWriter) {
+	message := "the gateway is not answering; after a restart it stays locked until you run make unlock on this computer, then retry"
+	if c.Secrets.Locked() {
+		message = "the gateway is locked: run make unlock on this computer, then retry"
+	}
+	w.Header().Set("Retry-After", "5")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_ = json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": nil, "error": map[string]any{"code": -32000, "message": message}})
 }

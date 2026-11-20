@@ -254,7 +254,7 @@ export const es: Record<MessageKey, string> = {
   "access.skillHint.on": "Se carga al momento",
   "access.skillHint.ask": "Espera tu aprobación una vez por sesión",
   "skills.title": "Tus *skills*",
-  "skills.intro": "Instrucciones y archivos que tus apps de IA cargan por el gateway, que nunca los ejecuta. Elige apagado, encendido o preguntar para cada clave de acceso.",
+  "skills.intro": "Instrucciones y archivos que tus apps de IA cargan por el gateway, que nunca los ejecuta. Elige Apagada, Activada o Preguntar para cada clave de acceso.",
   "skills.empty.title": "Aún no hay skills",
   "skills.empty.body": "Abre el enlace de una skill desde un catálogo, o pulsa Importar y pega su dirección. La revisas antes de que se añada nada.",
   "skills.licenceLabel": "Licencia",

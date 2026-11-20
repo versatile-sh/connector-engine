@@ -13,10 +13,11 @@ export const shortCommit = (commit: string) => commit.slice(0, 7);
 /** The total size of a skill's files. */
 export const totalBytes = (files: readonly { bytes: number }[]) => files.reduce((sum, file) => sum + file.bytes, 0);
 
-/** The page about a skill's folder: the catalog's link, or the repository tree at the pinned commit. */
+/** The page about a skill's folder: the catalog's link, or the repository tree at the pinned commit; an `owner/repo` repository is read as GitHub. */
 export function sourceLink(source: SkillSource): string {
   if (source.url) return source.url;
-  return `${source.repository.replace(/\/+$/, "")}/tree/${source.commit}/${source.path}`;
+  const repository = /^https?:\/\//.test(source.repository) ? source.repository.replace(/\/+$/, "") : `https://github.com/${source.repository}`;
+  return [`${repository}/tree/${source.commit}`, source.path].filter(Boolean).join("/");
 }
 
 /** What the owner is warned about before and after a skill is imported. */

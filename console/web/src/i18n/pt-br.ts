@@ -254,7 +254,7 @@ export const ptBR: Record<MessageKey, string> = {
   "access.skillHint.on": "Carrega na hora",
   "access.skillHint.ask": "Espera sua aprovação uma vez por sessão",
   "skills.title": "Suas *skills*",
-  "skills.intro": "Instruções e arquivos que seus apps de IA carregam pelo gateway, que nunca os executa. Escolha desligado, ligado ou perguntar para cada chave de acesso.",
+  "skills.intro": "Instruções e arquivos que seus apps de IA carregam pelo gateway, que nunca os executa. Escolha Desligada, Ligada ou Pedir para cada chave de acesso.",
   "skills.empty.title": "Nenhuma skill ainda",
   "skills.empty.body": "Abra o link de uma skill em um catálogo, ou clique em Importar e cole o endereço dela. Você revisa antes de qualquer coisa ser adicionada.",
   "skills.licenceLabel": "Licença",

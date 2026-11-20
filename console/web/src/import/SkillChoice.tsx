@@ -7,9 +7,9 @@ import { SkillFactsView } from "../skills/SkillFactsView";
 export function SkillChoice({ skill, access, onChange }: { skill: SkillFacts; access: Access; onChange(next: Access): void }) {
   const t = useT();
   return (
-    <div className="flex flex-col gap-5">
+    <div className="@container flex flex-col gap-5">
       <SkillFactsView skill={skill} />
-      <div className="flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-center sm:gap-6">
+      <div className="flex flex-col gap-3 border-t border-line pt-4 @lg:flex-row @lg:items-center @lg:gap-6">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{skill.keys.length > 0 ? t("import.skillKeys", { count: skill.keys.length }) : t("import.skillNoKeys")}</p>
           <p className="text-sm text-muted">{t("import.skillLater")}</p>

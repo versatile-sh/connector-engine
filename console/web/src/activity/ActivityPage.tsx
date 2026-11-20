@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { errorText, type CallOutcome } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { activityQuery, connectorsQuery, sessionQuery, skillsQuery } from "../queries";
+import { activityQuery, connectorsQuery, skillsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Icon } from "../ui/Icon";
@@ -39,14 +39,13 @@ function Chips<T extends string>({ label, all, options, value, onChange }: { lab
 }
 
 /** Every function call the apps made through the console: filters in the address, the calls per hour, per connector, the newest calls and, on a click, one call in full. */
-export function ActivityPage() {
+export function ActivityPage({ endpoint }: { endpoint: string }) {
   const t = useT();
   const { query } = useLocation();
   const filter = filterOf(query);
   const activity = useQuery(activityQuery(filter));
   const connectors = useQuery(connectorsQuery);
   const skills = useQuery(skillsQuery);
-  const endpoint = useQuery(sessionQuery).data?.mcp_url ?? "/mcp";
   const [open, setOpen] = useState<string>();
   const change = (next: Partial<ActivityFilter>) => {
     const merged: ActivityFilter = { ...filter, ...next };

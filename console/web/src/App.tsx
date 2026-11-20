@@ -67,13 +67,13 @@ export function App() {
   return (
     <Shell section={section} endpoint={mcp_url}>
       {section === "access" ? (
-        <AccessPage />
+        <AccessPage endpoint={mcp_url} />
       ) : section === "approvals" ? (
         <ApprovalsPage />
       ) : section === "skills" ? (
         <SkillsPage />
       ) : section === "activity" ? (
-        <ActivityPage />
+        <ActivityPage endpoint={mcp_url} />
       ) : section === "notifications" ? (
         <NotificationsPage />
       ) : detail ? (

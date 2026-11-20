@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { Connector, HourCount, Skill } from "../api.ts";
-import { apiQueryOf, approvalStateKey, barsOf, callOf, daysBetween, durationText, filterOf, hrefOf, keptSince, kindOf, lastWeek, namedOf, prettyJSON, skillFile } from "./activity.ts";
+import { apiQueryOf, approvalStateKey, barsOf, callOf, clearedOf, inScope, daysBetween, durationText, filterOf, hrefOf, keptSince, kindOf, lastWeek, namedOf, prettyJSON, skillFile } from "./activity.ts";
 
 const hour = (start: Date, counts: Partial<Omit<HourCount, "start">> = {}): HourCount => ({ start: start.toISOString(), ok: 0, error: 0, denied: 0, pending: 0, running: 0, ...counts });
 
@@ -181,5 +181,38 @@ describe("namedOf", () => {
 describe("skillFile", () => {
   test("is SKILL.md unless a file was named", () => {
     assert.deepEqual([skillFile(undefined), skillFile(""), skillFile("reference/fields.md")], ["SKILL.md", "SKILL.md", "reference/fields.md"]);
+  });
+});
+
+describe("the activity scope", () => {
+  describe("filterOf", () => {
+    test("reads everyone and its person", () => {
+      assert.deepEqual(filterOf(new URLSearchParams("scope=everyone&person=p-bob")), { range: "24h", scope: "everyone", person: "p-bob" });
+    });
+
+    test("drops a person outside everyone", () => {
+      assert.deepEqual(filterOf(new URLSearchParams("person=p-bob")), { range: "24h" });
+    });
+  });
+
+  describe("inScope", () => {
+    test("drops everyone and the person for mine", () => {
+      assert.deepEqual(inScope({ range: "7d", scope: "everyone", person: "p-bob" }, "mine"), { range: "7d" });
+    });
+
+    test("keeps the person for everyone", () => {
+      assert.deepEqual(inScope({ range: "7d", person: "p-bob" }, "everyone"), { range: "7d", scope: "everyone", person: "p-bob" });
+    });
+  });
+
+  describe("clearedOf", () => {
+    test("keeps whose calls it shows", () => {
+      assert.deepEqual(clearedOf({ range: "7d", scope: "everyone", person: "p-bob", outcome: "ok" }), { range: "7d", scope: "everyone" });
+    });
+  });
+
+  test("sends the scope and person to the API", () => {
+    const query = new URLSearchParams(apiQueryOf({ range: "24h", scope: "everyone", person: "p-bob" }, new Date("2026-11-20T00:00:00Z")));
+    assert.deepEqual([query.get("scope"), query.get("person")], ["everyone", "p-bob"]);
   });
 });

@@ -8,7 +8,7 @@ import { EmptyState } from "../ui/EmptyState";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { CAPTION, SKELETON, SURFACE, TITLE, button } from "../ui/styles";
-import { callOf, filterOf, hrefOf, isNarrowed, namedOf, periodOf, type ActivityFilter } from "./activity";
+import { callOf, filterOf, hrefOf, isNarrowed, namedOf, clearedOf, type ActivityFilter } from "./activity";
 import { ActivitySettings } from "./ActivitySettings";
 import { CallDetail } from "./CallDetail";
 import { CallList } from "./CallList";
@@ -74,7 +74,7 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
             ) : isNarrowed(filter) ? (
               <div className="arrive flex flex-col items-start gap-4 px-1 py-8">
                 <p className="text-muted">{t("activity.noMatch")}</p>
-                <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => show(periodOf(filter))}>
+                <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => show(clearedOf(filter))}>
                   {t("activity.clearFilters")}
                 </button>
               </div>

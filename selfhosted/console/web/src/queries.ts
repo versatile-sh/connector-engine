@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { apiQueryOf, type ActivityFilter } from "./activity/activity";
-import { api, setCsrf, type Account, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type Session, type Skill, type SlotView } from "./api";
+import type { Scope } from "./people/viewer";
+import { api, setCsrf, type Account, type LinkFacts, type PeopleData, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type Session, type Skill, type SlotView } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -57,13 +58,28 @@ export const keysPageQuery = queryOptions({
   },
 });
 
-/** Calls held for the owner, polled every few seconds. */
+/** The access keys a scope of the Access page shows: the user's own, as `keysPageQuery`, or everyone's under the same key. */
+export const scopedKeysQuery = (scope: Scope) =>
+  scope === "mine" ? keysPageQuery : queryOptions({ queryKey: [...keysPageQuery.queryKey, "everyone"], queryFn: () => api<KeysData>("GET", "/api/agents?scope=everyone") });
+
+/** Calls held for the signed-in user, polled every few seconds. */
 export const approvalsQuery = queryOptions({
   queryKey: ["approvals"],
   queryFn: () => api<{ approvals: Approval[] }>("GET", "/api/approvals"),
   select: (data) => data.approvals,
   refetchInterval: 4_000,
 });
+
+/** The held calls a scope shows: the user's own, as `approvalsQuery`, or everyone's under the same key, so one invalidation reads both again. */
+export const scopedApprovalsQuery = (scope: Scope) =>
+  scope === "mine"
+    ? approvalsQuery
+    : queryOptions({
+        queryKey: [...approvalsQuery.queryKey, "everyone"],
+        queryFn: () => api<{ approvals: Approval[] }>("GET", "/api/approvals?scope=everyone"),
+        select: (data) => data.approvals,
+        refetchInterval: 4_000,
+      });
 
 /** The key every activity page shares, whatever its filter. */
 export const activityKey = ["activity"] as const;
@@ -109,3 +125,10 @@ export const notificationsQuery = queryOptions({ queryKey: ["notifications"], qu
 
 /** The owner's name and when the last full backup was made. */
 export const accountQuery = queryOptions({ queryKey: ["account"], queryFn: () => api<Account>("GET", "/api/account") });
+
+/** The people of this console, the links still waiting and the newest changes. */
+export const peopleQuery = queryOptions({ queryKey: ["people"], queryFn: () => api<PeopleData>("GET", "/api/people") });
+
+/** What a join or reset link says, read once from its token; a link that no longer works answers 410. */
+export const linkQuery = (token: string) =>
+  queryOptions({ queryKey: ["link", token], queryFn: () => api<LinkFacts>("POST", "/api/invite/inspect", { token }), staleTime: Infinity, refetchOnWindowFocus: false });

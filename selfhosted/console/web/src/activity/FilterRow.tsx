@@ -7,7 +7,7 @@ import { Icon } from "../ui/Icon";
 import { SearchBox } from "../ui/SearchBox";
 import { Select, type SelectOption } from "../ui/Select";
 import { CHIP, SURFACE, button } from "../ui/styles";
-import { dayOf, daysBetween, isNarrowed, keptSince, lastWeek, periodOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
+import { dayOf, daysBetween, isNarrowed, keptSince, lastWeek, clearedOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
 
 const FILTER_OUTCOMES: readonly CallOutcome[] = ["ok", "error", "denied", "pending"];
 
@@ -96,7 +96,7 @@ export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
       <Choice<CallOutcome> label={t("activity.outcome")} all={t("activity.outcome.all")} value={filter.outcome} options={FILTER_OUTCOMES.map((outcome) => ({ value: outcome, text: t(`outcome.${outcome}`) }))} onChange={(outcome) => onChange({ ...filter, outcome })} />
       <Search value={filter.search} onSearch={(search) => onChange({ ...filter, search })} />
       {isNarrowed(filter) ? (
-        <button type="button" className={`${button({ variant: "quiet", size: "xs" })} swap-in`} onClick={() => onChange(periodOf(filter))}>
+        <button type="button" className={`${button({ variant: "quiet", size: "xs" })} swap-in`} onClick={() => onChange(clearedOf(filter))}>
           {t("activity.clearFilters")}
         </button>
       ) : null}

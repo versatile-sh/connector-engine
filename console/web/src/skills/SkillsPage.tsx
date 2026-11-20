@@ -21,7 +21,7 @@ function KeyChoice({ skill, agent, access }: { skill: Skill; agent: string; acce
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["skills"] }),
   });
   return (
-    <li className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-6">
+    <li className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0 @lg:flex-row @lg:items-center @lg:gap-6">
       <div className="min-w-0 flex-1">
         <code className="font-mono text-sm font-semibold break-all text-paper" translate="no">
           {agent}
@@ -71,7 +71,7 @@ function SkillCard({ skill }: { skill: Skill }) {
       {skill.access.length === 0 ? (
         <p className="py-4 text-sm text-muted">{t("skills.noKeys")}</p>
       ) : (
-        <ul className="mt-1">
+        <ul className="@container mt-1">
           {skill.access.map((key) => (
             <KeyChoice key={key.agent} skill={skill} agent={key.agent} access={key.access} />
           ))}
@@ -80,7 +80,7 @@ function SkillCard({ skill }: { skill: Skill }) {
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
         {confirming ? (
           <div role="group" aria-label={t("skills.remove")} className="swap-in bubble flex flex-wrap items-center gap-3 border border-amber/40 bg-amber/5 py-2 pr-2 pl-4">
-            <p className="text-sm">{t("skills.removeAsk", { name: skill.alias })}</p>
+            <p className="min-w-0 text-sm [overflow-wrap:anywhere]">{t("skills.removeAsk", { name: skill.alias })}</p>
             <button type="button" autoFocus disabled={remove.isPending} className={button({ variant: "quiet", size: "xs" })} onClick={() => setConfirming(false)}>
               {t("common.cancel")}
             </button>
@@ -112,7 +112,7 @@ export function SkillsPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <PageTitle section={t("nav.skills")} title={t("skills.title")}>
             {skills.isSuccess ? <Bubble tone={list.length > 0 ? "accent" : "neutral"}>{list.length}</Bubble> : null}
           </PageTitle>

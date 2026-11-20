@@ -32,7 +32,7 @@ const OAUTH: Record<string, MessageKey> = {
   failed: "oauth.failed",
 };
 
-const NAV_LINK = `relative inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm text-muted hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
+const NAV_LINK = `relative inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm max-lg:px-2 text-muted hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
 
 function Endpoint({ url }: { url: string }) {
   const t = useT();
@@ -98,7 +98,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           >
             <Wordmark />
           </a>
-          <nav aria-label={t("nav.label")} className="ml-4 hidden items-center gap-1 lg:flex">
+          <nav aria-label={t("nav.label")} className="ml-2 hidden items-center gap-1 lg:flex">
             <NavLinks section={section} waiting={waiting} />
           </nav>
           <div className="ml-auto flex min-w-0 items-center gap-2">

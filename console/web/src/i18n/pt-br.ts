@@ -5,7 +5,7 @@ export const ptBR: Record<MessageKey, string> = {
   "app.loading": "Carregando o console",
   "app.failed": "O console não conseguiu falar com o servidor.",
   "app.skip": "Pular para o conteúdo",
-  "app.home": "~/versatile.sh gateway de conectores, voltar ao início",
+  "app.home": "versatile.sh gateway de conectores, voltar ao início",
 
   "brand.label": "gateway de conectores",
   "lang.label": "Idioma",

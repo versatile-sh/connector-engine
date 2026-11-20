@@ -17,9 +17,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+var exhaustive = os.Getenv("CN_EXHAUSTIVE") == "1"
+
 func heavy(t *testing.T) {
-	if raceDetector || testing.Short() {
-		t.Skip("bounded exploration of millions of states: run without -race and -short, under a memory cap")
+	if raceDetector || !exhaustive {
+		t.Skip("bounded exploration of millions of states: set CN_EXHAUSTIVE=1 and run without -race, under a memory cap")
 	}
 }
 

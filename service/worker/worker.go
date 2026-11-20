@@ -13,14 +13,16 @@ import (
 	"github.com/agents-control/connector-engine/service"
 )
 
-// Config holds approval.sweepInterval, the batch size, the executor count, the shutdown grace of running executions, and where Run reports failures.
+// Config holds approval.sweepInterval, the batch size, the executor count, the shutdown grace of running executions, the history retention and where Run reports failures.
 type Config struct {
-	Interval  time.Duration
-	Batch     int
-	Executors int
-	Grace     time.Duration
-	Log       *slog.Logger
-	Failed    func()
+	Interval   time.Duration
+	Batch      int
+	Executors  int
+	Grace      time.Duration
+	Retention  port.Retention
+	PruneEvery time.Duration
+	Log        *slog.Logger
+	Failed     func()
 }
 
 // Stats counts what one sweep did.
@@ -47,6 +49,7 @@ type Worker struct {
 	mu      sync.Mutex
 	retries map[string]retry
 	running map[string]bool
+	pruned  time.Time
 }
 
 // New returns a Worker over a Service, the store it reads due work from and a clock.
@@ -167,7 +170,30 @@ func (w *Worker) sweep(ctx, exec context.Context, wg *sync.WaitGroup, report fun
 		st.FanOuts++
 		errs = append(errs, w.fanOut(ctx, f))
 	}
+	errs = append(errs, w.prune(ctx, now, tenants))
 	return st, errors.Join(errs...)
+}
+
+func (w *Worker) prune(ctx context.Context, now time.Time, tenants []port.Tenant) error {
+	p, ok := w.store.(port.Pruner)
+	if !ok || w.cfg.Retention == (port.Retention{}) || now.Sub(w.pruned) < w.cfg.PruneEvery {
+		return nil
+	}
+	w.pruned = now
+	var errs []error
+	for _, id := range append([]port.TenantID{port.Installation}, ids(tenants)...) {
+		_, err := p.Prune(ctx, id, now, w.cfg.Retention)
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+func ids(tenants []port.Tenant) []port.TenantID {
+	out := make([]port.TenantID, len(tenants))
+	for i, t := range tenants {
+		out[i] = t.ID
+	}
+	return out
 }
 
 func (w *Worker) failed(ctx context.Context, err error) {

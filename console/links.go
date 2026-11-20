@@ -1,15 +1,20 @@
 package console
 
 import (
+	"context"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/agents-control/connector-engine/console/sealed"
 )
 
 const (
@@ -19,8 +24,55 @@ const (
 
 var errBadToken = errors.New("the link is not valid or has expired")
 
+const gatewayLocked = "the gateway is locked: run make unlock on this computer, then open the link again"
+
+type signingKey struct {
+	mu  sync.Mutex
+	key []byte
+}
+
+func (c *Console) linkKey() ([]byte, error) {
+	c.signing.mu.Lock()
+	defer c.signing.mu.Unlock()
+	if c.signing.key != nil {
+		return c.signing.key, nil
+	}
+	if c.Secrets.Locked() {
+		return nil, sealed.ErrLocked
+	}
+	ctx := context.Background()
+	stored, legacy := c.State.linkKeyRecords()
+	var hexKey string
+	if stored != nil {
+		opened, err := c.Secrets.Open(ctx, *stored)
+		if err != nil {
+			return nil, err
+		}
+		hexKey = opened
+	} else {
+		if hexKey = legacy; hexKey == "" {
+			b := make([]byte, 32)
+			rand.Read(b)
+			hexKey = hex.EncodeToString(b)
+		}
+		v, err := c.Secrets.Seal(ctx, hexKey)
+		if err != nil {
+			return nil, err
+		}
+		if err := c.State.putSealedLinkKey(v); err != nil {
+			return nil, err
+		}
+	}
+	key, err := hex.DecodeString(hexKey)
+	if err != nil {
+		return nil, err
+	}
+	c.signing.key = key
+	return key, nil
+}
+
 func (c *Console) sign(kind string, expires time.Time, fields ...string) (string, error) {
-	key, err := c.State.LinkKey()
+	key, err := c.linkKey()
 	if err != nil {
 		return "", err
 	}
@@ -32,7 +84,7 @@ func (c *Console) sign(kind string, expires time.Time, fields ...string) (string
 }
 
 func (c *Console) open(kind, token string) (nonce string, fields []string, err error) {
-	key, err := c.State.LinkKey()
+	key, err := c.linkKey()
 	if err != nil {
 		return "", nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/agents-control/connector-engine/config"
 )
@@ -32,6 +33,9 @@ func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
 	}
 	if cfg.Runtime.AllowPrivateHosts {
 		t.Fatal("headless reaches private hosts")
+	}
+	if r := cfg.Retention; r.DeliveredEvents != 0 || r.IdempotencyKeys != 0 || r.Audit != 0 || r.Calls != 0 {
+		t.Fatalf("headless prunes history: %+v", r)
 	}
 	if cfg.Secrets != (config.Secrets{Adapter: "localfile", DataKeyCache: cfg.Secrets.DataKeyCache, Dir: "/var/lib/connector-engine/secrets"}) || cfg.Secrets.DataKeyCache.Seconds() != 300 {
 		t.Fatalf("headless secrets: %#v", cfg.Secrets)
@@ -66,5 +70,9 @@ func TestThePersonProfileReachesLocalServersAndLoads(t *testing.T) {
 	}
 	if !cfg.Runtime.AllowPrivateHosts {
 		t.Fatal("the person profile refuses the local servers its console imports")
+	}
+	week, quarter := 7*24*time.Hour, 90*24*time.Hour
+	if want := (config.Retention{Every: time.Hour, DeliveredEvents: week, IdempotencyKeys: week, Audit: quarter, Calls: quarter}); cfg.Retention != want {
+		t.Fatalf("person retention %+v, want %+v", cfg.Retention, want)
 	}
 }

@@ -35,6 +35,14 @@ func SkillName(n string) bool { return skillName.MatchString(n) && !strings.Cont
 // FullCommit reports whether c is a full 40-hex commit id, never a branch, a tag or a short id.
 func FullCommit(c string) bool { return fullCommit.MatchString(c) }
 
+// SkillFolder is the folder name a skill must carry: the last segment of its folder path, or of its repository when it sits at the root.
+func SkillFolder(repository, folder string) string {
+	if folder == "" {
+		return path.Base(strings.TrimRight(repository, "/"))
+	}
+	return path.Base(folder)
+}
+
 // SkillPath refuses a file path that is empty, absolute, not clean, climbs with .. or uses a backslash or a control byte.
 func SkillPath(p string) error {
 	switch {
@@ -72,8 +80,8 @@ func lintSkill(s *port.Skill, bad func(string, ...any)) {
 	if !SkillName(s.Name) {
 		bad("skill.name %q is lowercase letters, digits and hyphens, at most 64", s.Name)
 	}
-	if s.Source.Repository == "" || s.Source.Path == "" || path.Base(s.Source.Path) != s.Name {
-		bad("skill.source names the repository and a folder path whose last segment is %q", s.Name)
+	if s.Source.Repository == "" || SkillFolder(s.Source.Repository, s.Source.Path) != s.Name || s.Source.Path != "" && SkillPath(s.Source.Path) != nil {
+		bad("skill.source names the repository and a clean folder path whose last segment is %q", s.Name)
 	}
 	if !FullCommit(s.Source.Commit) {
 		bad("skill.source.commit %q is a full 40-hex commit", s.Source.Commit)

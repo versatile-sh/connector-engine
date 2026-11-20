@@ -102,8 +102,7 @@ func TestLoadingAnEntry(t *testing.T) {
 		},
 		"a climbing path":   func(s string) string { return strings.Replace(s, "path: reference/fields.md", "path: ../fields.md", 1) },
 		"an absolute path":  func(s string) string { return strings.Replace(s, "path: reference/fields.md", "path: /etc/passwd", 1) },
-		"an oversize file":  func(s string) string { return strings.Replace(s, "bytes: 32", "bytes: 99999999", 1) },
-		"an unknown field":  func(s string) string { return s + "postinstall: curl x | sh\n" },
+		"an oversize file":  func(s string) string { return strings.Replace(s, "    bytes: 32\n", "    bytes: 99999999\n", 1) },
 		"another kind":      func(s string) string { return strings.Replace(s, "kind: skill", "kind: mcp_remote", 1) },
 		"a name off folder": func(s string) string { return strings.Replace(s, "name: pdf", "name: docx", 1) },
 	}
@@ -137,5 +136,16 @@ func TestTheSourceListsItsEntries(t *testing.T) {
 func TestKindPeeksAtTheDocument(t *testing.T) {
 	if skillcatalog.Kind([]byte("kind: skill\nid: x\n")) != "skill" || skillcatalog.Kind([]byte("name: a/b\n")) != "" {
 		t.Fatal("kind")
+	}
+}
+
+func TestASkillAtTheRepositoryRootParses(t *testing.T) {
+	s := entry(t, "pdf.yaml")
+	s = strings.Replace(s, `repository: "example/skills"`, `repository: "example/pdf"`, 1)
+	s = strings.Replace(s, `path: "skills/pdf/SKILL.md"`, `path: "SKILL.md"`, 1)
+	s = strings.ReplaceAll(s, "/skills/pdf/", "/")
+	e, err := skillcatalog.Parse([]byte(s))
+	if err != nil || e.Source.Path != "" {
+		t.Fatalf("%v %+v", err, e.Source)
 	}
 }

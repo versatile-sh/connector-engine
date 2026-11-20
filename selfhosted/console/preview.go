@@ -20,6 +20,8 @@ type importRequest struct {
 	Choices      map[string]Access `json:"choices,omitempty"`
 	Access       Access            `json:"access,omitempty"`
 	Digest       string            `json:"digest,omitempty"`
+	capped       bool
+	keysOff      bool
 }
 
 // Preview is what the confirm screen shows before an import: where it comes from, the listing and each function's proposed choice.
@@ -163,48 +165,66 @@ func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	id, kind, err := c.importOne(r.Context(), in)
+	id, p, err := c.importOne(r.Context(), in)
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
+	kind := p.Kind
 	if kind != "skill" {
 		kind = "connector"
 	}
 	writeJSON(w, http.StatusCreated, map[string]string{kind: id})
 }
 
-func (c *Console) importOne(ctx context.Context, in importRequest) (string, string, error) {
+func proposedChoices(p Preview) map[string]Access {
+	out := map[string]Access{}
+	for _, t := range p.Tools {
+		out[t.Name] = t.Proposed
+	}
+	for _, it := range p.Items {
+		out[it.Name] = it.Access
+	}
+	return out
+}
+
+func above(a, base Access) bool { return a.mode().Rank() > base.mode().Rank() }
+
+func lowered(want, proposed map[string]Access) map[string]Access {
+	var out map[string]Access
+	for name, a := range want {
+		if base, ok := proposed[name]; ok && above(a, base) {
+			put(&out, name, base)
+		}
+	}
+	return out
+}
+
+func (c *Console) importOne(ctx context.Context, in importRequest) (string, Preview, error) {
 	for name, a := range in.Choices {
 		if !a.Valid() {
-			return "", "", invalid("function %s: access is off, on or ask", name)
+			return "", Preview{}, invalid("function %s: access is off, on or ask", name)
 		}
 	}
 	p, err := c.buildPreview(ctx, in)
 	if err != nil {
-		return "", "", err
+		return "", Preview{}, err
 	}
 	var id string
 	if p.Kind == "skill" {
 		id, err = c.importSkill(ctx, in, p)
 	} else {
-		choices := map[string]Access{}
-		for _, t := range p.Tools {
-			choices[t.Name] = t.Proposed
-		}
-		for _, it := range p.Items {
-			choices[it.Name] = it.Access
-		}
+		choices := proposedChoices(p)
 		for name, a := range in.Choices {
-			if _, ok := choices[name]; ok {
+			if base, ok := choices[name]; ok && !(in.capped && above(a, base)) {
 				choices[name] = a
 			}
 		}
-		id, err = c.Install(ctx, p.manifest, choices)
+		id, err = c.Install(ctx, p.manifest, choices, !in.keysOff)
 	}
 	if err != nil {
-		return "", "", err
+		return "", Preview{}, err
 	}
 	o := Origin{MCP: strings.TrimSpace(in.MCP), Listing: strings.TrimSpace(in.Listing), Local: in.Local, HeaderSecret: in.HeaderSecret, Digest: in.Digest}
-	return id, p.Kind, c.State.PutOrigin(id, o)
+	return id, p, c.State.PutOrigin(id, o)
 }

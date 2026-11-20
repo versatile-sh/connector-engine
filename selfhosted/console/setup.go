@@ -35,7 +35,7 @@ type Setup struct {
 	Stripped      []string         `yaml:"stripped,omitempty" json:"stripped"`
 }
 
-// SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off and each access key's profile there.
+// SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off and each access key's profile there, and in a review whether it is installed and the proposal of each choice this console would lower.
 type SetupConnector struct {
 	Name         string            `yaml:"name" json:"name"`
 	MCP          string            `yaml:"mcp,omitempty" json:"mcp,omitempty"`
@@ -48,11 +48,13 @@ type SetupConnector struct {
 	NewKeysOff   bool              `yaml:"newKeysOff,omitempty" json:"new_keys_off,omitempty"`
 	Profiles     []Profile         `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	Exists       bool              `yaml:"-" json:"exists"`
+	Above        map[string]Access `yaml:"-" json:"above,omitempty"`
 }
 
-// SetupOptions is what the owner chose in a setup's review: what becomes of each permission set by name; the zero value keeps every set.
+// SetupOptions is what the owner chose in a setup's review: what becomes of each permission set by name, and whether the keys made already get the connectors it adds; the zero value keeps every set and leaves those keys off.
 type SetupOptions struct {
-	Slots map[string]SlotChoice `json:"slots,omitempty"`
+	Slots        map[string]SlotChoice `json:"slots,omitempty"`
+	ExistingKeys bool                  `json:"existing_keys,omitempty"`
 }
 
 // SlotChoice is the review's answer for one permission set: keep it to give to a key later, apply it to a key made already, or discard it.
@@ -80,13 +82,14 @@ type SetupSkill struct {
 	Exists  bool   `yaml:"-" json:"exists"`
 }
 
-// SetupResult is what an import of a setup did: the entries it added, the ones it kept because they were installed, the ones that failed with why, and the permission sets it kept to give to keys later.
+// SetupResult is what an import of a setup did: the entries it added, the ones it kept because they were installed, the ones that failed with why, the permission sets it kept to give to keys later, and by connector the choices it lowered to this console's proposal.
 type SetupResult struct {
-	Added   []string          `json:"added"`
-	Kept    []string          `json:"kept"`
-	Failed  map[string]string `json:"failed"`
-	SignIns []string          `json:"sign_ins"`
-	Slots   []string          `json:"slots"`
+	Added   []string                     `json:"added"`
+	Kept    []string                     `json:"kept"`
+	Failed  map[string]string            `json:"failed"`
+	SignIns []string                     `json:"sign_ins"`
+	Slots   []string                     `json:"slots"`
+	Capped  map[string]map[string]Access `json:"capped"`
 }
 
 func setupName(at time.Time) string {
@@ -284,6 +287,16 @@ func (c *Console) inspectSetup(ctx context.Context, raw []byte) (BackupSummary, 
 	if err := c.markInstalled(ctx, &s); err != nil {
 		return BackupSummary{}, err
 	}
+	for i, sc := range s.Connectors {
+		if sc.Exists || sc.Local {
+			continue
+		}
+		p, err := c.buildPreview(ctx, importRequest{MCP: sc.MCP, Listing: sc.Listing, HeaderSecret: sc.HeaderSecret})
+		if err != nil {
+			continue
+		}
+		s.Connectors[i].Above = lowered(mergeChoices(sc), proposedChoices(p))
+	}
 	return BackupSummary{Kind: "setup", Counts: map[string]int{"connectors": len(s.Connectors), "skills": len(s.Skills)}, Setup: &s}, nil
 }
 
@@ -302,7 +315,7 @@ func (c *Console) checkOptions(o SetupOptions) error {
 	return nil
 }
 
-// ImportSetup adds what a setup holds through the console's own import, so pinning and the probe still apply; an entry already installed keeps its choices, and each key's profiles on the connectors it added become a permission set the options keep, apply to a key made already or discard, never bound by name.
+// ImportSetup adds what a setup holds through the console's own import, so pinning and the probe still apply, with each choice capped at what this console proposes and the keys made already left off its connectors unless the options opt in; an entry already installed keeps its choices, and each key's profiles on the connectors it added become a permission set the options keep, apply to a key made already or discard, never bound by name.
 func (c *Console) ImportSetup(ctx context.Context, raw []byte, opts SetupOptions) (SetupResult, error) {
 	s, err := parseSetup(raw)
 	if err != nil {
@@ -314,11 +327,14 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte, opts SetupOptions
 	if err := c.markInstalled(ctx, &s); err != nil {
 		return SetupResult{}, err
 	}
-	res := SetupResult{Added: []string{}, Kept: []string{}, Failed: map[string]string{}, SignIns: []string{}, Slots: []string{}}
+	res := SetupResult{Added: []string{}, Kept: []string{}, Failed: map[string]string{}, SignIns: []string{}, Slots: []string{}, Capped: map[string]map[string]Access{}}
 	add := func(name string, in importRequest) (string, bool) {
-		id, _, err := c.importOne(ctx, in)
+		id, p, err := c.importOne(ctx, in)
 		if err != nil {
 			res.Failed[name] = err.Error()
+		}
+		if low := lowered(in.Choices, proposedChoices(p)); in.capped && len(low) > 0 {
+			res.Capped[name] = low
 		}
 		return id, err == nil
 	}
@@ -328,7 +344,7 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte, opts SetupOptions
 			res.Kept = append(res.Kept, sc.Name)
 			continue
 		}
-		id, ok := add(sc.Name, importRequest{MCP: sc.MCP, Listing: sc.Listing, Local: sc.Local, HeaderSecret: sc.HeaderSecret, Choices: mergeChoices(sc)})
+		id, ok := add(sc.Name, importRequest{MCP: sc.MCP, Listing: sc.Listing, Local: sc.Local, HeaderSecret: sc.HeaderSecret, Choices: mergeChoices(sc), capped: true, keysOff: !opts.ExistingKeys})
 		if !ok {
 			continue
 		}

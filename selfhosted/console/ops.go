@@ -329,8 +329,8 @@ func AliasBase(name string) string {
 	return ns[strings.LastIndex(ns, ".")+1:]
 }
 
-// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every key made so far, expired ones included so that a renewal follows it; with a key already made it also finishes the first-run guide.
-func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
+// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and, with bindKeys, binds every key made so far, expired ones included so that a renewal follows it; with a key already made it also finishes the first-run guide.
+func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access, bindKeys bool) (string, error) {
 	conn, fns, err := c.installListing(ctx, m, func(ref port.ListingRef) string { return AliasBase(ref.Name) })
 	if err != nil {
 		return conn, err
@@ -351,7 +351,11 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
-	for _, a := range c.State.Agents() {
+	keys := c.State.Agents()
+	if !bindKeys {
+		keys = nil
+	}
+	for _, a := range keys {
 		if err := c.bind(ctx, conn, a); err != nil {
 			return conn, err
 		}

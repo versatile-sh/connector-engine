@@ -231,3 +231,51 @@ func (s *stack) importWith(file []byte, opts any) console.SetupResult {
 	}
 	return res
 }
+
+func TestASharedSetupCannotWidenWhatTheImporterHas(t *testing.T) {
+	file := profiledStack(t).exportSetup()
+
+	t.Run("the review shows where each connector reaches", func(t *testing.T) {
+		dst := freshOwner(t, personRelays)
+		var sum console.BackupSummary
+		status, raw := dst.upload("/api/backup/inspect", file, "")
+		if err := json.Unmarshal(raw, &sum); status != http.StatusOK || err != nil {
+			t.Fatalf("inspect: %d %s", status, raw)
+		}
+		if sc := sum.Setup.Connectors[0]; !sc.Local || !strings.HasPrefix(sc.MCP, "http://127.0.0.1:") {
+			t.Fatalf("connector %+v", sc)
+		}
+	})
+
+	t.Run("a choice above this console's proposal is capped and reported", func(t *testing.T) {
+		dst := profiled{stack: freshOwner(t, personRelays)}
+		res := dst.importWith(file, console.SetupOptions{})
+		var conns struct{ Connectors []console.ConnectorSummary }
+		dst.b.ok("GET", "/api/connectors", nil, &conns)
+		dst.conn = conns.Connectors[0].ID
+		if got := dst.choices()["notes"]; got["prompt:summarise"] != console.AccessOff || got["lookup"] != console.AccessOn {
+			t.Fatalf("choices %v", got)
+		}
+		if c := res.Capped["notes"]; len(c) != 1 || c["prompt:summarise"] != console.AccessOff {
+			t.Fatalf("capped %+v", res.Capped)
+		}
+	})
+
+	t.Run("keys made already start off unless the importer opts in", func(t *testing.T) {
+		for _, opt := range []bool{false, true} {
+			dst := profiled{stack: freshOwner(t, personRelays)}
+			mine := dst.mint("mine")
+			dst.importWith(file, console.SetupOptions{ExistingKeys: opt})
+			var conns struct{ Connectors []console.ConnectorSummary }
+			dst.b.ok("GET", "/api/connectors", nil, &conns)
+			dst.conn = conns.Connectors[0].ID
+			want := map[bool]console.ProfileMode{false: console.ProfileOff, true: console.ProfileFollow}[opt]
+			if p := dst.profile("mine"); p.Mode != want || len(toolsOf(t, mine)) == 0 == opt {
+				t.Errorf("existing keys %v: mine is %+v", opt, p)
+			}
+			if p := dst.profile(dst.mint("later").Agent); p.Mode != console.ProfileFollow {
+				t.Errorf("a key made after the import: %+v", p)
+			}
+		}
+	})
+}

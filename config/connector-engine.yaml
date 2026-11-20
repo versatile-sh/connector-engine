@@ -96,6 +96,8 @@ projection:
   maxPaths: 20
 resultFilter:
   adapter: none
+  locales:
+    - br
 overlay:
   suggester: none
 cli:

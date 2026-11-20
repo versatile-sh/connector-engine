@@ -73,11 +73,13 @@ func Approvers(b port.Binding, onBehalfOf port.PersonID) []string {
 	return out
 }
 
-// Decide is A3, A4 or A5: a conditional update from pending by an approver the Authorizer allows now (§8.2).
-// It returns whether a session row must be written (A4); the caller writes it in the same transaction.
+// Decide is A3, A4 or A5 on a pending, unexpired record by an allowed approver (§8.2); it reports whether the caller writes a session row (A4).
 func Decide(a port.Approval, by string, allowed bool, d port.Decision, note, channel string, l Limits, now time.Time) (port.Approval, bool, error) {
 	if err := transition(a, port.ApprovalPending); err != nil {
 		return a, false, err
+	}
+	if !now.Before(a.ExpiresAt) {
+		return a, false, port.Errorf(port.CodeApprovalExpired, "approval %s expired at %s", a.ID, a.ExpiresAt)
 	}
 	if !allowed || !slices.Contains(a.Approvers, by) {
 		return a, false, port.Errorf(port.CodeNotAnApprover, "%s is not an approver of %s", by, a.ID)

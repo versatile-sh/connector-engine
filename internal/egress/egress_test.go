@@ -55,3 +55,11 @@ func TestGuardRefusesLoopbackUnlessAllowed(t *testing.T) {
 		})
 	}
 }
+
+func TestTheGuardedTransportIgnoresAnEnvironmentProxy(t *testing.T) {
+	t.Setenv("HTTPS_PROXY", "http://127.0.0.1:3128")
+	t.Setenv("HTTP_PROXY", "http://127.0.0.1:3128")
+	if (egress.Guard{}).Transport().Proxy != nil {
+		t.Fatal("an environment proxy would carry every connection past the guard")
+	}
+}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
+	st "github.com/agents-control/connector-engine/service/servicetest"
 )
 
 type writerProbe struct {
@@ -76,4 +77,23 @@ func TestTheAuthorizerIsNeverAskedInsideAStoreRead(t *testing.T) {
 			t.Fatalf("%s deadlocked: a write waited while the service asked the authorizer inside a store read", name)
 		}
 	}
+}
+
+func TestAWorkspaceAdminCancelsAnApprovalThatDoesNotNameThem(t *testing.T) {
+	w, x := askWorld(t)
+	held := w.call(x, "s__search", `{}`)
+	done := make(chan error, 1)
+	go func() {
+		_, err := w.Svc.CancelApproval(w.Ctx, w.admin, held.Approval.ID)
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("CancelApproval deadlocked: it authorized inside its store write")
+	}
+	want(t, st.Ok(w.Svc.GetApproval(w.Ctx, w.admin, held.Approval.ID)).Approval.State, port.ApprovalCancelled, "cancelled")
 }

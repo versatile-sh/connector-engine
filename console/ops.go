@@ -392,11 +392,11 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// MintAgent binds the agent to every connector, lets the workspace rows decide for it until the token expires, and mints its token.
-func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration) (AgentToken, error) {
+// BindAgent binds the agent to every connector and records it, letting the workspace rows decide for it until ttl from now, at most the console's longest.
+func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
-		return AgentToken{}, fmt.Errorf("the agent name has letters or digits")
+		return Agent{}, fmt.Errorf("the agent name has letters or digits")
 	}
 	if ttl <= 0 || ttl > c.MaxAgentTTL {
 		ttl = c.MaxAgentTTL
@@ -404,23 +404,33 @@ func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration)
 	a := Agent{Name: name, ExpiresAt: time.Now().Add(ttl).UTC().Truncate(time.Second)}
 	var list items[connectorView]
 	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
-		return AgentToken{}, err
+		return Agent{}, err
 	}
 	for _, v := range list.Items {
 		if v.Connector.RemovedAt.IsZero() {
 			if err := c.bind(ctx, string(v.Connector.ID), a); err != nil {
-				return AgentToken{}, err
+				return Agent{}, err
 			}
 		}
 	}
-	tok, err := c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": c.Engine.Person}, ttl)
+	return a, c.State.PutAgent(a)
+}
+
+func (c *Console) agentToken(ctx context.Context, name string, ttl time.Duration) (string, error) {
+	return c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": c.Engine.Person}, ttl)
+}
+
+// MintAgent binds the agent to every connector, lets the workspace rows decide for it until the token expires, and mints its token.
+func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration) (AgentToken, error) {
+	a, err := c.BindAgent(ctx, name, ttl)
 	if err != nil {
 		return AgentToken{}, err
 	}
-	if err := c.State.PutAgent(a); err != nil {
+	tok, err := c.agentToken(ctx, a.Name, time.Until(a.ExpiresAt))
+	if err != nil {
 		return AgentToken{}, err
 	}
-	return AgentToken{Agent: name, Token: tok, ExpiresAt: a.ExpiresAt, MCPURL: c.MCPURL}, nil
+	return AgentToken{Agent: a.Name, Token: tok, ExpiresAt: a.ExpiresAt, MCPURL: c.MCPURL}, nil
 }
 
 // Approvals lists the calls waiting for the owner.

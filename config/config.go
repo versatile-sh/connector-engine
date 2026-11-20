@@ -43,6 +43,7 @@ type Config struct {
 	Runtime      Runtime      `yaml:"runtime"`
 	Audit        Audit        `yaml:"audit"`
 	Outbox       Outbox       `yaml:"outbox"`
+	Retention    Retention    `yaml:"retention"`
 }
 
 // Server holds the addresses the binary listens on; it is not a key of §14.
@@ -369,6 +370,15 @@ type Outbox struct {
 	Signing string `yaml:"signing"`
 }
 
+// Retention is retention.*: how often the worker prunes history and how long it keeps delivered events, idempotency keys, audit rows and finished calls; 0s keeps them forever.
+type Retention struct {
+	Every           time.Duration `yaml:"every"`
+	DeliveredEvents time.Duration `yaml:"deliveredEvents"`
+	IdempotencyKeys time.Duration `yaml:"idempotencyKeys"`
+	Audit           time.Duration `yaml:"audit"`
+	Calls           time.Duration `yaml:"calls"`
+}
+
 // Default returns every key of §14 at its default, and the keys of the binary at theirs.
 func Default() Config {
 	return Config{
@@ -404,6 +414,7 @@ func Default() Config {
 		Runtime:     Runtime{Adapters: []string{"remote", "declarative"}, CallTimeout: 60 * time.Second, Container: Container{CPU: 1, Memory: "2GB", IdleStop: 60 * time.Second, Network: "none"}},
 		Audit:       Audit{Arguments: "reference"},
 		Outbox:      Outbox{Signing: "standard-webhooks"},
+		Retention:   Retention{Every: time.Hour, DeliveredEvents: 7 * 24 * time.Hour, IdempotencyKeys: 7 * 24 * time.Hour},
 	}
 }
 

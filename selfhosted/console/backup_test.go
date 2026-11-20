@@ -143,11 +143,17 @@ func (s *stack) signIn() {
 
 func (s *stack) upload(path string, file []byte, pass string) (int, []byte) {
 	s.t.Helper()
+	return s.uploadAs(path, file, pass, ownerPassword)
+}
+
+func (s *stack) uploadAs(path string, file []byte, pass, password string) (int, []byte) {
+	s.t.Helper()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	fw, _ := mw.CreateFormFile("file", "backup")
 	_, _ = fw.Write(file)
 	_ = mw.WriteField("passphrase", pass)
+	_ = mw.WriteField("password", password)
 	_ = mw.Close()
 	req, _ := http.NewRequest("POST", s.base+path, &body)
 	req.Header.Set("Content-Type", mw.FormDataContentType())
@@ -332,6 +338,11 @@ func TestAFullBackupMovesEverythingToAFreshInstall(t *testing.T) {
 	}
 	callLookup(t, moved.base+"/mcp", tok.Token, false)
 
+	t.Run("a signed-in import asks for the password again", func(t *testing.T) {
+		if status, _ := moved.uploadAs("/api/backup/import", file, passphrase, "not the password"); status != http.StatusUnauthorized {
+			t.Fatalf("an import with a wrong password: %d", status)
+		}
+	})
 	t.Run("importing the same backup again changes nothing", func(t *testing.T) {
 		again := moved.restoreAndRestart(file)
 		sameView(t, want, again.view())

@@ -44,7 +44,17 @@ type Engine struct {
 	expires time.Time
 }
 
-var engineHTTP = &http.Client{Timeout: 90 * time.Second}
+var (
+	engineHTTP = &http.Client{Timeout: 90 * time.Second}
+	backupHTTP = &http.Client{Timeout: 30 * time.Minute}
+)
+
+func (e *Engine) backupClient() *http.Client {
+	if e.HTTP != nil {
+		return e.HTTP
+	}
+	return backupHTTP
+}
 
 func (e *Engine) client() *http.Client {
 	if e.HTTP != nil {
@@ -69,6 +79,10 @@ func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, 
 }
 
 func (e *Engine) send(ctx context.Context, base, bearer, method, path string, body []byte, limit int64) ([]byte, error) {
+	return e.sendWith(ctx, e.client(), base, bearer, method, path, body, limit)
+}
+
+func (e *Engine) sendWith(ctx context.Context, client *http.Client, base, bearer, method, path string, body []byte, limit int64) ([]byte, error) {
 	var in io.Reader
 	if body != nil {
 		in = bytes.NewReader(body)
@@ -83,7 +97,7 @@ func (e *Engine) send(ctx context.Context, base, bearer, method, path string, bo
 	if bearer != "" {
 		req.Header.Set("Authorization", "Bearer "+bearer)
 	}
-	resp, err := e.client().Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, unreachable(fmt.Errorf("engine unreachable: %w", err))
 	}
@@ -156,11 +170,11 @@ func (e *Engine) EnsureTenant(ctx context.Context) error {
 
 // Snapshot returns the engine's snapshot, its rows and its keys in plaintext, as the operator listener serves it.
 func (e *Engine) Snapshot(ctx context.Context) ([]byte, error) {
-	return e.send(ctx, e.OperatorURL, e.Operator, http.MethodGet, "/v1/snapshot", nil, maxBackupBytes)
+	return e.sendWith(ctx, e.backupClient(), e.OperatorURL, e.Operator, http.MethodGet, "/v1/snapshot", nil, maxBackupBytes)
 }
 
 // Restore replaces the engine's rows and keys with a snapshot; the engine then stops so that it starts again on them.
 func (e *Engine) Restore(ctx context.Context, snapshot []byte) error {
-	_, err := e.send(ctx, e.OperatorURL, e.Operator, http.MethodPut, "/v1/snapshot", snapshot, 1<<16)
+	_, err := e.sendWith(ctx, e.backupClient(), e.OperatorURL, e.Operator, http.MethodPut, "/v1/snapshot", snapshot, 1<<16)
 	return err
 }

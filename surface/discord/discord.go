@@ -126,10 +126,10 @@ func card(p surface.Prompt) embed {
 	if !p.ExpiresAt.IsZero() {
 		fields = append(fields, field{Name: "Expires", Value: "<t:" + strconv.FormatInt(p.ExpiresAt.Unix(), 10) + ":R>", Inline: true})
 	}
-	return embed{Title: "Allow " + markdown.Replace(p.Connector+": "+fn) + "?", Description: "`" + codeSpan.Replace(p.Function) + "`", Color: colorPending, Fields: fields, Footer: &footer{Text: "versatile.sh"}}
+	return embed{Title: "Allow " + markdown.Replace(p.Connector) + ": " + markdown.Replace(fn) + "?", Description: "`" + codeSpan.Replace(p.Function) + "`", Color: colorPending, Fields: fields, Footer: &footer{Text: "versatile.sh"}}
 }
 
-var markdown = strings.NewReplacer("\\", "\\\\", "*", "\\*", "_", "\\_", "~", "\\~", "`", "\\`", "|", "\\|", "[", "\\[", "]", "\\]", "(", "\\(", ")", "\\)", "<", "\\<", ">", "\\>", "#", "\\#", "@", "\\@", "\n", " ", "\r", " ")
+var markdown = strings.NewReplacer("\\", "\\\\", "*", "\\*", "_", "\\_", "~", "\\~", "`", "\\`", "|", "\\|", "[", "\\[", "]", "\\]", "(", "\\(", ")", "\\)", "<", "\\<", ">", "\\>", "#", "\\#", "@", "\\@", ":", "\\:", "\n", " ", "\r", " ")
 
 var codeSpan = strings.NewReplacer("`", "'", "\n", " ", "\r", " ")
 

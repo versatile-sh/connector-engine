@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -144,6 +145,9 @@ func writeAtomic(path string, raw []byte) error {
 	}
 	if err := os.Rename(tmp.Name(), path); err != nil {
 		return err
+	}
+	if runtime.GOOS == "windows" {
+		return nil
 	}
 	d, err := os.Open(dir)
 	if err != nil {

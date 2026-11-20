@@ -293,6 +293,9 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	if status != http.StatusOK || access2 == "" || refresh2 == "" || refresh2 == refresh {
 		t.Fatalf("refresh: %d %v", status, next)
 	}
+	if _, err := o.listTools(access2); err != nil {
+		t.Fatalf("tools/list after refresh: %v", err)
+	}
 	if status, out := o.token(renew, ""); status != http.StatusBadRequest || out["error"] != "invalid_grant" || !strings.Contains(fmt.Sprint(out["error_description"]), "already used") {
 		t.Fatalf("a rotated refresh token reused: %d %v", status, out)
 	}
@@ -300,8 +303,8 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	if status, out := o.token(ahead, ""); status != http.StatusBadRequest || out["error"] != "invalid_grant" {
 		t.Fatalf("the newer refresh token of a family whose older one was replayed: %d %v", status, out)
 	}
-	if _, err := o.listTools(access2); err != nil {
-		t.Fatalf("tools/list after refresh: %v", err)
+	if _, err := o.listTools(access2); err == nil {
+		t.Fatal("an access token of a replayed sign-in still lists tools")
 	}
 
 	o.b.ok("DELETE", "/api/agents/"+key, nil, nil)

@@ -52,7 +52,7 @@ func loopbackName(host string) bool {
 	return host == "127.0.0.1" || host == "localhost" || host == "::1"
 }
 
-// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port (RFC 8252 §7.3), a known app's scheme or a reverse-DNS private-use scheme (§7.1), or one exactly listed app callback page; any other scheme, such as an OS or file handler, is refused.
+// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port (RFC 8252 §7.3), a known app's scheme or a reverse-DNS private-use scheme with a dot (§7.1), or one exactly listed app callback page; any other scheme, such as a single-word OS or file handler, is refused.
 func RedirectAllowed(raw string) bool {
 	if _, ok := hostedCallbacks[raw]; ok {
 		return true
@@ -411,7 +411,15 @@ func (c *Console) agentFor(cl OAuthClient) string {
 	if !taken || a.ClientID == cl.ID || a.ClientID == "" && a.ViaBrowser && c.State.SignedIn(name, cl.ID) {
 		return name
 	}
-	return name + "-" + cl.ID[:8]
+	if suffixed := name + "-" + cl.ID[:8]; !c.ownedByOther(suffixed, cl.ID) {
+		return suffixed
+	}
+	return name + "-" + cl.ID
+}
+
+func (c *Console) ownedByOther(name, clientID string) bool {
+	a, taken := c.State.Agent(name)
+	return taken && a.ClientID != clientID
 }
 
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {

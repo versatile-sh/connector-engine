@@ -21,7 +21,9 @@ import (
 	"time"
 
 	"github.com/agents-control/connector-engine/console"
+	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/console/web"
+	secretslocal "github.com/agents-control/connector-engine/secrets/local"
 )
 
 func main() { os.Exit(run(os.Args[1:], os.Getenv, os.Stdout, os.Stderr)) }
@@ -114,6 +116,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	operatorURL := fs.String("engine-operator", or(getenv, "CONSOLE_ENGINE_OPERATOR_URL", "http://127.0.0.1:8081"), "the engine's operator listener")
 	tokenFile := fs.String("operator-token-file", or(getenv, "CONSOLE_OPERATOR_TOKEN_FILE", "/run/connector-engine/operator-token"), "file holding the operator token")
 	statePath := fs.String("state", or(getenv, "CONSOLE_STATE", "/var/lib/connector-console/state.json"), "the console's state file")
+	secretsDir := fs.String("secrets", or(getenv, "CONSOLE_SECRETS", "/var/lib/connector-console/secrets"), "key store that seals the console's own secrets")
 	tenant := fs.String("tenant", or(getenv, "CONSOLE_TENANT", "local"), "tenant of the local install")
 	workspace := fs.String("workspace", or(getenv, "CONSOLE_WORKSPACE", "default"), "workspace connectors are installed in")
 	person := fs.String("person", or(getenv, "CONSOLE_PERSON", "owner"), "engine person the console acts as; a tenant admin in bootstrap.roles")
@@ -151,8 +154,15 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		return 1
 	}
 	defer activity.Close()
+	store, err := secretslocal.Open(*secretsDir)
+	if err != nil {
+		fmt.Fprintf(stderr, "secrets: %v\n", err)
+		return 1
+	}
+	box := &sealed.Box{}
+	box.Unlock(store)
 	eng := &console.Engine{PublicURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)), Tenant: *tenant, Workspace: *workspace, Person: *person}
-	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(),
+	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(), Secrets: box,
 		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log, Activity: activity}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

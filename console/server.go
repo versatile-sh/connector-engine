@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/source/skillcatalog"
 )
@@ -52,6 +53,7 @@ type Console struct {
 	Log           *slog.Logger
 	Fetch         skillcatalog.Get
 	Activity      *Activity
+	Secrets       *sealed.Box
 
 	loginMu sync.Mutex
 	iconMu  sync.Mutex

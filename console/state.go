@@ -52,6 +52,8 @@ type stateFile struct {
 	Agents   map[string]Agent         `json:"agents,omitempty"`
 	Sessions map[string]StoredSession `json:"sessions,omitempty"`
 	Revoked  map[string]time.Time     `json:"revoked,omitempty"`
+	Clients  map[string]OAuthClient   `json:"oauth_clients,omitempty"`
+	Refresh  map[string]RefreshGrant  `json:"oauth_refresh,omitempty"`
 }
 
 // State is the console's file in its volume: the owner account, the connected agents and the revoked ones, written atomically with mode 0600.

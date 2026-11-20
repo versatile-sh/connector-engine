@@ -6,7 +6,7 @@ import { Segmented } from "../ui/Segmented";
 import { PRESS, button } from "../ui/styles";
 import { guides, type Block, type ClientId, type Guide } from "./clients";
 
-const CARD = `bubble flex min-h-16 flex-col items-start justify-center gap-0.5 border border-line-strong bg-card px-4 py-2.5 text-left hover:border-fg/40 aria-pressed:border-transparent aria-pressed:bg-bubble aria-pressed:text-on-bubble ${PRESS}`;
+const CARD = `bubble flex min-h-16 flex-col items-start justify-center gap-0.5 border border-line-strong bg-ink-raised px-4 py-2.5 text-left hover:border-paper/40 aria-pressed:border-paper/60 aria-pressed:bg-paper/10 ${PRESS}`;
 
 function Blocks({ guide }: { guide: Guide }) {
   const t = useT();
@@ -38,7 +38,7 @@ export function ClientPicker({ url, accessKey }: { url: string; accessKey: strin
   const guide = all.find((g) => g.id === chosen);
   return (
     <div>
-      <h3 className="font-display text-lg font-bold tracking-[-0.03em]">{t("clients.title")}</h3>
+      <h3 className="text-base font-medium">{t("clients.title")}</h3>
       <div role="group" aria-label={t("clients.title")} className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {all.map((g) => (
           <button key={g.id} type="button" aria-pressed={g.id === chosen} className={CARD} onClick={() => setChosen(g.id)}>

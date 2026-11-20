@@ -1,11 +1,27 @@
-/** Card surface shared by panels and tiles: a speech bubble with a hairline border. */
-export const SURFACE = "bubble border border-line-strong bg-card";
+/** Card surface shared by panels and tiles: a speech bubble with a hairline border and the site's light falling on its top edge. */
+export const SURFACE = "vignette-top bubble border border-line-strong bg-ink-raised";
+
+/** Small mono caption for machine facts: paths, counts, states. */
+export const CAPTION = "font-mono text-xs text-muted";
+
+/** Small mono uppercase label over a title, as the site's eyebrows. */
+export const EYEBROW = "font-mono text-[0.6875rem] tracking-[0.14em] text-muted uppercase";
+
+/** The site's text field box: ink fill, a paper hairline that brightens on focus and turns amber when invalid, the lime caret. */
+export const FIELD = "rounded-lg border border-paper/40 bg-ink text-paper caret-lime transition-colors duration-200 focus-within:border-paper/80 has-aria-invalid:border-amber/70";
+
+/** Hover light of a card, from the site's directory: the top edge glows lime and the border warms. The element needs no `group`. */
+export const LIT_EDGE =
+  "relative isolate before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-[radial-gradient(ellipse_75%_100%_at_50%_0%,rgb(198_244_50/0.1),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:border-lime/30 hover:before:opacity-100 focus-visible:border-lime/30 focus-visible:before:opacity-100";
+
+/** The lime hairline that lights the top edge of the panel holding the next step; its parent is `relative`. */
+export const HAIRLINE = "pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-lime/70 to-transparent";
 
 /** Press feedback for anything clickable that is drawn as a button. */
 export const PRESS = "transition-[background-color,border-color,color,opacity,transform,filter] duration-150 active:scale-[0.97]";
 
 /** Quiet underlined text link. */
-export const QUIET_LINK = "cursor-pointer underline decoration-line-strong underline-offset-4 transition-colors hover:text-fg hover:decoration-fg";
+export const QUIET_LINK = "cursor-pointer underline decoration-line-strong underline-offset-4 transition-colors hover:text-paper hover:decoration-paper";
 
 /** A loading placeholder that shimmers in the shape of what is coming. */
 export const SKELETON = "shimmer bubble";
@@ -13,13 +29,13 @@ export const SKELETON = "shimmer bubble";
 type ButtonOptions = { variant?: "primary" | "accent" | "secondary" | "quiet" | "danger" | "ink" | "onInk"; size?: "xs" | "sm" | "md" | "lg" };
 
 const BUTTON_VARIANT = {
-  primary: "bg-fg text-canvas hover:opacity-90 focus-visible:opacity-90 disabled:opacity-60",
-  accent: "bg-bubble text-on-bubble hover:brightness-110 focus-visible:brightness-110 disabled:opacity-60",
-  secondary: "border border-line-strong text-fg hover:border-fg/60 focus-visible:border-fg/60 disabled:opacity-60",
+  primary: "bg-paper text-ink hover:opacity-90 focus-visible:opacity-90 disabled:opacity-60",
+  accent: "bg-lime text-ink hover:brightness-110 focus-visible:brightness-110 disabled:opacity-60",
+  secondary: "border border-line-strong text-paper hover:border-paper/60 focus-visible:border-paper/60 disabled:opacity-60",
   danger: "border border-amber/50 text-amber hover:border-amber focus-visible:border-amber disabled:opacity-60",
   ink: "bg-ink text-paper hover:opacity-85 focus-visible:opacity-85 disabled:opacity-60",
   onInk: "border border-paper/30 text-paper hover:border-paper/70 focus-visible:border-paper/70 disabled:opacity-60",
-  quiet: "text-muted hover:bg-fg/8 hover:text-fg focus-visible:bg-fg/8 focus-visible:text-fg disabled:opacity-60",
+  quiet: "text-muted hover:bg-paper/8 hover:text-paper focus-visible:bg-paper/8 focus-visible:text-paper disabled:opacity-60",
 } as const;
 
 const BUTTON_SIZE = { xs: "h-8 px-3 text-xs", sm: "h-9 px-4 text-sm", md: "h-11 px-6 text-[0.9375rem]", lg: "h-12 px-5 text-base" } as const;
@@ -30,10 +46,10 @@ export function button({ variant = "primary", size = "md" }: ButtonOptions = {})
 }
 
 /** Class string of a button that is only an icon: round, quiet until pointed at. */
-export const ICON_BUTTON = `grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-fg/10 hover:text-fg ${PRESS}`;
+export const ICON_BUTTON = `grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-paper/10 hover:text-paper ${PRESS}`;
 
 /** The icon button on ink or on lime: it takes the colour of the text around it. */
 export const ICON_BUTTON_PLAIN = `grid size-9 shrink-0 place-items-center rounded-full hover:bg-current/15 ${PRESS}`;
 
-/** Class string of a small choice that stays pressed: a bubble that turns lime when on (`aria-pressed` or `aria-checked`). */
-export const CHIP = `bubble-word inline-flex h-8 shrink-0 items-center justify-center gap-2 border border-line-strong px-3 text-xs font-semibold whitespace-nowrap text-muted hover:border-fg/50 aria-checked:border-transparent aria-checked:bg-bubble aria-checked:text-on-bubble aria-pressed:border-transparent aria-pressed:bg-bubble aria-pressed:text-on-bubble ${PRESS}`;
+/** The site's chip, for a small choice that stays pressed: a pill that brightens to paper at 10% when on (`aria-pressed` or `aria-checked`), never lime. */
+export const CHIP = `inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-line-strong whitespace-nowrap text-muted select-none hover:text-paper aria-checked:border-paper/60 aria-checked:bg-paper/10 aria-checked:text-paper aria-pressed:border-paper/60 aria-pressed:bg-paper/10 aria-pressed:text-paper ${PRESS}`;

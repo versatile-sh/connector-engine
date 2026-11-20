@@ -10,6 +10,7 @@ import { navigate, useLocation } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
+import { PageTitle } from "../ui/PageTitle";
 import { button } from "../ui/styles";
 import { ConnectorCard, ConnectorCardSkeleton } from "./ConnectorCard";
 import { HubCard } from "./HubCard";
@@ -19,12 +20,12 @@ function Empty({ onPaste }: { onPaste(text: string): void }) {
   const t = useT();
   return (
     <section className="arrive bubble grid overflow-hidden border border-line-strong lg:grid-cols-2">
-      <div className="relative isolate bg-bubble p-6 text-ink sm:p-8">
+      <div className="relative isolate bg-lime p-6 text-ink sm:p-8">
         <div aria-hidden="true" className="backdrop-grid-ink absolute inset-0 -z-10" />
-        <h2 className="font-display text-3xl leading-[1.05] font-bold tracking-[-0.04em] sm:text-4xl">{t("connectors.empty.title")}</h2>
+        <h2 className="font-serif text-4xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-5xl">{t("connectors.empty.title")}</h2>
         <p className="mt-3 max-w-md text-ink/80">{t("connectors.empty.body")}</p>
       </div>
-      <div className="flex flex-col justify-center gap-5 bg-card p-6 sm:p-8">
+      <div className="flex flex-col justify-center gap-5 bg-ink-raised p-6 sm:p-8">
         <HubCard />
         <PasteBox onPaste={onPaste} />
       </div>
@@ -49,12 +50,9 @@ export function ConnectorsPage() {
     <section aria-labelledby="page-title">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 id="page-title" className="font-display text-4xl leading-none font-bold tracking-[-0.04em] sm:text-5xl">
-              {t("connectors.title")}
-            </h1>
+          <PageTitle section={t("nav.connectors")} title={t("connectors.title")}>
             {connectors.isSuccess ? <Bubble tone={list.length > 0 ? "accent" : "neutral"}>{list.length}</Bubble> : null}
-          </div>
+          </PageTitle>
           <p className="mt-3 text-muted">{t("connectors.intro")}</p>
         </div>
         <button type="button" className={button({ variant: "accent" })} onClick={() => open()}>
@@ -80,7 +78,7 @@ export function ConnectorsPage() {
           ))}
         </ul>
       ) : list.length === 0 ? (
-        setup.hidden || (setup.settled && !setup.ready) ? (
+        setup.settled && !setup.visible ? (
           <Empty onPaste={open} />
         ) : null
       ) : (

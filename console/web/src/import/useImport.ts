@@ -14,7 +14,7 @@ export function useImport(source: ImportSource) {
   const [choices, setChoices] = useState<Record<string, Access>>({});
   const install = useMutation({
     mutationFn: () => api<{ connector: string }>("POST", "/api/import", { ...source, choices }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["connectors"] }),
+    onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ["connectors"] }), queryClient.invalidateQueries({ queryKey: ["session"] })]),
   });
   return {
     preview,

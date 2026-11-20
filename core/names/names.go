@@ -4,6 +4,7 @@ package names
 import (
 	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/agents-control/connector-engine/port"
 )
@@ -76,3 +77,17 @@ func (t Table) Resolve(name string) (Entry, bool) {
 
 // Names lists the exposed names in a deterministic order (§10.2 L4).
 func (t Table) Names() []string { return slices.Clone(t.order) }
+
+// ResourceURI returns <alias>+<uri>, the URI an agent sees for a connector's resource; an alias must start with a letter to lead a URI scheme (RFC 3986).
+func ResourceURI(a, uri string) (string, bool) {
+	if a == "" || a[0] < 'a' || a[0] > 'z' {
+		return "", false
+	}
+	return a + "+" + uri, true
+}
+
+// SplitResourceURI returns the alias and the upstream URI of an agent-facing resource URI.
+func SplitResourceURI(s string) (a, uri string, ok bool) {
+	a, uri, ok = strings.Cut(s, "+")
+	return a, uri, ok && ValidAlias(a) == nil && uri != ""
+}

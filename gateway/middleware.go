@@ -23,6 +23,9 @@ func (g *Gateway) middleware(next mcp.MethodHandler) mcp.MethodHandler {
 		case *mcp.CallToolRequest:
 			return g.call(ctx, r)
 		}
+		if res, served, err := g.contentRequest(ctx, req); served {
+			return res, err
+		}
 		if refusedMethods[method] {
 			return nil, &jsonrpc.Error{Code: jsonrpc.CodeMethodNotFound, Message: "method not found"}
 		}

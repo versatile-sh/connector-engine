@@ -198,16 +198,19 @@ func TestKeysThisBuildDoesNotActOnAcceptOnlyTheirDefault(t *testing.T) {
 }
 
 func TestOnlyThePersonProfileRelaysServerGuidance(t *testing.T) {
-	for profile, want := range map[string]bool{"headless": false, "person": true} {
+	relays := func(c config.Config) [3]bool {
+		return [3]bool{c.Service().RelayInstructions, c.Service().UpstreamContent, c.Gateway.Skills == "tools+prompts"}
+	}
+	for profile, want := range map[string][3]bool{"headless": {}, "person": {true, true, true}} {
 		c, err := config.Load("../deploy/profiles/" + profile + "/connector-engine.yaml")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := c.Service().RelayInstructions; got != want {
-			t.Errorf("%s: relays instructions %v, want %v", profile, got, want)
+		if got := relays(c); got != want {
+			t.Errorf("%s: instructions, content and skill prompts %v, want %v", profile, got, want)
 		}
 	}
-	if config.Default().Service().RelayInstructions {
-		t.Error("the engine default relays instructions")
+	if relays(config.Default()) != [3]bool{} {
+		t.Error("the engine default relays server guidance")
 	}
 }

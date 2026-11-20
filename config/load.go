@@ -79,7 +79,8 @@ var oneOf = map[string][]string{
 	"projection.default":            {"off", "on"},
 	"audit.arguments":               {"reference", "redacted"},
 	"gateway.relayInstructions":     {"never", "pinned"},
-	"gateway.skills":                {"off", "tools"},
+	"gateway.upstreamContent":       {"refuse", "granted"},
+	"gateway.skills":                {"off", "tools", "tools+prompts"},
 	"approval.proofOfReading":       {"off"},
 	"overlay.suggester":             {"none"},
 	"outbox.signing":                {"standard-webhooks"},
@@ -100,7 +101,7 @@ func (c Config) values() map[string]string {
 		"pinning.autoAcceptReviewed": c.Pinning.AutoAcceptReviewed, "pinning.relistBeforeCall": c.Pinning.RelistBeforeCall,
 		"permission.destructiveMax": c.Permission.DestructiveMax, "permission.defaultMode": c.Permission.DefaultMode,
 		"resultFilter.adapter": c.ResultFilter.Adapter, "projection.default": c.Projection.Default, "audit.arguments": c.Audit.Arguments,
-		"gateway.relayInstructions": c.Gateway.RelayInstructions, "gateway.skills": c.Gateway.Skills, "approval.proofOfReading": c.Approval.ProofOfReading,
+		"gateway.relayInstructions": c.Gateway.RelayInstructions, "gateway.upstreamContent": c.Gateway.UpstreamContent, "gateway.skills": c.Gateway.Skills, "approval.proofOfReading": c.Approval.ProofOfReading,
 		"overlay.suggester": c.Overlay.Suggester, "outbox.signing": c.Outbox.Signing, "secrets.adapter": c.Secrets.Adapter,
 		"credentials.fallback": c.Credentials.Fallback, "exposure.onTrifecta": c.Exposure.OnTrifecta, "apps.appOnlyFunctions": c.Apps.AppOnlyFunctions,
 		"permission.unclassified": c.Permission.Unclassified, "catalog.defaultCeiling": c.Catalog.DefaultCeiling,
@@ -199,7 +200,7 @@ func (c Config) Service() service.Config {
 	s.ForceAsk = c.Exposure.OnTrifecta == "force_ask"
 	s.Separator, s.NameMax = c.Gateway.Separator, c.Gateway.ToolNameMax
 	s.ProjectionDefault, s.ProjectionMaxPaths = c.Projection.Default == "on", c.Projection.MaxPaths
-	s.RelayInstructions = c.Gateway.RelayInstructions == "pinned"
+	s.RelayInstructions, s.UpstreamContent = c.Gateway.RelayInstructions == "pinned", c.Gateway.UpstreamContent == "granted"
 	s.RequireDigest, s.ScanForToken, s.ChangedWarningDays, s.RefreshMargin = c.Listing.RequireDigest, c.Gateway.ScanArgumentsForToken, c.Approval.ChangedWarningDays, c.Credentials.RefreshMargin
 	return s
 }

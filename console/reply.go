@@ -60,6 +60,11 @@ func writeError(w http.ResponseWriter, status int, message string) {
 }
 
 func (c *Console) fail(w http.ResponseWriter, err error) {
+	status, reply := c.refusal(err)
+	writeJSON(w, status, reply)
+}
+
+func (c *Console) refusal(err error) (int, apiError) {
 	var ee *EngineError
 	var se *statusError
 	switch {
@@ -68,16 +73,16 @@ func (c *Console) fail(w http.ResponseWriter, err error) {
 		if status >= 500 {
 			status = http.StatusBadGateway
 		}
-		writeJSON(w, status, apiError{Error: ee.Detail, Code: ee.Code})
+		return status, apiError{Error: ee.Detail, Code: ee.Code}
 	case errors.As(err, &se):
-		writeError(w, se.status, err.Error())
+		return se.status, apiError{Error: err.Error()}
 	case errors.Is(err, sealed.ErrLocked):
-		writeError(w, http.StatusServiceUnavailable, err.Error())
+		return http.StatusServiceUnavailable, apiError{Error: err.Error()}
 	case codeStatus[port.CodeOf(err)] != 0:
-		writeError(w, codeStatus[port.CodeOf(err)], err.Error())
+		return codeStatus[port.CodeOf(err)], apiError{Error: err.Error()}
 	default:
 		c.logger().Error("console request failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "the console could not do this; its log has the cause")
+		return http.StatusInternalServerError, apiError{Error: "the console could not do this; its log has the cause"}
 	}
 }
 

@@ -42,6 +42,33 @@ func (c *Console) setSkillAccess(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (c *Console) setSkillAccessAll(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Access Access   `json:"access"`
+		Keys   []string `json:"keys"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	results, err := c.SetSkillAccessAll(r.Context(), r.PathValue("id"), in.Keys, in.Access)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	type keyReply struct {
+		Agent string `json:"agent"`
+		apiError
+	}
+	keys := make([]keyReply, len(results))
+	for i, k := range results {
+		keys[i].Agent = k.Agent
+		if k.Err != nil {
+			_, keys[i].apiError = c.refusal(k.Err)
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"keys": keys})
+}
+
 func (c *Console) setAccess(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Access Access `json:"access"`

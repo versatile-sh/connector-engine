@@ -96,3 +96,7 @@ cnctl skills export --to DIR [--skill NAME] [--prune]
 | `scripts/e2e.sh` | the e2e suite: builds both binaries, starts a throwaway `postgres:16-alpine` and live upstreams, drives the engine through `cnctl` and the go-sdk MCP client |
 
 Set `CN_PG=0` (or run without Docker) and the e2e suite runs on the memory store and skips the restart case. The container it starts is removed by its exact name.
+
+### A seeded console
+
+`make seed` builds the web app and serves a throwaway console at `http://127.0.0.1:7477` (`SEED_ADDR=host:port` moves it). It has 12 access keys, 15 connectors backed by small local MCP servers and 10 skills from the fixture catalog. Use it to see the pages with many keys. Seeding takes about nine minutes, because the engine refreshes every key's exposure on each binding write. It prints the address and a password generated for the `owner` account, which is shown once and never written to disk. Its engine and state live in memory and a temporary folder, and Ctrl-C forgets everything. The stack on 7465, its state and the system keychain are never touched. It is a Go test (`TestSeedPlayground`) that skips unless `CN_SEED_ADDR` is set, so `go test ./...` and CI never run it.

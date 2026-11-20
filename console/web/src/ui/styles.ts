@@ -33,6 +33,9 @@ export const PRESS = "transition-[background-color,border-color,color,opacity,tr
 /** Quiet underlined text link. */
 export const QUIET_LINK = "cursor-pointer underline decoration-line-strong underline-offset-4 transition-colors hover:text-paper hover:decoration-paper";
 
+/** The small pill a compact control sits in: a select, a date, a search box. */
+export const PILL = "h-8 min-w-0 rounded-full border border-line-strong bg-ink px-3 font-mono text-xs text-paper transition-colors duration-150 hover:border-paper/50 focus-visible:border-paper/80 focus-visible:outline-none";
+
 /** A loading placeholder that shimmers in the shape of what is coming. */
 export const SKELETON = "shimmer bubble";
 

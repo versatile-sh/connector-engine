@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/store/sqlite"
 )
 
 func TestTheDatabaseAndItsWALFilesAreOnlyTheOwners(t *testing.T) {
@@ -29,5 +30,11 @@ func TestTheDatabaseAndItsWALFilesAreOnlyTheOwners(t *testing.T) {
 		if info.Mode().Perm() != 0o600 {
 			t.Fatalf("%s is %v", filepath.Base(f), info.Mode().Perm())
 		}
+	}
+}
+
+func TestAPathTheDriverWouldSplitIsRefused(t *testing.T) {
+	if _, err := sqlite.Open(ctx, filepath.Join(t.TempDir(), "a?mode=memory", "store.db")); !port.IsCode(err, port.CodeInvalidArgument) {
+		t.Fatalf("a path with a ?: %v", err)
 	}
 }

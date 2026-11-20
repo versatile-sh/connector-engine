@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,6 +47,9 @@ func Open(ctx context.Context, path string) (*Store, error) {
 	registerOnce.Do(func() { errRegister = sqlite.RegisterDeterministicScalarFunction("cn_time", 1, cnTime) })
 	if errRegister != nil {
 		return nil, fail(errRegister)
+	}
+	if strings.Contains(path, "?") {
+		return nil, port.Errorf(port.CodeInvalidArgument, "the database path %q holds a ?, which the driver reads as its options", path)
 	}
 	if err := ownerOnly(path); err != nil {
 		return nil, fail(err)

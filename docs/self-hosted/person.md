@@ -24,6 +24,7 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 | `make notify` | desktop popups for calls waiting for approval |
 | `make export` / `make import FILE=...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
 | `make reset-password` | set a new console password from this machine; `USER=<username>` names whose once there are several users |
+| `vsh login`, then `vsh connectors`, `vsh access`, `vsh approvals`, … | manage the install from a terminal as a signed-in user, with or without Docker ([vsh](../reference/vsh.md#sign-in-and-manage)) |
 | `make cli ARGS="tools list"` | `vsh` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
 | `make admin ARGS="tenants create t2"` | `vsh admin` against the operator listener with the generated operator token |
 | `make keychain-status` / `keychain-migrate` / `keychain-revert` | report, move a plaintext root key under the keychain, or back ([keychain](keychain.md)) |

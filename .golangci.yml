@@ -45,6 +45,7 @@ linters:
     generated: strict
     paths:
       - vendor
+      - internal/plugkit
       - console/web
       - selfhosted/console/web
     rules:

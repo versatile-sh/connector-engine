@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/plugkit/discovery"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/discovery"
 
 	"github.com/versatile-sh/connector-engine/secrets/hostkey"
 	"github.com/versatile-sh/connector-engine/secrets/local"

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/plugkit/discovery"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/discovery"
 
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/service"

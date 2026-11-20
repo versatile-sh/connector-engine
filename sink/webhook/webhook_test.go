@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	plugout "github.com/agents-control/plugkit/outbox"
+	plugout "github.com/versatile-sh/connector-engine/internal/plugkit/outbox"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/sink/webhook"
 )

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/agents-control/plugkit/discovery"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/discovery"
 
 	"github.com/versatile-sh/connector-engine/catalog"
 	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"

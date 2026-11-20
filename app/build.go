@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/agents-control/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 
 	"github.com/versatile-sh/connector-engine/auth/jwks"
 	"github.com/versatile-sh/connector-engine/auth/local"

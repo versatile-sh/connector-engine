@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 	"gopkg.in/yaml.v3"
 
 	"github.com/versatile-sh/connector-engine/core/approval"

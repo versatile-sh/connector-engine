@@ -17,6 +17,7 @@ const (
 	argumentsMax   = 16 << 10
 	excerptMax     = 4 << 10
 	detailMax      = 512
+	codeMax        = 64
 	rpcInvalidArgs = -32602
 	toolSeparator  = "__"
 )
@@ -51,7 +52,8 @@ func decodeMessages(raw []byte) ([]rpcMessage, bool) {
 		return batch, json.Unmarshal(raw, &batch) == nil
 	}
 	var one rpcMessage
-	return []rpcMessage{one}, json.Unmarshal(raw, &one) == nil && (len(one.ID) > 0 || one.Method != "")
+	err := json.Unmarshal(raw, &one)
+	return []rpcMessage{one}, err == nil && (len(one.ID) > 0 || one.Method != "")
 }
 
 func rpcKey(id json.RawMessage) string { return string(bytes.TrimSpace(id)) }
@@ -274,7 +276,10 @@ func (in *inflight) answer(m rpcMessage) int {
 		return in.open
 	}
 	var r struct {
-		IsError    bool `json:"isError"`
+		IsError bool `json:"isError"`
+		Content []struct {
+			Text string `json:"text"`
+		} `json:"content"`
 		Structured struct {
 			Status   string `json:"status"`
 			Approval string `json:"approval_id"`
@@ -284,6 +289,9 @@ func (in *inflight) answer(m rpcMessage) int {
 	}
 	_ = json.Unmarshal(m.Result, &r)
 	sc := r.Structured
+	if !r.IsError || len(r.Content) != 1 || r.Content[0].Text != sc.Code+": "+sc.Detail || len(sc.Code) > codeMax {
+		sc.Code, sc.Detail = "", ""
+	}
 	cp.ResultBytes = len(m.Result)
 	switch {
 	case sc.Status == "pending_approval" && sc.Approval != "":
@@ -296,7 +304,7 @@ func (in *inflight) answer(m rpcMessage) int {
 	default:
 		cp.Outcome = OutcomeOK
 	}
-	if r.IsError && sc.Detail != "" {
+	if sc.Detail != "" {
 		cp.Detail, _ = cut(redactText(sc.Detail), detailMax)
 	}
 	if cp.Approval == "" {

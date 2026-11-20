@@ -646,3 +646,60 @@ func TestALaterPollDoesNotOverwriteTheFirstAnswerOfAnApproval(t *testing.T) {
 		}
 	}
 }
+
+func TestEachDetailTakesTheEngineRowThatStartedAfterItsRequest(t *testing.T) {
+	r := newActivityRig(t)
+	for i, failed := range []bool{true, false} {
+		answer := fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"result":{"content":[]}}`, i)
+		r.answer(jsonAnswer(answer, func() {
+			time.Sleep(30 * time.Millisecond)
+			r.engineCall(fmt.Sprintf("k%d", i), "search", port.CallFinished, failed)()
+		}))
+		r.post(toolCall(i, "notes__search", fmt.Sprintf(`{"n":%d}`, i)))
+	}
+	for _, c := range r.rows("", 2).Calls {
+		d := r.detail(c.ID)
+		want := map[string]console.CallOutcome{`{"n":0}`: console.OutcomeError, `{"n":1}`: console.OutcomeOK}[d.Arguments]
+		if d.Outcome != want || c.Outcome != want || d.EngineCall != "k"+d.Arguments[5:6] {
+			t.Fatalf("arguments %s: list %s, detail %s from %s", d.Arguments, c.Outcome, d.Outcome, d.EngineCall)
+		}
+	}
+}
+
+func TestAnUpstreamErrorKeepsNoTextWhenExcerptsAreOff(t *testing.T) {
+	r := newActivityRig(t)
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"mailbox says no"}],"isError":true,"structuredContent":{"code":"Dear Ana, your invoice","detail":"is attached"}}}`, nil))
+	r.post(toolCall(1, "mail__send", `{}`))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"credential_required: no usable credential for this call"}],"isError":true,"structuredContent":{"code":"credential_required","detail":"no usable credential for this call"}}}`, nil))
+	r.post(toolCall(2, "mail__read", `{}`))
+	byFn := map[string]console.ActivityCall{}
+	for _, c := range r.rows("", 2).Calls {
+		byFn[c.Function] = c
+	}
+	send := r.detail(byFn["send"].ID)
+	if send.Outcome != console.OutcomeError || send.Code != "" || send.Detail != "" || send.Result != "" {
+		t.Fatalf("the upstream's own error text was kept: %+v", send)
+	}
+	read := r.detail(byFn["read"].ID)
+	if read.Code != "credential_required" || read.Detail != "no usable credential for this call" {
+		t.Fatalf("the gateway's error: %+v", read)
+	}
+}
+
+func TestARequestOverTheCaptureLimitPassesUnchangedAndUnrecorded(t *testing.T) {
+	r := newActivityRig(t)
+	var got []byte
+	r.answer(func(w http.ResponseWriter, req *http.Request) {
+		got, _ = io.ReadAll(req.Body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"jsonrpc":"2.0","id":1,"result":{"content":[]}}`)
+	})
+	body := toolCall(1, "notes__create", fmt.Sprintf(`{"text":%q}`, strings.Repeat("x", 1<<20+10)))
+	resp, _ := r.post(body)
+	if resp.StatusCode != http.StatusOK || string(got) != body {
+		t.Fatalf("the engine got %d bytes of %d", len(got), len(body))
+	}
+	if p := r.page(""); len(p.Calls) != 0 {
+		t.Fatalf("an over-limit request was recorded: %+v", p.Calls)
+	}
+}

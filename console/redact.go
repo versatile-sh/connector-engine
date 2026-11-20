@@ -12,6 +12,7 @@ const redactedValue = "[redacted]"
 
 var (
 	secretKey   = regexp.MustCompile(`(?i)token|passw|secret|authori[sz]ation|api[-_]?key|bearer|cookie|credential|private[-_]?key|signature`)
+	countKey    = regexp.MustCompile(`(?i)tokens|token_?count`)
 	secretValue = regexp.MustCompile(`(?i)\bbearer\s+[a-z0-9._~+/=-]{8,}` +
 		`|\beyJ[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}` +
 		`|\b(?:sk|pk|rk)[-_][a-z0-9_-]{16,}` +
@@ -20,16 +21,23 @@ var (
 		`|\b(?:password|passwd|pwd|secret|api[-_]?key|access[-_]?token|refresh[-_]?token)\s*[:=]\s*["']?[^\s"',;]{4,}`)
 )
 
+func hidden(key string, v any) bool {
+	switch v.(type) {
+	case nil, bool:
+		return false
+	case json.Number:
+		return !countKey.MatchString(key)
+	}
+	return true
+}
+
 func redactAny(v any) any {
 	switch t := v.(type) {
 	case map[string]any:
 		for k, inner := range t {
-			switch inner.(type) {
-			case string, map[string]any, []any:
-				if secretKey.MatchString(k) {
-					t[k] = redactedValue
-					continue
-				}
+			if secretKey.MatchString(k) && hidden(k, inner) {
+				t[k] = redactedValue
+				continue
 			}
 			t[k] = redactAny(inner)
 		}
@@ -43,7 +51,7 @@ func redactAny(v any) any {
 	return v
 }
 
-// Redact returns the JSON value raw with likely secrets replaced: string or nested values under secret-looking keys, and bearer, JWT or API-key shaped strings; what does not parse yields false.
+// Redact returns the JSON value raw with likely secrets replaced: values under secret-looking keys (but booleans and token counts), and bearer, JWT or API-key shaped strings; what does not parse yields false.
 func Redact(raw []byte) (string, bool) {
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()

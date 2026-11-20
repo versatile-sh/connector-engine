@@ -179,16 +179,14 @@ type joined struct {
 
 type callKey struct{ agent, session, connector, function string }
 
-func closest(list []*port.Call, cp *Capture, used map[port.CallID]bool) *port.Call {
+func earliest(list []*port.Call, cp *Capture, used map[port.CallID]bool) *port.Call {
 	var best *port.Call
-	var gap time.Duration
 	for _, call := range list {
-		if used[call.ID] || call.StartedAt.Before(cp.At.Add(-joinSkew)) || call.StartedAt.After(cp.Done.Add(joinSkew)) {
+		if used[call.ID] || call.StartedAt.Before(cp.At) || call.StartedAt.After(cp.Done.Add(joinSkew)) {
 			continue
 		}
-		d := call.StartedAt.Sub(cp.At).Abs()
-		if best == nil || d < gap {
-			best, gap = call, d
+		if best == nil || call.StartedAt.Before(best.StartedAt) {
+			best = call
 		}
 	}
 	return best
@@ -220,7 +218,7 @@ func join(captures []Capture, f engineFacts) []joined {
 		case cp.Approval != "":
 			call = byApproval[port.ApprovalID(cp.Approval)]
 		case cp.Outcome == OutcomeOK || cp.Outcome == OutcomeError:
-			call = closest(open[callKey{cp.Agent, cp.Session, conn, fn}], cp, used)
+			call = earliest(open[callKey{cp.Agent, cp.Session, conn, fn}], cp, used)
 		}
 		if call != nil {
 			used[call.ID] = true

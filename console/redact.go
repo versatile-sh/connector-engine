@@ -18,7 +18,8 @@ var (
 		`|\b(?:sk|pk|rk)[-_][a-z0-9_-]{16,}` +
 		`|\bgh[pousr]_[a-z0-9]{20,}|\bgithub_pat_[a-z0-9_]{20,}|\bglpat-[a-z0-9_-]{20,}` +
 		`|\bxox[abprs]-[a-z0-9-]{10,}|\bakia[0-9a-z]{16}\b|\baiza[0-9a-z_-]{35}|\bya29\.[a-z0-9_-]{20,}` +
-		`|\b(?:password|passwd|pwd|secret|api[-_]?key|access[-_]?token|refresh[-_]?token|session[-_]?id)["']?\s*[:=]\s*["']?[^\s"',;]{4,}`)
+		`|\bbasic\s+[a-z0-9+/=]{8,}` +
+		`|[a-z0-9_-]*(?:password|passwd|pwd|secret|api[-_]?key|token|authorization|session[-_]?id)\\?["']?\s*[:=]\s*\\?["']?(?:(?:basic|bearer)\s+)?[^\s"',;\\]{4,}`)
 )
 
 func hidden(key string, v any) bool {

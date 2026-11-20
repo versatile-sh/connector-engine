@@ -2,6 +2,7 @@
 package skill
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -96,7 +97,7 @@ func (r *Runtime) Call(_ context.Context, h port.Handle, function string, argume
 	if in.Path == "" {
 		in.Path = listing.SkillEntry
 	}
-	out := port.SkillLoaded{Skill: s.Name, Path: in.Path, Redistribution: s.Redistribution, Source: firstOf(s.Source.URL, s.Source.Repository), Files: views(s.Files)}
+	out := port.SkillLoaded{Skill: s.Name, Path: in.Path, Redistribution: s.Redistribution, Source: cmp.Or(s.Source.URL, s.Source.Repository), Files: views(s.Files)}
 	var f *port.SkillFile
 	for i := range s.Files {
 		if s.Files[i].Path == in.Path {
@@ -150,15 +151,6 @@ func result(l port.SkillLoaded, head, body string, isError bool) (port.Result, e
 	}
 	structured, err := json.Marshal(l)
 	return port.Result{Content: content, Structured: structured, IsError: isError}, err
-}
-
-func firstOf(v ...string) string {
-	for _, s := range v {
-		if s != "" {
-			return s
-		}
-	}
-	return ""
 }
 
 // Stop forgets the instance.

@@ -26,7 +26,7 @@ const (
 	runGrace      = 2 * time.Minute
 )
 
-var mcpClient = &http.Client{}
+var mcpClient = &http.Client{Timeout: 5 * time.Minute}
 
 type elicitSession struct {
 	agent string

@@ -2,6 +2,7 @@ package port
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -202,4 +203,16 @@ type Pruner interface {
 // TenantPurger is the capability of a Store to delete every row of a removed tenant and return the counts; removal needs it.
 type TenantPurger interface {
 	PurgeTenant(ctx context.Context, tenant TenantID) (map[string]int, error)
+}
+
+// Snapshot is every row of a store in the store's own encoding, tagged with the kind of store that wrote it.
+type Snapshot struct {
+	Store  string                       `json:"store"`
+	Tables map[string][]json.RawMessage `json:"tables"`
+}
+
+// Snapshotter is the capability of a Store to copy every row in one consistent read and to replace every row with a Snapshot of its kind in one transaction.
+type Snapshotter interface {
+	Snapshot(ctx context.Context) (Snapshot, error)
+	Restore(ctx context.Context, s Snapshot) error
 }

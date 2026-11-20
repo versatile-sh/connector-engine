@@ -61,7 +61,7 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
               </div>
               {step.id === "connector" ? (
                 <Reveal open={open}>
-                  <div className="pt-3 sm:pl-10">
+                  <div className="pt-3 pr-1.5 pl-1.5 sm:pr-0 sm:pl-10">
                     <p className="mb-3 text-sm text-muted">{t("onboarding.step2.body")}</p>
                     <HubCard />
                     <PasteBox onPaste={onPaste} className="mt-4" />

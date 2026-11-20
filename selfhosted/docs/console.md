@@ -138,7 +138,8 @@ Account → **Import**, or **Restore from a backup** on the first-run screen, or
   - Importing the same backup again gives the same result.
 - Signed in, a full import asks for your password again. The first-run restore works only while no owner account exists.
 - A **setup** shows what it would add, then adds each connector and skill through the normal import: the server is probed, functions are pinned, and a skill whose digest changed is refused. An entry that is already installed keeps its choices, and nothing is deleted. Afterwards, sign in to each added connector.
-  - A key profile applies at once to a key of that name. A profile for a key not made yet waits in the console's state and applies when a key of that name is made.
+  - The review lists each new connector's key profiles by key name, and whether its new keys start off.
+  - A key profile applies at once to a key of that name. A profile for a key not made yet waits in the console's state and applies when a key of that name is made, unless the connector's new keys start off; the connector's page lists the waiting profiles and clears them one by one.
 
 A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, in profiles), root keys, account data, activity or device pairings.
 - Every address loses its user name and password, its query and its fragment.

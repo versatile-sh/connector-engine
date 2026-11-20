@@ -336,7 +336,17 @@ export type Account = { username: string; last_export?: string };
 export type BackupKind = "full" | "setup";
 
 /** One connector of a setup: where it comes from, each choice, and whether it is installed here already. */
-export type SetupConnector = { name: string; mcp?: string; listing?: string; transport?: string; functions: Record<string, Access> | null; items: Record<string, Access> | null; exists: boolean };
+export type SetupConnector = {
+  name: string;
+  mcp?: string;
+  listing?: string;
+  transport?: string;
+  functions: Record<string, Access> | null;
+  items: Record<string, Access> | null;
+  new_keys_off?: boolean;
+  profiles?: Profile[];
+  exists: boolean;
+};
 
 /** One skill of a setup, and whether it is installed here already. */
 export type SetupSkill = { name: string; listing: string; digest?: string; access: Access; exists: boolean };

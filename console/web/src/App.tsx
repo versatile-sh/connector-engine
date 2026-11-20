@@ -6,6 +6,7 @@ import { Auth, waitingLinkHost } from "./Auth";
 import { Mark } from "./Brand";
 import { ConnectorDetail } from "./connectors/ConnectorDetail";
 import { ConnectorsPage } from "./connectors/ConnectorsPage";
+import { Consent } from "./access/Consent";
 import { useT } from "./i18n/I18nProvider";
 import { ImportLanding } from "./import/ImportLanding";
 import { useLocation } from "./router";
@@ -57,6 +58,7 @@ export function App() {
   const { owner_exists, signed_in, mcp_url } = session.data;
   if (!owner_exists) return <Auth mode="setup" endpoint={mcp_url} />;
   if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} />;
+  if (path === "/connect") return <Consent id={query.get("request") ?? ""} />;
   const linked = linkedSource(path, query);
   if (linked) return <ImportLanding key={JSON.stringify(linked)} source={linked} />;
   const section = sectionOf(path);

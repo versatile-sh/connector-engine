@@ -5,6 +5,7 @@ import { Bubble } from "../ui/Bubble";
 import { Collapse } from "../ui/Collapse";
 import { ACCENT_BAR, QUIET_LINK, SURFACE, TOUCH, button } from "../ui/styles";
 import { AccessPicker } from "./AccessPicker";
+import { ChoiceRow } from "./ChoiceRow";
 import { ITEM_KINDS, accessChoices, groupItems } from "./items";
 
 type ItemSectionsProps = {
@@ -101,13 +102,11 @@ function PromptPreview({ text }: { text: string }) {
 function ItemRow({ item, picker, accept }: { item: Item; picker: ReactNode; accept: ReactNode }) {
   const t = useT();
   return (
-    <li className="flex flex-col gap-3 border-b border-line py-3.5 last:border-b-0 @lg:flex-row @lg:items-start @lg:gap-6">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <code className="min-w-0 font-mono text-sm font-semibold break-all text-paper" translate="no">
-            {item.label || item.name}
-          </code>
-          {item.title && item.title !== item.label ? <span className="text-sm text-muted [overflow-wrap:anywhere]">{item.title}</span> : null}
+    <ChoiceRow
+      name={item.label || item.name}
+      title={item.title}
+      flags={
+        <>
           {item.template ? (
             <Bubble tone="outline" title={t("items.templateHint")}>
               {t("items.template")}
@@ -115,15 +114,12 @@ function ItemRow({ item, picker, accept }: { item: Item; picker: ReactNode; acce
           ) : null}
           <StateFlag item={item} />
           {accept}
-        </div>
-        {item.kind === "prompt" ? (
-          <PromptPreview text={item.preview} />
-        ) : item.preview ? (
-          <p className="mt-1 text-sm whitespace-pre-line text-muted [overflow-wrap:anywhere]">{item.preview}</p>
-        ) : null}
-      </div>
+        </>
+      }
+      description={item.kind === "prompt" ? <PromptPreview text={item.preview} /> : item.preview ? <p className="mt-1 text-sm whitespace-pre-line text-muted [overflow-wrap:anywhere]">{item.preview}</p> : null}
+    >
       {picker}
-    </li>
+    </ChoiceRow>
   );
 }
 
@@ -150,7 +146,7 @@ export function ItemSections({ items, variant, accessOf, pendingOf, choose }: It
             {kind === "instructions" ? (
               groups[kind].map((item) => <Instructions key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} />)
             ) : (
-              <ul className="@container mt-2">
+              <ul className="mt-2">
                 {groups[kind].map((item) => (
                   <ItemRow key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} />
                 ))}

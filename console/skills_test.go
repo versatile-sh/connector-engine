@@ -226,6 +226,33 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 		}
 		b.ok("PUT", "/api/skills/"+imported.Skill+"/keys/claude-code", map[string]string{"access": "on"}, nil)
 	})
+	t.Run("one choice reaches every key at once, each with its own result", func(t *testing.T) {
+		accessOf := func() map[string]console.Access {
+			b.ok("GET", "/api/skills", nil, &skills)
+			got := map[string]console.Access{}
+			for _, k := range skills.Skills[0].Access {
+				got[k.Agent] = k.Access
+			}
+			return got
+		}
+		type results struct {
+			Keys []struct{ Agent, Error, Code string }
+		}
+		var all results
+		b.ok("PUT", "/api/skills/"+imported.Skill+"/keys", map[string]string{"access": "ask"}, &all)
+		if got := accessOf(); len(all.Keys) != 2 || all.Keys[0].Error != "" || all.Keys[1].Error != "" || got["claude-code"] != console.AccessAsk || got["codex"] != console.AccessAsk {
+			t.Fatalf("every key: %+v %v", all, got)
+		}
+		var some results
+		b.ok("PUT", "/api/skills/"+imported.Skill+"/keys", map[string]any{"access": "on", "keys": []string{"codex", "nobody"}}, &some)
+		if got := accessOf(); len(some.Keys) != 2 || some.Keys[0].Error != "" || some.Keys[1].Agent != "nobody" || some.Keys[1].Code != "not_found" || got["codex"] != console.AccessOn || got["claude-code"] != console.AccessAsk {
+			t.Fatalf("named keys: %+v %v", some, got)
+		}
+		if status, _ := b.send("PUT", "/api/skills/"+imported.Skill+"/keys", map[string]string{"access": "always"}, nil); status != http.StatusBadRequest {
+			t.Fatalf("an access that is not off, on or ask: %d", status)
+		}
+		b.ok("PUT", "/api/skills/"+imported.Skill+"/keys", map[string]any{"access": "on", "keys": []string{"claude-code"}}, nil)
+	})
 	t.Run("a skill without a licence is metadata only", func(t *testing.T) {
 		unlicensed := catalogBase + "pdf-unlicensed.yaml"
 		var pv console.Preview

@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { pairDevice, revokeDevice } from "../mutations";
 import { CopyBox } from "../ui/CopyBox";
 import { Icon } from "../ui/Icon";
+import { LongList } from "../ui/LongList";
 import { HAIRLINE, button } from "../ui/styles";
 import { browserFacts, deviceName, pairedHere, rememberPairedHere } from "./device";
 import { DeviceRow } from "./DeviceRow";
@@ -55,11 +56,15 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
       {devices.length === 0 ? (
         <p className="text-sm text-muted">{t("notify.devices.empty")}</p>
       ) : (
-        <ul>
-          {devices.map((device) => (
-            <DeviceRow key={device.id} device={device} here={device.id === here} remove={remove} />
-          ))}
-        </ul>
+        <LongList rows={devices} textOf={(device) => device.name} label={t("notify.devices.filter")}>
+          {(shown) => (
+            <ul>
+              {shown.map((device) => (
+                <DeviceRow key={device.id} device={device} here={device.id === here} remove={remove} />
+              ))}
+            </ul>
+          )}
+        </LongList>
       )}
     </Section>
   );

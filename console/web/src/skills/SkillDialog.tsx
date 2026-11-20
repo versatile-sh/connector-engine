@@ -1,33 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type RefObject } from "react";
-import { errorText, type Access, type Skill } from "../api";
-import { AccessPicker } from "../connectors/AccessPicker";
+import { errorText, type Skill } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { removeSkill, setSkillAccess } from "../mutations";
+import { removeSkill } from "../mutations";
 import { Sheet } from "../ui/Sheet";
 import { button } from "../ui/styles";
+import { KeyChoices } from "./KeyChoices";
 import { SkillFactsView } from "./SkillFactsView";
 import { SkillOverview } from "./SkillOverview";
-
-function KeyChoice({ skill, agent, access }: { skill: Skill; agent: string; access: Access }) {
-  const t = useT();
-  const set = useMutation(setSkillAccess);
-  return (
-    <li className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0 @lg:flex-row @lg:items-center @lg:gap-6">
-      <div className="min-w-0 flex-1">
-        <code className="font-mono text-sm font-semibold break-all text-paper" translate="no">
-          {agent}
-        </code>
-        {set.isError ? (
-          <p role="alert" className="mt-1 text-sm text-amber">
-            {errorText(set.error)}
-          </p>
-        ) : null}
-      </div>
-      <AccessPicker name={t("skills.keyName", { skill: skill.alias, key: agent })} of="skill" value={set.isPending ? set.variables.access : access} disabled={set.isPending} onChange={(next) => set.mutate({ skill: skill.id, agent, access: next })} />
-    </li>
-  );
-}
 
 function RemoveSkill({ skill }: { skill: Skill }) {
   const t = useT();
@@ -75,15 +55,7 @@ export function SkillDialog({ skill, origin, onClose }: SkillDialogProps) {
           <div className="min-w-0">
             <h3 className="text-base font-medium">{t("skills.perKey")}</h3>
             <p className="text-sm text-muted">{t("skills.perKeyIntro")}</p>
-            {skill.access.length === 0 ? (
-              <p className="py-4 text-sm text-muted">{t("skills.noKeys")}</p>
-            ) : (
-              <ul className="@container mt-1">
-                {skill.access.map((key) => (
-                  <KeyChoice key={key.agent} skill={skill} agent={key.agent} access={key.access} />
-                ))}
-              </ul>
-            )}
+            <KeyChoices skill={skill} />
           </div>
         </div>
         <RemoveSkill skill={skill} />

@@ -105,7 +105,7 @@ The user documentation lives in [`docs/`](docs/README.md), one page per task.
 - Start each page with its section banner, then a two-line intro.
 - Show a command and the output it prints. Copy the output from a real run; never invent a flag.
 - Keep one fact in one page and link to it from the others.
-- A new page needs a banner: add a line to `SECTIONS` in `docs/assets/src/build-banners.mjs`, then run `npm ci && npm run build` in `docs/assets/src`. The banners are outlined paths and load no font.
+- A new page needs a banner: add a line to `SECTIONS` in `docs/assets/src/build-banners.mjs`, then run `npm ci && npm run build` in `docs/assets/src`. The banners and the README flow diagram (`diagram-flow.svg`) are outlined paths and load no font.
 - CI checks the docs (`.github/workflows/docs.yml`): relative links and anchors with lychee, then `scripts/check-docs.sh` for the `make` targets and scripts the docs name and the banner sizes.
 
 ## Repository layout
@@ -129,6 +129,10 @@ The user documentation lives in [`docs/`](docs/README.md), one page per task.
 | `deploy/` | `compose.yaml`, the `headless` profile, the shared PaaS image (`deploy/cloud/`) and the community provider templates (`deploy/providers/`) |
 | `docs/` | the user documentation and its banners |
 | `e2e/`, `scripts/` | end-to-end runs of the built binaries; smoke, e2e, docs checks and the installers |
+
+## Contribution terms
+
+By submitting a contribution, you certify that you wrote it or otherwise have the right to submit it, and you license it to Versatile under the same terms as this project ([LICENSE](LICENSE)). You agree that Versatile may relicense your contribution, including under commercial terms. Sign off each commit (`git commit -s`) to confirm this.
 
 ## Code of conduct
 

@@ -77,6 +77,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/connectors/{id}/profiles/{agent}", c.authed(c.profileEffects))
 	mux.HandleFunc("PUT /api/connectors/{id}/profiles/{agent}", c.authed(c.setProfileAccess))
 	mux.HandleFunc("PUT /api/connectors/{id}/new-keys", c.authed(c.setNewKeys))
+	mux.HandleFunc("PUT /api/connectors/{id}/credential-mode", c.atLeast(RoleAdmin, c.setCredentialMode))
 	mux.HandleFunc("GET /api/slots", c.authed(c.listSlots))
 	mux.HandleFunc("POST /api/slots/{name}/claim", c.authed(c.claimSlot))
 	mux.HandleFunc("DELETE /api/slots/{name}", c.authed(c.discardSlot))

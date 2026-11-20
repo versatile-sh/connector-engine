@@ -105,7 +105,7 @@ func ManifestFor(p Probed, headerSecret bool) (port.Manifest, error) {
 		Kind: port.KindMCPRemote, Remote: &port.Remote{URL: p.URL, Transport: "streamable-http"}, Publisher: port.Publisher{Name: u.Host},
 	}
 	if headerSecret {
-		m.Auth = []port.AuthSpec{{Kind: port.CredentialCustomHeaders, OwnerKindsAllowed: []port.OwnerKind{port.OwnerWorkspace}}}
+		m.Auth = []port.AuthSpec{{Kind: port.CredentialCustomHeaders, OwnerKindsAllowed: []port.OwnerKind{port.OwnerWorkspace, port.OwnerUser}}}
 	}
 	return m, nil
 }

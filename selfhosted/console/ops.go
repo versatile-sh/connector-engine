@@ -23,27 +23,32 @@ type FunctionView struct {
 	Access      Access     `json:"access"`
 }
 
-// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far and the permission sets that hold a profile for it.
+// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far, the permission sets that hold a profile for it, and whose credential its calls use with who signed in.
 type ConnectorSummary struct {
-	ID          string         `json:"id"`
-	Alias       string         `json:"alias"`
-	Enabled     bool           `json:"enabled"`
-	Blocked     string         `json:"blocked,omitempty"`
-	Listing     string         `json:"listing"`
-	Version     string         `json:"version"`
-	Title       string         `json:"title"`
-	Description string         `json:"description,omitempty"`
-	Icon        string         `json:"icon,omitempty"`
-	Publisher   string         `json:"publisher,omitempty"`
-	RemoteURL   string         `json:"remote_url,omitempty"`
-	Transport   string         `json:"transport,omitempty"`
-	Auth        []string       `json:"auth,omitempty"`
-	Credentials []string       `json:"credentials,omitempty"`
-	Functions   []FunctionView `json:"functions"`
-	Items       []Item         `json:"items"`
-	Profiles    []Profile      `json:"profiles"`
-	Slots       []SlotProfile  `json:"slots"`
-	NewKeysOff  bool           `json:"new_keys_off,omitempty"`
+	ID          string           `json:"id"`
+	Alias       string           `json:"alias"`
+	Enabled     bool             `json:"enabled"`
+	Blocked     string           `json:"blocked,omitempty"`
+	Listing     string           `json:"listing"`
+	Version     string           `json:"version"`
+	Title       string           `json:"title"`
+	Description string           `json:"description,omitempty"`
+	Icon        string           `json:"icon,omitempty"`
+	Publisher   string           `json:"publisher,omitempty"`
+	RemoteURL   string           `json:"remote_url,omitempty"`
+	Transport   string           `json:"transport,omitempty"`
+	Auth        []string         `json:"auth,omitempty"`
+	Credentials []string         `json:"credentials,omitempty"`
+	Functions   []FunctionView   `json:"functions"`
+	Items       []Item           `json:"items"`
+	Profiles    []Profile        `json:"profiles"`
+	Slots       []SlotProfile    `json:"slots"`
+	NewKeysOff  bool             `json:"new_keys_off,omitempty"`
+	Mode        CredentialMode   `json:"credential_mode"`
+	Modes       []CredentialMode `json:"credential_modes"`
+	SignedIn    bool             `json:"signed_in,omitempty"`
+	SignedInN   *int             `json:"signed_in_count,omitempty"`
+	People      *int             `json:"people_count,omitempty"`
 }
 
 func (c *Console) workspaceGrants(ctx context.Context, conn string) ([]port.Grant, error) {
@@ -88,8 +93,10 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		if !conn.RemovedAt.IsZero() {
 			continue
 		}
-		s := ConnectorSummary{ID: string(conn.ID), Alias: conn.Alias, Enabled: conn.Enabled, Blocked: v.Blocked, Listing: conn.Listing.Listing.Name, Version: conn.Listing.Version, Title: conn.Alias}
+		s := ConnectorSummary{ID: string(conn.ID), Alias: conn.Alias, Enabled: conn.Enabled, Blocked: v.Blocked, Listing: conn.Listing.Listing.Name, Version: conn.Listing.Version, Title: conn.Alias,
+			Mode: c.State.CredentialMode(string(conn.ID)), Modes: []CredentialMode{}}
 		if m, err := c.Engine.manifest(ctx, conn); err == nil {
+			s.Modes = credentialModes(m)
 			if m.Kind == port.KindSkill {
 				continue
 			}
@@ -127,13 +134,36 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		}
 		s.NewKeysOff, s.Slots = c.State.NewKeysOff(string(conn.ID)), c.slotsOn(string(conn.ID), conn.Alias)
 		if creds, err := c.Engine.credentials(ctx, string(conn.ID)); err == nil {
-			for _, cr := range creds {
-				s.Credentials = append(s.Credentials, string(cr.Kind)+":"+string(cr.Status))
-			}
+			c.signIns(ctx, &s, creds)
 		}
 		out = append(out, s)
 	}
 	return out, nil
+}
+
+func (c *Console) signIns(ctx context.Context, s *ConnectorSummary, creds []port.Credential) {
+	viewer, _ := signedInUser(ctx)
+	users := c.State.Users()
+	signed := map[string]bool{}
+	for _, cr := range creds {
+		own := cr.OwnerKind == port.OwnerUser && cr.OwnerID == viewer.Person && viewer.Person != ""
+		if s.Mode == CredentialPerPerson && own || s.Mode == CredentialShared && cr.OwnerKind == port.OwnerWorkspace {
+			s.Credentials = append(s.Credentials, string(cr.Kind)+":"+string(cr.Status))
+		}
+		if cr.OwnerKind == port.OwnerUser && cr.Status == port.CredentialActive {
+			signed[cr.OwnerID] = true
+		}
+	}
+	s.SignedIn = s.Mode == CredentialPerPerson && signed[viewer.Person]
+	if viewer.Role.AtLeast(RoleAdmin) {
+		n, people := 0, len(users)
+		for _, u := range users {
+			if signed[u.Person] {
+				n++
+			}
+		}
+		s.SignedInN, s.People = &n, &people
+	}
 }
 
 func (c *Console) function(ctx context.Context, conn, name string) (port.Function, error) {
@@ -332,7 +362,7 @@ func AliasBase(name string) string {
 	return ns[strings.LastIndex(ns, ".")+1:]
 }
 
-// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and, with bindKeys, binds every key made so far, expired ones included so that a renewal follows it; with a key already made it also finishes the first-run guide.
+// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices, starts each person signing in when the listing allows no shared credential and, with bindKeys, binds every key made so far, expired ones included so that a renewal follows it; with a key already made it also finishes the first-run guide.
 func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access, bindKeys bool) (string, error) {
 	conn, fns, err := c.installListing(ctx, m, func(ref port.ListingRef) string { return AliasBase(ref.Name) })
 	if err != nil {
@@ -353,6 +383,9 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 		if err := c.writeAccess(ctx, conn, f.Name, a); err != nil {
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
+	}
+	if err := c.startMode(conn, m); err != nil {
+		return conn, err
 	}
 	keys := c.State.Agents()
 	if !bindKeys {
@@ -412,7 +445,7 @@ func (c *Console) Remove(ctx context.Context, conn string) error {
 }
 
 func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
-	if err := c.Engine.bind(ctx, conn, a.Name, a.Owner); err != nil {
+	if err := c.Engine.bind(ctx, conn, a.Name, a.Owner, c.ruleFor(conn)); err != nil {
 		return err
 	}
 	for _, sel := range agentSelectors {
@@ -570,13 +603,14 @@ func (c *Console) Decide(ctx context.Context, id string, approve bool) error {
 	return err
 }
 
-// SetHeaderSecret stores the headers the connector's calls carry, sealed by the engine for the workspace.
+// SetHeaderSecret stores the headers the connector's calls carry, sealed by the engine for the workspace, or for the context's actor alone when each person signs in.
 func (c *Console) SetHeaderSecret(ctx context.Context, conn string, headers map[string]string) error {
 	secret, err := json.Marshal(headers)
 	if err != nil {
 		return err
 	}
-	in := map[string]any{"connector": conn, "owner_kind": port.OwnerWorkspace, "owner_id": c.Engine.Workspace, "kind": port.CredentialCustomHeaders, "secret": secret}
+	kind, owner := c.credentialOwner(ctx, conn)
+	in := map[string]any{"connector": conn, "owner_kind": kind, "owner_id": owner, "kind": port.CredentialCustomHeaders, "secret": secret}
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/credentials", in, nil)
 }
 
@@ -586,13 +620,14 @@ func (c *Console) SetOAuthClient(ctx context.Context, issuer, clientID, secret s
 	return c.Engine.Call(ctx, http.MethodPut, "/v1/issuers/client", in, nil)
 }
 
-// BeginOAuth asks the engine for the provider address of a workspace connection.
+// BeginOAuth asks the engine for the provider address of a workspace connection, or of the context's actor's own connection when each person signs in.
 func (c *Console) BeginOAuth(ctx context.Context, conn string) (state, to string, err error) {
 	var out struct {
 		State string `json:"state"`
 		URL   string `json:"url"`
 	}
-	err = c.Engine.Call(ctx, http.MethodPost, connectorPath(conn, "/credentials:connect"), map[string]any{"owner": port.OwnerWorkspace}, &out)
+	kind, _ := c.credentialOwner(ctx, conn)
+	err = c.Engine.Call(ctx, http.MethodPost, connectorPath(conn, "/credentials:connect"), map[string]any{"owner": kind}, &out)
 	return out.State, out.URL, err
 }
 

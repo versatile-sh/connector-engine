@@ -11,7 +11,10 @@ import (
 	"github.com/versatile-sh/connector-engine/secrets/internal/ring"
 )
 
-const stagedExt = ".restore"
+const (
+	stagedExt = ".restore"
+	rootBytes = 32
+)
 
 // Keys is the key material of a store in plaintext: the root key, the key ring state and the other files kept beside them, such as the local issuer's keys.
 type Keys struct {
@@ -55,7 +58,7 @@ func (s *Store) Restore(k Keys, then func() error) error {
 	if err := json.Unmarshal(k.State, &state); err != nil {
 		return port.Errorf(port.CodeInvalidArgument, "the key ring state does not decode: %v", err)
 	}
-	if !ring.Opens(k.Root, state) || len(k.Root) == 0 {
+	if len(k.Root) != rootBytes || !ring.Opens(k.Root, state) {
 		return port.Errorf(port.CodeInvalidArgument, "the root key does not open the key ring state")
 	}
 	for name := range k.Files {

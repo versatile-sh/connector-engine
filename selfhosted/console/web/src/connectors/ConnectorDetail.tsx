@@ -170,7 +170,7 @@ export function ConnectorDetail({ id }: { id: string }) {
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
         <div className="min-w-0 flex-1 basis-56">
           <Display className="[overflow-wrap:anywhere]">{connector.title}</Display>
-          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted">
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted empty:hidden">
             {connector.publisher ? <span>{t("import.by", { publisher: connector.publisher })}</span> : null}
             {connector.blocked ? <Tag tone="amber" dot>{connector.blocked}</Tag> : null}
           </p>

@@ -34,11 +34,6 @@ function Headline({ waitingHost }: { waitingHost?: string | undefined }) {
         <em className="block text-lime">{t(waitingHost ? "auth.linkLine2" : "auth.line2")}</em>
       </Display>
       <p className="mt-6 max-w-lg text-lg text-pretty text-muted">{waitingHost ? t("auth.linkBody", { host: waitingHost }) : t("auth.lead")}</p>
-      {waitingHost ? (
-        <p className={`${CAPTION} mt-4 [overflow-wrap:anywhere]`} translate="no">
-          {waitingHost}
-        </p>
-      ) : null}
     </div>
   );
 }

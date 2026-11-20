@@ -14,10 +14,10 @@ export function useLocation() {
   return { path: url.pathname, query: url.searchParams };
 }
 
-/** Moves to another console page without reloading; `replace` rewrites the current entry instead of adding one. */
-export function navigate(to: string, { replace = false }: { replace?: boolean } = {}) {
+/** Moves to another console page without reloading; `replace` rewrites the current entry instead of adding one, and `keepScroll` stays where the page is. */
+export function navigate(to: string, { replace = false, keepScroll = false }: { replace?: boolean; keepScroll?: boolean } = {}) {
   if (replace) window.history.replaceState(null, "", to);
   else window.history.pushState(null, "", to);
-  window.scrollTo({ top: 0 });
+  if (!keepScroll) window.scrollTo({ top: 0 });
   window.dispatchEvent(new PopStateEvent("popstate"));
 }

@@ -12,8 +12,8 @@ export const sessionQuery = queryOptions({
   },
 });
 
-/** What GET /api/agents answers: the access keys, the endpoint and the longest life a key may have. */
-export type KeysData = { agents: Agent[]; mcp_url: string; max_ttl_hours: number };
+/** What GET /api/agents answers: the access keys and the longest life a key may have. */
+export type KeysData = { agents: Agent[]; max_ttl_hours: number };
 
 /** Every installed connector. */
 export const connectorsQuery = queryOptions({

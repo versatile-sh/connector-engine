@@ -19,7 +19,7 @@ const intoView = (element: HTMLElement | null) => {
   element?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 };
 
-function Created({ token }: { token: AgentToken }) {
+function Created({ token, endpoint }: { token: AgentToken; endpoint: string }) {
   const t = useT();
   return (
     <section ref={intoView} aria-labelledby="created-title" className="arrive vignette-top bubble-sent relative mb-8 scroll-mt-24 overflow-hidden border border-lime/50 bg-ink-raised p-5 sm:p-6">
@@ -37,14 +37,14 @@ function Created({ token }: { token: AgentToken }) {
       </div>
       <CopyBox label={t("keys.key")} text={token.token} className="mt-4" />
       <div className="mt-6 border-t border-line pt-5">
-        <ClientPicker url={token.mcp_url} accessKey={token.token} />
+        <ClientPicker url={endpoint} accessKey={token.token} />
       </div>
     </section>
   );
 }
 
 /** Connect an AI app: one endpoint for every MCP client, access keys made and revoked here, and for a new key the exact way into each app. */
-export function AccessPage() {
+export function AccessPage({ endpoint }: { endpoint: string }) {
   const t = useT();
   const keys = useQuery(keysPageQuery);
   const [name, setName] = useState("");
@@ -72,7 +72,6 @@ export function AccessPage() {
     });
   };
   const maxDays = Math.max(1, Math.floor((keys.data?.max_ttl_hours ?? 720) / 24));
-  const endpoint = keys.data?.mcp_url ?? "";
   const list = keys.data?.agents ?? [];
   return (
     <section aria-labelledby="page-title">
@@ -80,14 +79,12 @@ export function AccessPage() {
         <PageTitle section={t("nav.access")} title={t("keys.title")} />
         <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
       </header>
-      {endpoint ? (
-        <section aria-label={t("clients.title")} className={`${SURFACE} mb-10 p-5`}>
-          <ClientPicker url={endpoint} />
-        </section>
-      ) : null}
+      <section aria-label={t("clients.title")} className={`${SURFACE} mb-10 p-5`}>
+        <ClientPicker url={endpoint} />
+      </section>
       <h2 className="font-display text-xl font-bold tracking-[-0.03em]">{t("keys.advanced")}</h2>
       <p className="mt-1 mb-5 max-w-2xl text-sm text-muted">{t("keys.advancedIntro")}</p>
-      {mint.data ? <Created key={mint.data.token} token={mint.data} /> : null}
+      {mint.data ? <Created key={mint.data.token} token={mint.data} endpoint={endpoint} /> : null}
       <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>
           <h2 id="new-key" className="mb-3 text-base font-medium">

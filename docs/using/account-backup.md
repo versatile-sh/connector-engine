@@ -8,19 +8,25 @@ The console has one owner account. This page covers the password, full backups, 
 
 ## Account
 
-- **Account** changes the username and the password. A password change asks for the current one, needs at least 10 characters, signs out every other session and keeps this one.
+- **Account** changes the signed-in user's username and password. A username is unique without regard to case, and the login finds it the same way. A password change asks for the current one, needs at least 10 characters, signs out that user's other sessions and keeps this one; other users stay signed in.
 - Wrong current passwords are rate-limited like the login: 5 a minute.
+- A wrong password and an unknown username get the same answer, "wrong username or password", after the same work.
+- The console keeps its users in the state file, keyed by the engine person id. The first user is an Owner with the configured `--person` (default `owner`). Removing or demoting the last Owner is refused.
+- A state file from an earlier console, with its one `owner` account, becomes that Owner on the first start, and its sessions stay signed in. This is a one-way door: once this console writes the file it has no `owner`, and an earlier console on the same volume would see a first run.
 
 Forgot the password? On the machine that runs the console:
 
 ```sh
 make reset-password                          # without Docker: connector-engine-selfhosted reset-password
+make reset-password USER=<username>          # once there are several users; without Docker: --user <username>
 ```
+
+With one user the name may be left out.
 
 It asks for the new password twice, without echo, then prints:
 
 ```text
-password changed; every console session is signed out
+password changed; every console session of that user is signed out
 access keys and apps signed in through the browser still work: revoke them on the Access page if you suspect a compromise
 ```
 
@@ -95,7 +101,8 @@ A full restore, step by step:
 
 - A refusal before the engine's commit leaves the install as it was.
 - Importing the same backup again gives the same result. If a disk fails right after the commit, restore the same backup again.
-- Signed in, a full import asks for your password again. The first-run restore works only while no owner account exists.
+- Signed in, a full import asks for your password again. The first-run restore works only while no user exists.
+- A backup from an earlier console, with its one `owner` account, restores: the account becomes the Owner with this console's `--person`. A backup made by this console has `users` and no `owner`, and uses backup format 2, so an earlier console refuses it as written by a newer connector-engine. This is a one-way door: keep the earlier console's own backups if you may go back to it.
 - A setup's review shows each new connector's host, whether it is `local` (it reaches a private or loopback address on this machine), whether its new keys start off, and each choice the file sets above what this console proposes. Every choice is capped at this console's proposal, local connectors included, and the result lists what was lowered.
 - Keys made already start off on the connectors and skills a setup adds, unless **Give my existing keys the new connectors** is on.
 - Per permission set the review chooses **Keep** (the default), **Apply** to an existing key, or **Discard**. A set whose name is taken gets the first free `-2`, `-3` suffix. `make import` takes the defaults: every set kept, existing keys off, choices capped.

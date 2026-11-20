@@ -3,7 +3,6 @@ package onepassword
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -80,8 +79,8 @@ func fetch(ctx context.Context, c Config, client *http.Client) ([]byte, error) {
 	}
 	for _, f := range item.Fields {
 		if f.Label == c.Field || f.ID == c.Field {
-			key, err := hex.DecodeString(strings.TrimSpace(f.Value))
-			if err != nil || len(key) != 32 {
+			key, err := local.ParseUnlockKey(f.Value)
+			if err != nil {
 				return nil, port.Errorf(port.CodeInvalidArgument, "the 1Password field %q is not 64 hexadecimal characters", c.Field)
 			}
 			return key, nil

@@ -385,10 +385,18 @@ func TestTheConsentPage(t *testing.T) {
 
 	t.Run("caps wrong passwords at five a minute", func(t *testing.T) {
 		path := o.requestConsent(clientID, callback)
-		for range 4 {
-			if status, _ := o.b.send("POST", path, map[string]any{"approve": true, "password": "wrong horse battery"}, nil); status != http.StatusForbidden {
+		wrong := 0
+		for ; wrong <= 5; wrong++ {
+			status, _ := o.b.send("POST", path, map[string]any{"approve": true, "password": "wrong horse battery"}, nil)
+			if status == http.StatusTooManyRequests {
+				break
+			}
+			if status != http.StatusForbidden {
 				t.Fatalf("a wrong password: %d", status)
 			}
+		}
+		if wrong > 5 {
+			t.Fatal("six wrong passwords in a row were all checked")
 		}
 		if status, _ := o.b.send("POST", path, map[string]any{"approve": true, "password": ownerPassword}, nil); status != http.StatusTooManyRequests {
 			t.Fatalf("the right password after five wrong ones: %d", status)

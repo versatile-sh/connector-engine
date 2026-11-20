@@ -3,8 +3,9 @@ import { api, errorText } from "../api";
 import { Mark } from "../Brand";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
+import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
-import { SURFACE, button } from "../ui/styles";
+import { ACCENT_BAR, SURFACE, button } from "../ui/styles";
 
 type Destination = { kind: "loopback"; port?: string } | { kind: "app"; app: string } | { kind: "scheme"; scheme: string };
 
@@ -21,7 +22,7 @@ const whereTo = (destination: Destination, t: ReturnType<typeof useT>) => {
   }
 };
 
-/** The owner's answer to an AI app asking to connect by OAuth: allow or deny, then the browser goes back to the app. */
+/** The owner's answer to an AI app asking to connect by OAuth: a warning that the app named itself, where the access goes, allow or deny, then the browser goes back to the app. */
 export function Consent({ id }: { id: string }) {
   const t = useT();
   const path = `/api/oauth/requests/${encodeURIComponent(id)}`;
@@ -52,6 +53,13 @@ export function Consent({ id }: { id: string }) {
           </>
         ) : (
           <>
+            <p className="bubble relative mb-5 flex items-start gap-2.5 border border-amber/40 bg-amber/5 py-3 pr-3 pl-5 text-sm">
+              <span aria-hidden="true" className={`${ACCENT_BAR} bg-amber`} />
+              <Icon name="shield" className="mt-0.5 size-4 text-amber" />
+              <span>
+                <strong className="font-semibold">{t("consent.warning")}</strong> {t("consent.selfNamed")}
+              </span>
+            </p>
             <h1 id="consent-title" className="font-display text-2xl leading-tight font-bold tracking-[-0.03em] sm:text-3xl">
               {t("consent.title", { client })}
             </h1>

@@ -380,10 +380,16 @@ func TestTheSessionRowEndsWithTheAgentToken(t *testing.T) {
 	exp := st.Epoch.Add(10 * time.Minute)
 	x := w.AgentClaims(port.Claims{Tenant: tenant, Workspace: workspace, Agent: "x", Session: "s1", OnBehalfOf: "alice", ExpiresAt: exp})
 	held := w.call(x, "s__create_issue", `{"q":"1"}`)
+	if until := st.Ok(w.Svc.GetApproval(w.Ctx, w.alice, held.Approval.ID)).SessionUntil; !until.Equal(exp) {
+		t.Fatalf("the pending call says a session approval ends at %v, not with the token at %v", until, exp)
+	}
 	w.decide(held.Approval.ID, port.DecisionApproveForSession)
 	rows := st.Ok(w.Svc.ListGrants(w.Ctx, w.admin, port.GrantFilter{ScopeKind: port.ScopeSession, ScopeID: "s1"}))
 	if len(rows) != 1 || !rows[0].ExpiresAt.Equal(exp) {
 		t.Fatalf("the session row ends with the token: %+v", rows)
+	}
+	if until := st.Ok(w.Svc.GetApproval(w.Ctx, w.alice, held.Approval.ID)).SessionUntil; !until.IsZero() {
+		t.Fatalf("a decided call still offers a session approval until %v", until)
 	}
 }
 

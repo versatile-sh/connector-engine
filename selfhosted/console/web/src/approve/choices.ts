@@ -12,6 +12,14 @@ export const offeredChoices = (choices: readonly string[] | undefined): Approval
 /** What a list row offers by the record's mode: the session answer only for `ask_once`. */
 export const listChoices = (mode: string | undefined): readonly ApprovalChoice[] => (mode === "ask_once" ? ORDER : DEFAULT_CHOICES);
 
+/** How long Allow for this session lasts from `now`, in whole hours from 90 minutes up and in minutes below, or undefined when the record does not say. */
+export function sessionSpan(until: string | undefined, now: number): { unit: "hours" | "minutes"; count: number } | undefined {
+  const left = until ? new Date(until).getTime() - now : 0;
+  if (!(left > 0)) return undefined;
+  const minutes = Math.max(1, Math.round(left / 60_000));
+  return minutes < 90 ? { unit: "minutes", count: minutes } : { unit: "hours", count: Math.round(minutes / 60) };
+}
+
 /** The longest string shown whole in the arguments summary. */
 export const MAX_VALUE = 160;
 

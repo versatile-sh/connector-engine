@@ -4,6 +4,7 @@ package surface
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -48,6 +49,7 @@ type Prompt struct {
 	App           string    `json:"app"`
 	ExpiresAt     time.Time `json:"expires_at"`
 	Choices       []Choice  `json:"choices"`
+	SessionUntil  time.Time `json:"session_until,omitzero"`
 	ConsoleURL    string    `json:"console_url"`
 }
 
@@ -116,17 +118,30 @@ var ErrSettled = errors.New("the approval is no longer pending")
 // ErrNotOwner answers a click from someone other than the configured owner.
 var ErrNotOwner = errors.New("only the owner can answer")
 
-// Label is the English text of a choice, for channels that render buttons.
-func Label(c Choice) string {
+// Label is the English text of a choice, for channels that render buttons; the session choice names how long it lasts when sessionUntil is set.
+func Label(c Choice, sessionUntil time.Time) string {
 	switch c {
 	case ChoiceOnce:
 		return "Allow once"
 	case ChoiceSession:
-		return "Allow for this session"
+		return sessionLabel(time.Until(sessionUntil), sessionUntil.IsZero())
 	case ChoiceAlways:
 		return "Always allow"
 	}
 	return "Deny"
+}
+
+func sessionLabel(left time.Duration, unknown bool) string {
+	switch {
+	case unknown || left <= 0:
+		return "Allow for this session"
+	case left < 90*time.Minute:
+		if m := int(left.Round(time.Minute).Minutes()); m > 1 {
+			return fmt.Sprintf("Allow for up to %d minutes", m)
+		}
+		return "Allow for up to 1 minute"
+	}
+	return fmt.Sprintf("Allow for up to %d hours", int(left.Round(time.Hour).Hours()))
 }
 
 // Sentence is the English line a settled message shows.

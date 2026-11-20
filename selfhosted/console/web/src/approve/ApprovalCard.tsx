@@ -7,7 +7,7 @@ import { Display } from "../ui/Display";
 import { Notice } from "../ui/Notice";
 import { CAPTION, SURFACE, WELL } from "../ui/styles";
 import { Tag } from "../ui/Tag";
-import { clock, secondsLeft, summarizeArguments } from "./choices";
+import { clock, secondsLeft, sessionSpan, summarizeArguments } from "./choices";
 import { DecisionButtons } from "./DecisionButtons";
 import { Outcome } from "./Outcome";
 import { useNow } from "./useNow";
@@ -101,7 +101,7 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
       <div className="mt-6">
         {open ? (
           <>
-            <DecisionButtons choices={approval.choices} deciding={deciding} size="md" stacked onChoose={onChoose} />
+            <DecisionButtons choices={approval.choices} session={sessionSpan(approval.session_until, now)} deciding={deciding} size="md" stacked onChoose={onChoose} />
             {error ? <Notice className="mt-3">{error}</Notice> : null}
           </>
         ) : (

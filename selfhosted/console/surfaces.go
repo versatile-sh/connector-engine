@@ -254,7 +254,7 @@ func (d desk) Prompt(ctx context.Context, id string) (surface.Prompt, error) {
 		return surface.Prompt{}, surface.ErrSettled
 	}
 	return surface.Prompt{Approval: v.ID, Connector: v.Connector.Title, ConnectorIcon: v.Connector.Icon, Function: v.Function, FunctionTitle: v.FunctionTitle,
-		Kind: string(v.Kind), App: v.App, ExpiresAt: v.ExpiresAt, Choices: v.Choices, ConsoleURL: d.c.publicBase() + "/approve/" + v.ID}, nil
+		Kind: string(v.Kind), App: v.App, ExpiresAt: v.ExpiresAt, Choices: v.Choices, SessionUntil: v.SessionUntil, ConsoleURL: d.c.publicBase() + "/approve/" + v.ID}, nil
 }
 
 func (d desk) Decide(ctx context.Context, id string, choice surface.Choice, channel, by string) (surface.Outcome, error) {

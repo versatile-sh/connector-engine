@@ -41,6 +41,7 @@ type ApprovalView struct {
 	MayHaveRun     bool             `json:"may_have_run"`
 	ReachesOutside bool             `json:"reaches_outside"`
 	Choices        []surface.Choice `json:"choices"`
+	SessionUntil   time.Time        `json:"session_until,omitzero"`
 	DecidedBy      string           `json:"decided_by,omitempty"`
 	DecidedAt      time.Time        `json:"decided_at,omitzero"`
 	Channel        string           `json:"channel,omitempty"`
@@ -129,7 +130,7 @@ func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error)
 	if a.State == port.ApprovalPending {
 		v.Choices = append(v.Choices, surface.ChoiceOnce)
 		if a.Mode == port.ModeAskOnce {
-			v.Choices = append(v.Choices, surface.ChoiceSession)
+			v.Choices, v.SessionUntil = append(v.Choices, surface.ChoiceSession), d.SessionUntil
 		}
 		if v.known {
 			v.Choices = append(v.Choices, surface.ChoiceAlways)

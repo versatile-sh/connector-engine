@@ -105,7 +105,7 @@ func (c *Channel) Notify(ctx context.Context, p surface.Prompt) (surface.Ref, er
 	if len(p.Choices) > 0 {
 		row := make([]button, 0, len(p.Choices))
 		for _, ch := range p.Choices {
-			row = append(row, button{Text: surface.Label(ch), CallbackData: surface.ButtonID(ch, p.Key)})
+			row = append(row, button{Text: surface.Label(ch, p.SessionUntil), CallbackData: surface.ButtonID(ch, p.Key)})
 		}
 		body["reply_markup"] = keyboard{InlineKeyboard: [][]button{row}}
 	}

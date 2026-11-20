@@ -29,7 +29,7 @@ CN_OPERATOR_TOKEN=dev connector-engine --config examples/dev/connector-engine.ya
 
 | Setting | Behaviour |
 |---|---|
-| egress guard | upstream connections (MCP servers, OAuth issuers, sources) refuse non-public addresses unless `runtime.allowPrivateHosts` is set. The `person` profile sets it so local servers can be imported; `headless` does not. They ignore `HTTP_PROXY` and `HTTPS_PROXY`, because through a proxy the guard would check the proxy's address |
+| egress guard | upstream connections (MCP servers, OAuth issuers, sources) refuse non-public addresses unless `runtime.allowPrivateHosts` is set. The `person` profile sets it so local servers can be imported; `headless` does not. They ignore `HTTP_PROXY` and `HTTPS_PROXY`, because through a proxy the guard would check the proxy's address. `runtime.loopbackHost`, when set, is dialled in place of a `localhost`, `127.0.0.0/8` or `::1` host while the URL and its `Host` header stay as typed: the `person` profile sets `host.docker.internal`, so a server on the host's loopback is reachable from the engine's container |
 | retention | once set, the worker prunes history every `retention.every`: `retention.deliveredEvents`, `retention.idempotencyKeys`, `retention.audit`, `retention.calls`. The default and `headless` keep everything (`0s`); `person` keeps delivered events and idempotency keys 7 days, audit rows and finished calls 90 days |
 
 ## Listeners and tokens

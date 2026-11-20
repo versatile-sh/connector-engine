@@ -20,9 +20,10 @@ const (
 // ErrTooLarge is returned when a fetched body passes its limit.
 var ErrTooLarge = unreachable(errors.New("the response is larger than the console accepts"))
 
-// Reach says which addresses a server-side fetch may dial: public https only, or, when the person ticked it for one import, local and http too.
+// Reach says which addresses a server-side fetch may dial: public https only, or, when the person ticked it for one import, local and http too, a loopback host then dialled as LoopbackHost when set.
 type Reach struct {
-	Local bool
+	Local        bool
+	LoopbackHost string
 }
 
 // CheckURL refuses a URL the reach does not allow: https only unless local is allowed, and never a URL with credentials.
@@ -43,9 +44,9 @@ func (r Reach) CheckURL(raw string) (*url.URL, error) {
 	return u, nil
 }
 
-// Transport dials through the egress guard: every hop resolves once and refuses loopback, private, link-local and metadata addresses unless local is allowed.
+// Transport dials through the egress guard: every hop resolves once and refuses loopback, private, link-local and metadata addresses unless local is allowed, which also maps a loopback host to LoopbackHost.
 func (r Reach) Transport() *http.Transport {
-	t := egress.Guard{AllowPrivate: r.Local}.Transport()
+	t := egress.Guard{AllowPrivate: r.Local, LoopbackHost: r.LoopbackHost}.Transport()
 	t.ResponseHeaderTimeout = fetchTimeout
 	return t
 }

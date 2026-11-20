@@ -64,6 +64,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	tenant := fs.String("tenant", or(getenv, "CONSOLE_TENANT", "local"), "tenant of the local install")
 	workspace := fs.String("workspace", or(getenv, "CONSOLE_WORKSPACE", "default"), "workspace connectors are installed in")
 	person := fs.String("person", or(getenv, "CONSOLE_PERSON", "owner"), "engine person the console acts as; a tenant admin in bootstrap.roles")
+	loopbackHost := fs.String("loopback-host", getenv("CONSOLE_LOOPBACK_HOST"), "host a local server at localhost is dialled as, such as host.docker.internal in a container; empty dials loopback itself")
 	agentTTL := fs.Duration("agent-ttl", 720*time.Hour, "longest agent token; at most auth.agentTokenMaxLifetime")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -113,7 +114,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	}
 	eng := &console.Engine{PublicURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)), Tenant: *tenant, Workspace: *workspace, Person: *person}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(), Secrets: box,
-		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log, Activity: activity, Restart: stop}
+		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log, Activity: activity, Restart: stop, LoopbackHost: *loopbackHost}
 	go ensureTenant(ctx, eng, log)
 	go c.RunNotifications(ctx)
 	lis, err := net.Listen("tcp", *listen)

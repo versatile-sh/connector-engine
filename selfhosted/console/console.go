@@ -35,6 +35,7 @@ type Console struct {
 	Secrets       *sealed.Box
 	NewChannel    ChannelFactory
 	Restart       func()
+	LoopbackHost  string
 
 	loginMu       sync.Mutex
 	restoring     sync.Mutex

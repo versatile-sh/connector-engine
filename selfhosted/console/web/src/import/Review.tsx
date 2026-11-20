@@ -54,6 +54,7 @@ export function Review({ source, onBack, onInstalled }: { source: ImportSource; 
         <Identity preview={p} />
         {source.local ? <Tag dot>{t("import.localTick")}</Tag> : null}
       </div>
+      {p.host_loopback ? <p className="mt-2 text-sm text-pretty text-muted">{t("import.hostLoopback")}</p> : null}
       {p.warning ? <Notice className="mt-5">{p.warning}</Notice> : null}
       <h3 className={`${SUBTITLE} mt-8`}>{t(p.skill ? "import.skillChoose" : "import.choose")}</h3>
       <p className="text-sm text-pretty text-muted">{t(p.skill ? "import.skillChooseIntro" : "import.chooseIntro")}</p>

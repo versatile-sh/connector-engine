@@ -103,7 +103,7 @@ func (e Env) Ref(where, ref string) (string, error) {
 
 // Guard is the egress guard of the engine, allowing the operator-configured hosts.
 func (e Env) Guard(hosts ...string) egress.Guard {
-	return egress.Guard{AllowPrivate: e.Config.Runtime.AllowPrivateHosts, Hosts: hosts}
+	return egress.Guard{AllowPrivate: e.Config.Runtime.AllowPrivateHosts, Hosts: hosts, LoopbackHost: e.Config.Runtime.LoopbackHost}
 }
 
 // reporter is a port adapter that reports capabilities it knows only once it is open.

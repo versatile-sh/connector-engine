@@ -1,0 +1,35 @@
+import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { describe, test } from "node:test";
+
+const ROOT = join(import.meta.dirname, "..");
+
+const sources = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return sources(path);
+    return /\.tsx?$/.test(entry.name) && !entry.name.endsWith(".test.ts") ? [path] : [];
+  });
+
+const files = sources(ROOT).map((path) => ({ name: relative(ROOT, path), text: readFileSync(path, "utf8") }));
+
+const using = (pattern: RegExp) => files.filter((file) => pattern.test(file.text)).map((file) => file.name).sort();
+
+describe("the console's design vocabulary", () => {
+  test("sets the serif only in Display and the logotype", () => {
+    assert.deepEqual(using(/\bfont-serif\b/), ["Brand.tsx", "ui/Display.tsx"]);
+  });
+
+  test("draws no speech-bubble shapes", () => {
+    assert.deepEqual(using(/(?<![\w-])bubble(-word|-sent)?(?![\w-])/), []);
+  });
+
+  test("uses no type tokens outside the theme", () => {
+    assert.deepEqual(using(/\bfont-(display|bold|black|extrabold)\b/), []);
+  });
+
+  test("uses no colour or effect class the stylesheet no longer defines", () => {
+    assert.deepEqual(using(/\b(text|bg|border|fill|stroke|outline|ring|decoration|from|via|to)-amber(?![\w-])|\bbackdrop-(grid|beam|glow)\b|\bride-in\b/), []);
+  });
+});

@@ -1,11 +1,13 @@
 import type { Preview } from "../api";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { useT } from "../i18n/I18nProvider";
+import { Display } from "../ui/Display";
+import { CAPTION } from "../ui/styles";
 
-/** Who a connector says it is before it is installed: icon, title, publisher, description, and where it comes from. On lime it is drawn in ink, large. */
-export function Identity({ preview, onLime = false }: { preview: Preview; onLime?: boolean }) {
+/** Who a connector says it is before it is installed: icon, title, publisher, description, and where it comes from. As the `h1` of the install-link page its title is the page's serif headline; in the import window it is a sans heading. */
+export function Identity({ preview, as = "h3" }: { preview: Preview; as?: "h1" | "h3" }) {
   const t = useT();
-  const soft = onLime ? "text-ink/70" : "text-muted";
+  const page = as === "h1";
   const facts: { label: string; value: string }[] = [
     { label: t("import.from"), value: preview.url },
     ...(preview.remote_url && preview.remote_url !== preview.url ? [{ label: t("import.server"), value: preview.remote_url }] : []),
@@ -14,22 +16,22 @@ export function Identity({ preview, onLime = false }: { preview: Preview; onLime
   ];
   return (
     <div className="min-w-0">
-      <div className="flex items-center gap-4">
-        <ConnectorIcon src={preview.icon} title={preview.title} size={onLime ? "lg" : "md"} onLime={onLime} />
+      <div className={page ? "flex flex-col items-start gap-5 sm:flex-row sm:items-center" : "flex items-center gap-4"}>
+        <ConnectorIcon src={preview.icon} title={preview.title} size={page ? "lg" : "md"} />
         <div className="min-w-0">
-          <h2 className={`serif-room font-serif font-normal tracking-[-0.02em] [overflow-wrap:anywhere] ${onLime ? "text-5xl leading-[0.98] sm:text-6xl" : "text-3xl leading-none"}`}>{preview.title}</h2>
-          <p className={`mt-1 truncate font-mono text-xs ${soft}`} translate="no">
+          {page ? <Display className="[overflow-wrap:anywhere]">{preview.title}</Display> : <h3 className="text-xl leading-snug font-medium [overflow-wrap:anywhere]">{preview.title}</h3>}
+          <p className={`${CAPTION} ${page ? "mt-3" : "mt-0.5"} truncate`} translate="no">
             {preview.name}@{preview.version}
             {preview.publisher ? ` · ${t("import.by", { publisher: preview.publisher })}` : ""}
           </p>
         </div>
       </div>
-      {preview.description ? <p title={preview.description} className={`mt-4 line-clamp-4 max-w-xl [overflow-wrap:anywhere] ${onLime ? "text-ink/85" : "text-muted"}`}>{preview.description}</p> : null}
-      <dl className={`mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm ${soft}`}>
+      {preview.description ? <p title={preview.description} className="mt-5 line-clamp-4 max-w-xl text-pretty text-muted">{preview.description}</p> : null}
+      <dl className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm text-muted">
         {facts.map((fact) => (
           <div key={fact.label} className="contents">
             <dt>{fact.label}</dt>
-            <dd className={`min-w-0 truncate font-mono text-xs leading-5 ${onLime ? "text-ink" : "text-paper"}`} title={fact.value} translate="no">
+            <dd className="min-w-0 truncate font-mono text-xs leading-5 text-paper" title={fact.value} translate="no">
               {fact.value}
             </dd>
           </div>

@@ -2,15 +2,15 @@ import type { ReactNode } from "react";
 import type { ApprovalChoice, ApprovalView } from "../api";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { useLocale, useT } from "../i18n/I18nProvider";
-import { Bubble } from "../ui/Bubble";
 import { Disclosure } from "../ui/Disclosure";
+import { Display } from "../ui/Display";
 import { Notice } from "../ui/Notice";
-import { CAPTION, SURFACE } from "../ui/styles";
+import { CAPTION, SURFACE, WELL } from "../ui/styles";
+import { Tag } from "../ui/Tag";
 import { clock, secondsLeft, summarizeArguments } from "./choices";
 import { DecisionButtons } from "./DecisionButtons";
 import { Outcome } from "./Outcome";
 import { useNow } from "./useNow";
-import { Warning } from "./Warning";
 
 type ApprovalCardProps = {
   approval: ApprovalView;
@@ -50,12 +50,14 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
           </p>
         </div>
         <span className="min-w-0 shrink-0">
-          <Bubble tone={approval.kind === "destructive" ? "amber" : "neutral"}>{approval.skill ? t("approvals.skill") : t(`kind.${approval.kind}`)}</Bubble>
+          <Tag tone={approval.kind === "destructive" ? "amber" : "muted"} dot={approval.kind === "destructive"}>
+            {approval.skill ? t("approvals.skill") : t(`kind.${approval.kind}`)}
+          </Tag>
         </span>
       </div>
-      <h1 id="approve-title" className="text-lit serif-room mt-6 font-serif text-4xl leading-[1.02] font-normal tracking-[-0.02em] [overflow-wrap:anywhere] @md:text-5xl">
+      <Display id="approve-title" size="title" className="mt-6 [overflow-wrap:anywhere]">
         {approval.function_title ?? approval.function}
-      </h1>
+      </Display>
       <code className="mt-2 block font-mono text-sm break-all text-muted" translate="no">
         {approval.function}
       </code>
@@ -72,20 +74,20 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
           <span className="mt-0.5 block text-[0.8125rem] leading-snug text-muted">{t("approve.sessionNote")}</span>
         </Fact>
         <Fact label={t("approve.expires")}>
-          <span className={`font-mono tabular-nums ${open && left < 60 ? "text-amber" : ""}`} title={new Date(approval.expires_at).toLocaleString(locale)}>
+          <span className={`font-mono tabular-nums ${open && left < 60 ? "text-amber-400" : ""}`} title={new Date(approval.expires_at).toLocaleString(locale)}>
             {open ? t("approve.left", { time: clock(left) }) : t("approve.closed")}
           </span>
         </Fact>
       </dl>
       {open && (approval.may_have_run || approval.reaches_outside) ? (
         <div className="mt-4 flex flex-col gap-2">
-          {approval.may_have_run ? <Warning>{t("approve.mayHaveRun")}</Warning> : null}
-          {approval.reaches_outside ? <Warning>{t("approve.reachesOutside")}</Warning> : null}
+          {approval.may_have_run ? <Notice live={false}>{t("approve.mayHaveRun")}</Notice> : null}
+          {approval.reaches_outside ? <Notice live={false}>{t("approve.reachesOutside")}</Notice> : null}
         </div>
       ) : null}
       {summary ? (
         <Disclosure
-          className="mt-4 bubble border border-line-strong bg-ink-sunken"
+          className={`${WELL} mt-4`}
           summary={
             <>
               <span className="font-medium">{t("common.arguments")}</span>
@@ -100,11 +102,7 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
         {open ? (
           <>
             <DecisionButtons choices={approval.choices} deciding={deciding} size="md" stacked onChoose={onChoose} />
-            {error ? (
-              <div className="mt-3">
-                <Notice>{error}</Notice>
-              </div>
-            ) : null}
+            {error ? <Notice className="mt-3">{error}</Notice> : null}
           </>
         ) : (
           <Outcome approval={pending ? { ...approval, state: "expired" } : approval} first={first} />

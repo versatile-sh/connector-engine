@@ -1,6 +1,7 @@
 import type { Agent } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
-import { Bubble } from "../ui/Bubble";
+import { InlineConfirm } from "../ui/InlineConfirm";
+import { Tag } from "../ui/Tag";
 import { button } from "../ui/styles";
 import type { RevokeEvent, RevokeState } from "./revoke";
 
@@ -14,14 +15,14 @@ export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps)
   const asking = (flow.kind === "confirming" || flow.kind === "revoking") && flow.name === entry.name;
   const revoking = flow.kind === "revoking" && flow.name === entry.name;
   return (
-    <li className={`border-b border-line py-3 last:border-b-0 transition-opacity duration-300 ${revoking ? "opacity-60" : ""}`}>
+    <li className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${revoking ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span className={`size-2 shrink-0 rounded-full ${expired ? "bg-amber" : "bg-lime"}`} aria-hidden="true" />
-        <code title={entry.name} className="min-w-0 grow basis-[calc(100%-1.5rem)] truncate font-mono text-sm font-semibold @md:basis-0" translate="no">
+        <span className={`size-1.5 shrink-0 rounded-full ${expired ? "bg-amber-400" : "bg-lime"}`} aria-hidden="true" />
+        <code title={entry.name} className="min-w-0 grow basis-[calc(100%-1.5rem)] truncate font-mono text-sm font-medium @md:basis-0" translate="no">
           {entry.name}
         </code>
-        <span className="font-mono text-xs text-muted @max-md:ml-6 @max-md:min-w-0 @max-md:grow @max-md:basis-0">{t("keys.until", { date: new Date(entry.expires_at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) })}</span>
-        {expired ? <Bubble tone="amber">{t("keys.expired")}</Bubble> : null}
+        <span className="font-mono text-xs text-muted @max-md:ml-5.5 @max-md:min-w-0 @max-md:grow @max-md:basis-0">{t("keys.until", { date: new Date(entry.expires_at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) })}</span>
+        {expired ? <Tag tone="amber">{t("keys.expired")}</Tag> : null}
         {asking ? null : (
           <button
             type="button"
@@ -35,33 +36,22 @@ export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps)
         )}
       </div>
       {entry.via_browser ? (
-        <p className="mt-1 flex flex-wrap items-center gap-2 pl-6 font-mono text-xs text-muted">
-          {entry.new ? <Bubble tone="accent">{t("keys.newBadge")}</Bubble> : null}
+        <p className="mt-1 flex flex-wrap items-center gap-2 pl-5.5 font-mono text-xs text-muted">
+          {entry.new ? <Tag tone="lime">{t("keys.newBadge")}</Tag> : null}
           {t("keys.viaBrowser")}
         </p>
       ) : null}
       {asking ? (
-        <div
-          role="group"
-          aria-label={t("keys.revokeLabel", { name: entry.name })}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") dispatch({ type: "cancel" });
-          }}
-          className="swap-in bubble mt-3 flex flex-wrap items-center justify-between gap-3 border border-amber/40 bg-amber/5 py-2.5 pr-2.5 pl-4"
-        >
-          <p className="min-w-0 grow basis-56 text-sm">{t("keys.revokeAsk", { name: entry.name })}</p>
-          <div className="ml-auto flex shrink-0 gap-2">
-            <button type="button" autoFocus disabled={revoking} className={button({ variant: "quiet", size: "xs" })} onClick={() => dispatch({ type: "cancel" })}>
-              {t("common.cancel")}
-            </button>
-            <button type="button" disabled={revoking} className={`${button({ variant: "danger", size: "xs" })} min-w-28`} onClick={onConfirm}>
-              {revoking ? t("keys.revoking") : t("keys.revokeConfirm")}
-            </button>
-          </div>
-          <p role="alert" className="w-full text-sm text-amber empty:hidden">
-            {error ?? ""}
-          </p>
-        </div>
+        <InlineConfirm
+          label={t("keys.revokeLabel", { name: entry.name })}
+          question={t("keys.revokeAsk", { name: entry.name })}
+          confirm={t("keys.revokeConfirm")}
+          working={t("keys.revoking")}
+          busy={revoking}
+          error={error}
+          onCancel={() => dispatch({ type: "cancel" })}
+          onConfirm={onConfirm}
+        />
       ) : null}
     </li>
   );

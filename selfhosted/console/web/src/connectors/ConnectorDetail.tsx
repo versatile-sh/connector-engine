@@ -6,12 +6,13 @@ import { useT } from "../i18n/I18nProvider";
 import { removeConnector, setFunctionAccess } from "../mutations";
 import { connectorsQuery } from "../queries";
 import { navigate } from "../router";
-import { Bubble } from "../ui/Bubble";
+import { Display } from "../ui/Display";
 import { Arrow, Icon } from "../ui/Icon";
 import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
-import { SKELETON, SURFACE, button } from "../ui/styles";
+import { CAPTION, PANEL, QUIET_LINK, SKELETON, SKELETON_LINE, TITLE, WELL, button } from "../ui/styles";
+import { Tag } from "../ui/Tag";
 import { AccessPicker } from "./AccessPicker";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { ConnectorItems } from "./ConnectorItems";
@@ -29,13 +30,15 @@ function Back() {
         event.preventDefault();
         navigate("/");
       }}
-      className={`${button({ variant: "quiet", size: "sm" })} -ml-4 mb-4 self-start`}
+      className={`${QUIET_LINK} inline-flex items-center gap-1.5 self-start text-sm text-muted`}
     >
       <Arrow back />
       {t("detail.back")}
     </a>
   );
 }
+
+const TONE = { on: "paper", ask: "lime", off: "muted" } as const;
 
 function Functions({ connector }: { connector: Connector }) {
   const t = useT();
@@ -44,25 +47,23 @@ function Functions({ connector }: { connector: Connector }) {
   const counts = accessCounts(functions);
   const pending = (name: string) => setAccess.isPending && setAccess.variables.name === name;
   return (
-    <section aria-labelledby="functions-title" className={`${SURFACE} min-w-0 p-5 sm:p-6`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <h2 id="functions-title" className="text-lg leading-snug font-medium">
-            {t("detail.functions")}
-          </h2>
-          <Bubble>{functions.length}</Bubble>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
+    <section aria-labelledby="functions-title" className="min-w-0">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h2 id="functions-title" className={TITLE}>
+          {t("detail.functions")}
+        </h2>
+        <span className="flex flex-wrap gap-x-3">
+          <Tag>{functions.length}</Tag>
           {(["on", "ask", "off"] as const).map((access) =>
             counts[access] > 0 ? (
-              <Bubble key={access} tone={access === "ask" ? "outline" : "neutral"}>
+              <Tag key={access} tone={TONE[access]}>
                 {t(`access.count.${access}`, { count: counts[access] })}
-              </Bubble>
+              </Tag>
             ) : null,
           )}
-        </div>
+        </span>
       </div>
-      <p role="alert" className="min-h-0 text-sm text-amber empty:hidden">
+      <p role="alert" className="mt-2 text-sm text-amber-400 empty:hidden">
         {setAccess.isError ? errorText(setAccess.error) : ""}
       </p>
       {functions.length === 0 ? (
@@ -70,7 +71,7 @@ function Functions({ connector }: { connector: Connector }) {
       ) : (
         <LongList rows={functions} textOf={(fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`} label={t("detail.filter")}>
           {(shown) => (
-            <ul className="mt-2">
+            <ul className={`${WELL} mt-3`}>
               {shown.map((fn) => (
                 <ChoiceRow
                   key={fn.name}
@@ -81,9 +82,9 @@ function Functions({ connector }: { connector: Connector }) {
                     <>
                       <KindLabel kind={fn.kind} />
                       {fn.state !== "active" ? (
-                        <Bubble tone="amber" title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
+                        <Tag tone="amber" dot title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
                           {fn.state}
-                        </Bubble>
+                        </Tag>
                       ) : null}
                     </>
                   }
@@ -109,7 +110,7 @@ function Remove({ connector, remove, onClose }: { connector: Connector; remove: 
   return (
     <Sheet title={t("detail.removeTitle", { title: connector.title })} closeLabel={t("common.close")} onClose={onClose}>
       <p className="text-muted">{t("detail.removeBody")}</p>
-      <p role="alert" className="mt-3 min-h-5 text-sm text-amber">
+      <p role="alert" className="mt-3 min-h-5 text-sm text-amber-400">
         {remove.isError ? errorText(remove.error) : ""}
       </p>
       <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -133,15 +134,16 @@ export function ConnectorDetail({ id }: { id: string }) {
   const remove = useMutation(removeConnector);
   if (connectors.isPending) {
     return (
-      <div aria-hidden="true" className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <div className="shimmer size-16 rounded-full" />
+      <div aria-hidden="true" className="flex flex-col gap-8">
+        <div className={`${SKELETON_LINE} h-4 w-28`} />
+        <div className="flex items-center gap-5">
+          <div className="shimmer size-16 rounded-2xl" />
           <div className="flex-1">
-            <div className={`${SKELETON} h-9 w-64 max-w-full`} />
-            <div className="shimmer bubble-word mt-3 h-3 w-48" />
+            <div className={`${SKELETON_LINE} h-10 w-64 max-w-full`} />
+            <div className={`${SKELETON_LINE} mt-3 h-3 w-48`} />
           </div>
         </div>
-        <div className={`${SKELETON} h-80`} />
+        <div className={`${SKELETON} h-96 rounded-2xl`} />
       </div>
     );
   }
@@ -149,7 +151,7 @@ export function ConnectorDetail({ id }: { id: string }) {
   const connector = connectors.data.find((c) => c.id === id);
   if (!connector) {
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-6">
         <Back />
         <Notice>{t("detail.gone")}</Notice>
       </div>
@@ -164,17 +166,17 @@ export function ConnectorDetail({ id }: { id: string }) {
   return (
     <div className="swap-in flex flex-col">
       <Back />
-      <header className="mb-8 flex flex-wrap items-start gap-5">
+      <header className="mt-8 mb-10 flex flex-wrap items-start gap-x-6 gap-y-5">
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
-        <div className="min-w-48 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lit serif-room min-w-0 font-serif text-5xl leading-none font-normal tracking-[-0.02em] [overflow-wrap:anywhere]">{connector.title}</h1>
-            {connector.blocked ? <Bubble tone="amber">{connector.blocked}</Bubble> : null}
-          </div>
-          {connector.publisher ? <p className="mt-1 text-sm text-muted">{t("import.by", { publisher: connector.publisher })}</p> : null}
-          {connector.description ? <p className="mt-3 max-w-2xl text-muted">{connector.description}</p> : null}
+        <div className="min-w-0 flex-1 basis-full sm:basis-56">
+          <Display className="[overflow-wrap:anywhere]">{connector.title}</Display>
+          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted empty:hidden">
+            {connector.publisher ? <span>{t("import.by", { publisher: connector.publisher })}</span> : null}
+            {connector.blocked ? <Tag tone="amber" dot>{connector.blocked}</Tag> : null}
+          </p>
+          {connector.description ? <p className="mt-4 max-w-2xl text-pretty text-muted">{connector.description}</p> : null}
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <a
             href={hrefOf({ range: "24h", connector: connector.id })}
             className={button({ variant: "secondary", size: "sm" })}
@@ -192,25 +194,27 @@ export function ConnectorDetail({ id }: { id: string }) {
           </button>
         </div>
       </header>
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <Functions connector={connector} />
-          <ConnectorItems connector={connector} />
+      <article className={`${PANEL} p-4 sm:p-8 xl:p-10`}>
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] xl:gap-14">
+          <div className="flex min-w-0 flex-col gap-10">
+            <Functions connector={connector} />
+            <ConnectorItems connector={connector} />
+          </div>
+          <aside className="flex flex-col gap-8 lg:self-start lg:tall:sticky lg:tall:top-24">
+            <Credentials connector={connector} />
+            <dl className="grid gap-4 text-sm">
+              {facts.map((fact) => (
+                <div key={fact.label} className="min-w-0">
+                  <dt className={CAPTION}>{fact.label}</dt>
+                  <dd className="mt-1 truncate font-mono text-xs leading-5 text-paper" title={fact.value} translate="no">
+                    {fact.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </aside>
         </div>
-        <aside className="flex flex-col gap-6">
-          <Credentials connector={connector} />
-          <dl className={`${SURFACE} grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 p-5 text-sm`}>
-            {facts.map((fact) => (
-              <div key={fact.label} className="contents">
-                <dt className="text-muted">{fact.label}</dt>
-                <dd className="min-w-0 truncate text-right font-mono text-xs leading-5" title={fact.value} translate="no">
-                  {fact.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </aside>
-      </div>
+      </article>
       {removing ? <Remove connector={connector} remove={remove} onClose={() => setRemoving(false)} /> : null}
     </div>
   );

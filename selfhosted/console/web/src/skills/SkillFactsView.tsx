@@ -2,6 +2,7 @@ import type { SkillFacts } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { Disclosure } from "../ui/Disclosure";
 import { Notice } from "../ui/Notice";
+import { WELL } from "../ui/styles";
 import { formatBytes, shortCommit, skillWarnings, sourceLink, totalBytes } from "./summary";
 
 type SkillFactsViewProps = { skill: SkillFacts; unbound?: string[] | undefined };
@@ -17,7 +18,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
       {warnings.length > 0 ? (
         <div className="flex flex-col gap-2">
           {warnings.map((warning) => (
-            <Notice key={warning}>
+            <Notice key={warning} live={false}>
               {warning === "scripts" ? t("skills.warn.scripts") : warning === "metadataOnly" ? t("skills.warn.metadataOnly") : t("skills.warn.needs", { names: (unbound ?? []).join(", ") })}
             </Notice>
           ))}
@@ -31,14 +32,14 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
         </dd>
         <dt>{t("skills.source")}</dt>
         <dd className="min-w-0 truncate font-mono text-xs leading-5">
-          <a href={link} target="_blank" rel="noreferrer noopener" className="text-paper underline decoration-line-strong underline-offset-4 hover:decoration-lime" title={link} translate="no">
+          <a href={link} target="_blank" rel="noreferrer noopener" className="text-paper underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-lime" title={link} translate="no">
             {[skill.source.repository.replace(/^https?:\/\/(github\.com\/)?/, ""), skill.source.path].filter(Boolean).join("/")}@{shortCommit(skill.source.commit)}
           </a>
           <span className="sr-only"> {t("common.opensNewTab")}</span>
         </dd>
       </dl>
       <Disclosure
-        className="bubble border border-line-strong bg-ink-raised/60"
+        className={WELL}
         summary={
           <>
             <span>{t("skills.files", { count: skill.files.length })}</span>
@@ -49,7 +50,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
         <ul className="border-t border-line px-4 py-2">
           {skill.files.map((file) => (
             <li key={file.path} className="flex items-center justify-between gap-4 py-1 font-mono text-xs">
-              <code className={`min-w-0 truncate ${file.path.startsWith("scripts/") ? "text-amber" : "text-paper"}`} translate="no" title={file.path}>
+              <code className={`min-w-0 truncate ${file.path.startsWith("scripts/") ? "text-amber-400" : "text-paper"}`} translate="no" title={file.path}>
                 {file.path}
               </code>
               <span className="shrink-0 text-muted tabular-nums">{formatBytes(file.bytes)}</span>

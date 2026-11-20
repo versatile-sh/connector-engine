@@ -6,6 +6,7 @@ import { commonAccess } from "../connectors/summary";
 import { useT } from "../i18n/I18nProvider";
 import { setSkillAccess, setSkillAccessAll } from "../mutations";
 import { LongList } from "../ui/LongList";
+import { WELL } from "../ui/styles";
 
 function KeyChoice({ skill, agent, access }: { skill: Skill; agent: string; access: Access }) {
   const t = useT();
@@ -15,7 +16,7 @@ function KeyChoice({ skill, agent, access }: { skill: Skill; agent: string; acce
       name={agent}
       description={
         set.isError ? (
-          <p role="alert" className="text-sm text-amber">
+          <p role="alert" className="text-sm text-amber-400">
             {errorText(set.error)}
           </p>
         ) : null
@@ -35,7 +36,7 @@ export function KeyChoices({ skill }: { skill: Skill }) {
   return (
     <>
       {skill.access.length > 1 ? (
-        <div className="@container mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 border-b border-line-strong pb-3 @md:gap-x-6">
+        <div className="@container mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 pb-3 @md:gap-x-6 sm:px-5">
           <span className="text-sm font-medium">{t("skills.allKeys", { count: skill.access.length })}</span>
           <AccessPicker
             name={t("skills.allKeysName", { skill: skill.alias })}
@@ -46,12 +47,12 @@ export function KeyChoices({ skill }: { skill: Skill }) {
           />
         </div>
       ) : null}
-      <p role="alert" className="mt-2 text-sm text-amber empty:hidden">
+      <p role="alert" className="mt-2 text-sm text-amber-400 empty:hidden">
         {all.isError ? errorText(all.error) : kept.length > 0 ? t("skills.allKeysKept", { keys: kept.map((key) => key.agent).join(", ") }) : ""}
       </p>
       <LongList rows={skill.access} textOf={(key) => key.agent} label={t("keys.filter")}>
         {(shown) => (
-          <ul>
+          <ul className={WELL}>
             {shown.map((key) => (
               <KeyChoice key={key.agent} skill={skill} agent={key.agent} access={key.access} />
             ))}

@@ -4,14 +4,14 @@ import { errorText, type AgentToken } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { mintKey, revokeKey } from "../mutations";
 import { keysPageQuery } from "../queries";
-import { Bubble } from "../ui/Bubble";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
-import { HAIRLINE, SURFACE, button } from "../ui/styles";
+import { HAIRLINE, LEAD, PANEL, SKELETON_LINE, SUBTITLE, SURFACE, TITLE, WELL, button } from "../ui/styles";
+import { Tag } from "../ui/Tag";
 import { ClientPicker } from "./ClientPicker";
 import { KeyRow } from "./KeyRow";
 import { revokeStep, type RevokeEvent } from "./revoke";
@@ -23,14 +23,14 @@ const intoView = (element: HTMLElement | null) => {
 function Created({ token, endpoint }: { token: AgentToken; endpoint: string }) {
   const t = useT();
   return (
-    <section ref={intoView} aria-labelledby="created-title" className="arrive vignette-top bubble-sent relative mb-8 scroll-mt-24 overflow-hidden border border-lime/50 bg-ink-raised p-5 sm:p-6">
+    <section ref={intoView} aria-labelledby="created-title" className={`${SURFACE} arrive relative mb-8 scroll-mt-24 overflow-hidden p-5 sm:p-6`}>
       <span aria-hidden="true" className={HAIRLINE} />
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-lime text-ink">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full border border-line-strong text-lime">
           <Icon name="key" className="size-[1.1rem]" />
         </span>
         <div className="min-w-0">
-          <h2 id="created-title" className="text-lg leading-snug font-medium [overflow-wrap:anywhere]">
+          <h2 id="created-title" className={`${TITLE} [overflow-wrap:anywhere]`}>
             {t("keys.created", { name: token.agent })}
           </h2>
           <p className="text-sm text-muted">{t("keys.once")}</p>
@@ -38,7 +38,7 @@ function Created({ token, endpoint }: { token: AgentToken; endpoint: string }) {
       </div>
       <CopyBox label={t("keys.key")} text={token.token} className="mt-4" />
       <div className="mt-6 border-t border-line pt-5">
-        <ClientPicker url={endpoint} accessKey={token.token} />
+        <ClientPicker url={endpoint} accessKey={token.token} heading="h3" />
       </div>
     </section>
   );
@@ -76,19 +76,20 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
   const list = keys.data?.agents ?? [];
   return (
     <section aria-labelledby="page-title">
-      <header className="mb-8">
-        <PageTitle section={t("nav.access")} title={t("keys.title")} />
-        <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
+      <header className="mb-10">
+        <PageTitle section={t("nav.access")} title={t("keys.title")}>
+          {t("keys.intro")}
+        </PageTitle>
       </header>
-      <section aria-label={t("clients.title")} className={`${SURFACE} mb-10 p-5`}>
+      <section aria-label={t("clients.title")} className={`${PANEL} mb-14 p-4 sm:p-8`}>
         <ClientPicker url={endpoint} />
       </section>
-      <h2 className="font-display text-xl font-bold tracking-[-0.03em]">{t("keys.advanced")}</h2>
-      <p className="mt-1 mb-5 max-w-2xl text-sm text-muted">{t("keys.advancedIntro")}</p>
+      <h2 className={TITLE}>{t("keys.advanced")}</h2>
+      <p className={`${LEAD} mt-1 mb-6 text-sm`}>{t("keys.advancedIntro")}</p>
       {mint.data ? <Created key={mint.data.token} token={mint.data} endpoint={endpoint} /> : null}
       <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>
-          <h2 id="new-key" className="mb-3 text-base font-medium">
+          <h2 id="new-key" className={`${SUBTITLE} mb-4`}>
             {t("keys.new")}
           </h2>
           <Field label={t("keys.name")} hint={t("keys.nameHint")} mono placeholder={t("keys.namePlaceholder")} value={name} onChange={(event) => setName(event.target.value)} required autoComplete="off" spellCheck={false} />
@@ -102,36 +103,36 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
             onChange={(event) => setDays(Number(event.target.value))}
             error={mint.isError ? errorText(mint.error) : undefined}
           />
-          <button type="submit" disabled={mint.isPending} className={`${button({ variant: "accent" })} w-full`}>
+          <button type="submit" disabled={mint.isPending} className={`${button({ variant: "primary" })} w-full`}>
             <Icon name="key" className="size-4" />
             {mint.isPending ? t("keys.creating") : t("keys.create")}
           </button>
-          <p className="mt-4 text-[0.8125rem] leading-snug text-muted">{t("keys.restart")}</p>
+          <p className="mt-4 text-[0.8125rem] leading-snug text-pretty text-muted">{t("keys.restart")}</p>
         </form>
         <section aria-labelledby="keys-title" className={`${SURFACE} p-5`}>
-          <div className="mb-2 flex items-center gap-2.5">
-            <h2 id="keys-title" className="text-base font-medium">
+          <div className="mb-3 flex items-baseline gap-3">
+            <h2 id="keys-title" className={SUBTITLE}>
               {t("keys.list")}
             </h2>
-            {keys.isSuccess ? <Bubble>{list.length}</Bubble> : null}
+            {keys.isSuccess ? <Tag>{list.length}</Tag> : null}
           </div>
           {keys.isError ? (
             <Notice>{errorText(keys.error)}</Notice>
           ) : keys.isPending ? (
-            <ul aria-hidden="true">
+            <ul aria-hidden="true" className={WELL}>
               {[0, 1, 2].map((row) => (
-                <li key={row} className="flex items-center justify-between border-b border-line py-3 last:border-b-0">
-                  <div className="shimmer bubble-word h-4 w-32" />
-                  <div className="shimmer bubble-word h-3 w-40" />
+                <li key={row} className="flex items-center justify-between border-b border-line px-4 py-3.5 last:border-b-0">
+                  <div className={`${SKELETON_LINE} h-4 w-32`} />
+                  <div className={`${SKELETON_LINE} h-3 w-40`} />
                 </li>
               ))}
             </ul>
           ) : list.length === 0 ? (
-            <p className="py-2 text-sm text-muted">{t("keys.empty", { endpoint })}</p>
+            <p className="py-2 text-sm text-pretty text-muted">{t("keys.empty")}</p>
           ) : (
             <LongList rows={list} textOf={(key) => key.name} label={t("keys.filter")}>
               {(shown) => (
-                <ul className="@container">
+                <ul className={`${WELL} @container`}>
                   {shown.map((key) => (
                     <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
                   ))}

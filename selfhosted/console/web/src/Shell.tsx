@@ -35,7 +35,7 @@ const OAUTH: Record<string, MessageKey> = {
   failed: "oauth.failed",
 };
 
-const NAV_LINK = `relative isolate inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm max-lg:px-2 text-muted hover:text-paper aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
+const NAV_LINK = `relative isolate inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm xl:px-3.5 text-muted transition-colors duration-250 hover:text-paper aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
 
 type Iris = { section: Section; at: number; x: number; y: number; r: number };
 
@@ -43,10 +43,10 @@ function Endpoint({ url }: { url: string }) {
   const t = useT();
   const { result, copy } = useCopy();
   return (
-    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} title={url} className={`bubble-word hidden h-9 min-w-0 items-center gap-2 border border-line-strong px-3 font-mono text-xs text-muted hover:border-paper/50 hover:text-paper xl:inline-flex ${PRESS}`}>
-      <span className={`size-1.5 shrink-0 rounded-full ${result === "copied" ? "bg-lime" : "bg-lime/60"}`} aria-hidden="true" />
+    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} title={url} className={`hidden h-9 min-w-0 items-center gap-2 rounded-full border border-line-strong px-3.5 font-mono text-xs text-muted hover:border-paper/50 hover:text-paper xl:inline-flex ${PRESS}`}>
+      <span className="size-1.5 shrink-0 rounded-full bg-lime" aria-hidden="true" />
       <span className="min-w-0 truncate" translate="no">{url.replace(/^https?:\/\//, "")}</span>
-      <Icon name={result === "copied" ? "check" : "copy"} className="size-3.5" />
+      <Icon name={result === "copied" ? "check" : "copy"} className={`size-3.5 ${result === "copied" ? "text-lime" : ""}`} />
     </button>
   );
 }
@@ -69,10 +69,10 @@ function SetupProgress() {
   const setup = useSetup();
   if (!setup.visible) return null;
   return (
-    <button type="button" onClick={() => navigate("/")} className={`${button({ variant: "secondary", size: "sm" })} arrive hidden font-mono text-xs sm:inline-flex`}>
+    <button type="button" onClick={() => navigate("/")} className={`${button({ variant: "secondary", size: "sm" })} arrive hidden font-mono text-xs font-normal sm:inline-flex lg:hidden xl:inline-flex`}>
       <span aria-hidden="true" className="flex gap-1">
         {setup.steps.map((step) => (
-          <span key={step.id} className={`size-1.5 rounded-full transition-colors duration-500 ${step.done ? "bg-lime" : "bg-line-strong"}`} />
+          <span key={step.id} className={`size-1.5 rounded-full transition-colors duration-250 ${step.done ? "bg-lime" : "bg-line-strong"}`} />
         ))}
       </span>
       {t("shell.setup", { done: setup.done, total: setup.total })}
@@ -80,7 +80,7 @@ function SetupProgress() {
   );
 }
 
-/** The frame of every signed-in page: the lit backdrop, the top bar with the sections, the setup progress, the endpoint, the language and sign-out, the main landmark and the site's footer. */
+/** The frame of every signed-in page: the site's grid and light, the top bar with the sections, the setup progress, the endpoint, the language and sign-out, the main landmark and the site's footer. */
 export function Shell({ section, endpoint, children }: { section: Section; endpoint: string; children: ReactNode }) {
   const t = useT();
   const { path, query } = useLocation();
@@ -90,14 +90,14 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
   const oauthKey = oauth ? OAUTH[oauth] : undefined;
   return (
     <div className="relative isolate flex min-h-dvh flex-col overflow-x-clip">
-      <div aria-hidden="true" className="backdrop-grid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[40rem]" />
-      <div aria-hidden="true" className="backdrop-beam pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem]" />
+      <div aria-hidden="true" className="grid-base2 pointer-events-none absolute inset-x-0 top-0 -z-10 h-[40rem]" />
+      <div aria-hidden="true" className="light-beam pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem]" />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-ink-raised focus:px-3 focus:py-2">
         {t("app.skip")}
       </a>
       <header className="sticky top-0 z-30 border-b border-line bg-ink/85 backdrop-blur-md">
         <div aria-hidden="true" className="light-lamp pointer-events-none absolute inset-x-0 -bottom-px mx-auto h-px w-1/3" />
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-5 sm:px-8">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-5 sm:gap-4 sm:px-8">
           <a
             href="/"
             aria-label={t("app.home")}
@@ -109,7 +109,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           >
             <Wordmark />
           </a>
-          <nav aria-label={t("nav.label")} className="relative ml-2 hidden items-center gap-1 lg:flex">
+          <nav aria-label={t("nav.label")} className="relative ml-2 hidden items-center gap-0.5 lg:flex">
             <NavLinks section={section} waiting={waiting} />
           </nav>
           <div className="ml-auto flex min-w-0 items-center gap-2">
@@ -121,15 +121,15 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
             </button>
           </div>
         </div>
-        <nav aria-label={t("nav.label")} className="no-scrollbar relative mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 py-1 lg:hidden">
+        <nav aria-label={t("nav.label")} className="no-scrollbar relative mx-auto flex w-full max-w-6xl gap-0.5 overflow-x-auto px-1.5 pb-2 sm:px-4.5 lg:hidden">
           <NavLinks section={section} waiting={waiting} />
         </nav>
       </header>
-      <main id="main" tabIndex={-1} className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pt-8 pb-20 sm:px-8 sm:pt-10">
+      <main id="main" tabIndex={-1} className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pt-10 pb-24 sm:px-8 sm:pt-14">
         {oauth ? (
           <div className="mb-6">
             <Notice
-              tone={oauth === "connected" ? "accent" : "amber"}
+              tone={oauth === "connected" ? "lime" : "amber"}
               action={
                 <button type="button" className={button({ variant: "quiet", size: "xs" })} onClick={() => navigate(path, { replace: true })}>
                   {t("oauth.dismiss")}
@@ -150,7 +150,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
   );
 }
 
-/** The links of the sections inside a `relative` nav: one pill glides under the current link and follows it when the links resize, and a soft iris opens where a link is pressed, from its centre on a key press. */
+/** The links of the sections inside a `relative` nav: one quiet pill glides under the current link and follows it when the links resize, and a soft iris opens where a link is pressed, from its centre on a key press. */
 function NavLinks({ section, waiting }: { section: Section; waiting: number }) {
   const t = useT();
   const pill = useRef<HTMLSpanElement>(null);
@@ -183,7 +183,7 @@ function NavLinks({ section, waiting }: { section: Section; waiting: number }) {
   );
   return (
     <>
-      <span ref={pill} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 h-9 origin-left rounded-md bg-paper/8 transition-transform duration-250 ease-(--ease-glide)" />
+      <span ref={pill} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 h-9 origin-left rounded-full bg-paper/8 transition-transform duration-250 ease-(--ease-glide)" />
       {NAV.map((item) => (
         <a
           key={item.section}
@@ -210,7 +210,7 @@ function NavLinks({ section, waiting }: { section: Section; waiting: number }) {
           ) : null}
           {t(item.label)}
           {item.section === "approvals" && waiting > 0 ? (
-            <span className="arrive bubble-word bg-lime px-1.5 py-px font-mono text-[0.6875rem] leading-4 text-ink tabular-nums">
+            <span className="arrive font-mono text-xs text-lime tabular-nums">
               <span aria-hidden="true">{waiting}</span>
               <span className="sr-only">{t("nav.waiting", { count: waiting })}</span>
             </span>

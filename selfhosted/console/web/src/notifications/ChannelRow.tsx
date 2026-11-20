@@ -2,13 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { errorText, type ChannelView } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { testChannel } from "../mutations";
-import { Bubble } from "../ui/Bubble";
+import { InlineConfirm } from "../ui/InlineConfirm";
 import { button } from "../ui/styles";
-import { InlineConfirm } from "./InlineConfirm";
+import { Tag } from "../ui/Tag";
 import { SETUP } from "./setup";
 import type { useRemove } from "./useRemove";
 
-const TONE = { connected: "accent", connecting: "neutral", error: "amber", notify_only: "outline" } as const;
+const TONE = { connected: "lime", connecting: "muted", error: "amber", notify_only: "muted" } as const;
 
 type ChannelRowProps = { channel: ChannelView; remove: ReturnType<typeof useRemove> };
 
@@ -19,7 +19,7 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
   const asking = remove.asking(channel.id);
   const failed = test.isError ? errorText(test.error) : test.data && !test.data.ok ? (test.data.error ?? t("notify.channels.testFailed")) : undefined;
   return (
-    <li className={`border-b border-line py-3 transition-opacity duration-300 last:border-b-0 ${remove.busy && asking ? "opacity-60" : ""}`}>
+    <li className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${remove.busy && asking ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <div className="min-w-0 grow basis-full @md:basis-0">
           <p title={channel.label} className="truncate font-medium">{channel.label}</p>
@@ -29,9 +29,9 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
             {channel.secret_hint ? <span translate="no">••••{channel.secret_hint}</span> : null}
           </p>
         </div>
-        <Bubble tone={TONE[channel.status]} title={channel.error}>
+        <Tag tone={TONE[channel.status]} dot title={channel.error}>
           {t(`notify.status.${channel.status}`)}
-        </Bubble>
+        </Tag>
         {asking ? null : (
           <div className="flex shrink-0 gap-2">
             <button type="button" disabled={test.isPending} className={button({ variant: "secondary", size: "xs" })} onClick={() => test.mutate(channel.id)}>
@@ -43,9 +43,9 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
           </div>
         )}
       </div>
-      {channel.status === "error" && channel.error ? <p className="mt-1.5 text-sm text-amber [overflow-wrap:anywhere]">{channel.error}</p> : null}
-      <p aria-live="polite" className="text-sm [overflow-wrap:anywhere] empty:hidden">
-        {failed ? <span className="text-amber">{failed}</span> : test.data?.ok ? <span className="text-lime">{t("notify.channels.testSent")}</span> : ""}
+      {channel.status === "error" && channel.error ? <p className="mt-1.5 text-sm text-amber-400">{channel.error}</p> : null}
+      <p aria-live="polite" className="text-sm empty:hidden">
+        {failed ? <span className="text-amber-400">{failed}</span> : test.data?.ok ? <span className="text-lime">{t("notify.channels.testSent")}</span> : ""}
       </p>
       {asking ? (
         <InlineConfirm

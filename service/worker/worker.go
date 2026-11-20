@@ -13,11 +13,12 @@ import (
 	"github.com/agents-control/connector-engine/service"
 )
 
-// Config holds approval.sweepInterval, the batch size, the executor count, and the logger and counter that Run reports failures to.
+// Config holds approval.sweepInterval, the batch size, the executor count, the shutdown grace of running executions, and where Run reports failures.
 type Config struct {
 	Interval  time.Duration
 	Batch     int
 	Executors int
+	Grace     time.Duration
 	Log       *slog.Logger
 	Failed    func()
 }
@@ -68,15 +69,17 @@ func New(svc *service.Service, store port.Store, clock port.Clock, cfg Config) *
 	return &Worker{svc: svc, store: store, clock: clock, cfg: cfg, slots: make(chan struct{}, cfg.Executors), retries: map[string]retry{}, running: map[string]bool{}}
 }
 
-// Run sweeps every Interval until ctx ends and waits for the approved records it started; it logs and counts each failure, and a failed item backs off.
+// Run sweeps every Interval until ctx ends, then gives the approved records it started Grace to finish before it cancels them; it logs and counts each failure.
 func (w *Worker) Run(ctx context.Context) error {
+	exec, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	defer cancel()
 	var wg sync.WaitGroup
-	defer wg.Wait()
+	defer w.drain(&wg, cancel)
 	t := time.NewTicker(w.cfg.Interval)
 	defer t.Stop()
 	for {
 		w.failed(ctx, safe.Run(func() error {
-			_, err := w.sweep(ctx, &wg, func(err error) { w.failed(ctx, err) })
+			_, err := w.sweep(ctx, exec, &wg, func(err error) { w.failed(ctx, err) })
 			return err
 		}))
 		select {
@@ -87,12 +90,23 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 
+func (w *Worker) drain(wg *sync.WaitGroup, cancel context.CancelFunc) {
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(w.cfg.Grace):
+		cancel()
+		<-done
+	}
+}
+
 // Sweep runs one pass: due work, the re-list of due connectors and credentials, and the pending fan-outs; it waits for the approved records it started.
 func (w *Worker) Sweep(ctx context.Context) (Stats, error) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var async []error
-	st, err := w.sweep(ctx, &wg, func(e error) {
+	st, err := w.sweep(ctx, ctx, &wg, func(e error) {
 		mu.Lock()
 		async = append(async, e)
 		mu.Unlock()
@@ -101,7 +115,7 @@ func (w *Worker) Sweep(ctx context.Context) (Stats, error) {
 	return st, errors.Join(append(async, err)...)
 }
 
-func (w *Worker) sweep(ctx context.Context, wg *sync.WaitGroup, report func(error)) (Stats, error) {
+func (w *Worker) sweep(ctx, exec context.Context, wg *sync.WaitGroup, report func(error)) (Stats, error) {
 	var st Stats
 	var items []port.WorkItem
 	var tenants []port.Tenant
@@ -131,7 +145,7 @@ func (w *Worker) sweep(ctx context.Context, wg *sync.WaitGroup, report func(erro
 		}
 		st.Items++
 		if it.Kind == port.WorkApprovedRecord {
-			w.execute(ctx, wg, key, it, report)
+			w.execute(exec, wg, key, it, report)
 			continue
 		}
 		err := w.dispatch(ctx, it)

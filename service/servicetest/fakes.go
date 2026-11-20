@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -189,14 +190,18 @@ func (r *Runtime) ListFunctions(_ context.Context, h port.Handle) ([]port.RawDef
 	return append([]port.RawDefinition(nil), r.defs[in.listing]...), r.meta[in.listing], nil
 }
 
-// Call runs the handler of the function and logs the call.
-func (r *Runtime) Call(_ context.Context, h port.Handle, function string, args json.RawMessage, _ time.Time) (port.Result, error) {
+// Call runs the handler of the function and logs the call; like a real runtime, it loses the answer when ctx was cancelled while the handler ran.
+func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, args json.RawMessage, _ time.Time) (port.Result, error) {
 	r.mu.Lock()
 	r.Calls = append(r.Calls, Invocation{Function: function, Arguments: args, Credential: r.handles[h].secrets.Credential})
 	fn := r.handlers[function]
 	r.mu.Unlock()
 	if fn != nil {
-		return fn(args)
+		res, err := fn(args)
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return port.Result{}, ctx.Err()
+		}
+		return res, err
 	}
 	return port.Result{Content: json.RawMessage(`[{"type":"text","text":"ok"}]`), Structured: args}, nil
 }

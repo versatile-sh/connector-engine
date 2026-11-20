@@ -3,6 +3,7 @@ package worker_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"slices"
 	"strings"
@@ -174,6 +175,50 @@ func TestRunLogsCountsAndSurvivesFailingAndPanickingSweeps(t *testing.T) {
 		}
 		if !strings.Contains(logs.String(), "worker sweep failed") {
 			t.Fatalf("panics=%v: no log line: %q", panics, logs.String())
+		}
+	}
+}
+
+func heldAndApproved(t *testing.T, f *fixture) port.ApprovalID {
+	t.Helper()
+	st.Ok(f.Svc.SetConnectorLevel(f.Ctx, f.admin, f.conn.ID, port.LevelCustom))
+	st.Ok(f.Svc.CreateGrant(f.Ctx, f.admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: "w1", Connector: f.conn.ID, Selector: "*", Mode: port.ModeAllow}))
+	st.Ok(f.Svc.PutBinding(f.Ctx, f.admin, port.Binding{Connector: f.conn.ID, Agent: "x", AskRequester: true}))
+	st.Ok(f.Svc.CreateGrant(f.Ctx, f.admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: "x", Connector: f.conn.ID, Selector: "*", Mode: port.ModeAsk}))
+	x := f.AgentClaims(port.Claims{Tenant: "t1", Workspace: "w1", Agent: "x", Session: "s1", OnBehalfOf: "alice"})
+	held := st.Ok(f.Svc.Call(f.Ctx, x, service.CallRequest{Name: "s__search", Arguments: []byte(`{"q":"a"}`)}))
+	st.Ok(f.Svc.DecideApproval(f.Ctx, f.Person("t1", "alice"), held.Approval.ID, port.DecisionApprove, "", "test"))
+	return held.Approval.ID
+}
+
+func TestShutdownLetsARunningApprovedExecutionFinishWithinTheGrace(t *testing.T) {
+	for _, c := range []struct {
+		grace time.Duration
+		state port.ApprovalState
+	}{{time.Minute, port.ApprovalExecuted}, {10 * time.Millisecond, port.ApprovalExecuting}} {
+		f := newFixture(t)
+		f.Clock.Advance(time.Since(st.Epoch))
+		id := heldAndApproved(t, f)
+		started, release := make(chan struct{}), make(chan struct{})
+		f.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) {
+			close(started)
+			<-release
+			return port.Result{Structured: json.RawMessage(`{"ok":true}`)}, nil
+		})
+		ctx, cancel := context.WithCancel(f.Ctx)
+		w := worker.New(f.Svc, f.Store, f.Clock, worker.Config{Interval: time.Hour, Grace: c.grace})
+		done := make(chan error, 1)
+		go func() { done <- w.Run(ctx) }()
+		<-started
+		cancel()
+		if c.grace < time.Second {
+			time.Sleep(100 * time.Millisecond)
+		}
+		close(release)
+		<-done
+		got := st.Ok(f.Svc.GetApproval(f.Ctx, f.Person("t1", "alice"), id)).Approval.State
+		if got != c.state {
+			t.Fatalf("grace %s: state %s, want %s", c.grace, got, c.state)
 		}
 	}
 }

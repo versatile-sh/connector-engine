@@ -92,3 +92,28 @@ func TestCapped(t *testing.T) {
 		t.Fatalf("§6.2 capped_by_destructive_max lists the destructive and unclassified functions: %v", got)
 	}
 }
+
+func TestAnItemIsCoveredOnlyByItsNameOrItsKindWildcard(t *testing.T) {
+	item := port.Function{Name: port.InstructionsItem, Class: port.ClassRead}
+	tool := port.Function{Name: "f", Class: port.ClassRead}
+	for _, tc := range []struct {
+		sel        string
+		item, tool bool
+		spec       int
+	}{
+		{"*", false, true, 0},
+		{"class:read", false, true, 1},
+		{"fn:" + port.InstructionsItem, false, false, 2},
+		{port.InstructionsItem, true, false, 2},
+		{port.ItemInstructions + "*", true, false, 1},
+	} {
+		if grant.Covers(tc.sel, item) != tc.item || grant.Covers(tc.sel, tool) != tc.tool || grant.Specificity(tc.sel) != tc.spec {
+			t.Errorf("%s: covers item %v, tool %v, specificity %d", tc.sel, grant.Covers(tc.sel, item), grant.Covers(tc.sel, tool), grant.Specificity(tc.sel))
+		}
+	}
+	for sel, ok := range map[string]bool{port.InstructionsItem: true, port.ItemInstructions + "*": true, port.ItemInstructions: false} {
+		if err := grant.Validate(row(port.ScopeWorkspace, sel, port.ModeAllow), grant.Policy{}); (err == nil) != ok {
+			t.Errorf("validate %s: %v", sel, err)
+		}
+	}
+}

@@ -107,6 +107,34 @@ const (
 	SelectorFunction = "fn:"
 )
 
+// Item kinds: a function row whose name starts with one of these is a connector item, not a tool; * and class: never cover it.
+const (
+	ItemInstructions = "instructions:"
+)
+
+// InstructionsItem is the name of the item that pins a connector's server instructions.
+const InstructionsItem = ItemInstructions + "server"
+
+var itemKinds = []string{ItemInstructions}
+
+// ItemKind returns the item kind a function name starts with, or "" for a tool.
+func ItemKind(name string) string {
+	for _, k := range itemKinds {
+		if strings.HasPrefix(name, k) {
+			return k
+		}
+	}
+	return ""
+}
+
+// SelectorOf returns the selector that names one function or item exactly: fn:<name> for a tool, the item name itself for an item.
+func SelectorOf(name string) string {
+	if ItemKind(name) != "" {
+		return name
+	}
+	return SelectorFunction + name
+}
+
 // Approval is one held call (§8.1).
 type Approval struct {
 	ID                 ApprovalID    `json:"id"`

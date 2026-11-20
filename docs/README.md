@@ -10,7 +10,8 @@ Start with **Install**, then **Use**. Every page is short and has runnable examp
 |---|---|
 | **install it** on my machine | [Install](getting-started/install.md) |
 | **use it** with my AI app | [First run](getting-started/first-run.md), then [Connect an AI app](getting-started/connect-an-app.md) |
-| run it for a team or inside a product | [The headless engine](enterprise/headless.md), then [Deploy to the cloud](enterprise/cloud.md) |
+| run it on a server | [Run it on a VPS](self-hosted/vps.md) |
+| embed it in a product | [The headless engine](enterprise/headless.md) |
 
 ## Getting started
 
@@ -32,11 +33,12 @@ Start with **Install**, then **Use**. Every page is short and has runnable examp
 | [Activity](using/activity.md) | what is recorded and for how long |
 | [Account and backup](using/account-backup.md) | password, full backups, shareable setups, restore |
 
-## Self-hosted (the person profile)
+## Self-hosted
 
 | Page | Covers |
 |---|---|
-| [The person profile](self-hosted/person.md) | what runs, commands, port, settings |
+| [The person profile](self-hosted/person.md) | what runs, the no-Docker binary, commands, port, settings |
+| [Run it on a VPS](self-hosted/vps.md) | single user over an SSH tunnel, or a team behind Caddy, firewall, backups, updates |
 | [The keychain](self-hosted/keychain.md) | root keys, unlock, migration, recovery, 1Password |
 | [Updating](self-hosted/updating.md) | update, pin a version, go back |
 | [Uninstalling](self-hosted/uninstalling.md) | stop, or delete everything |
@@ -52,7 +54,7 @@ Start with **Install**, then **Use**. Every page is short and has runnable examp
 | [Postgres and tenants](enterprise/postgres.md) | the database role, migrations, tenants, retention |
 | [Scaling and replicas](enterprise/scaling.md) | one instance, health checks, what replicas need |
 | [Security model](enterprise/security-model.md) | what it protects, what it trusts, deploying safely |
-| [Deploy to the cloud](enterprise/cloud.md) | Render, Railway, Fly.io |
+| [Deploy to the cloud](enterprise/cloud.md) | community PaaS templates (Render, Railway, Fly.io), not tested by maintainers |
 | [Architecture](../ARCHITECTURE.md) | ports and adapters, the path of a call, grants, approvals |
 
 ## Reference

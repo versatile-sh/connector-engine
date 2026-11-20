@@ -38,7 +38,7 @@ make logs
 | a server on `localhost` is unreachable | it must listen on an address Docker can reach; the engine dials `host.docker.internal` in place of `localhost` |
 | a call answers like an unknown tool | the function is off for this key, or the key cannot see the connector ([permissions](../using/permissions.md)) |
 
-## The engine (headless and cloud)
+## The engine (headless)
 
 | You see | Fix |
 |---|---|

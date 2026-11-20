@@ -42,4 +42,4 @@ Use `/readyz` for load balancers and platform health checks.
 
 ## Rolling updates
 
-A volume-backed instance (Render disk, Fly volume, Railway volume) cannot run two copies during a deploy, so the platform stops the old one first. Expect a short gap; AI apps retry. Use a maintenance window for upgrades with migrations.
+A volume-backed instance (a platform disk or volume) cannot run two copies during a deploy, so the platform stops the old one first. Expect a short gap; AI apps retry. Use a maintenance window for upgrades with migrations.

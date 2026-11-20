@@ -12,7 +12,7 @@
   <b><a href="#install">Install</a></b> &nbsp;·&nbsp;
   <b><a href="#use">Use</a></b> &nbsp;·&nbsp;
   <a href="#how-it-works">How it works</a> &nbsp;·&nbsp;
-  <a href="#deploy-for-a-team">Deploy</a> &nbsp;·&nbsp;
+  <a href="docs/self-hosted/vps.md">VPS</a> &nbsp;·&nbsp;
   <a href="docs/README.md">Docs</a>
 </p>
 
@@ -23,7 +23,7 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 | For | You get | Start with |
 |---|---|---|
 | **Individuals** | a local console on `127.0.0.1` that every AI app on your machine signs in to | [Install](#install) |
-| **Teams** | one gateway behind your identity provider, with shared connectors and approvals | [Deploy for a team](#deploy-for-a-team) |
+| **Teams** | one gateway on your own server, behind your identity provider | [Run it on a VPS](docs/self-hosted/vps.md) |
 | **Companies and products** | a headless engine you embed: operator API, CloudEvents, your own adapters | [The headless engine](docs/enterprise/headless.md) |
 
 <a id="install"></a>
@@ -35,6 +35,7 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 | **Docker** (any OS) | `git clone https://github.com/versatile-sh/connector-engine && cd connector-engine && make up` | works today |
 | **Linux, macOS** | `curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh \| sh`, then `connector-engine-selfhosted up --open` | after v0.1.0 |
 | **Windows** | `irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 \| iex` | after v0.1.0 |
+| **A VPS** | [Run it on a VPS](docs/self-hosted/vps.md): the binary or Docker on loopback, reached through an SSH tunnel; or the headless engine behind Caddy | works today with Docker |
 | **Docker, no clone** (Linux) | `docker run -d --network host -v connector-engine:/var/lib/connector-engine --entrypoint /usr/local/bin/connector-engine-selfhosted ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain` | after v0.1.0 |
 
 Works today, with Docker:
@@ -102,19 +103,7 @@ flowchart LR
 | **Secrets at rest**<br/>Envelope encryption; root keys wrapped by your OS keychain. | **Activity and events**<br/>Every call on record, redacted; a CloudEvent for every decision. | **Backups**<br/>Encrypted full backups, and shareable setups without credentials. |
 | **Headless engine**<br/>No console: your IdP, the operator API, your product decides. | **Adapters**<br/>Postgres, 1Password, webhooks, or your own through one registry. | **Self-hosted**<br/>Runs on your machine or your cloud. MIT licensed. |
 
-<a id="deploy-for-a-team"></a>
-
-## Deploy for a team
-
-The headless engine with Postgres and your OIDC issuer. Fork first and set your issuer; [Deploy to the cloud](docs/enterprise/cloud.md) lists what each platform needs.
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/versatile-sh/connector-engine)
-
-The button works from the first release on: it builds from the published, public `connector-engine-headless` image.
-
-Fly.io: `fly launch` with [`fly.toml`](fly.toml). Railway: [`railway.json`](railway.json); the template comes with the first release.
-
-> Never expose the person console to the internet: it is a single-owner app for `127.0.0.1`. Teams use the headless engine, which needs an OIDC issuer.
+> Never expose the person console to the internet: it is a single-owner app for `127.0.0.1`. On a server, reach it through an SSH tunnel, or run the headless engine behind TLS and OIDC ([VPS guide](docs/self-hosted/vps.md)).
 
 <a id="docs"></a>
 
@@ -124,10 +113,14 @@ Fly.io: `fly launch` with [`fly.toml`](fly.toml). Railway: [`railway.json`](rail
 |---|---|
 | [Getting started](docs/README.md#getting-started) | install per OS, first run, connect an app, import a connector |
 | [Using it](docs/README.md#using-it) | connectors, permissions, skills, approvals, activity, backups |
-| [Self-hosted](docs/README.md#self-hosted-the-person-profile) | the person profile, the keychain, updating, troubleshooting |
-| [Enterprise and headless](docs/README.md#enterprise-and-headless) | OIDC, Postgres, scaling, security model, cloud deploys |
+| [Self-hosted](docs/README.md#self-hosted) | the person profile, running it on a VPS, the keychain, updating, troubleshooting |
+| [Enterprise and headless](docs/README.md#enterprise-and-headless) | OIDC, Postgres, scaling, security model |
 | [Reference](docs/README.md#reference) | configuration, `cnctl`, API, events |
 | [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) | how it is built, how to contribute, how to report a vulnerability |
+
+## Other ways to deploy
+
+Community templates for Render, Railway and Fly.io, not tested by maintainers: [`deploy/providers/`](deploy/providers/README.md).
 
 ## License
 

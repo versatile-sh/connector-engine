@@ -76,5 +76,5 @@ Secrets are never written in the files. A key ending in `Ref` takes a reference:
 |---|---|
 | `headless` | [`deploy/profiles/headless/`](../../deploy/profiles/headless) |
 | `person` | [`selfhosted/deploy/profiles/person/`](../../selfhosted/deploy/profiles/person) ([what it changes](../self-hosted/person.md#profile-settings)) |
-| cloud | [`deploy/cloud/`](../../deploy/cloud) ([deploy to the cloud](../enterprise/cloud.md)) |
+| cloud | [`deploy/cloud/`](../../deploy/cloud) ([community templates](../enterprise/cloud.md)) |
 | dev | [`examples/dev/`](../../examples/dev) |

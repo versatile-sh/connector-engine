@@ -2,7 +2,7 @@
 
 # Install
 
-Pick the line for your machine. Each option installs the `person` profile: the engine, the local console and `cnctl`, for one person on their own computer. For a team or a product, see [the headless engine](../enterprise/headless.md) and [cloud deploys](../enterprise/cloud.md).
+Pick the line for your machine. Each option installs the `person` profile: the engine, the local console and `cnctl`, for one person on their own computer. On a server, see [run it on a VPS](../self-hosted/vps.md). For a product, see [the headless engine](../enterprise/headless.md).
 
 | You have | Run | Status |
 |---|---|---|

@@ -126,7 +126,7 @@ The user documentation lives in [`docs/`](docs/README.md), one page per task.
 | `cmd/connector-engine`, `cmd/cnctl` | the headless binaries |
 | `internal/plugkit` | in-module copy of the plugin kit (adapters, outbox, discovery) |
 | `selfhosted/` | the `person` profile: console, approval surfaces, host keychain, its binaries and compose file ([selfhosted/README.md](selfhosted/README.md)) |
-| `deploy/` | `compose.yaml`, the `headless` profile and the cloud deploy (`deploy/cloud/`) |
+| `deploy/` | `compose.yaml`, the `headless` profile, the shared PaaS image (`deploy/cloud/`) and the community provider templates (`deploy/providers/`) |
 | `docs/` | the user documentation and its banners |
 | `e2e/`, `scripts/` | end-to-end runs of the built binaries; smoke, e2e, docs checks and the installers |
 

@@ -57,7 +57,7 @@ make up PROFILE=headless
 
 It starts `init` (operator token and Postgres passwords), Postgres and the engine with `deploy/profiles/headless/`. The public listener is on `127.0.0.1:8080` and the operator listener on `127.0.0.1:8081`. Set your issuer in `deploy/profiles/headless/connector-engine.yaml` first ([OIDC](oidc.md)).
 
-On a cloud platform: [deploy to the cloud](cloud.md).
+On a server you control: [run it on a VPS](../self-hosted/vps.md#option-b-team-or-headless). On a platform-as-a-service: [community templates](cloud.md).
 
 ## Configuration files
 

@@ -53,7 +53,5 @@ Images are multi-arch (`linux/amd64`, `linux/arm64`) with an SBOM and provenance
 
 | Step | Why |
 |---|---|
-| set both GHCR packages to public (package settings → visibility) | `docker run`, `deploy/cloud/Dockerfile` and the cloud buttons pull without credentials |
-| create the Railway template from this repository (PostgreSQL, a volume at `/var/lib/connector-engine`, `CN_DATABASE_URL`, `CN_OPERATOR_TOKEN`, `PORT=8080`), then add its button to [cloud](enterprise/cloud.md#railway) and the README | Railway templates live on railway.com, not in the repository |
-| deploy once with the Render button and once with `fly launch` | the cloud configs are untested on the platforms |
+| set both GHCR packages to public (package settings → visibility) | `docker run` and `deploy/cloud/Dockerfile` pull without credentials |
 | update [SECURITY.md](../SECURITY.md) "Supported versions" | it says no release is tagged yet |

@@ -1,26 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, errorText, type ActivitySettings as Settings } from "../api";
+import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { deleteActivity, saveRecording, type Recording } from "../mutations";
 import { activitySettingsQuery } from "../queries";
 import { Icon } from "../ui/Icon";
 import { Sheet } from "../ui/Sheet";
 import { CAPTION, SKELETON, SURFACE, button } from "../ui/styles";
 import { Switch } from "../ui/Switch";
 
-type Recording = Pick<Settings, "record_arguments" | "record_results">;
-
 function DeleteAll({ onClose }: { onClose(): void }) {
   const t = useT();
-  const queryClient = useQueryClient();
-  const remove = useMutation({
-    mutationFn: () => api("DELETE", "/api/activity"),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["activity"] });
-      await queryClient.invalidateQueries({ queryKey: ["activity-settings"] });
-      onClose();
-    },
-  });
+  const remove = useMutation(deleteActivity);
   return (
     <Sheet title={t("activity.settings.deleteTitle")} closeLabel={t("common.close")} onClose={onClose}>
       <p className="text-muted">{t("activity.settings.deleteBody")}</p>
@@ -31,7 +22,7 @@ function DeleteAll({ onClose }: { onClose(): void }) {
         <button type="button" autoFocus className={button({ variant: "secondary" })} onClick={onClose}>
           {t("common.cancel")}
         </button>
-        <button type="button" disabled={remove.isPending} className={button({ variant: "danger" })} onClick={() => remove.mutate()}>
+        <button type="button" disabled={remove.isPending} className={button({ variant: "danger" })} onClick={() => remove.mutate(undefined, { onSuccess: onClose })}>
           <Icon name="trash" className="size-4" />
           {t("activity.settings.deleteConfirm")}
         </button>
@@ -43,13 +34,9 @@ function DeleteAll({ onClose }: { onClose(): void }) {
 /** What the console keeps of each call: arguments on by default, result excerpts off, 30 days, and a way to delete it all behind a confirmation. */
 export function ActivitySettings() {
   const t = useT();
-  const queryClient = useQueryClient();
   const settings = useQuery(activitySettingsQuery);
   const [deleting, setDeleting] = useState(false);
-  const save = useMutation({
-    mutationFn: (next: Recording) => api<Settings>("PUT", "/api/activity/settings", next),
-    onSuccess: (saved) => queryClient.setQueryData(activitySettingsQuery.queryKey, saved),
-  });
+  const save = useMutation(saveRecording);
   const current: Recording | undefined = save.isPending ? save.variables : settings.data;
   return (
     <section aria-labelledby="activity-settings" className={`${SURFACE} p-5`}>

@@ -1,20 +1,12 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { useReducer } from "react";
-import { api, errorText } from "../api";
+import { errorText } from "../api";
 import { revokeStep, type RevokeEvent } from "../access/revoke";
 
-/** The inline remove flow of one list on the notifications page: one row asked at a time, DELETE on confirm, the list refetched after. */
-export function useRemove(path: (id: string) => string) {
-  const queryClient = useQueryClient();
+/** The inline remove flow of one list on the notifications page: one row asked at a time, the removal sent on confirm. */
+export function useRemove(removal: UseMutationOptions<unknown, Error, string>) {
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
-  const remove = useMutation({
-    mutationFn: (id: string) => api("DELETE", path(id)),
-    onSuccess: async () => {
-      dispatch({ type: "revoked" });
-      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    },
-    onError: () => dispatch({ type: "failed" }),
-  });
+  const remove = useMutation(removal);
   const send = (event: RevokeEvent) => {
     if (event.type === "ask") remove.reset();
     dispatch(event);
@@ -29,7 +21,7 @@ export function useRemove(path: (id: string) => string) {
     confirm: () => {
       if (flow.kind !== "confirming") return;
       dispatch({ type: "confirm" });
-      remove.mutate(flow.name);
+      remove.mutate(flow.name, { onSuccess: () => dispatch({ type: "revoked" }), onError: () => dispatch({ type: "failed" }) });
     },
   };
 }

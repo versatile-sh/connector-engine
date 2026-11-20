@@ -303,10 +303,10 @@ func uninstall(c *command, keep, purge, yes, noKeychain bool) error {
 	if keep == purge {
 		return usage("usage: connector-engine-selfhosted uninstall [--data DIR] --keep-data | --purge [--yes]")
 	}
-	if _, err := os.Stat(layout(*c.data).operatorFile); purge && err != nil {
-		return fmt.Errorf("%s holds no install (no operator-token): nothing is deleted", *c.data)
-	}
 	if purge {
+		if err := holdsInstall(*c.data); err != nil {
+			return err
+		}
 		c.io.say("This deletes " + *c.data + " and the unlock key of this install: every connector, credential, access key and the account. Export a backup first if you may need any of it.\n")
 		if err := c.io.confirm("Delete everything of this install?", yes); err != nil {
 			return err

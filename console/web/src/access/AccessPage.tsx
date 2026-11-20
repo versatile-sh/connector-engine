@@ -141,7 +141,7 @@ export function AccessPage() {
           ) : list.length === 0 ? (
             <p className="py-2 text-sm text-muted">{t("keys.empty", { endpoint })}</p>
           ) : (
-            <ul>
+            <ul className="@container">
               {list.map((key) => (
                 <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
               ))}

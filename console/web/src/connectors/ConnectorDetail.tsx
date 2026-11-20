@@ -79,7 +79,7 @@ function Functions({ connector }: { connector: Connector }) {
       ) : shown.length === 0 ? (
         <p className="py-6 text-sm text-muted">{t("detail.noMatch")}</p>
       ) : (
-        <ul className="mt-2">
+        <ul className="@container mt-2">
           {shown.map((fn) => (
             <FunctionRow
               key={fn.name}

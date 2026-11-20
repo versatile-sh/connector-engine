@@ -14,7 +14,7 @@ export function AccessPicker({ name, value, disabled = false, of = "function", o
       value={value}
       disabled={disabled}
       onChange={onChange}
-      className="w-full sm:w-auto"
+      className="w-full @lg:w-auto"
       options={ACCESS.map((access) => ({ value: access, text: t(`access.${access}`), hint: t(of === "skill" ? `access.skillHint.${access}` : `access.hint.${access}`) }))}
     />
   );

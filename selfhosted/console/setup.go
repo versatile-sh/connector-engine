@@ -84,7 +84,10 @@ func stripURL(raw string, stripped *[]string) string {
 			*stripped = append(*stripped, fmt.Sprintf("removed the query parameter %q from %s://%s%s", name, u.Scheme, u.Host, u.Path))
 		}
 	}
-	u.RawQuery, u.Fragment = q.Encode(), ""
+	if u.Fragment != "" {
+		*stripped = append(*stripped, fmt.Sprintf("removed the fragment from %s://%s%s", u.Scheme, u.Host, u.Path))
+	}
+	u.RawQuery, u.Fragment, u.RawFragment = q.Encode(), "", ""
 	return u.String()
 }
 

@@ -22,3 +22,5 @@ secrets:
   adapter: hostkey
   dir: /var/lib/connector-engine/secrets
   unlockSocket: /run/connector-engine-unlock/unlock.sock
+runtime:
+  allowPrivateHosts: true

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 
 	"github.com/versatile-sh/connector-engine/filter/builtin"
 )

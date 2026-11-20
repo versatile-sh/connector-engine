@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/plugkit/discovery"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/discovery"
 
 	"github.com/versatile-sh/connector-engine/auth/jwks"
 	"github.com/versatile-sh/connector-engine/auth/local"

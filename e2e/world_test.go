@@ -16,8 +16,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	plugout "github.com/agents-control/plugkit/outbox"
 	"github.com/versatile-sh/connector-engine/internal/grpctest"
+	plugout "github.com/versatile-sh/connector-engine/internal/plugkit/outbox"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/service"
 	"github.com/versatile-sh/connector-engine/store/storetest"

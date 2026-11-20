@@ -10,8 +10,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/plugkit/adapters"
-	"github.com/agents-control/plugkit/discovery"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/discovery"
 
 	"github.com/versatile-sh/connector-engine/artifact/digest"
 	"github.com/versatile-sh/connector-engine/auth/local"

@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/agents-control/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 )
 
 // Engine and ports of the adapters file; each port also reads CN_<PORT> from the environment.

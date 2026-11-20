@@ -103,6 +103,22 @@ connector-console --listen 127.0.0.1:7465 --engine http://127.0.0.1:8080 \
 
 `connector-console --help` lists every flag.
 
+## Engine identity
+
+The console acts on the engine as engine persons, never as one shared account:
+
+| Flag (env) | Default | Is |
+|---|---|---|
+| `--person` (`CONSOLE_PERSON`) | `owner` | the first Owner's person; agent tokens made before multi-user name it, so they keep working |
+| `--service-person` (`CONSOLE_SERVICE_PERSON`) | `console` | the person the console reads as and writes role rows as; it must be the `tenant_admin` row of `bootstrap.roles` |
+| `--managers-group` (`CONSOLE_MANAGERS_GROUP`) | `managers` | the engine group that holds every Owner and Admin |
+
+- Every write runs as the person of the console user who made it, so the engine's audit, `decided_by` on approvals and the grants name that user. A write with no user behind it is refused before it reaches the engine.
+- Background writes act for the key's owner: a refresh-token renewal, and a decision from a chat channel, a desktop link or an app's elicitation. "Always allow" acts as the user who chose it.
+- Reads and the approvals watch run as the service person; the console then shows each user what is theirs.
+- At every start, and after a restore, the console writes each user's engine role as the service person: `tenant_admin` over `t/<tenant>` for an Owner or Admin, `agent_configurer` over `t/<tenant>/w/<workspace>` for a Member, and membership of the managers group for Owners and Admins. It removes the rows of its users that should not be there and the old `owner` row once no user is `owner`; rows of other persons stay.
+- Each access key has one owner, the user who made it; its agent tokens and bindings carry that person as `on_behalf_of` and `agent_owner`. Keys from an earlier console belong to the first Owner. A key name another user's key has is refused with "this name is taken".
+
 ## Profile settings
 
 The profile is a pair of files in `selfhosted/deploy/profiles/person/`. What it sets beyond the engine defaults:
@@ -110,6 +126,7 @@ The profile is a pair of files in `selfhosted/deploy/profiles/person/`. What it 
 | Setting | Value | Why |
 |---|---|---|
 | `auth.localIssuer` | enabled | the console mints agent tokens for your apps |
+| `bootstrap.roles` | `{tenant: local, person: console, role: tenant_admin, scope: t/local}` | the console's service person; the users' own rows come from the console ([engine identity](#engine-identity)) |
 | `secrets` port | `builtin:hostkey` | root keys wrapped by a key in your OS keychain |
 | `runtime.allowPrivateHosts` | `true` | you can import servers on your own network or `localhost` |
 | `runtime.loopbackHost` | `host.docker.internal` | a server on the host's loopback is reachable from the container |

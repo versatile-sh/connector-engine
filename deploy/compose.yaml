@@ -13,7 +13,7 @@ services:
   init:
     <<: *image
     profiles: [person, headless]
-    entrypoint: ["/usr/local/bin/connector-console", "init", "--dir", "/run/connector-engine", "--db-host", "postgres:5432"]
+    entrypoint: ["/usr/local/bin/connector-engine", "init", "--dir", "/run/connector-engine", "--db-host", "postgres:5432"]
     volumes:
       - secrets:/run/connector-engine
     restart: "no"

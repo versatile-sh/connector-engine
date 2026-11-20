@@ -61,7 +61,7 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
               </div>
               {step.id === "connector" ? (
                 <Reveal open={open}>
-                  <div className="pt-3 pl-10">
+                  <div className="pt-3 sm:pl-10">
                     <p className="mb-3 text-sm text-muted">{t("onboarding.step2.body")}</p>
                     <HubCard />
                     <PasteBox onPaste={onPaste} className="mt-4" />
@@ -70,7 +70,7 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
               ) : null}
               {step.id === "app" ? (
                 <Reveal open={open}>
-                  <div className="flex flex-col items-start gap-3 pt-3 pl-10 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col items-start gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between sm:pl-10">
                     <p className="text-sm text-muted">{t("onboarding.step3.body")}</p>
                     <button type="button" className={button({ variant: "accent", size: "sm" })} onClick={() => navigate("/access")}>
                       {t("onboarding.step3.action")}

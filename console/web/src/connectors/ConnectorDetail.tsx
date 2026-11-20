@@ -128,7 +128,7 @@ function Remove({ connector, onClose }: { connector: Connector; onClose(): void 
       <p role="alert" className="mt-3 min-h-5 text-sm text-amber">
         {remove.isError ? errorText(remove.error) : ""}
       </p>
-      <div className="mt-4 flex justify-end gap-2">
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
         <button type="button" autoFocus className={button({ variant: "secondary" })} onClick={onClose}>
           {t("common.cancel")}
         </button>

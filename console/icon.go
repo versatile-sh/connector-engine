@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 )
 
 var iconTypes = []string{"image/png", "image/jpeg", "image/gif", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"}
@@ -43,11 +44,30 @@ func FetchIcon(ctx context.Context, raw string) ([]byte, string, error) {
 	return body, kind, nil
 }
 
+type iconCache struct {
+	mu sync.Mutex
+	m  map[string]icon
+}
+
+func (ic *iconCache) get(raw string) (icon, bool) {
+	ic.mu.Lock()
+	defer ic.mu.Unlock()
+	v, ok := ic.m[raw]
+	return v, ok
+}
+
+func (ic *iconCache) put(raw string, v icon) {
+	ic.mu.Lock()
+	defer ic.mu.Unlock()
+	if len(ic.m) >= maxIconCache {
+		clear(ic.m)
+	}
+	put(&ic.m, raw, v)
+}
+
 func (c *Console) icon(w http.ResponseWriter, r *http.Request) {
 	raw := r.URL.Query().Get("u")
-	c.iconMu.Lock()
-	ic, ok := c.icons[raw]
-	c.iconMu.Unlock()
+	ic, ok := c.icons.get(raw)
 	if !ok {
 		body, kind, err := FetchIcon(r.Context(), raw)
 		if err != nil {
@@ -55,12 +75,7 @@ func (c *Console) icon(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ic = icon{body: body, kind: kind}
-		c.iconMu.Lock()
-		if len(c.icons) >= maxIconCache {
-			clear(c.icons)
-		}
-		c.icons[raw] = ic
-		c.iconMu.Unlock()
+		c.icons.put(raw, ic)
 	}
 	h := w.Header()
 	h.Set("Content-Type", ic.kind)

@@ -11,6 +11,7 @@ export type Session = {
   signed_in: boolean;
   csrf?: string;
   mcp_url: string;
+  onboarding_dismissed?: boolean;
 };
 
 export type FunctionView = {

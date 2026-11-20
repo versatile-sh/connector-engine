@@ -75,6 +75,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/agents", c.authed(c.listAgents))
 	mux.HandleFunc("POST /api/agents", c.authed(c.mintAgent))
 	mux.HandleFunc("DELETE /api/agents/{name}", c.authed(c.revokeAgent))
+	mux.HandleFunc("POST /api/onboarding/dismiss", c.authed(c.dismissOnboarding))
 	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
 	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
 	mux.HandleFunc("GET /api/icon", c.authed(c.icon))
@@ -140,6 +141,7 @@ func (c *Console) session(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{"owner_exists": c.State.HasOwner(), "signed_in": ok, "mcp_url": c.MCPURL}
 	if ok {
 		out["csrf"] = csrf
+		out["onboarding_dismissed"] = c.State.OnboardingDismissed()
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -467,6 +469,14 @@ func (c *Console) mintAgent(w http.ResponseWriter, r *http.Request) {
 
 func (c *Console) revokeAgent(w http.ResponseWriter, r *http.Request) {
 	if err := c.RevokeAgent(r.Context(), r.PathValue("name")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) dismissOnboarding(w http.ResponseWriter, _ *http.Request) {
+	if err := c.State.DismissOnboarding(); err != nil {
 		c.fail(w, err)
 		return
 	}

@@ -26,11 +26,11 @@ function Tick({ step, current }: { step: SetupStep; current: boolean }) {
   );
 }
 
-/** The first-run guide on the connectors page: account, first connector, first AI app, each ticked from real data, the next one open with what it takes. Hidden for good once the owner says so. */
+/** The first-run guide on the connectors page: account, first connector, first AI app, each ticked from real data, the next one open with what it takes. It hides by itself once every step is done, and for good once the owner closes it. */
 export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
   const t = useT();
   const setup = useSetup();
-  if (!setup.ready || setup.hidden) return null;
+  if (!setup.visible) return null;
   const current = setup.steps.find((step) => !step.done)?.id;
   return (
     <section aria-labelledby="setup-title" className="arrive vignette-top bubble relative mb-8 overflow-hidden border border-line-strong bg-ink-raised">
@@ -40,13 +40,8 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
           <h2 id="setup-title" className="font-serif text-2xl leading-tight font-normal tracking-[-0.01em]">
             {t("onboarding.title")}
           </h2>
-          <p className="font-mono text-xs text-muted">{current ? t("onboarding.progress", { done: setup.done, total: setup.total }) : t("onboarding.allSet")}</p>
+          <p className="font-mono text-xs text-muted">{t("onboarding.progress", { done: setup.done, total: setup.total })}</p>
         </div>
-        {current ? null : (
-          <button type="button" className={button({ variant: "accent", size: "sm" })} onClick={setup.hide}>
-            {t("common.done")}
-          </button>
-        )}
         <button type="button" aria-label={t("onboarding.hide")} title={t("onboarding.hide")} className={ICON_BUTTON} onClick={setup.hide}>
           <Icon name="close" className="size-4" />
         </button>

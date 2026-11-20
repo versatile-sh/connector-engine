@@ -15,7 +15,6 @@ export const en = {
   "common.copied": "Copied",
   "common.copyFailed": "Blocked",
   "common.save": "Save",
-  "common.done": "Done",
   "common.opensNewTab": "(opens in a new tab)",
 
   "nav.label": "Console",
@@ -71,7 +70,6 @@ export const en = {
   "onboarding.title": "Get set up",
   "onboarding.progress": "{done} of {total} done",
   "onboarding.hide": "Hide the setup guide",
-  "onboarding.allSet": "All set. Your AI apps can reach your connectors now.",
   "onboarding.stepDone": "done",
   "onboarding.step1": "Create your account",
   "onboarding.step2": "Import your first connector",

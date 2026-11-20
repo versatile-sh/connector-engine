@@ -17,7 +17,6 @@ export const es: Record<MessageKey, string> = {
   "common.copied": "Copiado",
   "common.copyFailed": "Bloqueado",
   "common.save": "Guardar",
-  "common.done": "Listo",
   "common.opensNewTab": "(se abre en una pestaña nueva)",
 
   "nav.label": "Consola",
@@ -73,7 +72,6 @@ export const es: Record<MessageKey, string> = {
   "onboarding.title": "Primeros pasos",
   "onboarding.progress": "{done} de {total} hechos",
   "onboarding.hide": "Ocultar la guía",
-  "onboarding.allSet": "Todo listo. Tus apps de IA ya llegan a tus conectores.",
   "onboarding.stepDone": "hecho",
   "onboarding.step1": "Crea tu cuenta",
   "onboarding.step2": "Importa tu primer conector",

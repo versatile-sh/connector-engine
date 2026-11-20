@@ -242,7 +242,7 @@ func (c *Console) freeAlias(ctx context.Context, base string) (string, error) {
 	return alias, nil
 }
 
-// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent.
+// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent; with a key already made it also finishes the first-run guide.
 func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
 	lv, err := c.createListing(ctx, m)
 	if err != nil {
@@ -289,11 +289,17 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
-	for _, a := range c.State.Agents() {
+	agents := c.State.Agents()
+	for _, a := range agents {
 		if a.ExpiresAt.After(time.Now()) {
 			if err := c.bind(ctx, conn, a); err != nil {
 				return conn, err
 			}
+		}
+	}
+	if len(agents) > 0 {
+		if err := c.State.DismissOnboarding(); err != nil {
+			return conn, err
 		}
 	}
 	return conn, nil
@@ -385,7 +391,7 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// MintAgent binds the agent to every connector, lets the workspace rows decide for it until the token expires, and mints its token.
+// MintAgent binds the agent to every connector, lets the workspace rows decide for it until the token expires, and mints its token; with a connector already installed it also finishes the first-run guide.
 func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration) (AgentToken, error) {
 	name = Slug(name)
 	if name == "" {
@@ -399,8 +405,10 @@ func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration)
 	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
 		return AgentToken{}, err
 	}
+	installed := false
 	for _, v := range list.Items {
 		if v.Connector.RemovedAt.IsZero() {
+			installed = true
 			if err := c.bind(ctx, string(v.Connector.ID), a); err != nil {
 				return AgentToken{}, err
 			}
@@ -412,6 +420,11 @@ func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration)
 	}
 	if err := c.State.PutAgent(a); err != nil {
 		return AgentToken{}, err
+	}
+	if installed {
+		if err := c.State.DismissOnboarding(); err != nil {
+			return AgentToken{}, err
+		}
 	}
 	return AgentToken{Agent: name, Token: tok, ExpiresAt: a.ExpiresAt, MCPURL: c.MCPURL}, nil
 }

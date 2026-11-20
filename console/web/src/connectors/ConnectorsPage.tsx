@@ -78,7 +78,7 @@ export function ConnectorsPage() {
           ))}
         </ul>
       ) : list.length === 0 ? (
-        setup.hidden || (setup.settled && !setup.ready) ? (
+        setup.settled && !setup.visible ? (
           <Empty onPaste={open} />
         ) : null
       ) : (

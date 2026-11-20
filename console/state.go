@@ -48,10 +48,11 @@ type StoredSession struct {
 }
 
 type stateFile struct {
-	Owner    *Owner                   `json:"owner,omitempty"`
-	Agents   map[string]Agent         `json:"agents,omitempty"`
-	Sessions map[string]StoredSession `json:"sessions,omitempty"`
-	Revoked  map[string]time.Time     `json:"revoked,omitempty"`
+	Owner               *Owner                   `json:"owner,omitempty"`
+	Agents              map[string]Agent         `json:"agents,omitempty"`
+	Sessions            map[string]StoredSession `json:"sessions,omitempty"`
+	Revoked             map[string]time.Time     `json:"revoked,omitempty"`
+	OnboardingDismissed bool                     `json:"onboarding_dismissed,omitempty"`
 }
 
 // State is the console's file in its volume: the owner account, the connected agents and the revoked ones, written atomically with mode 0600.
@@ -236,4 +237,26 @@ func (s *State) Revoked(agent string, iat int64) bool {
 	defer s.mu.Unlock()
 	at, ok := s.data.Revoked[agent]
 	return ok && iat <= at.Unix()
+}
+
+// OnboardingDismissed reports whether the first-run guide was closed or finished, for good.
+func (s *State) OnboardingDismissed() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.OnboardingDismissed
+}
+
+// DismissOnboarding closes the first-run guide for good, on every browser and across restarts.
+func (s *State) DismissOnboarding() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data.OnboardingDismissed {
+		return nil
+	}
+	s.data.OnboardingDismissed = true
+	if err := s.save(); err != nil {
+		s.data.OnboardingDismissed = false
+		return err
+	}
+	return nil
 }

@@ -62,12 +62,12 @@ export function Footer() {
               <span className="text-muted-light">$</span> versatile --anywhere --anything --your-way
             </p>
           </div>
-          <nav aria-label="versatile.sh" className="flex flex-col items-start gap-2 text-sm text-muted">
-            <a href={hub} target="_blank" rel="noopener" className={QUIET_LINK}>
+          <nav aria-label="versatile.sh" className="flex flex-col items-start gap-2 text-sm text-muted pointer-coarse:gap-0">
+            <a href={hub} target="_blank" rel="noopener" className={`${QUIET_LINK} pointer-coarse:py-3`}>
               {t("footer.hub")}
               <span className="sr-only"> {t("common.opensNewTab")}</span>
             </a>
-            <a href={SITE} target="_blank" rel="noopener noreferrer" className={QUIET_LINK} translate="no">
+            <a href={SITE} target="_blank" rel="noopener noreferrer" className={`${QUIET_LINK} pointer-coarse:py-3`} translate="no">
               versatile.sh
               <span className="sr-only"> {t("common.opensNewTab")}</span>
             </a>

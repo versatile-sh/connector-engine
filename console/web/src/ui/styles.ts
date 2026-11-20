@@ -17,6 +17,13 @@ export const LIT_EDGE =
 /** The lime hairline that lights the top edge of the panel holding the next step; its parent is `relative`. */
 export const HAIRLINE = "pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-lime/70 to-transparent";
 
+/** On a touch screen, the hit area of a small control grows to at least 44px square around its centre without changing how it looks; the control is `relative`. */
+export const TOUCH =
+  "pointer-coarse:after:absolute pointer-coarse:after:top-1/2 pointer-coarse:after:left-1/2 pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 pointer-coarse:after:-translate-x-1/2 pointer-coarse:after:-translate-y-1/2";
+
+/** The touch hit area of one segment of a group: 44px tall, as wide as the segment so neighbours never overlap; the segment is `relative`. */
+export const TOUCH_ROW = "pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:top-1/2 pointer-coarse:after:h-full pointer-coarse:after:min-h-11 pointer-coarse:after:-translate-y-1/2";
+
 /** The coloured bar on the left of a rounded card, inset clear of its corners; the card is `relative`. */
 export const ACCENT_BAR = "pointer-events-none absolute inset-y-2.5 left-1.5 w-1 rounded-full";
 
@@ -45,14 +52,14 @@ const BUTTON_SIZE = { xs: "h-8 px-3 text-xs", sm: "h-9 px-4 text-sm", md: "h-11 
 
 /** Class string of the one button language, for links and real buttons alike: a small bubble with its tail. */
 export function button({ variant = "primary", size = "md" }: ButtonOptions = {}): string {
-  return `bubble-word inline-flex shrink-0 items-center justify-center gap-2 font-semibold whitespace-nowrap ${PRESS} ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]}`;
+  return `bubble-word relative inline-flex shrink-0 items-center justify-center gap-2 font-semibold whitespace-nowrap ${TOUCH} ${PRESS} ${BUTTON_VARIANT[variant]} ${BUTTON_SIZE[size]}`;
 }
 
 /** Class string of a button that is only an icon: round, quiet until pointed at. */
-export const ICON_BUTTON = `grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-paper/10 hover:text-paper ${PRESS}`;
+export const ICON_BUTTON = `relative grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-paper/10 hover:text-paper ${TOUCH} ${PRESS}`;
 
 /** The icon button on ink or on lime: it takes the colour of the text around it. */
-export const ICON_BUTTON_PLAIN = `grid size-9 shrink-0 place-items-center rounded-full hover:bg-current/15 ${PRESS}`;
+export const ICON_BUTTON_PLAIN = `relative grid size-9 shrink-0 place-items-center rounded-full hover:bg-current/15 ${TOUCH} ${PRESS}`;
 
 /** The site's chip, for a small choice that stays pressed: a pill that brightens to paper at 10% when on (`aria-pressed` or `aria-checked`), never lime. */
-export const CHIP = `inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-line-strong whitespace-nowrap text-muted select-none hover:text-paper aria-checked:border-paper/60 aria-checked:bg-paper/10 aria-checked:text-paper aria-pressed:border-paper/60 aria-pressed:bg-paper/10 aria-pressed:text-paper ${PRESS}`;
+export const CHIP = `relative inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-line-strong whitespace-nowrap text-muted select-none hover:text-paper aria-checked:border-paper/60 aria-checked:bg-paper/10 aria-checked:text-paper aria-pressed:border-paper/60 aria-pressed:bg-paper/10 aria-pressed:text-paper ${TOUCH} ${PRESS}`;

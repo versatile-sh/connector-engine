@@ -28,7 +28,7 @@ function Created({ token }: { token: AgentToken }) {
           <Icon name="key" className="size-[1.1rem]" />
         </span>
         <div className="min-w-0">
-          <h2 id="created-title" className="text-lg leading-snug font-medium">
+          <h2 id="created-title" className="text-lg leading-snug font-medium [overflow-wrap:anywhere]">
             {t("keys.created", { name: token.agent })}
           </h2>
           <p className="text-sm text-muted">{t("keys.once")}</p>

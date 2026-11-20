@@ -33,7 +33,7 @@ function Held({ approval, connector, deciding, onDecide }: { approval: Approval;
           {approval.class ? <Bubble>{approval.class}</Bubble> : null}
         </div>
         <p className="mt-0.5 text-sm text-muted">{t("approvals.on", { connector })}</p>
-        <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs text-muted">
+        <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs text-muted [overflow-wrap:anywhere]">
           <span>{t("approvals.from", { agent: approval.agent })}</span>
           <span title={approval.session}>{t("approvals.session", { id: approval.session.slice(0, 8) })}</span>
           <span title={new Date(approval.expires_at).toLocaleString(locale)}>{t("approvals.expires", { when: fromNow(approval.expires_at, locale) })}</span>

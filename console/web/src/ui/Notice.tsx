@@ -6,7 +6,7 @@ export function Notice({ tone = "amber", children, action }: { tone?: "amber" | 
   return (
     <div role={tone === "amber" ? "alert" : "status"} className="arrive bubble relative flex items-center gap-3 border border-line-strong bg-ink-raised py-3 pr-3 pl-5 text-sm">
       <span aria-hidden="true" className={`${ACCENT_BAR} ${tone === "amber" ? "bg-amber" : "bg-lime"}`} />
-      <p className="min-w-0 flex-1">{children}</p>
+      <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{children}</p>
       {action}
     </div>
   );

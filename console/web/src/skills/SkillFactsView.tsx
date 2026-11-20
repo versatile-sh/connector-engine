@@ -10,7 +10,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
   const t = useT();
   const warnings = skillWarnings({ ...skill, unbound });
   const link = sourceLink(skill.source);
-  const licence = skill.licence.spdx ? t("skills.licence", { spdx: skill.licence.spdx }) : t("skills.noLicence");
+  const licence = skill.licence.spdx && skill.licence.spdx !== "NONE" ? t("skills.licence", { spdx: skill.licence.spdx }) : t("skills.noLicence");
   return (
     <div className="flex flex-col gap-4">
       {warnings.length > 0 ? (
@@ -31,7 +31,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
         <dt>{t("skills.source")}</dt>
         <dd className="min-w-0 truncate font-mono text-xs leading-5">
           <a href={link} target="_blank" rel="noreferrer noopener" className="text-paper underline decoration-line-strong underline-offset-4 hover:decoration-lime" title={link} translate="no">
-            {skill.source.repository.replace(/^https?:\/\//, "")}/{skill.source.path}@{shortCommit(skill.source.commit)}
+            {[skill.source.repository.replace(/^https?:\/\/(github\.com\/)?/, ""), skill.source.path].filter(Boolean).join("/")}@{shortCommit(skill.source.commit)}
           </a>
           <span className="sr-only"> {t("common.opensNewTab")}</span>
         </dd>

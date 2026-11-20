@@ -25,6 +25,8 @@ describe("sourceLink", () => {
   describe("without one", () => {
     test("points at the tree at the pinned commit", () =>
       assert.equal(sourceLink({ repository: "https://github.com/a/b/", path: "skills/pdf", commit }), `https://github.com/a/b/tree/${commit}/skills/pdf`));
+    test("reads owner/repo as GitHub and drops an empty root path", () =>
+      assert.equal(sourceLink({ repository: "a/b", path: "", commit }), `https://github.com/a/b/tree/${commit}`));
   });
 });
 

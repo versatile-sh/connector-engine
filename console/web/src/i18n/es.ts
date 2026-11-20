@@ -166,7 +166,6 @@ export const es: Record<MessageKey, string> = {
 
   "keys.title": "*Conecta* una app de IA",
   "keys.intro": "Elige tu app abajo y conéctala solo con la dirección: la app abre esta consola en tu navegador y tú la permites. Todos los conectores aparecen con los permisos que definiste.",
-  "keys.endpoint": "Endpoint",
   "keys.new": "Nueva clave de acceso",
   "keys.name": "Nombre",
   "keys.namePlaceholder": "claude-desktop, cursor, chatgpt…",

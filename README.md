@@ -12,7 +12,10 @@ This builds one image (engine, `cnctl`, console) and starts the `person` profile
 
 | Command | What it does |
 |---|---|
-| `make up` / `make down` / `make logs` | start, stop, follow the `person` profile; `PROFILE=headless` runs the engine alone |
+| `make up` / `make down` / `make logs` | start, stop, follow the `person` profile; `PROFILE=headless` runs the engine alone. With the `person` profile, `make up` ends with `make unlock` |
+| `make unlock` | deliver the unlock key from the host's keychain to the engine and the console after any restart ([docs/SECRETS.md](docs/SECRETS.md)) |
+| `make keychain-migrate` / `keychain-revert` / `keychain-status` | move an existing plaintext `root.key` under the keychain (verified, idempotent), back again, or report |
+| `make keychain-recovery` / `keychain-import` | print the unlock key for a password manager, or restore it into this host's keychain from stdin |
 | `make cli ARGS="tools list"` | `cnctl` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
 | `make admin ARGS="tenants create t2"` | `cnctl admin` against the operator listener with the generated operator token |
 | `make test` | Go tests, the console typecheck and `adapters check` of both profiles |
@@ -21,6 +24,7 @@ This builds one image (engine, `cnctl`, console) and starts the `person` profile
 - `CONSOLE_PORT` is the only port setting. It sets the published port, the Host allowlist (`127.0.0.1`, `localhost` and `[::1]` at that port) and the OAuth redirect `http://127.0.0.1:<port>/oauth/callback`. Put it in `deploy/.env` to keep it.
 - Outside Docker: `connector-console --listen 127.0.0.1:<port> --engine http://127.0.0.1:8080 --engine-operator http://127.0.0.1:8081 --operator-token-file <file> --state <file>`; the allowlist follows the port of `--listen`.
 - Install links: `http://127.0.0.1:<port>/import?listing=<https URL of a listing in the Manifest format>` or `?mcp=<https MCP URL>` open a confirm screen (after sign-in) with the origin, title, icon, publisher and each function's proposed choice. Nothing is installed before the click.
+- Root keys: in the `person` profile the engine's and the console's root keys rest wrapped by an unlock key kept in the OS keychain (macOS Keychain, Secret Service, DPAPI) and piped into each container by `make unlock`; without a keychain they stay plaintext files and the console warns. `PROJECT` names the compose project and the keychain item. See [docs/SECRETS.md](docs/SECRETS.md) for the delivery, the migration and the threat model.
 - First boot writes a random operator token and the Postgres passwords into the `secrets` volume. The console keeps the owner account (PBKDF2-SHA256) in the `console-data` volume. Secrets the console keeps for itself, such as notifier tokens, go through `console/sealed`: a `port.SecretStore` (envelope encryption, key store in `console-data/secrets`) seals each value, so the state file holds only `port.Sealed` records; passwords and tokens it only checks stay hashes.
 - The console is the OAuth 2.1 authorization server of the `person` profile only: `/.well-known/oauth-protected-resource[/mcp]` names it, `/.well-known/oauth-authorization-server` describes it, `/oauth/register` takes dynamic client registration (RFC 7591; loopback `http` redirects on any port and app schemes such as `cursor:` or `vscode:`, never `https`), and `/oauth/authorize` (PKCE S256 only) and `/oauth/token` (`authorization_code`, rotating `refresh_token`) do the rest. Allowing an app creates the access key named after it, so its grants, the key list and Revoke work as for any key. Access tokens are engine agent tokens living one hour; the console keeps registered clients and the SHA-256 of refresh tokens (90 days) in its state file.
 - Skills (`person` profile): a skill link `http://127.0.0.1:<port>/import?listing=<https URL of a skill catalog entry>` opens the same confirm screen, dispatched on `kind: skill`. It shows the licence, the source at its pinned commit, the file list with sizes and a warning when the skill carries scripts. Nothing is fetched beyond the entry until you confirm; then each file is fetched over public https, checked against its sha256 and its address pinned to `source.commit`, and refused for a branch name, `..`, an absolute path or a size over the limits (256 files, 1 MiB a file, 4 MiB a skill). The Skills tab sets each skill off, on or ask per access key; keys made later start off. AI apps see two tools, `skill_list` and `skill_load`, and a short index of their skills in the server instructions. The gateway serves skill files as text and never runs them. A skill without a redistributable licence is `metadata_only`: it is listed, and `skill_load` answers with its source instead of its files.
@@ -42,7 +46,8 @@ This builds one image (engine, `cnctl`, console) and starts the `person` profile
 | `runtime/` | `ConnectorRuntime` adapters: `remote` (MCP), `declarative` (REST), `grpc`, `skill` (pinned skill files as text, no process), `memory` |
 | `source/` | `ListingSource` adapters: `files`, `openapi`, `reflection`, `bsr`, `registry`, `docker`, `skillcatalog` (https catalog entries, no URL built in) |
 | `store/` | `memory` and `postgres` (row-level security per tenant) |
-| `secrets/`, `auth/`, `credential/` | envelope encryption, token verification and the local issuer, the credential broker |
+| `secrets/`, `auth/`, `credential/` | envelope encryption (`local`, `hostkey`), token verification and the local issuer, the credential broker |
+| `cli/keychain` | `cnctl keychain`: the unlock key in the host's keychain |
 | `filter/`, `index/`, `sink/`, `relay/` | result filter, tool index, event sinks, the outbox relay |
 | `app/`, `config/` | the composition root and `connector-engine.yaml` with `adapters.yaml` |
 | `cmd/connector-engine`, `cmd/cnctl` | the server and the command line |

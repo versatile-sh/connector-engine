@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -339,6 +340,27 @@ func TestAnExpiredKeyIsTurnedOffAndStaysOffOnceRenewed(t *testing.T) {
 	for _, name := range []string{"old", "older", "live"} {
 		if pr := p.profile(name); pr.Mode != console.ProfileOff {
 			t.Errorf("%s after every key went off and a renewal: %+v", name, pr)
+		}
+	}
+}
+
+func TestAKeyTurnedOffWhileItRenewsStaysOff(t *testing.T) {
+	p := profiledStack(t)
+	p.mint("racer")
+	for round := range 25 {
+		p.mode(console.ProfileFollow, "racer")
+		var wg sync.WaitGroup
+		var off, renew int
+		wg.Go(func() {
+			off, _ = p.b.send("PUT", "/api/connectors/"+p.conn+"/profiles", map[string]any{"mode": "off", "keys": []string{"racer"}}, nil)
+		})
+		wg.Go(func() { renew, _ = p.b.send("POST", "/api/agents", map[string]any{"name": "racer"}, nil) })
+		wg.Wait()
+		if off != http.StatusOK || renew != http.StatusCreated {
+			t.Fatalf("round %d: off %d, renew %d", round, off, renew)
+		}
+		if pr := p.profile("racer"); pr.Mode != console.ProfileOff {
+			t.Fatalf("round %d: a renewal undid off: %+v", round, pr)
 		}
 	}
 }

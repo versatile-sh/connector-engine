@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/versatile-sh/connector-engine/core/grant"
@@ -37,6 +38,13 @@ type Effect struct {
 }
 
 func isOverride(g port.Grant) bool { return grant.Specificity(g.Selector) == 2 }
+
+func (c *Console) lockConnector(conn string) func() {
+	m, _ := c.writing.LoadOrStore(conn, &sync.Mutex{})
+	mu := m.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
 
 func (c *Console) boundKeys(ctx context.Context, conn string) (map[string]bool, error) {
 	binds, err := c.Engine.bindings(ctx, conn)
@@ -95,6 +103,7 @@ func (c *Console) SetProfileMode(ctx context.Context, conn string, names []strin
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
+	defer c.lockConnector(conn)()
 	return eachKey(c.knownAgents(), names, func(a Agent) error { return set(ctx, conn, a) }), nil
 }
 
@@ -126,6 +135,7 @@ func (c *Console) SetProfileAccess(ctx context.Context, conn, agent, name string
 	if err != nil {
 		return err
 	}
+	defer c.lockConnector(conn)()
 	return c.narrow(ctx, conn, a, name, access)
 }
 
@@ -256,6 +266,7 @@ func (c *Console) join(ctx context.Context, conn port.Connector, a Agent, known 
 		}
 		return c.rebindSkill(ctx, id, a)
 	}
+	defer c.lockConnector(id)()
 	bound, err := c.boundKeys(ctx, id)
 	switch {
 	case err != nil:

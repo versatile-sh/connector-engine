@@ -46,6 +46,7 @@ type Console struct {
 	surf          surfaces
 	signing       signingKey
 	sep           separatorCache
+	writing       sync.Map
 }
 
 // Handler returns every route behind the guard.

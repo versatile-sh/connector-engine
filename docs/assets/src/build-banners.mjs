@@ -146,6 +146,7 @@ const SECTIONS = [
   ["events", "reference", "Events, as ", "CloudEvents"],
   ["contributing", "project", "Contributing ", "a change"],
   ["security", "project", "Report a ", "vulnerability"],
+  ["releasing", "project", "Ship a ", "release"],
 ];
 
 writeFileSync(join(out, "banner-hero.svg"), hero());

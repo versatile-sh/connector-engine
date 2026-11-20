@@ -23,7 +23,7 @@ type FunctionView struct {
 	Access      Access     `json:"access"`
 }
 
-// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far and the profiles a setup left waiting for keys not made yet.
+// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far and the permission sets that hold a profile for it.
 type ConnectorSummary struct {
 	ID          string         `json:"id"`
 	Alias       string         `json:"alias"`
@@ -42,7 +42,7 @@ type ConnectorSummary struct {
 	Functions   []FunctionView `json:"functions"`
 	Items       []Item         `json:"items"`
 	Profiles    []Profile      `json:"profiles"`
-	Waiting     []Profile      `json:"waiting,omitempty"`
+	Slots       []SlotProfile  `json:"slots"`
 	NewKeysOff  bool           `json:"new_keys_off,omitempty"`
 }
 
@@ -125,7 +125,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		if s.Profiles, err = c.profiles(ctx, string(conn.ID), agentRows); err != nil {
 			return nil, err
 		}
-		s.NewKeysOff, s.Waiting = c.State.NewKeysOff(string(conn.ID)), c.State.PendingProfiles(string(conn.ID))
+		s.NewKeysOff, s.Slots = c.State.NewKeysOff(string(conn.ID)), c.slotsOn(string(conn.ID), conn.Alias)
 		if creds, err := c.Engine.credentials(ctx, string(conn.ID)); err == nil {
 			for _, cr := range creds {
 				s.Credentials = append(s.Credentials, string(cr.Kind)+":"+string(cr.Status))
@@ -153,35 +153,62 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 	if err != nil {
 		return err
 	}
-	return results[0].Err
+	for _, r := range results {
+		if r.Err != nil {
+			return r.Err
+		}
+	}
+	return nil
 }
 
-// SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, and answers each name's result in order.
+// SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, lifts the new-key limits of the names written, and answers each name's result in order, then one entry per bound key it failed to give the item rows.
 func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string, a Access) ([]Result, error) {
-	if len(names) == 0 {
+	switch {
+	case len(names) == 0:
 		return nil, invalid("name at least one function or item")
+	case !a.Valid():
+		return nil, invalid("access %q is not off, on or ask", a)
 	}
-	defer c.lockConnector(conn)()
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
+	if err := c.plainConnector(ctx, conn); err != nil {
+		return nil, err
+	}
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	results := make([]Result, 0, len(names))
-	items := false
+	items, written := false, []string{}
 	for _, name := range names {
 		err := c.writeAccess(ctx, conn, name, a)
 		results = append(results, Result{Name: name, Err: err})
 		items = items || err == nil && port.ItemKind(name) != ""
+		if err == nil {
+			written = append(written, name)
+		}
+	}
+	if err := c.State.LiftNewKeyLimits(conn, written); err != nil {
+		results = append(results, Result{Name: "keys", Err: err})
 	}
 	if !items || a == AccessOff {
 		return results, nil
 	}
 	bound, err := c.boundKeys(ctx, conn)
 	if err != nil {
-		return nil, err
+		return append(results, Result{Name: "keys", Err: err}), nil
 	}
-	return results, c.bindAll(ctx, conn, func(ctx context.Context, conn string, a Agent) error {
-		if !bound[a.Name] {
-			return nil
+	for _, k := range c.liveAgents() {
+		if !bound[k.Name] {
+			continue
 		}
-		return c.bind(ctx, conn, a)
-	})
+		if err := c.bind(ctx, conn, k); err != nil {
+			results = append(results, Result{Name: k.Name, Err: fmt.Errorf("key %s keeps its old item rows: %w", k.Name, err)})
+		}
+	}
+	return results, nil
 }
 
 func (c *Console) bindAll(ctx context.Context, conn string, bind func(context.Context, string, Agent) error) error {
@@ -305,12 +332,17 @@ func AliasBase(name string) string {
 	return ns[strings.LastIndex(ns, ".")+1:]
 }
 
-// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every key made so far, expired ones included so that a renewal follows it; with a key already made it also finishes the first-run guide.
-func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
+// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and, with bindKeys, binds every key made so far, expired ones included so that a renewal follows it; with a key already made it also finishes the first-run guide.
+func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access, bindKeys bool) (string, error) {
 	conn, fns, err := c.installListing(ctx, m, func(ref port.ListingRef) string { return AliasBase(ref.Name) })
 	if err != nil {
 		return conn, err
 	}
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return conn, err
+	}
+	defer unlock()
 	for _, f := range fns {
 		a, ok := choices[f.Name]
 		if kind, item := itemKinds[port.ItemKind(f.Name)]; !ok && item {
@@ -322,7 +354,11 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
-	for _, a := range c.State.Agents() {
+	keys := c.State.Agents()
+	if !bindKeys {
+		keys = nil
+	}
+	for _, a := range keys {
 		if err := c.bind(ctx, conn, a); err != nil {
 			return conn, err
 		}
@@ -356,8 +392,14 @@ func (c *Console) openToWorkspace(ctx context.Context, target string) error {
 	return nil
 }
 
-// Remove uninstalls a connector and forgets its new-key default and waiting profiles; with a key made, the first-run guide was finished and stays so.
+// Remove uninstalls a connector under its lock and forgets its new-key default and limits, its profiles in permission sets and the lock; with a key made, the first-run guide was finished and stays so.
 func (c *Console) Remove(ctx context.Context, conn string) error {
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	defer c.writing.Delete(conn)
 	if len(c.State.Agents()) > 0 {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return err
@@ -384,7 +426,7 @@ func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
 
 var agentSelectors = []string{port.SelectorAll, port.ItemInstructions + port.SelectorAll, port.ItemPrompt + port.SelectorAll, port.ItemResource + port.SelectorAll}
 
-// RevokeAgent refuses every token minted so far for the agent, then unbinds it from every connector and deletes the grants scoped to it; a key and a connector existed, so the first-run guide stays finished.
+// RevokeAgent refuses every token minted so far for the agent, then under each connector's lock unbinds it and deletes its rows there, and last deletes the rows left; a key and a connector existed, so the first-run guide stays finished.
 func (c *Console) RevokeAgent(ctx context.Context, name string) error {
 	ok, err := c.State.RevokeAgent(name, time.Now())
 	if err != nil {
@@ -401,11 +443,27 @@ func (c *Console) RevokeAgent(ctx context.Context, name string) error {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return err
 		}
-		if err := c.Engine.unbind(ctx, string(conn.ID), name); err != nil {
+		if err := c.revokeOn(ctx, string(conn.ID), name); err != nil {
 			return err
 		}
 	}
 	rows, err := c.Engine.grants(ctx, port.ScopeAgent, name, "")
+	if err != nil {
+		return err
+	}
+	return c.Engine.deleteGrants(ctx, rows)
+}
+
+func (c *Console) revokeOn(ctx context.Context, conn, name string) error {
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if err := c.Engine.unbind(ctx, conn, name); err != nil {
+		return err
+	}
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, name, conn)
 	if err != nil {
 		return err
 	}
@@ -420,11 +478,15 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, takes a setup's waiting profile, and starts off on skills. It records the agent until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide.
-func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
+// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, within each connector's new-key limits, and starts off on skills. A named permission set gives the key its profile on the set's connectors and is forgotten once the key is recorded. It records the agent until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide.
+func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration, slotName string) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
 		return Agent{}, invalid("the agent name has letters or digits")
+	}
+	slot, ok := c.State.Slot(slotName)
+	if slotName != "" && !ok {
+		return Agent{}, noSlot(slotName)
 	}
 	if ttl <= 0 || ttl > c.MaxAgentTTL {
 		ttl = c.MaxAgentTTL
@@ -436,14 +498,19 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration)
 	}
 	known := slices.ContainsFunc(c.State.Agents(), func(k Agent) bool { return k.Name == name })
 	for _, conn := range live {
-		if err := c.join(ctx, conn, a, known); err != nil {
+		if p, ok := slot.Profiles[string(conn.ID)]; ok {
+			err = c.claimOn(ctx, string(conn.ID), a, p)
+		} else {
+			err = c.join(ctx, conn, a, known)
+		}
+		if err != nil {
 			return Agent{}, err
 		}
 	}
 	if err := c.State.PutAgent(a); err != nil {
 		return Agent{}, err
 	}
-	if err := c.State.DropPendingProfiles(name); err != nil {
+	if err := c.State.DropSlot(slotName); err != nil {
 		return Agent{}, err
 	}
 	if len(live) > 0 {
@@ -458,9 +525,9 @@ func (c *Console) agentToken(ctx context.Context, name string, ttl time.Duration
 	return c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": c.Engine.Person}, ttl)
 }
 
-// MintAgent binds the agent as BindAgent does and mints its token, living until the key expires.
-func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration) (AgentToken, error) {
-	a, err := c.BindAgent(ctx, name, ttl)
+// MintAgent binds the agent as BindAgent does, with the named permission set when one is named, and mints its token, living until the key expires.
+func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration, slot string) (AgentToken, error) {
+	a, err := c.BindAgent(ctx, name, ttl, slot)
 	if err != nil {
 		return AgentToken{}, err
 	}

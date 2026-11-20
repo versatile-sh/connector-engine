@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import { MutationObserver, QueryClient, type QueryKey, type UseMutationOptions } from "@tanstack/react-query";
 import * as mutations from "./mutations.ts";
 import type { Connector } from "./api.ts";
-import { accountQuery, activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, profileEffectsQuery, sessionQuery, skillsQuery } from "./queries.ts";
+import { accountQuery, activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, profileEffectsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries.ts";
 
 const KNOWN: readonly QueryKey[] = [
   sessionQuery.queryKey,
@@ -15,6 +15,7 @@ const KNOWN: readonly QueryKey[] = [
   activitySettingsQuery.queryKey,
   notificationsQuery.queryKey,
   accountQuery.queryKey,
+  slotsQuery.queryKey,
 ];
 
 const realFetch = globalThis.fetch;
@@ -38,6 +39,9 @@ describe("mutations", () => {
   const cases: { name: string; run: () => ReturnType<typeof staleAfter>; stale: string[] }[] = [
     { name: "signIn", run: () => staleAfter(mutations.signIn, { mode: "login", username: "o", password: "p" }), stale: ["session"] },
     { name: "mintKey", run: () => staleAfter(mutations.mintKey, { name: "cursor", ttl_hours: 24 }), stale: ["session", "agents"] },
+    { name: "mintKey with a permission set", run: () => staleAfter(mutations.mintKey, { name: "cursor", ttl_hours: 24, slot: "claude-code" }), stale: ["session", "agents", "slots", "connectors"] },
+    { name: "claimSlot", run: () => staleAfter(mutations.claimSlot, { slot: "claude-code", key: "cursor" }), stale: ["slots", "connectors", "agents"] },
+    { name: "discardSlot", run: () => staleAfter(mutations.discardSlot, "claude-code"), stale: ["slots", "connectors"] },
     { name: "revokeKey", run: () => staleAfter(mutations.revokeKey, "cursor"), stale: ["session", "agents"] },
     { name: "sealHeader", run: () => staleAfter(mutations.sealHeader, { connector: "c1", header: "Authorization", value: "v" }), stale: ["connectors"] },
     { name: "connectOAuth", run: () => staleAfter(mutations.connectOAuth, { connector: "c1", clientID: "", clientSecret: "" }), stale: [] },
@@ -92,9 +96,33 @@ describe("mutations", () => {
 
   describe("importBackup", () => {
     describe("with a setup", () => {
-      test("refreshes connectors, skills and session", async () => {
-        globalThis.fetch = async () => new Response(JSON.stringify({ added: ["github"], kept: [], failed: {}, sign_ins: [] }), { status: 200 });
-        assert.deepEqual((await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "" })).stale.sort(), ["connectors", "session", "skills"]);
+      test("refreshes connectors, skills, sets and session", async () => {
+        globalThis.fetch = async () => new Response(JSON.stringify({ added: ["github"], kept: [], failed: {}, sign_ins: [], slots: [], capped: {} }), { status: 200 });
+        assert.deepEqual((await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "" })).stale.sort(), ["connectors", "session", "skills", "slots"]);
+      });
+    });
+
+    describe("with the review's options", () => {
+      test("sends them as JSON in the form", async () => {
+        let sent: FormData | undefined;
+        globalThis.fetch = async (_input, init) => {
+          sent = init?.body instanceof FormData ? init.body : undefined;
+          return new Response(JSON.stringify({ added: [], kept: [], failed: {}, sign_ins: [], slots: [], capped: {} }), { status: 200 });
+        };
+        await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "", options: { existing_keys: true } });
+        assert.equal(sent?.get("options"), '{"existing_keys":true}');
+      });
+    });
+
+    describe("without options", () => {
+      test("sends no options field", async () => {
+        let sent: FormData | undefined;
+        globalThis.fetch = async (_input, init) => {
+          sent = init?.body instanceof FormData ? init.body : undefined;
+          return new Response(JSON.stringify({ added: [], kept: [], failed: {}, sign_ins: [], slots: [], capped: {} }), { status: 200 });
+        };
+        await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "" });
+        assert.equal(sent?.has("options"), false);
       });
     });
 
@@ -144,7 +172,7 @@ describe("mutations", () => {
       ],
       items: null,
       profiles: [],
-      waiting: [{ agent: "later", mode: "off", overrides: {} }],
+      slots: [],
       new_keys_off: false,
     });
 
@@ -206,11 +234,6 @@ describe("mutations", () => {
     test("keeps new keys off in the cached list without reading it again", async () => {
       const { cached, stale } = await write(mutations.setNewKeysOff, { connector: "c1", off: true });
       assert.deepEqual([cached?.new_keys_off, stale], [true, []]);
-    });
-
-    test("drops a waiting profile from the cached list without reading it again", async () => {
-      const { cached, stale } = await write(mutations.dropWaiting, { connector: "c1", agent: "later" });
-      assert.deepEqual([cached?.waiting, stale], [[], []]);
     });
   });
 

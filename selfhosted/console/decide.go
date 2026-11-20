@@ -45,6 +45,7 @@ type ApprovalView struct {
 	DecidedBy      string           `json:"decided_by,omitempty"`
 	DecidedAt      time.Time        `json:"decided_at,omitzero"`
 	Channel        string           `json:"channel,omitempty"`
+	AlwaysError    string           `json:"always_error,omitempty"`
 	approval       port.Approval
 	known          bool
 }
@@ -107,7 +108,7 @@ func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error)
 	a := d.Approval
 	v := ApprovalView{ID: string(a.ID), State: string(a.State), Mode: string(a.Mode), Function: a.Function, Kind: a.Class, App: string(a.Agent), Session: string(a.Session),
 		CreatedAt: a.CreatedAt, ExpiresAt: a.ExpiresAt, MayHaveRun: d.MayHaveRun, ReachesOutside: d.ReachesOutside, DecidedBy: a.DecisionNote, DecidedAt: a.DecidedAt,
-		Channel: a.Channel, Choices: []surface.Choice{}, approval: a}
+		Channel: a.Channel, Choices: []surface.Choice{}, AlwaysError: c.surf.alwaysFailed(string(a.ID)), approval: a}
 	if v.DecidedBy == "" {
 		v.DecidedBy = a.DecidedBy
 	}
@@ -172,7 +173,7 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	return v, lost, nil
 }
 
-// allowAfterRun turns the approval's function or skill on once its approved call has run, since replacing the row earlier would cancel that run, and clears the calling key's narrowing of that function.
+// allowAfterRun allows the approval's function or skill for the calling key only once its approved call has run, since replacing the row earlier would cancel that run, and records a failure on the approval.
 func (c *Console) allowAfterRun(v ApprovalView) {
 	ctx, cancel := context.WithTimeout(context.Background(), allowWait)
 	defer cancel()
@@ -191,12 +192,56 @@ func (c *Console) allowAfterRun(v ApprovalView) {
 	var err error
 	if v.Skill {
 		err = c.SetSkillAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), AccessOn)
-	} else if err = c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn); err == nil {
-		err = c.SetProfileAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), v.approval.Function, AccessOn)
+	} else {
+		err = c.allowForKey(ctx, string(v.approval.Connector), string(v.approval.Agent), v.approval.Function)
 	}
 	if err != nil {
+		c.surf.failAlways(v.ID, err)
 		c.logger().Warn("always allow", "approval", v.ID, "error", err)
 	}
+}
+
+func (c *Console) allowForKey(ctx context.Context, conn, agent, name string) error {
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	f, err := c.function(ctx, conn, name)
+	if err != nil {
+		return err
+	}
+	workspace, err := c.workspaceGrants(ctx, conn)
+	if err != nil {
+		return err
+	}
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, "", conn)
+	if err != nil {
+		return err
+	}
+	held := func(key string) bool {
+		return slices.ContainsFunc(rows, func(g port.Grant) bool { return g.ScopeID == key && g.Selector == port.SelectorOf(name) })
+	}
+	base := functionAccess(f, workspace)
+	if base != AccessOn {
+		for _, a := range c.knownAgents() {
+			if a.Name != agent && !held(a.Name) {
+				if err := c.writeOverride(ctx, conn, a.Name, f, base); err != nil {
+					return err
+				}
+			}
+		}
+		if err := c.State.LimitNewKeys(conn, name, base); err != nil {
+			return err
+		}
+	}
+	if err := c.Engine.deleteGrants(ctx, slices.DeleteFunc(rows, func(g port.Grant) bool { return g.ScopeID != agent || g.Selector != port.SelectorOf(name) })); err != nil {
+		return err
+	}
+	if base == AccessOn {
+		return nil
+	}
+	return c.writeAccess(ctx, conn, name, AccessOn)
 }
 
 // Outcome is the surface outcome of a decided, expired or cancelled approval view.

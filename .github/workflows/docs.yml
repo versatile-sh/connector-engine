@@ -1,0 +1,51 @@
+name: Docs
+
+on:
+  pull_request:
+    paths:
+      - "**.md"
+      - "docs/**"
+      - "scripts/install.sh"
+      - "scripts/install.ps1"
+      - "scripts/check-docs.sh"
+      - "Makefile"
+      - "selfhosted/selfhosted.mk"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [main]
+    paths:
+      - "**.md"
+      - "docs/**"
+      - "scripts/install.sh"
+      - "scripts/check-docs.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    name: Links, commands, banners and installer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Relative links and anchors
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8
+        with:
+          lycheeVersion: v0.24.2
+          args: >-
+            --offline --include-fragments --no-progress
+            README.md ARCHITECTURE.md CONTRIBUTING.md SECURITY.md selfhosted/README.md
+            'docs/**/*.md' 'deploy/**/*.md'
+          jobSummary: false
+      - name: Commands named in the docs, banner sizes
+        run: bash scripts/check-docs.sh
+      - name: shellcheck the installer and the checks
+        run: shellcheck scripts/install.sh scripts/check-docs.sh

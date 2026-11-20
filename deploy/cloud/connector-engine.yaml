@@ -1,0 +1,16 @@
+mode: production
+server:
+  listen: 0.0.0.0:8080
+  grpcListen: ""
+  operatorListen: 0.0.0.0:8081
+  publicURL: ""
+auth:
+  audience: urn:connector-engine:cloud:mcp
+  manageAudience: urn:connector-engine:cloud
+  issuers:
+    - {name: "https://issuer.example.com", url: "https://issuer.example.com/.well-known/jwks.json"}
+  operator: {tokenRef: "env:CN_OPERATOR_TOKEN"}
+bootstrap:
+  roles: []
+secrets:
+  dir: /var/lib/connector-engine/secrets

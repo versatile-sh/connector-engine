@@ -127,10 +127,10 @@ func (c *Console) openBackup(raw, passphrase []byte) (BackupSummary, map[string]
 	return BackupSummary{Kind: "full", Build: m.Build, CreatedAt: m.CreatedAt, Counts: m.Counts, Replaces: c.State.HasOwner()}, files, nil
 }
 
-// InspectBackup opens a backup or a setup file and returns its summary without changing anything.
-func (c *Console) InspectBackup(ctx context.Context, raw, passphrase []byte) (BackupSummary, error) {
+// InspectBackup opens a backup or a setup file and returns its summary without changing anything; with probe, a setup's remote connectors are asked for the choices this console would lower.
+func (c *Console) InspectBackup(ctx context.Context, raw, passphrase []byte, probe bool) (BackupSummary, error) {
 	if !isBackup(raw) {
-		return c.inspectSetup(ctx, raw)
+		return c.inspectSetup(ctx, raw, probe)
 	}
 	s, _, err := c.openBackup(raw, passphrase)
 	return s, err
@@ -197,6 +197,7 @@ func decodeState(raw []byte) (stateFile, error) {
 	if err == nil && d.Owner == nil {
 		err = errors.New("it has no owner account")
 	}
+	migrateSlots(&d)
 	return d, err
 }
 

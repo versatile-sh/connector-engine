@@ -18,7 +18,7 @@ const LABEL: Record<ApprovalChoice, MessageKey> = { once: "decide.once", session
 
 const VARIANT = { once: "primary", session: "secondary", always: "secondary", deny: "danger" } as const;
 
-/** The answers to one held call: Allow once, Allow for this session when the record offers it, named by how long it lasts when the record says, Always allow and Deny. */
+/** The answers to one held call: Allow once, Allow for this session when the record offers it, named by how long it lasts when the record says, Always allow this app and Deny. */
 export function DecisionButtons({ choices, session, deciding, size = "sm", stacked = false, onChoose }: DecisionButtonsProps) {
   const t = useT();
   const label = (choice: ApprovalChoice) => (choice === "session" && session ? t(session.unit === "hours" ? "decide.sessionHours" : "decide.sessionMinutes", { count: session.count }) : t(LABEL[choice]));

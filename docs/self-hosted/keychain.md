@@ -1,4 +1,29 @@
-# Secrets at rest
+![Keys in the keychain](../assets/section-keychain.svg)
+
+# The keychain and secrets at rest
+
+The `person` profile keeps its root keys wrapped by an unlock key in your OS keychain: a copy of the Docker volumes opens nothing without it. This page explains where each key rests, how it reaches the containers, and how to move, recover or replace it.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `make unlock` | read the unlock key from the keychain and deliver it to the engine and the console (also run by `make up`) |
+| `make keychain-status` | report whether each root key is `wrapped` or plaintext |
+| `make keychain-migrate` / `make keychain-revert` | move a plaintext `root.key` under the keychain, verified and idempotent, or back |
+| `make keychain-recovery` | print the unlock key once, for a password manager |
+| `make keychain-import` | read the unlock key on stdin into this machine's keychain |
+
+```sh
+make keychain-status
+```
+
+```text
+engine: wrapped
+console: wrapped
+```
+
+## How records are sealed
 
 Every secret the engine keeps (credentials, held call arguments, results, client secrets) is a `port.Sealed` record: a data key per record, wrapped by a key-encryption key per tenant, wrapped by one root key (`secrets/internal/ring`). Postgres never holds plaintext. This page is about the last link: where the root key rests and who can read it.
 
@@ -41,7 +66,7 @@ Alternatives rejected, from Docker's documentation and not measured here: compos
 
 ## Without Docker
 
-`connector-engine-selfhosted up` runs the engine and the console as one process of the user, so it reads the unlock key from the keychain itself, at start, through the same backends: no socket, no `docker exec`, and no locked state after a restart. A fresh root is created wrapped; a plaintext root, left by a run without a keychain, is wrapped (`Migrate`) on the first start that finds one; a wrapped root without its key refuses to start, and when the keychain holds no item for it the start reads the keychain only, never minting a new key over the lost one. `--no-keychain`, or a host without a keychain, keeps plaintext roots with the warning of [Without a keychain](#without-a-keychain). The account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item. Layout and commands: [../README.md](../README.md#run-without-docker).
+`connector-engine-selfhosted up` runs the engine and the console as one process of the user, so it reads the unlock key from the keychain itself, at start, through the same backends: no socket, no `docker exec`, and no locked state after a restart. A fresh root is created wrapped; a plaintext root, left by a run without a keychain, is wrapped (`Migrate`) on the first start that finds one; a wrapped root without its key refuses to start, and when the keychain holds no item for it the start reads the keychain only, never minting a new key over the lost one. `--no-keychain`, or a host without a keychain, keeps plaintext roots with the warning of [Without a keychain](#without-a-keychain). The account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item. Layout and commands: [the person profile](person.md#without-docker).
 
 Each Docker install has its own keychain item: service `connector-engine`, account the compose project name (`PROJECT`, default `connector-engine`).
 
@@ -111,6 +136,6 @@ Limits:
 | A compromised engine or console process | the opened records | the same: the key is in memory while it runs |
 | Logs, `docker inspect`, process lists | no key | no key: pipes only |
 
-A full backup ([console.md](console.md#backups)) holds both root keys in plaintext inside a file encrypted under your passphrase (Argon2id, AES-256-GCM), so it opens on a machine without the old keychain. The import wraps them again with the new machine's key. Whoever holds the file and the passphrase holds every record: the passphrase is that file's only protection. To take the snapshot, the console reads the engine's keys in plaintext from the operator listener on the compose network (`server.snapshot: true`, person profile only). Whoever holds the operator token in the `secrets` volume and reaches that network can do the same, as they could already drive every operation of the engine.
+A full backup ([account and backup](../using/account-backup.md#full-backups)) holds both root keys in plaintext inside a file encrypted under your passphrase (Argon2id, AES-256-GCM), so it opens on a machine without the old keychain. The import wraps them again with the new machine's key. Whoever holds the file and the passphrase holds every record: the passphrase is that file's only protection. To take the snapshot, the console reads the engine's keys in plaintext from the operator listener on the compose network (`server.snapshot: true`, person profile only). Whoever holds the operator token in the `secrets` volume and reaches that network can do the same, as they could already drive every operation of the engine.
 
 What it does not do: protect a running, unlocked install; protect against the owner's own account being compromised; replace backups (keep the recovery key).

@@ -1,3 +1,5 @@
+![How it is built](docs/assets/section-architecture.svg)
+
 # Architecture
 
 connector-engine decides, for each agent and each function of each connected tool server, whether a call runs, waits for a person, or is refused. This page explains the layers, the path of one call, and the rules the engine enforces.

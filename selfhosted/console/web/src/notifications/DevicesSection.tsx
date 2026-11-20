@@ -35,7 +35,9 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
   const pair = useMutation(pairDevice);
   const remove = useRemove(revokeDevice);
   const [here, setHere] = useState(pairedHere);
-  const onPair = () => pair.mutate(deviceName(browserFacts(navigator)), { onSuccess: (paired) => setHere(rememberPairedHere(paired.device.id)) });
+  const pairedAlready = devices.some((device) => device.id === here);
+  const onPair = () =>
+    pair.mutate({ name: deviceName(browserFacts(navigator)), id: pairedAlready && here ? here : undefined }, { onSuccess: (paired) => setHere(rememberPairedHere(paired.device.id)) });
   return (
     <Section
       id="devices-title"
@@ -45,7 +47,7 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
       action={
         <button type="button" disabled={pair.isPending} className={button({ variant: "primary", size: "sm" })} onClick={onPair}>
           <Icon name="plus" className="size-4" />
-          {pair.isPending ? t("notify.devices.pairing") : t("notify.devices.pair")}
+          {pair.isPending ? t("notify.devices.pairing") : pairedAlready ? t("notify.devices.repair") : t("notify.devices.pair")}
         </button>
       }
     >

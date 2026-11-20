@@ -4,6 +4,7 @@ import { KindLabel } from "../connectors/KindLabel";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { CAPTION, PRESS } from "../ui/styles";
 import { Tag } from "../ui/Tag";
+import { AccessKeyName } from "./AccessKeyName";
 import { approvalStateKey, durationText, kindOf, skillFile, timeOf, type Named } from "./activity";
 import { OutcomeTag } from "./OutcomeTag";
 
@@ -48,9 +49,7 @@ export function CallList({ calls, named, onOpen }: CallListProps) {
                     {call.skill ? skillFile(call.path) : title}
                   </span>
                   <span aria-hidden="true">·</span>
-                  <span className="truncate" translate="no">
-                    {call.agent}
-                  </span>
+                  <AccessKeyName name={call.agent} />
                 </span>
               </span>
               <span className="flex flex-col items-end gap-1 @lg:flex-row @lg:items-center @lg:gap-3">

@@ -305,6 +305,7 @@ func (c *Console) setElicit(w http.ResponseWriter, r *http.Request) {
 func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Name string `json:"name"`
+		ID   string `json:"id"`
 	}
 	if !readJSON(w, r, &in) {
 		return
@@ -315,14 +316,22 @@ func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := "cnk_" + randomID()
-	d := Device{ID: randomID()[:12], Name: name, KeyHash: keyHash(key), CreatedAt: time.Now().UTC().Truncate(time.Second)}
+	d, again := c.State.Device(in.ID)
+	if !again {
+		d = Device{ID: randomID()[:12], Name: name, CreatedAt: time.Now().UTC().Truncate(time.Second)}
+	}
+	d.KeyHash, d.LastSeen = keyHash(key), time.Time{}
 	if err := c.State.PutDevice(d); err != nil {
 		c.fail(w, err)
 		return
 	}
 	c.surf.wake()
 	cmd := fmt.Sprintf("umask 077 && mkdir -p ~/.config/versatile && printf '%%s' '%s' > ~/.config/versatile/notify.key && cnctl notify --console %s", key, c.publicBase())
-	writeJSON(w, http.StatusCreated, map[string]any{"device": DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt}, "key": key, "command": cmd})
+	status := http.StatusCreated
+	if again {
+		status = http.StatusOK
+	}
+	writeJSON(w, status, map[string]any{"device": DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt}, "key": key, "command": cmd})
 }
 
 func deviceName(raw string) (string, bool) {

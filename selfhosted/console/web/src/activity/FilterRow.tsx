@@ -127,7 +127,7 @@ export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
         data.agents.length > APP_MENU_FROM ? (
           <AppSearch apps={data.agents} value={filter.agent} onChange={(agent) => onChange({ ...filter, agent })} />
         ) : (
-          <Choice label={t("common.app")} all={t("activity.app.all")} value={filter.agent} options={data.agents.map((agent) => ({ value: agent, text: agent }))} onChange={(agent) => onChange({ ...filter, agent })} />
+          <Choice label={t("activity.key")} all={t("activity.app.all")} value={filter.agent} options={data.agents.map((agent) => ({ value: agent, text: agent }))} onChange={(agent) => onChange({ ...filter, agent })} />
         )
       ) : null}
       <Choice<CallOutcome> label={t("activity.outcome")} all={t("activity.outcome.all")} value={filter.outcome} options={FILTER_OUTCOMES.map((outcome) => ({ value: outcome, text: t(`outcome.${outcome}`) }))} onChange={(outcome) => onChange({ ...filter, outcome })} />

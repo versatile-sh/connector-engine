@@ -1,7 +1,7 @@
 import type { MessageKey, Translate } from "../i18n";
 
 /** The AI apps and ways in the picker offers. */
-export type ClientId = "claude-code" | "claude-desktop" | "codex" | "opencode" | "cursor" | "vscode" | "antigravity" | "pi" | "code" | "generic" | "ai";
+export type ClientId = "claude-code" | "claude-desktop" | "codex" | "opencode" | "cursor" | "vscode" | "antigravity" | "pi" | "omp" | "gemini" | "code" | "generic" | "ai";
 
 /** One block to paste: where it goes, the file when it is one, and the exact text with the key filled in; `setup` marks a one-time install step that carries no key. */
 export type Block = { where: MessageKey; path?: string; label?: string; text: string; setup?: boolean };
@@ -117,6 +117,20 @@ const APPS: readonly App[] = [
     kind: "clients.kind.terminal",
     oauth: (url) => ({ blocks: [terminal("pi install npm:pi-mcp-adapter", true), file("~/.pi/agent/mcp.json", json({ mcpServers: { [NAME]: { url } } }))], note: "clients.note.piOAuth" }),
     withKey: (url, key) => ({ blocks: [terminal("pi install npm:pi-mcp-adapter", true), file("~/.pi/agent/mcp.json", json({ mcpServers: { [NAME]: { url, headers: headersOf(key) } } }))], note: "clients.note.pi" }),
+  },
+  {
+    id: "gemini",
+    name: "Gemini CLI",
+    kind: "clients.kind.terminal",
+    oauth: (url) => ({ blocks: [terminal(`gemini mcp add -s user -t http ${NAME} ${url}`)], note: "clients.note.geminiOAuth" }),
+    withKey: (url, key) => ({ blocks: [file("~/.gemini/settings.json", json({ mcpServers: { [NAME]: { httpUrl: url, headers: headersOf(key) } } }))], note: "clients.note.gemini" }),
+  },
+  {
+    id: "omp",
+    name: "oh-my-pi",
+    kind: "clients.kind.config",
+    oauth: (url) => ({ blocks: [file("~/.omp/agent/mcp.json", json({ mcpServers: { [NAME]: { type: "http", url } } }))], note: "clients.note.ompOAuth" }),
+    withKey: (url, key) => ({ blocks: [file("~/.omp/agent/mcp.json", json({ mcpServers: { [NAME]: { type: "http", url, headers: headersOf(key) } } }))], note: "clients.note.omp" }),
   },
   {
     id: "code",

@@ -23,7 +23,7 @@ const hostOf = (raw: string) => {
 /** An install link opened from outside, as the live doorway: who the connector is on lime, what it may do on ink, and nothing installed before Install. */
 export function ImportLanding({ source }: { source: ImportSource }) {
   const t = useT();
-  const { preview, install, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
+  const { preview, install, request, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
   const host = hostOf(source.listing ?? source.mcp ?? "");
   const home = (
     <a
@@ -114,7 +114,7 @@ export function ImportLanding({ source }: { source: ImportSource }) {
                     type="button"
                     disabled={install.isPending}
                     className={button({ variant: "accent", size: "lg" })}
-                    onClick={() => install.mutate(undefined, { onSuccess: ({ connector }) => navigate(connector ? `/connectors/${encodeURIComponent(connector)}` : "/skills") })}
+                    onClick={() => install.mutate(request, { onSuccess: ({ connector }) => navigate(connector ? `/connectors/${encodeURIComponent(connector)}` : "/skills") })}
                   >
                     {install.isPending ? t("import.installing") : preview.data.skill ? t("import.addSkill") : t("import.install", { count: preview.data.tools.length })}
                     <Arrow />

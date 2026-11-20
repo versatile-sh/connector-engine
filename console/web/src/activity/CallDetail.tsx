@@ -42,19 +42,19 @@ function Facts({ call, connector }: { call: ActivityDetail; connector: string })
   const kind = kindOf(call.class);
   const approval = approvalStateKey(call.approval_state);
   const facts: { label: string; value: ReactNode }[] = [
-    { label: t("activity.detail.when"), value: <time dateTime={call.at}>{timeOf(call.at, locale)}</time> },
-    { label: t("activity.detail.app"), value: call.agent },
+    { label: t("activity.when"), value: <time dateTime={call.at}>{timeOf(call.at, locale)}</time> },
+    { label: t("common.app"), value: call.agent },
     ...(call.skill
       ? [
           { label: t("activity.detail.skill"), value: connector === call.skill ? call.skill : `${connector} (${call.skill})` },
           { label: t("activity.detail.file"), value: skillFile(call.path) },
         ]
-      : [{ label: t("activity.detail.connector"), value: connector }, ...(kind ? [{ label: t("activity.detail.kind"), value: <KindLabel kind={kind} /> }] : [])]),
-    { label: t("activity.detail.outcome"), value: [t(`outcome.${call.outcome}`), call.code, call.detail].filter(Boolean).join(" · ") },
+      : [{ label: t("activity.connector"), value: connector }, ...(kind ? [{ label: t("activity.detail.kind"), value: <KindLabel kind={kind} /> }] : [])]),
+    { label: t("activity.outcome"), value: [t(`outcome.${call.outcome}`), call.code, call.detail].filter(Boolean).join(" · ") },
     { label: t("activity.detail.duration"), value: durationText(call.duration_ms) },
     ...(call.approval ? [{ label: t("activity.detail.approval"), value: approval ? t(approval) : (call.approval_state ?? call.approval) }] : []),
     ...(call.result_bytes ? [{ label: t("activity.detail.size"), value: t("activity.detail.bytes", { count: call.result_bytes }) }] : []),
-    ...(call.session ? [{ label: t("activity.detail.session"), value: call.session }] : []),
+    ...(call.session ? [{ label: t("common.session"), value: call.session }] : []),
   ];
   return (
     <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
@@ -96,7 +96,7 @@ export function CallDetail({ id, named, onClose }: { id: string; named: Readonly
             <>
               <Captured
                 id="call-arguments"
-                title={t("activity.detail.arguments")}
+                title={t("common.arguments")}
                 kept={call.kept_arguments}
                 text={call.arguments}
                 cut={call.arguments_cut}

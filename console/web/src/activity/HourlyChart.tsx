@@ -2,7 +2,7 @@ import type { HourCount } from "../api";
 import type { Locale } from "../i18n";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { CAPTION, SURFACE } from "../ui/styles";
-import { barsOf, type ActivityRange, type Bar } from "./activity";
+import { barsOf, type Bar } from "./activity";
 
 const HEIGHT = 120;
 const STEP = 10;
@@ -33,14 +33,14 @@ function Stack({ bar, x, max, label }: { bar: Bar; x: number; max: number; label
   );
 }
 
-/** The calls of the range as stacked bars, per hour over a day and per local day beyond, coloured by outcome; screen readers get the same numbers as a table. */
-export function HourlyChart({ hours, range }: { hours: readonly HourCount[]; range: ActivityRange }) {
+/** The calls of the period as stacked bars, per hour over up to two days and per local day beyond, coloured by outcome; screen readers get the same numbers as a table. */
+export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
   const t = useT();
   const locale = useLocale();
-  const bars = barsOf(hours, range);
+  const bars = barsOf(hours);
   const max = Math.max(1, ...bars.map((bar) => bar.total));
   const total = bars.reduce((sum, bar) => sum + bar.total, 0);
-  const daily = range !== "24h";
+  const daily = bars[0]?.unit === "day";
   const title = t(daily ? "activity.chart.daily" : "activity.chart.hourly");
   const width = Math.max(bars.length, 1) * STEP;
   const ticks = [...new Set([0, Math.floor((bars.length - 1) / 2), bars.length - 1])].flatMap((index) => bars[index] ?? []);
@@ -70,8 +70,8 @@ export function HourlyChart({ hours, range }: { hours: readonly HourCount[]; ran
         <caption>{title}</caption>
         <thead>
           <tr>
-            <th scope="col">{t("activity.chart.when")}</th>
-            <th scope="col">{t("activity.chart.calls")}</th>
+            <th scope="col">{t("activity.when")}</th>
+            <th scope="col">{t("activity.calls")}</th>
           </tr>
         </thead>
         <tbody>

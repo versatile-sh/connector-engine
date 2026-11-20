@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useReducer, useState, type FormEvent } from "react";
-import { api, errorText, type AgentToken } from "../api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useReducer, useState, type FormEvent } from "react";
+import { errorText, type AgentToken } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { keysQuery } from "../queries";
+import { mintKey, revokeKey } from "../mutations";
+import { keysPageQuery } from "../queries";
 import { Bubble } from "../ui/Bubble";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
@@ -18,7 +19,7 @@ const intoView = (element: HTMLElement | null) => {
   element?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 };
 
-function Created({ token }: { token: AgentToken }) {
+function Created({ token, endpoint }: { token: AgentToken; endpoint: string }) {
   const t = useT();
   return (
     <section ref={intoView} aria-labelledby="created-title" className="arrive vignette-top bubble-sent relative mb-8 scroll-mt-24 overflow-hidden border border-lime/50 bg-ink-raised p-5 sm:p-6">
@@ -36,50 +37,24 @@ function Created({ token }: { token: AgentToken }) {
       </div>
       <CopyBox label={t("keys.key")} text={token.token} className="mt-4" />
       <div className="mt-6 border-t border-line pt-5">
-        <ClientPicker url={token.mcp_url} accessKey={token.token} />
+        <ClientPicker url={endpoint} accessKey={token.token} />
       </div>
     </section>
   );
 }
 
 /** Connect an AI app: one endpoint for every MCP client, access keys made and revoked here, and for a new key the exact way into each app. */
-export function AccessPage() {
+export function AccessPage({ endpoint }: { endpoint: string }) {
   const t = useT();
-  const queryClient = useQueryClient();
-  const keys = useQuery(keysQuery);
+  const keys = useQuery(keysPageQuery);
   const [name, setName] = useState("");
   const [days, setDays] = useState(30);
-  const mint = useMutation({
-    mutationFn: () => api<AgentToken>("POST", "/api/agents", { name, ttl_hours: days * 24 }),
-    onSuccess: () => {
-      setName("");
-      void queryClient.invalidateQueries({ queryKey: ["agents"] });
-      void queryClient.invalidateQueries({ queryKey: ["session"] });
-    },
-  });
-  const markSeen = useMutation({ mutationFn: () => api("POST", "/api/agents/seen") }).mutate;
-  const anyNew = keys.data?.agents.some((key) => key.new) ?? false;
-  const settled = keys.isSuccess && !keys.isFetching;
-  useEffect(
-    function tellServerNewKeysWereSeen() {
-      if (anyNew && settled) markSeen();
-    },
-    [anyNew, settled, markSeen],
-  );
+  const mint = useMutation(mintKey);
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
-  const revoke = useMutation({
-    mutationFn: (agent: string) => api("DELETE", `/api/agents/${encodeURIComponent(agent)}`),
-    onSuccess: async (_, agent) => {
-      dispatch({ type: "revoked" });
-      if (mint.data?.agent === agent) mint.reset();
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-      await queryClient.invalidateQueries({ queryKey: ["agents"] });
-    },
-    onError: () => dispatch({ type: "failed" }),
-  });
+  const revoke = useMutation(revokeKey);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    mint.mutate();
+    mint.mutate({ name, ttl_hours: days * 24 }, { onSuccess: () => setName("") });
   };
   const onRevokeEvent = (event: RevokeEvent) => {
     if (event.type === "ask") revoke.reset();
@@ -88,10 +63,15 @@ export function AccessPage() {
   const onConfirm = () => {
     if (flow.kind !== "confirming") return;
     dispatch({ type: "confirm" });
-    revoke.mutate(flow.name);
+    revoke.mutate(flow.name, {
+      onSuccess: (_, agent) => {
+        dispatch({ type: "revoked" });
+        if (mint.data?.agent === agent) mint.reset();
+      },
+      onError: () => dispatch({ type: "failed" }),
+    });
   };
   const maxDays = Math.max(1, Math.floor((keys.data?.max_ttl_hours ?? 720) / 24));
-  const endpoint = keys.data?.mcp_url ?? "";
   const list = keys.data?.agents ?? [];
   return (
     <section aria-labelledby="page-title">
@@ -99,14 +79,12 @@ export function AccessPage() {
         <PageTitle section={t("nav.access")} title={t("keys.title")} />
         <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
       </header>
-      {endpoint ? (
-        <section aria-label={t("clients.title")} className={`${SURFACE} mb-10 p-5`}>
-          <ClientPicker url={endpoint} />
-        </section>
-      ) : null}
+      <section aria-label={t("clients.title")} className={`${SURFACE} mb-10 p-5`}>
+        <ClientPicker url={endpoint} />
+      </section>
       <h2 className="font-display text-xl font-bold tracking-[-0.03em]">{t("keys.advanced")}</h2>
       <p className="mt-1 mb-5 max-w-2xl text-sm text-muted">{t("keys.advancedIntro")}</p>
-      {mint.data ? <Created key={mint.data.token} token={mint.data} /> : null}
+      {mint.data ? <Created key={mint.data.token} token={mint.data} endpoint={endpoint} /> : null}
       <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>
           <h2 id="new-key" className="mb-3 text-base font-medium">

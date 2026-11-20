@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { api, errorText, type ApprovalChoice, type Decision } from "../api";
+import { errorText } from "../api";
 import { Wordmark } from "../Brand";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
-import { approvalQuery } from "../queries";
+import { decideApproval } from "../mutations";
+import { approvalQuery, sessionQuery } from "../queries";
 import { navigate } from "../router";
 import { Notice } from "../ui/Notice";
 import { SKELETON, SURFACE, button } from "../ui/styles";
@@ -44,20 +45,11 @@ export function ApprovePage({ id, token, signedIn }: ApprovePageProps) {
   const t = useT();
   const queryClient = useQueryClient();
   const link = signedIn ? null : token;
-  const options = approvalQuery(id, link);
-  const approval = useQuery(options);
-  const decide = useMutation({
-    mutationFn: (choice: ApprovalChoice) => api<Decision>("POST", `/api/approvals/${encodeURIComponent(id)}/decide`, link ? { choice, token: link } : { choice }),
-    onSuccess: (result, choice) => {
-      queryClient.setQueryData(options.queryKey, result.outcome);
-      if (!signedIn) return;
-      void queryClient.invalidateQueries({ queryKey: ["approvals"] });
-      if (choice === "always") void queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
-  });
+  const approval = useQuery(approvalQuery(id, link));
+  const decide = useMutation(decideApproval);
   const signIn = () => {
     navigate(`/approve/${encodeURIComponent(id)}`, { replace: true });
-    void queryClient.invalidateQueries({ queryKey: ["session"] });
+    void queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey });
   };
   if (approval.data) {
     return (
@@ -66,9 +58,9 @@ export function ApprovePage({ id, token, signedIn }: ApprovePageProps) {
           approval={approval.data}
           signedIn={signedIn}
           first={!decide.data?.already_decided}
-          deciding={decide.isPending ? decide.variables : undefined}
+          deciding={decide.isPending ? decide.variables.choice : undefined}
           error={decide.isError ? (statusOf(decide.error) === 401 ? t(link ? "approve.linkSpent" : "approve.sessionEnded") : errorText(decide.error)) : undefined}
-          onChoose={(choice) => decide.mutate(choice)}
+          onChoose={(choice) => decide.mutate({ id, choice, token: link })}
         />
         {decide.isError && statusOf(decide.error) === 401 ? (
           <button type="button" className={`${button({ variant: "secondary", size: "sm" })} mt-4 self-center`} onClick={signIn}>

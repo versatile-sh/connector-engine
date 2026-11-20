@@ -148,13 +148,13 @@ func (s *Service) stopConnector(ctx context.Context, c port.Connector) {
 }
 
 func (s *Service) functionOf(c port.Connector, m port.Manifest, def port.RawDefinition, meta port.ListMeta) (port.Function, error) {
-	hash, err := pinning.DefinitionHash(def.Raw)
+	hash, err := pinning.DefinitionHash(def.Name, def.Raw)
 	if err != nil {
 		return port.Function{}, err
 	}
 	v := viewOf(def.Raw)
 	f := port.Function{Tenant: c.Tenant, Connector: c.ID, Name: def.Name, Definition: slices.Clone(def.Raw), DefinitionHash: hash, Visibility: v.Meta.UI.Visibility,
-		OpenWorld: v.Annotations == nil || v.Annotations.OpenWorldHint == nil || *v.Annotations.OpenWorldHint}
+		OpenWorld: port.ItemKind(def.Name) == "" && (v.Annotations == nil || v.Annotations.OpenWorldHint == nil || *v.Annotations.OpenWorldHint)}
 	if content, ok := meta.UIResources[v.Meta.UI.ResourceURI]; ok {
 		f.UIResourceHash = pinning.UIResourceHash(content)
 	}
@@ -166,6 +166,9 @@ func (s *Service) functionOf(c port.Connector, m port.Manifest, def port.RawDefi
 }
 
 func classOf(f port.Function, m port.Manifest) (port.Class, port.ClassSource) {
+	if port.ItemKind(f.Name) != "" {
+		return port.ClassRead, port.ClassSourceItem
+	}
 	if f.ClassSource == port.ClassSourceAdmin && f.Class != port.ClassNone {
 		return f.Class, port.ClassSourceAdmin
 	}
@@ -190,18 +193,33 @@ func (s *Service) captureFunctions(ctx context.Context, c port.Connector, m port
 		}
 		return nil, meta, upstream(err, "connector %s did not list its functions: %v", c.ID)
 	}
+	for _, d := range defs {
+		if port.ItemKind(d.Name) != "" {
+			return nil, meta, port.Errorf(port.CodeInvalidManifest, "tool %q uses a name reserved for connector items", d.Name)
+		}
+		if _, err := names.Exposed(c.Alias, d.Name, s.cfg.Separator, s.cfg.NameMax); err != nil {
+			return nil, meta, err
+		}
+	}
+	defs = append(defs, s.items(meta)...)
 	out := make([]port.Function, 0, len(defs))
 	for _, d := range defs {
 		f, err := s.functionOf(c, m, d, meta)
 		if err != nil {
 			return nil, meta, err
 		}
-		if _, err := names.Exposed(c.Alias, f.Name, s.cfg.Separator, s.cfg.NameMax); err != nil {
-			return nil, meta, err
-		}
 		out = append(out, f)
 	}
 	return out, meta, nil
+}
+
+func (s *Service) items(meta port.ListMeta) []port.RawDefinition {
+	var out []port.RawDefinition
+	if s.cfg.RelayInstructions && meta.Instructions != "" {
+		raw, _ := json.Marshal(map[string]string{"instructions": meta.Instructions})
+		out = append(out, port.RawDefinition{Name: port.InstructionsItem, Raw: raw})
+	}
+	return out
 }
 
 func outputSchemaOf(f port.Function) json.RawMessage {

@@ -29,7 +29,7 @@ func TestCanonical(t *testing.T) {
 func TestDefinitionHash(t *testing.T) {
 	h := func(raw string) port.Hash {
 		t.Helper()
-		v, err := pinning.DefinitionHash([]byte(raw))
+		v, err := pinning.DefinitionHash("f", []byte(raw))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -45,7 +45,7 @@ func TestDefinitionHash(t *testing.T) {
 	if h(`{"name":"f","description":"d","inputSchema":{"type":"object"},"_meta":{"ui":{"resourceUri":"ui://a"}}}`) == base {
 		t.Fatal("§9: _meta ui.resourceUri is hashed")
 	}
-	fields, err := pinning.ChangedFields([]byte(`{"name":"f","description":"d"}`), []byte(`{"name":"f","description":"e","title":"t"}`))
+	fields, err := pinning.ChangedFields("f", []byte(`{"name":"f","description":"d"}`), []byte(`{"name":"f","description":"e","title":"t"}`))
 	if err != nil || len(fields) != 2 || fields[0] != "title" || fields[1] != "description" {
 		t.Fatalf("changed fields %v %v", fields, err)
 	}
@@ -121,5 +121,22 @@ func TestAcceptAndReclassify(t *testing.T) {
 	read := port.Function{DefinitionHash: "h2", Class: port.ClassRead, ClassSource: port.ClassSourceReviewed}
 	if pinning.AutoAccept(read, review, "none") || !pinning.AutoAccept(read, review, "read") {
 		t.Fatal("§9: auto-accept only with pinning.autoAcceptReviewed = read")
+	}
+}
+
+func TestAnItemPinsTheKeysOfItsKind(t *testing.T) {
+	h := func(raw string) port.Hash {
+		v, err := pinning.DefinitionHash(port.InstructionsItem, []byte(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	if h(`{"instructions":"a"}`) == h(`{"instructions":"b"}`) || h(`{"instructions":"a"}`) != h(`{"instructions":"a","description":"x"}`) {
+		t.Fatal("instructions pin their text and only it")
+	}
+	fields, err := pinning.ChangedFields(port.InstructionsItem, []byte(`{"instructions":"a"}`), []byte(`{"instructions":"b"}`))
+	if err != nil || len(fields) != 1 || fields[0] != "instructions" {
+		t.Fatalf("changed fields %v %v", fields, err)
 	}
 }

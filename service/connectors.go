@@ -420,7 +420,7 @@ func (s *Service) emitQuarantine(tx port.Tx, c port.Connector, f *port.Function,
 	if ch.Kind == pinning.ChangeChanged {
 		old, err := tx.GetFunction(c.ID, ch.Function)
 		if err == nil {
-			ev.ChangedFields, _ = pinning.ChangedFields(old.Definition, f.Definition)
+			ev.ChangedFields, _ = pinning.ChangedFields(ch.Function, old.Definition, f.Definition)
 		}
 	}
 	return s.record(tx, c.Tenant, "system", string(c.ID), evFunctionQuarantined, ev)

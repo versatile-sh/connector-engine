@@ -25,7 +25,7 @@ const (
 
 var tokenLike = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// Setup is a shareable install: the connectors and skills to add with their choices, each access key's profiles as a permission set named after the key, and the kinds of notification channel, never a secret.
+// Setup is a shareable install: the connectors and skills to add with their choices, each access key's profiles as a permission set named after the key, and the kinds of notification channel, never a secret; a review also lists the sets an import would make.
 type Setup struct {
 	APIVersion    string           `yaml:"apiVersion" json:"api_version"`
 	Kind          string           `yaml:"kind" json:"kind"`
@@ -33,6 +33,7 @@ type Setup struct {
 	Skills        []SetupSkill     `yaml:"skills,omitempty" json:"skills"`
 	Notifications []string         `yaml:"notifications,omitempty" json:"notifications"`
 	Stripped      []string         `yaml:"stripped,omitempty" json:"stripped"`
+	Slots         []SlotView       `yaml:"-" json:"slots,omitempty"`
 }
 
 // SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off and each access key's profile there, and in a review whether it is installed and the proposal of each choice this console would lower.
@@ -297,6 +298,7 @@ func (c *Console) inspectSetup(ctx context.Context, raw []byte) (BackupSummary, 
 		}
 		s.Connectors[i].Above = lowered(mergeChoices(sc), proposedChoices(p))
 	}
+	s.Slots = reviewSlots(s.Connectors)
 	return BackupSummary{Kind: "setup", Counts: map[string]int{"connectors": len(s.Connectors), "skills": len(s.Skills)}, Setup: &s}, nil
 }
 
@@ -409,4 +411,25 @@ func (c *Console) applySlot(ctx context.Context, slot KeySlot, key string) error
 		}
 	}
 	return nil
+}
+
+func reviewSlots(connectors []SetupConnector) []SlotView {
+	byName := map[string]*SlotView{}
+	for _, sc := range connectors {
+		if sc.Exists {
+			continue
+		}
+		for _, p := range sc.Profiles {
+			name := Slug(p.Agent)
+			if byName[name] == nil {
+				byName[name] = &SlotView{Name: name}
+			}
+			byName[name].Connectors = append(byName[name].Connectors, SlotProfile{Slot: name, Connector: sc.Name, Alias: sc.Name, Mode: p.Mode, Overrides: p.Overrides})
+		}
+	}
+	out := []SlotView{}
+	for _, name := range slices.Sorted(maps.Keys(byName)) {
+		out = append(out, *byName[name])
+	}
+	return out
 }

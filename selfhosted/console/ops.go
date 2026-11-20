@@ -389,7 +389,7 @@ func (c *Console) openToWorkspace(ctx context.Context, target string) error {
 	return nil
 }
 
-// Remove uninstalls a connector under its lock and forgets its new-key default, its waiting profiles and the lock; with a key made, the first-run guide was finished and stays so.
+// Remove uninstalls a connector under its lock and forgets its new-key default and limits, its profiles in permission sets and the lock; with a key made, the first-run guide was finished and stays so.
 func (c *Console) Remove(ctx context.Context, conn string) error {
 	unlock, err := c.lockConnector(ctx, conn)
 	if err != nil {

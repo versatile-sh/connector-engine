@@ -91,6 +91,11 @@ func (p profiled) consent(slot string) string {
 func TestASharedSetupBringsEachKeyAsAPermissionSetNeverBoundByName(t *testing.T) {
 	file := slotSetup(t)
 	dst := importedSlots(t, file, "alpha")
+	var sum console.BackupSummary
+	_, raw := freshOwner(t).upload("/api/backup/inspect", file, "")
+	if err := json.Unmarshal(raw, &sum); err != nil || len(sum.Setup.Slots) != 3 || sum.Setup.Slots[0].Name != "alpha" || sum.Setup.Slots[0].Connectors[0].Overrides["lookup"] != console.AccessAsk {
+		t.Fatalf("the review lists the sets %s", raw)
+	}
 	slots := dst.slots()
 	if len(slots) != 3 {
 		t.Fatalf("slots %+v", slots)

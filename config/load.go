@@ -148,7 +148,11 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if len(c.Mutations()) > 0 && !acknowledged(AckManageMutations) {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
 	}
-	if !acknowledged(AckPlaintextRootKey) {
+	switch {
+	case acknowledged(AckPlaintextRootKey):
+	case c.Secrets.Adapter == "hostkey":
+		add(level, "secrets.adapter", "hostkey keeps a plaintext root key on a host without a keychain and until it is migrated; acknowledge %s to run with it", AckPlaintextRootKey)
+	default:
 		add(level, "secrets.adapter", "%s keeps the root key in plaintext; acknowledge %s to run with it", c.Secrets.Adapter, AckPlaintextRootKey)
 	}
 	if c.Runtime.AllowPrivateHosts && !acknowledged(AckPrivateEgress) {

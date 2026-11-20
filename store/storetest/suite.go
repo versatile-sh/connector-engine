@@ -57,6 +57,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"roles and groups":          rolesAndGroups,
 		"calls clients and syncs":   callsClientsAndSyncs,
 		"purge tenant":              purgeTenant,
+		"prune history":             pruneHistory,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -795,4 +796,53 @@ func purgeTenant(e *env) {
 	}
 	_, err = purger.PurgeTenant(ctx, port.Installation)
 	e.code(err, port.CodeInvalidArgument)
+}
+
+func pruneHistory(e *env) {
+	pruner, ok := e.s.(port.Pruner)
+	if !ok {
+		e.t.Fatal("the store does not prune history")
+	}
+	fill := func(scope port.Scope) {
+		tenant := scope.Tenant
+		e.must(e.write(scope, func(tx port.Tx) error {
+			_, err1 := tx.MarkInbox("idem:old", t0)
+			_, err2 := tx.Emit(port.Event{Type: "delivered", Tenant: tenant, Time: t0})
+			finished := port.Call{ID: port.CallID("done-" + string(tenant)), Tenant: tenant, State: port.CallFinished, StartedAt: t0, FinishedAt: t0}
+			running := port.Call{ID: port.CallID("run-" + string(tenant)), Tenant: tenant, State: port.CallStarted, StartedAt: t0}
+			return errors.Join(err1, err2, tx.Audit(port.AuditRow{At: t0, Tenant: tenant, Actor: "a", Action: "x", Subject: "s"}), tx.CreateCall(finished), tx.CreateCall(running))
+		}))
+	}
+	fill(scopeA)
+	fill(scopeB)
+	pending, err := e.o.Pending(ctx, 0)
+	e.must(err)
+	ids := make([]string, len(pending))
+	for i, p := range pending {
+		ids[i] = p.ID
+	}
+	e.must(e.o.MarkDelivered(ctx, ids))
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		_, err := tx.Emit(port.Event{Type: "pending", Tenant: "ta", Time: t0})
+		return err
+	}))
+	later := time.Now().Add(30 * 24 * time.Hour)
+	none, err := pruner.Prune(ctx, "ta", later, port.Retention{})
+	e.must(err)
+	e.same(0, none["events"]+none["inbox"]+none["audit"]+none["calls"])
+	counts, err := pruner.Prune(ctx, "ta", later, port.Retention{Delivered: 7 * 24 * time.Hour, Inbox: 7 * 24 * time.Hour, Audit: time.Hour, Calls: time.Hour})
+	e.must(err)
+	e.same([]int{1, 1, 1, 1}, []int{counts["events"], counts["inbox"], counts["audit"], counts["calls"]})
+	for scope, want := range map[port.Scope]int{scopeA: 0, scopeB: 1} {
+		e.must(e.read(scope, func(tx port.Tx) error {
+			audit, err1 := tx.ListAudit("s")
+			seen, err2 := tx.SeenInbox("idem:old")
+			calls, err3 := tx.ListCalls(port.CallFilter{})
+			e.same([]any{want, want == 1, want + 1}, []any{len(audit), seen, len(calls)})
+			return errors.Join(err1, err2, err3)
+		}))
+	}
+	left, err := e.o.Pending(ctx, 0)
+	e.must(err)
+	e.same([]any{1, "pending"}, []any{len(left), left[0].Type})
 }

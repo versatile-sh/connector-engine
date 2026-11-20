@@ -202,7 +202,7 @@ func Search(f Facts, s port.Subject, now time.Time) []port.FunctionDecision {
 func SessionGranted(rows []port.Grant, s port.Subject, connector port.ConnectorID, fn port.Function, now time.Time) bool {
 	for _, g := range rows {
 		if g.ScopeKind == port.ScopeSession && g.ScopeID == string(s.Session) && g.Agent == s.Agent && g.Connector == connector &&
-			g.Selector == port.SelectorFunction+fn.Name && g.DefinitionHash == fn.DefinitionHash && grant.Live(g, now) {
+			g.Selector == port.SelectorOf(fn.Name) && g.DefinitionHash == fn.DefinitionHash && grant.Live(g, now) {
 			return true
 		}
 	}

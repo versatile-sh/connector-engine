@@ -69,7 +69,7 @@ func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port
 		return out, err
 	}
 	for _, g := range rows {
-		if grant.Covers(g.Selector, f) && g.Selector == port.SelectorFunction+name && grant.Stale(g, f) {
+		if grant.Covers(g.Selector, f) && g.Selector == port.SelectorOf(name) && grant.Stale(g, f) {
 			out.StaleGrant = append(out.StaleGrant, g)
 		}
 	}

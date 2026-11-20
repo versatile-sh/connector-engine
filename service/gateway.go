@@ -27,10 +27,11 @@ type ServedFunction struct {
 	OverlayHash port.Hash
 }
 
-// FunctionList is what ListFunctions answers: tools, skills, and whether approval_status and approval_cancel are listed too.
+// FunctionList is what ListFunctions answers: tools, skills, connector items, and whether approval_status and approval_cancel are listed too.
 type FunctionList struct {
 	Functions     []ServedFunction
 	Skills        []ServedSkill
+	Instructions  []ServedInstructions
 	ApprovalTools bool
 	TTL           time.Duration
 	Exposure      port.Exposure
@@ -147,6 +148,9 @@ func (s *Service) resolve(ctx context.Context, sub port.Subject, name string, sk
 				return err
 			}
 			for _, f := range fns {
+				if port.ItemKind(f.Name) != "" {
+					continue
+				}
 				if _, err := names.Exposed(c.Alias, f.Name, s.cfg.Separator, s.cfg.NameMax); err == nil {
 					entries = append(entries, names.Entry{Connector: c.ID, Function: f.Name})
 				}
@@ -254,6 +258,10 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 				if err != nil {
 					return err
 				}
+				if port.ItemKind(fn) != "" {
+					s.serveItem(&out, c, f, mode)
+					continue
+				}
 				out.ApprovalTools = out.ApprovalTools || mode == port.ModeAsk || mode == port.ModeAskOnce
 				if skill {
 					out.Skills = append(out.Skills, servedSkill(c, f, mode))
@@ -277,6 +285,7 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 		return nil
 	})
 	slices.SortFunc(out.Functions, func(a, b ServedFunction) int { return cmp.Compare(a.Name, b.Name) })
+	slices.SortFunc(out.Instructions, func(a, b ServedInstructions) int { return cmp.Compare(a.Alias, b.Alias) })
 	return out, err
 }
 

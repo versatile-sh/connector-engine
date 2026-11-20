@@ -148,17 +148,32 @@ func hashValue(v any) port.Hash {
 
 var definitionKeys = []string{"name", "title", "description", "inputSchema", "outputSchema", "annotations"}
 
-// Hashed is the part of a raw tool definition that is pinned: the six keys and _meta ui.resourceUri and ui.visibility (§9).
-func Hashed(raw []byte) (map[string]json.RawMessage, error) {
+var itemKeys = map[string][]string{
+	port.ItemInstructions: {"instructions"},
+}
+
+func keysOf(name string) ([]string, bool) {
+	if keys, ok := itemKeys[port.ItemKind(name)]; ok {
+		return keys, true
+	}
+	return definitionKeys, false
+}
+
+// Hashed is the pinned part of a raw definition: for a tool the six keys and _meta ui.resourceUri and ui.visibility, for an item the keys of its kind (§9).
+func Hashed(name string, raw []byte) (map[string]json.RawMessage, error) {
 	var all map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &all); err != nil {
 		return nil, port.Errorf(port.CodeInvalidArgument, "a definition is a JSON object: %v", err)
 	}
+	keys, item := keysOf(name)
 	out := map[string]json.RawMessage{}
-	for _, k := range definitionKeys {
+	for _, k := range keys {
 		if v, ok := all[k]; ok {
 			out[k] = v
 		}
+	}
+	if item {
+		return out, nil
 	}
 	var meta struct {
 		UI map[string]json.RawMessage `json:"ui"`
@@ -177,9 +192,9 @@ func Hashed(raw []byte) (map[string]json.RawMessage, error) {
 	return out, nil
 }
 
-// DefinitionHash is the RFC 8785 hash of the pinned part of a raw definition; icons and order are excluded (§9).
-func DefinitionHash(raw []byte) (port.Hash, error) {
-	h, err := Hashed(raw)
+// DefinitionHash is the RFC 8785 hash of the pinned part of the raw definition of the function or item name; icons and order are excluded (§9).
+func DefinitionHash(name string, raw []byte) (port.Hash, error) {
+	h, err := Hashed(name, raw)
 	if err != nil {
 		return "", err
 	}
@@ -187,18 +202,22 @@ func DefinitionHash(raw []byte) (port.Hash, error) {
 	return HashJSON(b)
 }
 
-// ChangedFields lists the pinned keys whose canonical value differs between two raw definitions (event 6).
-func ChangedFields(oldRaw, newRaw []byte) ([]string, error) {
-	a, err := Hashed(oldRaw)
+// ChangedFields lists the pinned keys whose canonical value differs between two raw definitions of the function or item name (event 6).
+func ChangedFields(name string, oldRaw, newRaw []byte) ([]string, error) {
+	a, err := Hashed(name, oldRaw)
 	if err != nil {
 		return nil, err
 	}
-	b, err := Hashed(newRaw)
+	b, err := Hashed(name, newRaw)
 	if err != nil {
 		return nil, err
+	}
+	keys, item := keysOf(name)
+	if !item {
+		keys = append(slices.Clone(keys), "_meta")
 	}
 	var out []string
-	for _, k := range append(slices.Clone(definitionKeys), "_meta") {
+	for _, k := range keys {
 		x, _ := canonicalOrNil(a[k])
 		y, _ := canonicalOrNil(b[k])
 		if !bytes.Equal(x, y) {

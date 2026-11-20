@@ -401,7 +401,6 @@ func (c Config) inert() adapters.Findings {
 		key string
 		ok  bool
 	}{
-		{"gateway.relayInstructions", c.Gateway.RelayInstructions == d.Gateway.RelayInstructions},
 		{"gateway.denyAs", c.Gateway.DenyAs == d.Gateway.DenyAs},
 		{"audit.arguments", c.Audit.Arguments == d.Audit.Arguments},
 		{"audit.hashChain", c.Audit.HashChain == d.Audit.HashChain},

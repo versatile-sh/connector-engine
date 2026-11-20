@@ -199,6 +199,7 @@ func (c Config) Service() service.Config {
 	s.ForceAsk = c.Exposure.OnTrifecta == "force_ask"
 	s.Separator, s.NameMax = c.Gateway.Separator, c.Gateway.ToolNameMax
 	s.ProjectionDefault, s.ProjectionMaxPaths = c.Projection.Default == "on", c.Projection.MaxPaths
+	s.RelayInstructions = c.Gateway.RelayInstructions == "pinned"
 	s.RequireDigest, s.ScanForToken, s.ChangedWarningDays, s.RefreshMargin = c.Listing.RequireDigest, c.Gateway.ScanArgumentsForToken, c.Approval.ChangedWarningDays, c.Credentials.RefreshMargin
 	return s
 }

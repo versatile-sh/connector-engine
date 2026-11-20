@@ -110,8 +110,8 @@ func TestBothProtocolEras(t *testing.T) {
 			if bytes.Contains(byName["plain"].Raw, []byte("annotations")) || !bytes.Contains(byName["flagged"].Raw, []byte(`"destructiveHint":false`)) {
 				t.Fatalf("raw bytes lost the difference: %s / %s", byName["plain"].Raw, byName["flagged"].Raw)
 			}
-			plain, _ := pinning.DefinitionHash(byName["plain"].Raw)
-			flagged, _ := pinning.DefinitionHash(byName["flagged"].Raw)
+			plain, _ := pinning.DefinitionHash("plain", byName["plain"].Raw)
+			flagged, _ := pinning.DefinitionHash("flagged", byName["flagged"].Raw)
 			if plain == flagged {
 				t.Fatal("an absent hint and an explicit false hash alike")
 			}

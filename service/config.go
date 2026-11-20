@@ -37,6 +37,7 @@ type Config struct {
 	ChangedWarningDays int
 	KeyOutcome         string
 	RefreshMargin      time.Duration
+	RelayInstructions  bool
 }
 
 // DefaultConfig returns the defaults of §14.

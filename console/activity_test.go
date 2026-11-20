@@ -615,3 +615,34 @@ func TestARealAgentCallIsJoinedWithTheEngineRecord(t *testing.T) {
 		t.Fatalf("search detail: %+v", d)
 	}
 }
+
+func TestALaterPollDoesNotOverwriteTheFirstAnswerOfAnApproval(t *testing.T) {
+	r := newActivityRig(t)
+	r.b.ok("PUT", "/api/activity/settings", map[string]bool{"record_arguments": true, "record_results": true}, nil)
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[],"structuredContent":{"status":"pending_approval","approval_id":"a2"}}}`, nil))
+	r.post(toolCall(1, "notes__create", `{"title":"y"}`))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"created y"}]}}`, nil))
+	r.post(toolCall(2, "approval_status", `{"approval_id":"a2"}`))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"result_not_kept: gone"}],"isError":true,"structuredContent":{"code":"result_not_kept","detail":"gone"}}}`, nil))
+	r.post(toolCall(3, "approval_status", `{"approval_id":"a2"}`))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":4,"error":{"code":-32602,"message":"unknown tool \"search\""}}`, nil))
+	r.post(toolCall(4, "search", `{}`))
+	p := r.rows("", 2)
+	byFn := map[string]console.ActivityCall{}
+	for _, c := range p.Calls {
+		byFn[c.Function] = c
+	}
+	if c := byFn["search"]; c.Alias != "" || c.Connector != "" || c.Outcome != console.OutcomeDenied {
+		t.Fatalf("a name without a prefix: %+v", c)
+	}
+	created := r.until("", func(p console.ActivityPage) bool {
+		return slices.ContainsFunc(p.Calls, func(c console.ActivityCall) bool { return c.Function == "create" && c.Outcome == console.OutcomeOK })
+	})
+	for _, c := range created.Calls {
+		if c.Function == "create" {
+			if d := r.detail(c.ID); c.Outcome != console.OutcomeOK || !strings.Contains(d.Result, "created y") {
+				t.Fatalf("the first answer of the approval: %+v %+v", c, d)
+			}
+		}
+	}
+}

@@ -291,7 +291,7 @@ func (a *Activity) pruneLocked() {
 	}
 }
 
-// Captures returns the calls captured at or after from and not before the floor, oldest first, each with the later answer of its approval folded in.
+// Captures returns the calls captured at or after from and not before the floor, oldest first, each with the first later answer of its approval folded in.
 func (a *Activity) Captures(from time.Time) ([]Capture, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -320,9 +320,10 @@ func (a *Activity) Captures(from time.Time) ([]Capture, error) {
 			return nil, err
 		}
 	}
+	slices.SortStableFunc(late, func(x, y Capture) int { return x.At.Compare(y.At) })
 	for _, l := range late {
 		for i := range calls {
-			if calls[i].Approval == l.Approval && calls[i].Agent == l.Agent {
+			if calls[i].Approval == l.Approval && calls[i].Agent == l.Agent && calls[i].Outcome == OutcomePending {
 				calls[i].Outcome, calls[i].Code, calls[i].Detail, calls[i].Done = l.Outcome, l.Code, l.Detail, l.Done
 				if l.KeptResult {
 					calls[i].KeptResult, calls[i].Result, calls[i].ResultCut, calls[i].ResultBytes = true, l.Result, l.ResultCut, l.ResultBytes

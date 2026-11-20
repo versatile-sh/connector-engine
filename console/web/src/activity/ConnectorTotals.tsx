@@ -25,7 +25,7 @@ export function ConnectorTotals({ counts, connectors, selected, onSelect }: Conn
         </li>
         {counts.map((count) => {
           const connector = connectors.find((c) => c.id === count.connector);
-          const title = connector?.title ?? (count.connector ? (count.alias ?? count.connector) : t("activity.connectors.removed", { alias: count.alias ?? "?" }));
+          const title = connector?.title ?? (count.connector ? (count.alias ?? count.connector) : t("activity.connectors.unknown", { alias: count.alias || "?" }));
           return (
             <li key={count.connector ?? `alias:${count.alias ?? ""}`} className="arrive">
               <button type="button" aria-pressed={selected !== undefined && selected === count.connector} disabled={!count.connector} className={ROW} onClick={() => onSelect(count.connector === selected ? undefined : count.connector)}>

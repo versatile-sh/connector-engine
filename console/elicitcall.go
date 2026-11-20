@@ -89,6 +89,18 @@ func (c *Console) passAnswer(w http.ResponseWriter, r *http.Request, a engineAns
 	}
 	w.WriteHeader(a.status)
 	_, _ = w.Write(a.body)
+	captured(r, a.status, a.header.Get("Content-Type"), a.body)
+}
+
+func captured(r *http.Request, status int, kind string, body []byte) {
+	calls, ok := r.Context().Value(captureKey{}).(*inflight)
+	if !ok {
+		return
+	}
+	resp := &http.Response{StatusCode: status, Header: http.Header{"Content-Type": {kind}}, Body: io.NopCloser(bytes.NewReader(body))}
+	calls.wrap(resp)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
 }
 
 func metaString(meta map[string]json.RawMessage, key string) string {
@@ -298,6 +310,7 @@ wait:
 	}
 	_, _ = fmt.Fprintf(w, "event: message\ndata: %s\n\n", ans.raw)
 	_ = rc.Flush()
+	captured(r, http.StatusOK, "application/json", ans.raw)
 }
 
 func writeRPC(w http.ResponseWriter, id json.RawMessage, key string, v any) {

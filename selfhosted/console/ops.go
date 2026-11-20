@@ -250,11 +250,21 @@ func (c *Console) installListing(ctx context.Context, m port.Manifest, aliasBase
 	return conn, fns, c.Engine.setLevel(ctx, conn, port.LevelCustom)
 }
 
+// AliasBase is the alias a listing name proposes: its last segment without an mcp- prefix, or the namespace's last label when that is only server or mcp.
+func AliasBase(name string) string {
+	ns, last := "", name
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		ns, last = name[:i], name[i+1:]
+	}
+	if base := strings.TrimPrefix(last, "mcp-"); ns == "" || (base != "server" && base != "mcp" && base != "") {
+		return base
+	}
+	return ns[strings.LastIndex(ns, ".")+1:]
+}
+
 // Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent; with a key already made it also finishes the first-run guide.
 func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
-	conn, fns, err := c.installListing(ctx, m, func(ref port.ListingRef) string {
-		return strings.TrimPrefix(ref.Name[strings.LastIndex(ref.Name, "/")+1:], "mcp-")
-	})
+	conn, fns, err := c.installListing(ctx, m, func(ref port.ListingRef) string { return AliasBase(ref.Name) })
 	if err != nil {
 		return conn, err
 	}

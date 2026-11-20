@@ -2,8 +2,10 @@ import type { ActivityCall } from "../api";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { KindLabel } from "../connectors/KindLabel";
 import { useLocale, useT } from "../i18n/I18nProvider";
+import { rowMotion } from "../ui/kept";
 import { CAPTION, PRESS } from "../ui/styles";
 import { Tag } from "../ui/Tag";
+import { useKept } from "../ui/useKept";
 import { AccessKeyName } from "./AccessKeyName";
 import { approvalStateKey, durationText, kindOf, skillFile, timeOf, type Named } from "./activity";
 import { OutcomeTag } from "./OutcomeTag";
@@ -18,19 +20,20 @@ function Asked({ state }: { state: string | undefined }) {
 
 type CallListProps = { calls: readonly ActivityCall[]; named: ReadonlyMap<string, Named>; onOpen(id: string): void };
 
-/** The calls newest first, one row each: the icon, the function or the skill with its class and approval, when, through which connector or file and from which app, then the outcome and the duration. */
+/** The calls newest first, a new one sliding in at the top, one row each: the icon, the function or the skill with its class and approval, when, through which connector or file and from which app, then the outcome and the duration. */
 export function CallList({ calls, named, onOpen }: CallListProps) {
   const t = useT();
   const locale = useLocale();
+  const drawn = useKept(calls, (call) => call.id);
   return (
     <ol className="@container -mx-1 flex flex-col">
-      {calls.map((call) => {
+      {drawn.map(({ row: call, phase }) => {
         const owner = call.connector ? named.get(call.connector) : undefined;
         const title = owner?.title ?? call.alias ?? call.connector ?? "?";
         const kind = kindOf(call.class);
         const when = timeOf(call.at, locale);
         return (
-          <li key={call.id} className="arrive border-b border-line last:border-b-0">
+          <li key={call.id} {...rowMotion(phase)} className="border-b border-line last:border-b-0">
             <button type="button" className={ROW} onClick={() => onOpen(call.id)}>
               <ConnectorIcon src={owner?.icon} title={title} size="sm" />
               <span className="min-w-0">

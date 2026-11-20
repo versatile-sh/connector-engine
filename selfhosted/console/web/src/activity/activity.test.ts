@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { Connector, HourCount, Skill } from "../api.ts";
-import { apiQueryOf, approvalStateKey, barsOf, callOf, durationText, filterOf, hrefOf, kindOf, lastWeek, namedOf, prettyJSON, skillFile } from "./activity.ts";
+import { apiQueryOf, approvalStateKey, barsOf, callOf, daysBetween, durationText, filterOf, hrefOf, keptSince, kindOf, lastWeek, namedOf, prettyJSON, skillFile } from "./activity.ts";
 
 const hour = (start: Date, counts: Partial<Omit<HourCount, "start">> = {}): HourCount => ({ start: start.toISOString(), ok: 0, error: 0, denied: 0, pending: 0, running: 0, ...counts });
 
@@ -85,6 +85,30 @@ describe("apiQueryOf", () => {
 describe("lastWeek", () => {
   test("is the last seven local days, today included", () => {
     assert.deepEqual(lastWeek(new Date(2026, 10, 3, 9)), { range: "custom", from: "2026-10-28", to: "2026-11-03" });
+  });
+});
+
+describe("daysBetween", () => {
+  test("lists the days newest first, both ends included", () => {
+    assert.deepEqual(daysBetween("2026-10-30", "2026-11-02"), ["2026-11-02", "2026-11-01", "2026-10-31", "2026-10-30"]);
+  });
+
+  test("lists one day when both ends are the same", () => {
+    assert.deepEqual(daysBetween("2026-11-02", "2026-11-02"), ["2026-11-02"]);
+  });
+
+  test("lists nothing when the start is after the end", () => {
+    assert.deepEqual(daysBetween("2026-11-03", "2026-11-02"), []);
+  });
+
+  test("lists nothing for a day that does not exist", () => {
+    assert.deepEqual(daysBetween("2026-02-30", "2026-03-02"), []);
+  });
+});
+
+describe("keptSince", () => {
+  test("is thirty local days before today", () => {
+    assert.equal(keptSince(new Date(2026, 10, 3, 9)), "2026-10-04");
   });
 });
 

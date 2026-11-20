@@ -26,7 +26,8 @@ Self-hosted means "only the person profile on a person's own machine uses it". C
 | `connector-console init` | **core** | the headless compose profile runs it to write the operator token and the Postgres passwords. Becomes `connector-engine init` |
 | `surface/` and its five adapters | self-hosted | approval channels of the console |
 | `cli/keychain`, `cli/notify` | self-hosted | host keychain, host notifications |
-| `secrets/hostkey` | self-hosted | needs the host's unlock socket and keychain |
+| `secrets/hostkey` | self-hosted | needs the host's unlock socket or, in-process, its keychain |
+| `store/sqlite` | core package, self-hosted registration | only `selfhosted.Register` adds `builtin:sqlite`, so the headless binaries do not link SQLite; `scripts/check-layering.sh` checks it |
 | `secrets/local`, `secrets/onepassword`, `secrets/memory` | core | headless profiles select them; `hostkey` and `console/sealed` build on `secrets/local` |
 | `deploy/profiles/person`, `deploy/check`, `deploy/compose.check.yaml`, the `engine` and `console` compose services | self-hosted | person profile and its check |
 | `deploy/compose.yaml` (`init`, `postgres`, `engine-headless`), `deploy/profiles/headless`, `deploy/postgres` | core | headless profile |
@@ -67,7 +68,7 @@ Self-hosted means "only the person profile on a person's own machine uses it". C
 │   ├── cmd/
 │   │   ├── cnctl/               core commands + keychain, notify
 │   │   ├── connector-console/   console serve
-│   │   └── connector-engine/    core engine + hostkey + unlock
+│   │   └── connector-engine/    core engine + hostkey + sqlite + unlock + the no-Docker lifecycle
 │   ├── console/                 Go console, sealed/, web/
 │   ├── deploy/
 │   │   ├── compose.yaml         include ../../deploy/compose.yaml; engine, console
@@ -77,6 +78,7 @@ Self-hosted means "only the person profile on a person's own machine uses it". C
 │   ├── docs/                    SECRETS.md, approvals-surfaces.md
 │   ├── scripts/                 console-check.sh, keychain.sh
 │   ├── secrets/hostkey/
+│   ├── standalone/              engine and console in one process, without Docker
 │   └── surface/                 desktop, discord, slack, telegram, webhook
 ├── Dockerfile                   default target: self-hosted image; target headless: core only
 └── Makefile                     core targets; include selfhosted/selfhosted.mk

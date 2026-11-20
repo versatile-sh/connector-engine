@@ -34,8 +34,36 @@ export function pickLocale(saved: string | null, browser: readonly string[]): Lo
   return "en";
 }
 
+const PLURAL = /\{(\w+), plural,((?:\s*(?:=\d+|zero|one|two|few|many|other)\s*\{[^{}]*\})+)\s*\}/g;
+
+const BRANCH = /(=\d+|zero|one|two|few|many|other)\s*\{([^{}]*)\}/g;
+
+const PLACEHOLDER = /\{(\w+)\}/g;
+
+/** Fills a message: each `{name, plural, =0 {…} one {…} other {…}}` takes the branch of its number, an exact `=n` first, then the locale's plural rule, then `other`, with `#` as the number; then each `{name}` takes its value. */
+export function format(text: string, params: Params | undefined, rules: Intl.PluralRules): string {
+  return text
+    .replace(PLURAL, (whole, name: string, body: string) => {
+      const given = params?.[name];
+      const value = Number(given);
+      if (given === undefined || given === "" || !Number.isFinite(value)) return whole;
+      const branches = new Map([...body.matchAll(BRANCH)].map(([, selector, branch]) => [selector, branch]));
+      const branch = branches.get(`=${value}`) ?? branches.get(rules.select(value)) ?? branches.get("other");
+      return branch === undefined ? whole : branch.replaceAll("#", String(value));
+    })
+    .replace(PLACEHOLDER, (whole, name: string) => String(params?.[name] ?? whole));
+}
+
+/** The names a message fills, its plural numbers included, sorted. */
+export function paramsOf(text: string): string[] {
+  const plurals = [...text.matchAll(PLURAL)].map((match) => match[1] ?? "");
+  const plain = [...text.replace(PLURAL, "").matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
+  return [...new Set([...plurals, ...plain])].sort();
+}
+
 /** Builds the translate function of a locale. */
 export function createTranslate(locale: Locale): Translate {
   const dictionary = DICTIONARIES[locale];
-  return (key, params) => dictionary[key].replace(/\{(\w+)\}/g, (whole, name: string) => String(params?.[name] ?? whole));
+  const rules = new Intl.PluralRules(locale);
+  return (key, params) => format(dictionary[key], params, rules);
 }

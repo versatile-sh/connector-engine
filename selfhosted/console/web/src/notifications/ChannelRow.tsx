@@ -6,20 +6,21 @@ import { InlineConfirm } from "../ui/InlineConfirm";
 import { button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { SETUP } from "./setup";
+import { rowMotion, type RowPhase } from "../ui/kept";
 import type { useRemove } from "./useRemove";
 
 const TONE = { connected: "lime", connecting: "muted", error: "amber", notify_only: "muted" } as const;
 
-type ChannelRowProps = { channel: ChannelView; remove: ReturnType<typeof useRemove> };
+type ChannelRowProps = { channel: ChannelView; remove: ReturnType<typeof useRemove>; phase: RowPhase };
 
 /** One channel: its label and kind, its status, the owner id and the last characters of its secret, a Test message, and an inline Remove. */
-export function ChannelRow({ channel, remove }: ChannelRowProps) {
+export function ChannelRow({ channel, remove, phase }: ChannelRowProps) {
   const t = useT();
   const test = useMutation(testChannel);
   const asking = remove.asking(channel.id);
   const failed = test.isError ? errorText(test.error) : test.data && !test.data.ok ? (test.data.error ?? t("notify.channels.testFailed")) : undefined;
   return (
-    <li className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${remove.busy && asking ? "opacity-60" : ""}`}>
+    <li {...rowMotion(phase)} className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${remove.busy && asking ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <div className="min-w-0 grow basis-full @md:basis-0">
           <p title={channel.label} className="truncate font-medium">{channel.label}</p>

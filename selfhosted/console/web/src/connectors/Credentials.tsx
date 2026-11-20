@@ -35,6 +35,7 @@ export function Credentials({ connector }: { connector: Connector }) {
       <h2 id="creds-title" className={SUBTITLE}>
         {t("common.credentials")}
       </h2>
+      <p className="text-[0.8125rem] leading-snug text-pretty text-muted">{t("creds.shared")}</p>
       {stored.length > 0 ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-sm text-muted">{t("creds.stored")}</span>

@@ -319,6 +319,82 @@ svg {
     height 250ms var(--ease-settle);
 }
 
+[data-row] {
+  interpolate-size: allow-keywords;
+}
+
+[data-row="enter"] {
+  animation: row-in 0.25s var(--ease-settle) backwards;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    translate: 0 -0.375rem;
+  }
+}
+
+@supports not (interpolate-size: allow-keywords) {
+  [data-row="leave"] {
+    display: none;
+  }
+}
+
+@supports (interpolate-size: allow-keywords) {
+  [data-row="enter"] {
+    animation-name: row-grow;
+  }
+
+  [data-row="leave"] {
+    animation: row-shrink 0.25s var(--ease-glide) both;
+  }
+
+  @keyframes row-grow {
+    from {
+      opacity: 0;
+      block-size: 0;
+      padding-block: 0;
+      overflow: clip;
+    }
+    to {
+      overflow: clip;
+    }
+  }
+
+  @keyframes row-shrink {
+    from {
+      overflow: clip;
+    }
+    to {
+      opacity: 0;
+      block-size: 0;
+      padding-block: 0;
+      border-block-width: 0;
+      overflow: clip;
+    }
+  }
+}
+
+.tab-line {
+  transition:
+    transform 0.25s var(--ease-glide),
+    opacity 0.25s var(--ease-glide);
+}
+
+.tabs-strip {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+}
+
+.tabs-strip[data-fade-start] {
+  --fade-start: 2rem;
+}
+
+.tabs-strip[data-fade-end] {
+  --fade-end: 2rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

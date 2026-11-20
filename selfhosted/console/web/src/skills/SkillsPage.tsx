@@ -6,6 +6,7 @@ import { ImportDialog } from "../import/ImportDialog";
 import { skillsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { EmptyState } from "../ui/EmptyState";
+import { LongList } from "../ui/LongList";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
@@ -13,7 +14,7 @@ import { PANEL, SKELETON, button } from "../ui/styles";
 import { expandedOf, skillsHref } from "./expanded";
 import { SkillCard } from "./SkillCard";
 
-/** Every installed skill as a grid of compact cards in one panel; one at a time opens in a dialog over the grid, named by `?skill=` so it survives a reload and Back closes it. Import reads a skill link like a connector link. */
+/** Every installed skill as a grid of compact cards in one panel, with a filter past six of them; one at a time opens in a dialog over the grid, named by `?skill=` so it survives a reload and Back closes it. Import reads a skill link like a connector link. */
 export function SkillsPage() {
   const t = useT();
   const { query } = useLocation();
@@ -55,21 +56,26 @@ export function SkillsPage() {
         ) : list.length === 0 ? (
           <EmptyState title={t("skills.empty.title")} body={t("skills.empty.body")} />
         ) : (
-          <ul className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-            {list.map((skill) => (
-              <SkillCard
-                key={skill.id}
-                skill={skill}
-                href={skillsHref(query, skill.id)}
-                open={skill.id === open}
-                onOpen={() => {
-                  pushed.current = true;
-                  navigate(skillsHref(query, skill.id), { keepScroll: true });
-                }}
-                onClose={close}
-              />
-            ))}
-          </ul>
+          <LongList rows={list} textOf={(skill) => `${skill.title} ${skill.alias} ${skill.publisher ?? ""} ${skill.description ?? ""}`} keyOf={(skill) => skill.id} label={t("skills.filter")} whole>
+            {(shown) => (
+              <ul className="grid gap-6 @xl:grid-cols-2 @4xl:grid-cols-3">
+                {shown.map(({ row: skill, phase }) => (
+                  <SkillCard
+                    key={skill.id}
+                    phase={phase}
+                    skill={skill}
+                    href={skillsHref(query, skill.id)}
+                    open={skill.id === open}
+                    onOpen={() => {
+                      pushed.current = true;
+                      navigate(skillsHref(query, skill.id), { keepScroll: true });
+                    }}
+                    onClose={close}
+                  />
+                ))}
+              </ul>
+            )}
+          </LongList>
         )}
       </div>
       {importing ? <ImportDialog initialKind="listing" onClose={() => setImporting(false)} /> : null}

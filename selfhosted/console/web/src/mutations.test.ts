@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, test } from "node:test";
 import { MutationObserver, QueryClient, type QueryKey, type UseMutationOptions } from "@tanstack/react-query";
 import * as mutations from "./mutations.ts";
-import { accountQuery, activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries.ts";
+import type { Connector } from "./api.ts";
+import { accountQuery, activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, profileEffectsQuery, sessionQuery, skillsQuery } from "./queries.ts";
 
 const KNOWN: readonly QueryKey[] = [
   sessionQuery.queryKey,
@@ -38,8 +39,6 @@ describe("mutations", () => {
     { name: "signIn", run: () => staleAfter(mutations.signIn, { mode: "login", username: "o", password: "p" }), stale: ["session"] },
     { name: "mintKey", run: () => staleAfter(mutations.mintKey, { name: "cursor", ttl_hours: 24 }), stale: ["session", "agents"] },
     { name: "revokeKey", run: () => staleAfter(mutations.revokeKey, "cursor"), stale: ["session", "agents"] },
-    { name: "setFunctionAccess", run: () => staleAfter(mutations.setFunctionAccess, { connector: "c1", name: "f", access: "on" }), stale: ["connectors"] },
-    { name: "setItemAccess", run: () => staleAfter(mutations.setItemAccess, { connector: "c1", name: "prompt:x", access: "on" }), stale: ["connectors"] },
     { name: "sealHeader", run: () => staleAfter(mutations.sealHeader, { connector: "c1", header: "Authorization", value: "v" }), stale: ["connectors"] },
     { name: "connectOAuth", run: () => staleAfter(mutations.connectOAuth, { connector: "c1", clientID: "", clientSecret: "" }), stale: [] },
     { name: "removeConnector", run: () => staleAfter(mutations.removeConnector, "c1"), stale: ["session", "connectors", "skills"] },
@@ -128,6 +127,90 @@ describe("mutations", () => {
         globalThis.fetch = async () => new Response(JSON.stringify({ kind: "full", counts: {}, replaces: true }), { status: 200 });
         assert.deepEqual((await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "p" })).stale, []);
       });
+    });
+  });
+
+  describe("a connector access write", () => {
+    const connector = (state = "active"): Connector => ({
+      id: "c1",
+      alias: "c1",
+      enabled: true,
+      listing: "l",
+      version: "1",
+      title: "C1",
+      functions: [
+        { name: "f", class: "read", kind: "read", state, access: "off" },
+        { name: "g", class: "read", kind: "read", state: "active", access: "off" },
+      ],
+      items: null,
+      profiles: [],
+      waiting: [{ agent: "later", mode: "off", overrides: {} }],
+      new_keys_off: false,
+    });
+
+    async function write<TVariables>(options: UseMutationOptions<unknown, Error, TVariables>, variables: TVariables, { state = "active", status = 204, body = "" } = {}) {
+      globalThis.fetch = async () => new Response(body || null, { status, headers: body ? { "content-type": "application/json" } : {} });
+      const client = new QueryClient();
+      client.setQueryData(connectorsQuery.queryKey, { connectors: [connector(state)] });
+      client.setQueryData(profileEffectsQuery("c1", "cursor").queryKey, { effects: [] });
+      await new MutationObserver(client, options).mutate(variables).catch(() => undefined);
+      const cached = client.getQueryData(connectorsQuery.queryKey)?.connectors[0];
+      const stale = client.getQueryCache().getAll().filter((query) => query.state.isInvalidated).map((query) => query.queryKey.join("/"));
+      return { cached, stale };
+    }
+
+    describe("of one function", () => {
+      test("sets its access in the cached list at once", async () => {
+        const { cached } = await write(mutations.setFunctionAccess, { connector: "c1", name: "f", access: "on" });
+        assert.deepEqual(cached?.functions?.map((fn) => fn.access), ["on", "off"]);
+      });
+
+      test("reads only the connector's engine answers again", async () => {
+        assert.deepEqual((await write(mutations.setFunctionAccess, { connector: "c1", name: "f", access: "on" })).stale, ["connectors/c1/effects/cursor"]);
+      });
+
+      describe("when the function was quarantined", () => {
+        test("reads the whole list again", async () => {
+          assert.deepEqual((await write(mutations.setFunctionAccess, { connector: "c1", name: "f", access: "on" }, { state: "quarantined" })).stale.sort(), ["connectors", "connectors/c1/effects/cursor"]);
+        });
+      });
+
+      describe("when the console refuses", () => {
+        test("reads the whole list again", async () => {
+          const { stale } = await write(mutations.setFunctionAccess, { connector: "c1", name: "f", access: "on" }, { status: 400, body: JSON.stringify({ error: "no" }) });
+          assert.ok(stale.includes("connectors"));
+        });
+      });
+    });
+
+    describe("of many functions", () => {
+      test("sets each one's access in the cached list at once", async () => {
+        const { cached } = await write(mutations.setFunctionsAccess, { connector: "c1", names: ["f", "g"], access: "ask" }, { status: 200, body: JSON.stringify({ items: [{ name: "f" }, { name: "g" }] }) });
+        assert.deepEqual(cached?.functions?.map((fn) => fn.access), ["ask", "ask"]);
+      });
+
+      describe("when one is refused", () => {
+        test("reads the whole list again", async () => {
+          const { stale } = await write(mutations.setFunctionsAccess, { connector: "c1", names: ["f", "g"], access: "ask" }, { status: 200, body: JSON.stringify({ items: [{ name: "f" }, { name: "g", error: "no" }] }) });
+          assert.ok(stale.includes("connectors"));
+        });
+      });
+    });
+
+    describe("of one item", () => {
+      test("reads only the connector's engine answers again", async () => {
+        assert.deepEqual((await write(mutations.setItemAccess, { connector: "c1", name: "prompt:x", access: "on" })).stale, ["connectors/c1/effects/cursor"]);
+      });
+    });
+
+    test("keeps new keys off in the cached list without reading it again", async () => {
+      const { cached, stale } = await write(mutations.setNewKeysOff, { connector: "c1", off: true });
+      assert.deepEqual([cached?.new_keys_off, stale], [true, []]);
+    });
+
+    test("drops a waiting profile from the cached list without reading it again", async () => {
+      const { cached, stale } = await write(mutations.dropWaiting, { connector: "c1", agent: "later" });
+      assert.deepEqual([cached?.waiting, stale], [[], []]);
     });
   });
 

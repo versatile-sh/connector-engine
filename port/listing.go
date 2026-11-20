@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Manifest is one immutable listing version document (§5.2).
+// Manifest is one immutable listing version document.
 type Manifest struct {
 	Owner            TenantID      `json:"owner,omitempty"`
 	Name             string        `json:"name"`
@@ -43,7 +43,7 @@ type SourceInfo struct {
 	ImportedAt      time.Time `json:"imported_at,omitempty"`
 }
 
-// PrivateSource is the source the engine sets on every private listing (§5.2).
+// PrivateSource is the source the engine sets on every private listing.
 const PrivateSource = "private"
 
 // Remote is where an mcp_remote connector is reached.
@@ -75,7 +75,7 @@ type RESTFunction struct {
 	OutputSchema json.RawMessage `json:"output_schema,omitempty"`
 }
 
-// GRPC is the input of the declarative gRPC executor (OD-44).
+// GRPC is the input of the declarative gRPC executor.
 type GRPC struct {
 	Target     string         `json:"target"`
 	Descriptor Descriptor     `json:"descriptor"`
@@ -90,7 +90,7 @@ type Descriptor struct {
 	Digest string `json:"digest,omitempty"`
 }
 
-// Descriptor sources of §5.2.
+// Descriptor sources.
 const (
 	DescriptorReflection = "reflection"
 	DescriptorFileSet    = "file_descriptor_set"
@@ -193,7 +193,7 @@ type MetaUI struct {
 	Visibility  []string `json:"visibility,omitempty"`
 }
 
-// AuthSpec says what a listing needs to connect (§5.2, §11).
+// AuthSpec says what a listing needs to connect.
 type AuthSpec struct {
 	Kind              CredentialKind      `json:"kind"`
 	Issuer            string              `json:"issuer,omitempty"`
@@ -271,14 +271,14 @@ type Offer struct {
 	Withheld   bool       `json:"withheld"`
 }
 
-// CatalogPolicy is the default of one workspace; there is none for the tenant (§5.5).
+// CatalogPolicy is the default of one workspace; there is none for the tenant.
 type CatalogPolicy struct {
 	Tenant    TenantID      `json:"tenant"`
 	Workspace WorkspaceID   `json:"workspace"`
 	Default   PolicyDefault `json:"default"`
 }
 
-// CatalogRule shows or hides listings to a subject of a tenant at a ceiling (§5.5).
+// CatalogRule shows or hides listings to a subject of a tenant at a ceiling.
 type CatalogRule struct {
 	ID          RuleID      `json:"id"`
 	Tenant      TenantID    `json:"tenant"`
@@ -293,5 +293,5 @@ type CatalogRule struct {
 	CreatedBy   string      `json:"created_by,omitempty"`
 }
 
-// StarterCreator marks the rules createTenant writes from the starter set (§5.5 V2).
+// StarterCreator marks the rules createTenant writes from the starter set.
 const StarterCreator = "starter"

@@ -21,18 +21,18 @@ func TestLint(t *testing.T) {
 	m := remote()
 	m.Name, m.Kind = "issues", port.KindPiece
 	if f := listing.Lint(m, true); len(f) != 2 {
-		t.Fatalf("§5.2: a bad name and a reserved kind: %+v", f)
+		t.Fatalf("a bad name and a reserved kind: %+v", f)
 	}
 	pkg := port.Manifest{Name: "io.x/p", Version: "1", Kind: port.KindMCPPackage, Publisher: port.Publisher{Name: "x"}, Artifact: &port.Artifact{Type: "oci", Ref: "r"}}
 	if err := listing.Validate(pkg, true); err == nil || !strings.Contains(err.Error(), "digest") || !strings.Contains(err.Error(), "egress") {
-		t.Fatalf("§5.2: an mcp_package needs a digest and egress.allow_hosts: %v", err)
+		t.Fatalf("an mcp_package needs a digest and egress.allow_hosts: %v", err)
 	}
 	g := port.Manifest{Name: "io.x/g", Version: "1", Kind: port.KindGRPCDeclarative, Publisher: port.Publisher{Name: "x"}, GRPC: &port.GRPC{
 		Target: "dns:///api:443", Descriptor: port.Descriptor{From: port.DescriptorReflection},
 		Methods: []port.GRPCFunction{{Name: "Orders_Get", FullMethod: "/shop.v1.Orders/Get"}, {Name: "get", FullMethod: "/shop.v1.Orders/Get"}},
 	}}
 	if f := listing.Lint(g, true); len(f) != 1 || !strings.Contains(f[0].Detail, `"get"`) {
-		t.Fatalf("§5.2: a gRPC function is named <Service>_<Method>: %+v", f)
+		t.Fatalf("a gRPC function is named <Service>_<Method>: %+v", f)
 	}
 }
 
@@ -52,7 +52,7 @@ func TestClassSourceOrder(t *testing.T) {
 	} {
 		c, s, _ := listing.Class(tc.in)
 		if c != tc.class || s != tc.source {
-			t.Errorf("§5.2 %s: %s %s", tc.name, c, s)
+			t.Errorf("%s: %s %s", tc.name, c, s)
 		}
 	}
 	if _, _, s := listing.Class(listing.ClassInput{HTTPMethod: "get"}); s != port.ClassRead {
@@ -68,17 +68,17 @@ func TestTrust(t *testing.T) {
 	}
 	m.Review = &port.Review{DefinitionHashes: []port.Hash{"h1"}}
 	if listing.Trust(m, listing.Evidence{Signed: true}) != port.TrustSigned {
-		t.Fatal("§5.2: a review that misses a hash is not reviewed")
+		t.Fatal("a review that misses a hash is not reviewed")
 	}
 	m.Review.DefinitionHashes = append(m.Review.DefinitionHashes, "h2")
 	if listing.Trust(m, listing.Evidence{}) != port.TrustReviewed || listing.InstallLevel(port.TrustReviewed) != port.LevelWrite {
-		t.Fatal("§5.2, OD-5: reviewed installs at level write")
+		t.Fatal("reviewed installs at level write")
 	}
 	p := listing.Private(m, "t1")
 	if listing.Trust(p, listing.Evidence{FirstParty: true}) == port.TrustFirstParty || p.Source.Registry != port.PrivateSource || p.Publisher.Name != "t1" {
-		t.Fatalf("§5.2: a private listing is never first_party and carries the private source: %+v", p)
+		t.Fatalf("a private listing is never first_party and carries the private source: %+v", p)
 	}
 	if listing.InstallLevel(port.TrustSigned) != port.LevelOff {
-		t.Fatal("OD-5: other listings install at off")
+		t.Fatal("other listings install at off")
 	}
 }

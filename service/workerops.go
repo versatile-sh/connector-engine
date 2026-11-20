@@ -109,7 +109,7 @@ func (s *Service) ExpireGrant(ctx context.Context, tenant port.TenantID, id port
 	})
 }
 
-// ExpirePauses ends every pause of the tenant whose expiry passed (§8.3).
+// ExpirePauses ends every pause of the tenant whose expiry passed.
 func (s *Service) ExpirePauses(ctx context.Context, tenant port.TenantID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		all, err := tx.ListPauses()

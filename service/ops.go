@@ -9,7 +9,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// ListCalls returns the audit rows of the caller's tenant, oldest first and the newest limit of them when limit is positive; arguments are references and hashes only (§13.1 listCalls).
+// ListCalls returns the audit rows of the caller's tenant, oldest first and the newest limit of them when limit is positive; arguments are references and hashes only.
 func (s *Service) ListCalls(ctx context.Context, p port.Principal, f port.CallFilter, limit int) ([]port.Call, error) {
 	if err := s.authorize(ctx, p, authz.AuditRead, s.tenantResource(p)); err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ type SourceStatus struct {
 	LastSync port.SourceSync `json:"last_sync"`
 }
 
-// ListSources returns the configured listing sources with their last sync, by name (§13.1 listSources).
+// ListSources returns the configured listing sources with their last sync, by name.
 func (s *Service) ListSources(ctx context.Context, p port.Principal) ([]SourceStatus, error) {
 	if err := s.authorize(ctx, p, authz.SourceRead, s.scopeResource(p)); err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (s *Service) ListSources(ctx context.Context, p port.Principal) ([]SourceSt
 	return out, nil
 }
 
-// RotateKey re-wraps the root key, or the key-encryption key of one tenant, through the secret store; the operator alone may (§13.1 rotateKey).
+// RotateKey re-wraps the root key, or the key-encryption key of one tenant, through the secret store; the operator alone may.
 func (s *Service) RotateKey(ctx context.Context, p port.Principal, scope port.KeyScope) (port.Operation, error) {
 	op := port.Operation{ID: port.OperationID(s.d.NewID()), Kind: "rotate_key", Done: true, CreatedAt: s.now(), UpdatedAt: s.now()}
 	if err := s.authorize(ctx, p, authz.KeyRotate, authz.Installation); err != nil {
@@ -102,7 +102,7 @@ type ClientRegistrationInput struct {
 	RedirectURL string `json:"redirect_url,omitempty"`
 }
 
-// PutClientRegistration stores the pre-registered client the tenant uses for an issuer; credential.Registrar reads it (§11.3, §13.1).
+// PutClientRegistration stores the pre-registered client the tenant uses for an issuer; credential.Registrar reads it.
 func (s *Service) PutClientRegistration(ctx context.Context, p port.Principal, in ClientRegistrationInput) (port.ClientRegistration, error) {
 	tenant := p.Claims.Tenant
 	if err := s.authorize(ctx, p, authz.ClientRegister, s.tenantResource(p)); err != nil {

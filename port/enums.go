@@ -1,9 +1,9 @@
 package port
 
-// Mode is the answer of a grant row or of the evaluation, in order of strictness (§6.1).
+// Mode is the answer of a grant row or of the evaluation, in order of strictness.
 type Mode string
 
-// Modes of §6.1; Inherit exists only on a tenant fn: row (§6.4 G10).
+// Modes; Inherit exists only on a tenant fn: row.
 const (
 	ModeDeny    Mode = "deny"
 	ModeAsk     Mode = "ask"
@@ -30,10 +30,10 @@ func (m Mode) Stricter(o Mode) Mode {
 	return m
 }
 
-// Class is the trusted kind of a function; the empty class is unclassified and counts as destructive (§5.2).
+// Class is the trusted kind of a function; the empty class is unclassified and counts as destructive.
 type Class string
 
-// Classes of §5.2.
+// Classes.
 const (
 	ClassNone        Class = ""
 	ClassRead        Class = "read"
@@ -51,13 +51,13 @@ func (c Class) Effective() Class {
 	return c
 }
 
-// Raises reports whether moving from c to n raises the effective class (§6.4 G7).
+// Raises reports whether moving from c to n raises the effective class.
 func (c Class) Raises(n Class) bool { return classRank[n] > classRank[c] }
 
-// ClassSource says where the class of a function came from (§5.2).
+// ClassSource says where the class of a function came from.
 type ClassSource string
 
-// Class sources of §5.2, in the order they are trusted.
+// Class sources, in the order they are trusted.
 const (
 	ClassSourceAdmin           ClassSource = "admin"
 	ClassSourceReviewed        ClassSource = "reviewed"
@@ -66,10 +66,10 @@ const (
 	ClassSourceItem            ClassSource = "item"
 )
 
-// FunctionState is the lifecycle state of a function of a connector (§5.3).
+// FunctionState is the lifecycle state of a function of a connector.
 type FunctionState string
 
-// Function states of §5.3.
+// Function states.
 const (
 	FunctionActive      FunctionState = "active"
 	FunctionQuarantined FunctionState = "quarantined"
@@ -77,10 +77,10 @@ const (
 	FunctionDisabled    FunctionState = "disabled"
 )
 
-// Caller is the kind of client that sends a request on the agent endpoint (§4.3).
+// Caller is the kind of client that sends a request on the agent endpoint.
 type Caller string
 
-// Callers of §4.3; an absent caller claim is a model.
+// Callers; an absent caller claim is a model.
 const (
 	CallerModel Caller = "model"
 	CallerView  Caller = "view"
@@ -92,10 +92,10 @@ const (
 	VisibleToApp   = "app"
 )
 
-// ScopeKind is the layer a grant row belongs to (§6.1).
+// ScopeKind is the layer a grant row belongs to.
 type ScopeKind string
 
-// Grant scopes of §6.1.
+// Grant scopes.
 const (
 	ScopeTenant    ScopeKind = "tenant"
 	ScopeWorkspace ScopeKind = "workspace"
@@ -104,20 +104,20 @@ const (
 	ScopeSession   ScopeKind = "session"
 )
 
-// Origin says how a grant row was written (§6.1).
+// Origin says how a grant row was written.
 type Origin string
 
-// Origins of §6.1.
+// Origins.
 const (
 	OriginSettings Origin = "settings"
 	OriginLevel    Origin = "level"
 	OriginApproval Origin = "approval"
 )
 
-// Level is a named set of class rows (§6.2).
+// Level is a named set of class rows.
 type Level string
 
-// Levels of §6.2.
+// Levels.
 const (
 	LevelOff    Level = "off"
 	LevelRead   Level = "read"
@@ -125,10 +125,10 @@ const (
 	LevelCustom Level = "custom"
 )
 
-// Ceiling is the catalog ceiling a rule gives a listing (§5.5 V7).
+// Ceiling is the catalog ceiling a rule gives a listing.
 type Ceiling string
 
-// Ceilings of §5.5, from lowest to highest.
+// Ceilings, from lowest to highest.
 const (
 	CeilingRead  Ceiling = "read"
 	CeilingWrite Ceiling = "write"
@@ -148,10 +148,10 @@ func (c Ceiling) Lower(o Ceiling) Ceiling {
 // Valid reports whether c is one of the three ceilings.
 func (c Ceiling) Valid() bool { _, ok := ceilingRank[c]; return ok }
 
-// ListingStatus is the status of a listing or of a listing version, from least to most strict (§5.2).
+// ListingStatus is the status of a listing or of a listing version, from least to most strict.
 type ListingStatus string
 
-// Listing statuses of §5.2.
+// Listing statuses.
 const (
 	ListingActive      ListingStatus = "active"
 	ListingDeprecated  ListingStatus = "deprecated"
@@ -161,7 +161,7 @@ const (
 
 var statusRank = map[ListingStatus]int{ListingActive: 0, ListingDeprecated: 1, ListingQuarantined: 2, ListingDeleted: 3}
 
-// EffectiveStatus is the stricter of a version's own status and its listing's (§5.2).
+// EffectiveStatus is the stricter of a version's own status and its listing's.
 func EffectiveStatus(listing, version ListingStatus) ListingStatus {
 	if statusRank[version] > statusRank[listing] {
 		return version
@@ -169,13 +169,13 @@ func EffectiveStatus(listing, version ListingStatus) ListingStatus {
 	return listing
 }
 
-// Exists reports whether a version of this effective status exists for a tenant (§5.5 V1).
+// Exists reports whether a version of this effective status exists for a tenant.
 func (s ListingStatus) Exists() bool { return s == ListingActive || s == ListingDeprecated }
 
-// TrustLevel is the computed store badge of a listing version (§5.2).
+// TrustLevel is the computed store badge of a listing version.
 type TrustLevel string
 
-// Trust levels of §5.2.
+// Trust levels.
 const (
 	TrustUnreviewed        TrustLevel = "unreviewed"
 	TrustNamespaceVerified TrustLevel = "namespace_verified"
@@ -184,10 +184,10 @@ const (
 	TrustFirstParty        TrustLevel = "first_party"
 )
 
-// Kind selects the runtime adapter of a listing (§5.2).
+// Kind selects the runtime adapter of a listing.
 type Kind string
 
-// Listing kinds of §5.2 and the skill kind; Piece and WasmComponent are reserved.
+// Listing kinds and the skill kind; Piece and WasmComponent are reserved.
 const (
 	KindMCPRemote       Kind = "mcp_remote"
 	KindMCPPackage      Kind = "mcp_package"
@@ -198,10 +198,10 @@ const (
 	KindWasmComponent   Kind = "wasm_component"
 )
 
-// SubjectKind is who a catalog rule or policy is about (§5.5).
+// SubjectKind is who a catalog rule or policy is about.
 type SubjectKind string
 
-// Catalog subjects of §5.5.
+// Catalog subjects.
 const (
 	SubjectTenant    SubjectKind = "tenant"
 	SubjectWorkspace SubjectKind = "workspace"
@@ -209,58 +209,58 @@ const (
 	SubjectUser      SubjectKind = "user"
 )
 
-// TargetKind is what a catalog rule or offer names (§5.5), from least to most specific.
+// TargetKind is what a catalog rule or offer names, from least to most specific.
 type TargetKind string
 
-// Catalog targets of §5.5.
+// Catalog targets.
 const (
 	TargetSource    TargetKind = "source"
 	TargetPublisher TargetKind = "publisher"
 	TargetListing   TargetKind = "listing"
 )
 
-// Audience says whether a tenant or workspace rule shows a listing to all or only to named subjects (§5.5 V8).
+// Audience says whether a tenant or workspace rule shows a listing to all or only to named subjects.
 type Audience string
 
-// Audiences of §5.5 V8.
+// Audiences V8.
 const (
 	AudienceAll   Audience = "all"
 	AudienceNamed Audience = "named"
 )
 
-// PolicyDefault is the catalog policy default of a workspace (§5.5).
+// PolicyDefault is the catalog policy default of a workspace.
 type PolicyDefault string
 
-// Policy defaults of §5.5.
+// Policy defaults.
 const (
 	PolicyVisible PolicyDefault = "visible"
 	PolicyHidden  PolicyDefault = "hidden"
 )
 
-// CredentialPolicy names which owner's credential a binding uses (§6.3, §11.2).
+// CredentialPolicy names which owner's credential a binding uses.
 type CredentialPolicy string
 
-// Credential policies of §6.3.
+// Credential policies.
 const (
 	CredentialPerUser  CredentialPolicy = "per_user"
 	CredentialPerAgent CredentialPolicy = "per_agent"
 	CredentialShared   CredentialPolicy = "shared"
 )
 
-// OwnerKind is who owns a credential (§11.1).
+// OwnerKind is who owns a credential.
 type OwnerKind string
 
-// Credential owners of §11.1.
+// Credential owners.
 const (
 	OwnerUser      OwnerKind = "user"
 	OwnerWorkspace OwnerKind = "workspace"
 	OwnerAgent     OwnerKind = "agent"
 )
 
-// CredentialKind is the kind of an upstream credential (§11.1).
+// CredentialKind is the kind of an upstream credential.
 type CredentialKind string
 
-// Credential kinds of §11.1.
+// Credential kinds.
 const (
 	CredentialOAuth2User              CredentialKind = "oauth2_user"
 	CredentialOAuth2ClientCredentials CredentialKind = "oauth2_client_credentials"
@@ -270,10 +270,10 @@ const (
 	CredentialCustomHeaders           CredentialKind = "custom_headers"
 )
 
-// Registration is how the OAuth client of an issuer was obtained (§11.1).
+// Registration is how the OAuth client of an issuer was obtained.
 type Registration string
 
-// Client registrations of §11.1.
+// Client registrations.
 const (
 	RegistrationPreRegistered Registration = "pre_registered"
 	RegistrationCIMD          Registration = "cimd"
@@ -281,10 +281,10 @@ const (
 	RegistrationManual        Registration = "manual"
 )
 
-// CredentialStatus is the state of a credential (§11.1).
+// CredentialStatus is the state of a credential.
 type CredentialStatus string
 
-// Credential statuses of §11.1.
+// Credential statuses.
 const (
 	CredentialActive      CredentialStatus = "active"
 	CredentialNeedsReauth CredentialStatus = "needs_reauth"
@@ -292,10 +292,10 @@ const (
 	CredentialFailed      CredentialStatus = "failed"
 )
 
-// ApprovalState is the state of an approval record (§8.2).
+// ApprovalState is the state of an approval record.
 type ApprovalState string
 
-// Approval states of §8.2.
+// Approval states.
 const (
 	ApprovalPending        ApprovalState = "pending"
 	ApprovalApproved       ApprovalState = "approved"
@@ -308,7 +308,7 @@ const (
 	ApprovalCancelled      ApprovalState = "cancelled"
 )
 
-// Open reports whether the record is pending, approved or executing (§8.1).
+// Open reports whether the record is pending, approved or executing.
 func (s ApprovalState) Open() bool {
 	return s == ApprovalPending || s == ApprovalApproved || s == ApprovalExecuting
 }
@@ -316,20 +316,20 @@ func (s ApprovalState) Open() bool {
 // Terminal reports whether no transition but A13 and A14 leaves the state.
 func (s ApprovalState) Terminal() bool { return s != "" && !s.Open() }
 
-// Decision is what an approver answers (§8.2 A3 to A5).
+// Decision is what an approver answers.
 type Decision string
 
-// Decisions of §8.2.
+// Decisions.
 const (
 	DecisionApprove           Decision = "approve"
 	DecisionApproveForSession Decision = "approve_for_session"
 	DecisionDeny              Decision = "deny"
 )
 
-// CallState is the state of the audit row of a forwarded call (§10.3 C8 to C12).
+// CallState is the state of the audit row of a forwarded call.
 type CallState string
 
-// Call states of §10.3.
+// Call states.
 const (
 	CallStarted        CallState = "started"
 	CallFinished       CallState = "finished"
@@ -337,10 +337,10 @@ const (
 	CallOutcomeUnknown CallState = "outcome_unknown"
 )
 
-// OverlayState is the state of a description overlay version (§9.1).
+// OverlayState is the state of a description overlay version.
 type OverlayState string
 
-// Overlay states of §9.1.
+// Overlay states.
 const (
 	OverlaySuggested  OverlayState = "suggested"
 	OverlayProposed   OverlayState = "proposed"
@@ -348,19 +348,19 @@ const (
 	OverlaySuperseded OverlayState = "superseded"
 )
 
-// OverlaySource says who wrote an overlay (§9.1).
+// OverlaySource says who wrote an overlay.
 type OverlaySource string
 
-// Overlay sources of §9.1.
+// Overlay sources.
 const (
 	OverlayByPerson OverlaySource = "person"
 	OverlayByModel  OverlaySource = "model"
 )
 
-// TenantState is the registry state of a tenant (§4.4).
+// TenantState is the registry state of a tenant.
 type TenantState string
 
-// Tenant states of §4.4.
+// Tenant states.
 const (
 	TenantActive   TenantState = "active"
 	TenantRemoving TenantState = "removing"

@@ -1,4 +1,4 @@
-// Package wire is the JWT claim set of a per-run or person token and its mapping to port.Claims (§4.3).
+// Package wire is the JWT claim set of a per-run or person token and its mapping to port.Claims.
 package wire
 
 import (

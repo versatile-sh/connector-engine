@@ -53,7 +53,7 @@ func loopbackName(host string) bool {
 	return host == "127.0.0.1" || host == "localhost" || host == "::1"
 }
 
-// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port (RFC 8252 §7.3), an app's private-use scheme (§7.1), or one exactly listed app callback page that shows the code for the owner to paste back; never any other https or a scheme a browser handles itself.
+// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port, an app's private-use scheme, or one exactly listed app callback page that shows the code for the owner to paste back; never any other https or a scheme a browser handles itself.
 func RedirectAllowed(raw string) bool {
 	if _, ok := hostedCallbacks[raw]; ok {
 		return true

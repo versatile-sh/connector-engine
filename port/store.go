@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Scope is what a unit of work may touch: the rows of one tenant, the installation tables, or both (§4.4).
+// Scope is what a unit of work may touch: the rows of one tenant, the installation tables, or both.
 type Scope struct {
 	Tenant       TenantID
 	Installation bool
@@ -186,7 +186,7 @@ type Tx interface {
 	MarkInbox(id string, at time.Time) (bool, error)
 }
 
-// TenantPurger is the capability of a Store to delete every row of a removed tenant and return the counts (§4.4 step 4); removal needs it.
+// TenantPurger is the capability of a Store to delete every row of a removed tenant and return the counts; removal needs it.
 type TenantPurger interface {
 	PurgeTenant(ctx context.Context, tenant TenantID) (map[string]int, error)
 }

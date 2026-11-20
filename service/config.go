@@ -9,7 +9,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Config holds the keys of §14 that the use cases read; DefaultConfig is the defaults of that table.
+// Config holds the keys that the use cases read; DefaultConfig is the defaults of that table.
 type Config struct {
 	Approval           approval.Limits
 	PollAfter          time.Duration
@@ -41,7 +41,7 @@ type Config struct {
 	UpstreamContent    bool
 }
 
-// DefaultConfig returns the defaults of §14.
+// DefaultConfig returns the defaults.
 func DefaultConfig() Config {
 	return Config{
 		Approval: approval.Defaults, PollAfter: 15 * time.Second, RelistMin: 30 * time.Second, RelistMax: 300 * time.Second,

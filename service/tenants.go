@@ -13,7 +13,7 @@ import (
 // RemoveTenantKind is the kind of the fan-out row of a tenant removal.
 const RemoveTenantKind = "remove_tenant"
 
-// CreateTenant registers a tenant with its key and, under catalog.tenantDefault = starter, the starter rules; a second call writes nothing (§4.4).
+// CreateTenant registers a tenant with its key and, under catalog.tenantDefault = starter, the starter rules; a second call writes nothing.
 func (s *Service) CreateTenant(ctx context.Context, p port.Principal, tenant port.TenantID) (port.Tenant, error) {
 	var out port.Tenant
 	if err := s.authorize(ctx, p, authz.TenantCreate, authz.Installation); err != nil {
@@ -56,7 +56,7 @@ func (s *Service) CreateTenant(ctx context.Context, p port.Principal, tenant por
 	return out, err
 }
 
-// RemoveTenant marks a tenant removing, which refuses every token of it at once, and queues the worker's steps 2 to 5 of §4.4.
+// RemoveTenant marks a tenant removing, which refuses every token of it at once, and queues the worker's steps 2 to 5.
 func (s *Service) RemoveTenant(ctx context.Context, p port.Principal, tenant port.TenantID) (port.Operation, error) {
 	var op port.Operation
 	if err := s.authorize(ctx, p, authz.TenantRemove, authz.Installation); err != nil {
@@ -101,7 +101,7 @@ func (s *Service) GetOperation(ctx context.Context, p port.Principal, id port.Op
 	return out, err
 }
 
-// FanOutTenant is the worker's step of an operator's status change or offer for one tenant: events 36 and A7 inside that tenant (§5.5).
+// FanOutTenant is the worker's step of an operator's status change or offer for one tenant: events 36 and A7 inside that tenant.
 func (s *Service) FanOutTenant(ctx context.Context, f port.FanOut, tenant port.TenantID) error {
 	var blocked, connectors int
 	err := s.write(ctx, port.Scope{Tenant: tenant}, "FanOutTenant:"+string(f.ID), func(tx port.Tx) error {
@@ -150,7 +150,7 @@ func (s *Service) fanOut(tx port.Tx, id port.OperationID) (port.FanOut, error) {
 	return all[i], nil
 }
 
-// RemoveTenantData is the worker's steps 2 to 5 of §4.4: cancel open approvals, shred the key, delete the rows, publish event 38.
+// RemoveTenantData is the worker's steps 2 to 5: cancel open approvals, shred the key, delete the rows, publish event 38.
 func (s *Service) RemoveTenantData(ctx context.Context, f port.FanOut) error {
 	tenant := f.Tenant
 	var creds []port.Credential

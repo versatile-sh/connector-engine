@@ -123,7 +123,7 @@ func ruleEvent(r port.CatalogRule, deleted bool, by string) catalog.RuleChanged 
 		Show: r.Show, Install: r.Install, Ceiling: string(r.Ceiling), Audience: string(aud), Deleted: deleted, By: by}
 }
 
-// PutCatalogRule writes a rule of the caller's tenant; connectors it newly blocks or unblocks are announced in the same transaction (§5.5).
+// PutCatalogRule writes a rule of the caller's tenant; connectors it newly blocks or unblocks are announced in the same transaction.
 func (s *Service) PutCatalogRule(ctx context.Context, p port.Principal, r port.CatalogRule) (port.CatalogRule, error) {
 	if err := s.authorize(ctx, p, authz.CatalogWrite, s.tenantResource(p)); err != nil {
 		return r, err
@@ -194,7 +194,7 @@ func (s *Service) ListCatalogRules(ctx context.Context, p port.Principal) ([]por
 	return out, err
 }
 
-// PutCatalogPolicy sets the default of a workspace; a policy for the tenant itself is refused (§5.5).
+// PutCatalogPolicy sets the default of a workspace; a policy for the tenant itself is refused.
 func (s *Service) PutCatalogPolicy(ctx context.Context, p port.Principal, subject port.SubjectKind, workspace port.WorkspaceID, def port.PolicyDefault) (port.CatalogPolicy, error) {
 	pol := port.CatalogPolicy{Tenant: p.Claims.Tenant, Workspace: workspace, Default: def}
 	if err := corecatalog.ValidatePolicy(subject); err != nil {
@@ -231,7 +231,7 @@ func (s *Service) GetCatalogPolicy(ctx context.Context, p port.Principal, worksp
 	return out, err
 }
 
-// PutOffer withholds or offers a source or one installation listing to a tenant and queues the fan-out of §5.5.
+// PutOffer withholds or offers a source or one installation listing to a tenant and queues the fan-out.
 func (s *Service) PutOffer(ctx context.Context, p port.Principal, o port.Offer) (port.Operation, error) {
 	var op port.Operation
 	if err := s.authorize(ctx, p, authz.OfferPut, authz.Installation); err != nil {
@@ -286,7 +286,7 @@ func (s *Service) ListOffers(ctx context.Context, p port.Principal, tenant port.
 	return out, err
 }
 
-// ExplainVisibility answers the levels of §5.5 for (workspace, person, listing); a workspace admin gets not found for a hidden listing.
+// ExplainVisibility answers the levels for (workspace, person, listing); a workspace admin gets not found for a hidden listing.
 func (s *Service) ExplainVisibility(ctx context.Context, p port.Principal, workspace port.WorkspaceID, person port.PersonID, ref port.ListingRef) (corecatalog.Answer, error) {
 	var out corecatalog.Answer
 	tenantAdmin := s.authorize(ctx, p, authz.CatalogRead, s.tenantResource(p)) == nil

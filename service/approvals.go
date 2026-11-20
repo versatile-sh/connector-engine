@@ -16,7 +16,7 @@ import (
 
 const reasonCancelledByApprover port.Code = "cancelled_by_approver"
 
-// ApprovalDetail is a record with its arguments opened for the reader and the warnings of §8.5.
+// ApprovalDetail is a record with its arguments opened for the reader and the warnings.
 type ApprovalDetail struct {
 	Approval       port.Approval   `json:"approval"`
 	Arguments      []byte          `json:"arguments,omitempty"`
@@ -78,7 +78,7 @@ func (s *Service) ListApprovals(ctx context.Context, p port.Principal, f port.Ap
 	return newest(out, limit), nil
 }
 
-// GetApproval returns one record with its arguments opened for this reader (§13.1 getApproval).
+// GetApproval returns one record with its arguments opened for this reader.
 func (s *Service) GetApproval(ctx context.Context, p port.Principal, id port.ApprovalID) (ApprovalDetail, error) {
 	var d ApprovalDetail
 	var siblings []port.Approval
@@ -128,7 +128,7 @@ func (s *Service) GetApproval(ctx context.Context, p port.Principal, id port.App
 	return d, nil
 }
 
-// DecideApproval is A3, A4 and A5; when another decision won the race the record as it now is comes back (§13.1).
+// DecideApproval is A3, A4 and A5; when another decision won the race the record as it now is comes back.
 func (s *Service) DecideApproval(ctx context.Context, p port.Principal, id port.ApprovalID, d port.Decision, note, channel string) (port.Approval, error) {
 	var out port.Approval
 	if err := s.authorize(ctx, p, authz.ApprovalDecide, s.tenantResource(p)); err != nil {
@@ -275,7 +275,7 @@ func (s *Service) WatchApprovals(ctx context.Context, p port.Principal, after in
 	return out, err
 }
 
-// ExplainAccess returns the evaluation of one function for one subject: the mode, the step and reason, the matched rows and each layer (§7.1).
+// ExplainAccess returns the evaluation of one function for one subject: the mode, the step and reason, the matched rows and each layer.
 func (s *Service) ExplainAccess(ctx context.Context, p port.Principal, sub port.Subject, connector port.ConnectorID, function string) (evaluate.Decision, error) {
 	var out evaluate.Decision
 	c, err := s.connectorOf(ctx, p, connector, authz.ConnectorManage)
@@ -298,7 +298,7 @@ func (s *Service) ExplainAccess(ctx context.Context, p port.Principal, sub port.
 	return out, err
 }
 
-// GetCall returns the audit row of a forwarded call; arguments are references and hashes only (§13.1 getCall).
+// GetCall returns the audit row of a forwarded call; arguments are references and hashes only.
 func (s *Service) GetCall(ctx context.Context, p port.Principal, id port.CallID) (port.Call, error) {
 	var out port.Call
 	if err := s.authorize(ctx, p, authz.AuditRead, s.tenantResource(p)); err != nil {

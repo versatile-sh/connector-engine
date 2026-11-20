@@ -1,4 +1,4 @@
-// Package mux is the ConnectorRuntime that sends each listing to the runtime serving its kind (§3.3).
+// Package mux is the ConnectorRuntime that sends each listing to the runtime serving its kind.
 package mux
 
 import (

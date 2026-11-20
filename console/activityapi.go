@@ -80,9 +80,13 @@ type ActivityPage struct {
 }
 
 type activityFilter struct {
-	from, to         time.Time
-	connector, agent string
-	outcome          CallOutcome
+	from, to                 time.Time
+	connector, agent, search string
+	outcome                  CallOutcome
+}
+
+func (f activityFilter) found(r ActivityCall) bool {
+	return f.search == "" || strings.Contains(strings.ToLower(r.Function), f.search) || strings.Contains(strings.ToLower(r.Skill), f.search)
 }
 
 type itemStream[T any] struct {
@@ -322,7 +326,7 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 	byConn := map[string]*ConnectorCount{}
 	for _, j := range rows {
 		r := j.row
-		if r.At.Before(f.from) || r.At.After(f.to) {
+		if r.At.Before(f.from) || r.At.After(f.to) || !f.found(r) {
 			continue
 		}
 		agentOK := f.agent == "" || r.Agent == f.agent
@@ -372,7 +376,7 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, error) {
 	qv := r.URL.Query()
 	now := time.Now().UTC()
-	f := activityFilter{from: now.Add(-activityWindow), to: now, connector: qv.Get("connector"), agent: qv.Get("agent"), outcome: CallOutcome(qv.Get("outcome"))}
+	f := activityFilter{from: now.Add(-activityWindow), to: now, connector: qv.Get("connector"), agent: qv.Get("agent"), search: strings.ToLower(strings.TrimSpace(qv.Get("search"))), outcome: CallOutcome(qv.Get("outcome"))}
 	for name, into := range map[string]*time.Time{"from": &f.from, "to": &f.to} {
 		if v := qv.Get(name); v != "" {
 			t, err := time.Parse(time.RFC3339, v)

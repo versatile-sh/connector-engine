@@ -358,6 +358,9 @@ func TestDeniedHeldAndFailedCallsShowWhatTheyCameTo(t *testing.T) {
 	if p := r.page("?outcome=pending"); len(p.Calls) != 1 || p.Calls[0].Function != "create" || p.Total != 1 {
 		t.Fatalf("the outcome filter: %+v", p.Calls)
 	}
+	if p := r.page("?search=SEAR"); len(p.Calls) != 1 || p.Calls[0].Function != "search" || p.Total != 1 || len(p.Connectors) != 1 || p.Connectors[0].Total != 1 {
+		t.Fatalf("the search narrows the calls and the totals to the functions it names: %+v %+v", p.Calls, p.Connectors)
+	}
 
 	r.engine.setApproval(port.Approval{ID: "a1", Agent: "claude-code", Connector: "c-notes", Function: "create", Class: port.ClassWrite, State: port.ApprovalExecuted, CreatedAt: time.Now()})
 	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"created"}]}}`, func() {

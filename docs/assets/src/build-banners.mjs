@@ -139,6 +139,7 @@ const SECTIONS = [
   ["scaling", "enterprise", "Scaling and ", "replicas"],
   ["security-model", "enterprise", "Security ", "model"],
   ["cloud", "enterprise", "Deploy to the ", "cloud"],
+  ["vps", "self-hosted", "Run it on a ", "VPS"],
   ["architecture", "enterprise", "How it is ", "built"],
   ["config", "reference", "Configuration ", "keys"],
   ["cnctl", "reference", "The command line, ", "cnctl"],

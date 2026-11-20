@@ -67,6 +67,11 @@ func Run(ctx context.Context, kc Keychain, args []string, stdin io.Reader, stdou
 	return 0
 }
 
+// Ensure returns the unlock key of account in kc, creating it once; a nil kc is ErrUnavailable.
+func Ensure(ctx context.Context, kc Keychain, account string) (string, error) {
+	return run(ctx, kc, "ensure", account, nil)
+}
+
 func run(ctx context.Context, kc Keychain, verb, name string, stdin io.Reader) (string, error) {
 	if kc == nil {
 		return "", ErrUnavailable

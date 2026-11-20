@@ -42,6 +42,7 @@ type inflight struct {
 	results  bool
 	mu       sync.Mutex
 	byID     map[string]*Capture
+	answers  map[string]rpcMessage
 	open     int
 }
 
@@ -92,7 +93,7 @@ func (c *Console) callsIn(r *http.Request, body []byte) *inflight {
 	}
 	settings := c.Activity.Settings()
 	now := time.Now().UTC()
-	in := &inflight{activity: c.Activity, results: settings.RecordResults, byID: map[string]*Capture{}}
+	in := &inflight{activity: c.Activity, results: settings.RecordResults, byID: map[string]*Capture{}, answers: map[string]rpcMessage{}}
 	for _, m := range msgs {
 		var p toolCall
 		if m.Method != "tools/call" || len(m.ID) == 0 || json.Unmarshal(m.Params, &p) != nil {
@@ -244,7 +245,7 @@ func (t *tap) event() {
 	if len(t.data) > 0 && !t.dataOver {
 		if msgs, ok := decodeMessages(t.data); ok {
 			for _, m := range msgs {
-				if t.calls.answer(m) == 0 {
+				if t.calls.take(m) == 0 {
 					t.done = true
 				}
 			}
@@ -257,22 +258,28 @@ func (t *tap) finish() {
 	if !t.sse && !t.over {
 		if msgs, ok := decodeMessages(t.buf); ok {
 			for _, m := range msgs {
-				t.calls.answer(m)
+				t.calls.take(m)
 			}
 		}
 	}
 	t.calls.settle(t.over && !t.sse, t.size)
 }
 
-func (in *inflight) answer(m rpcMessage) int {
+func (in *inflight) take(m rpcMessage) int {
 	in.mu.Lock()
 	defer in.mu.Unlock()
-	cp := in.byID[rpcKey(m.ID)]
+	k := rpcKey(m.ID)
+	cp := in.byID[k]
 	if cp == nil || !cp.Done.IsZero() || (len(m.Result) == 0 && len(m.Error) == 0) {
 		return in.open
 	}
 	cp.Done = time.Now().UTC()
+	in.answers[k] = m
 	in.open--
+	return in.open
+}
+
+func (in *inflight) describe(cp *Capture, m rpcMessage) {
 	if len(m.Error) > 0 {
 		var e struct {
 			Code    int    `json:"code"`
@@ -284,7 +291,7 @@ func (in *inflight) answer(m rpcMessage) int {
 			cp.Outcome, cp.Code = OutcomeDenied, "unknown_tool"
 		}
 		cp.Detail, _ = cut(redactText(e.Message), detailMax)
-		return in.open
+		return
 	}
 	var r struct {
 		IsError bool `json:"isError"`
@@ -307,7 +314,7 @@ func (in *inflight) answer(m rpcMessage) int {
 	switch {
 	case sc.Status == "pending_approval" && sc.Approval != "":
 		cp.Outcome, cp.Approval = OutcomePending, sc.Approval
-		return in.open
+		return
 	case r.IsError && sc.Code == "approval_denied":
 		cp.Outcome, cp.Code = OutcomeDenied, sc.Code
 	case r.IsError:
@@ -327,14 +334,15 @@ func (in *inflight) answer(m rpcMessage) int {
 			cp.Result, cp.ResultCut = cut(excerpt, excerptMax)
 		}
 	}
-	return in.open
 }
 
 func (in *inflight) settle(oversize bool, size int) {
 	in.mu.Lock()
 	defer in.mu.Unlock()
-	for _, cp := range in.byID {
-		if cp.Done.IsZero() {
+	for k, cp := range in.byID {
+		if m, ok := in.answers[k]; ok {
+			in.describe(cp, m)
+		} else {
 			cp.Done = time.Now().UTC()
 			cp.Outcome, cp.Code = OutcomeError, "no_answer"
 			if oversize {

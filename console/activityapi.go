@@ -215,7 +215,6 @@ func join(captures []Capture, f engineFacts) []joined {
 		call := &f.calls[i]
 		if call.Approval != "" {
 			byApproval[call.Approval] = call
-			continue
 		}
 		k := callKey{string(call.Agent), string(call.Session), string(call.Connector), call.Function}
 		open[k] = append(open[k], call)
@@ -264,6 +263,9 @@ func (f engineFacts) settle(r ActivityCall, call *port.Call) ActivityCall {
 		r.Connector, r.Alias, r.Function, r.Class = string(call.Connector), f.byID[string(call.Connector)], call.Function, call.Class
 		if f.skills[r.Connector] {
 			r.Skill = r.Alias
+		}
+		if r.Approval == "" {
+			r.Approval = string(call.Approval)
 		}
 		r.DurationMS = nil
 		switch {

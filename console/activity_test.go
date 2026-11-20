@@ -22,6 +22,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/console"
 	"github.com/agents-control/connector-engine/port"
 )
@@ -197,7 +198,9 @@ func (r *activityRig) until(query string, ok func(console.ActivityPage) bool) co
 
 func (r *activityRig) rows(query string, n int) console.ActivityPage {
 	r.t.Helper()
-	return r.until(query, func(p console.ActivityPage) bool { return len(p.Calls) == n })
+	return r.until(query, func(p console.ActivityPage) bool {
+		return len(p.Calls) == n && !slices.ContainsFunc(p.Calls, func(c console.ActivityCall) bool { return !c.Captured })
+	})
 }
 
 func (r *activityRig) detail(id string) console.ActivityDetail {
@@ -555,13 +558,20 @@ func TestAnUnauthorizedAnswerIsNotRecorded(t *testing.T) {
 	}
 }
 
-func TestARealAgentCallIsJoinedWithTheEngineRecord(t *testing.T) {
+type realRig struct {
+	*activityRig
+	cs   *mcp.ClientSession
+	conn console.ConnectorSummary
+}
+
+func newRealRig(t *testing.T, tweaks ...func(*config.Config)) *realRig {
+	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	base := "http://" + lis.Addr().String()
-	public, operator := bootEngine(t, base)
+	public, operator := bootEngine(t, base, tweaks...)
 	up := newUpstream(t)
 	dir := t.TempDir()
 	state, err := console.OpenState(dir + "/state.json")
@@ -590,7 +600,6 @@ func TestARealAgentCallIsJoinedWithTheEngineRecord(t *testing.T) {
 	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true}, nil)
 	var list struct{ Connectors []console.ConnectorSummary }
 	b.ok("GET", "/api/connectors", nil, &list)
-	conn := list.Connectors[0]
 	var tok console.AgentToken
 	b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
 	client := mcp.NewClient(&mcp.Implementation{Name: "agent", Version: "1"}, nil)
@@ -598,7 +607,13 @@ func TestARealAgentCallIsJoinedWithTheEngineRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cs.Close()
+	t.Cleanup(func() { cs.Close() })
+	return &realRig{activityRig: &activityRig{t: t, b: b, activity: act}, cs: cs, conn: list.Connectors[0]}
+}
+
+func TestARealAgentCallIsJoinedWithTheEngineRecord(t *testing.T) {
+	rr := newRealRig(t)
+	cs, conn, r := rr.cs, rr.conn, rr.activityRig
 	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: conn.Alias + "__search", Arguments: map[string]any{"q": "milk", "token": "t0ps3cret"}})
 	if err != nil || res.IsError || textOf(res) != "ran search" {
 		t.Fatalf("search through the capturing proxy: %v %v", res, err)
@@ -606,7 +621,6 @@ func TestARealAgentCallIsJoinedWithTheEngineRecord(t *testing.T) {
 	if _, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: conn.Alias + "__purge", Arguments: map[string]any{}}); err != nil {
 		t.Fatal(err)
 	}
-	r := &activityRig{t: t, b: b}
 	byFn := map[string]console.ActivityCall{}
 	for _, row := range r.rows("", 2).Calls {
 		byFn[row.Function] = row
@@ -722,7 +736,9 @@ func TestASkillLoadIsShownByTheSkillName(t *testing.T) {
 	}))
 	r.post(toolCall(2, "skill_load", `{"skill":"pdf","path":"reference/fields.md"}`))
 	r.engine.addCall(port.Call{ID: "s2", Agent: "cursor", Session: "s9", Connector: "c-pdf", Function: "skill", State: port.CallFinished, StartedAt: time.Now().UTC()})
-	p := r.rows("", 2)
+	p := r.until("", func(p console.ActivityPage) bool {
+		return len(p.Calls) == 2 && slices.ContainsFunc(p.Calls, func(c console.ActivityCall) bool { return c.Captured })
+	})
 	byID := map[string]console.ActivityCall{}
 	for _, c := range p.Calls {
 		byID[c.ID] = c
@@ -742,5 +758,39 @@ func TestASkillLoadIsShownByTheSkillName(t *testing.T) {
 	}
 	if len(p.Connectors) != 1 || !p.Connectors[0].Skill || p.Connectors[0].Total != 2 {
 		t.Fatalf("per connector: %+v", p.Connectors)
+	}
+}
+
+func TestACallApprovedInsideTheHoldWindowIsOneRow(t *testing.T) {
+	rr := newRealRig(t, func(c *config.Config) { c.Approval.HoldWindow = 20 * time.Second })
+	done := make(chan error, 1)
+	go func() {
+		res, err := rr.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: rr.conn.Alias + "__purge", Arguments: map[string]any{"all": true}})
+		if err == nil && (res.IsError || textOf(res) != "ran purge") {
+			err = fmt.Errorf("purge answered %v", res)
+		}
+		done <- err
+	}()
+	var waiting struct{ Approvals []struct{ ID string } }
+	for deadline := time.Now().Add(10 * time.Second); len(waiting.Approvals) == 0; time.Sleep(50 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the held call never reached the approvals")
+		}
+		rr.b.ok("GET", "/api/approvals", nil, &waiting)
+	}
+	rr.b.ok("POST", "/api/approvals/"+waiting.Approvals[0].ID, map[string]bool{"approve": true}, nil)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	p := rr.until("", func(p console.ActivityPage) bool { return len(p.Calls) > 0 && p.Calls[0].Captured })
+	if len(p.Calls) != 1 {
+		t.Fatalf("the approved call is listed %d times: %+v", len(p.Calls), p.Calls)
+	}
+	row := p.Calls[0]
+	if row.Function != "purge" || row.Outcome != console.OutcomeOK || row.Approval != waiting.Approvals[0].ID || row.ApprovalState == "" || row.Class == "" {
+		t.Fatalf("the approved row: %+v", row)
+	}
+	if d := rr.detail(row.ID); d.EngineCall == "" || d.Arguments != `{"all":true}` {
+		t.Fatalf("its detail: %+v", d)
 	}
 }

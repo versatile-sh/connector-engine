@@ -1,6 +1,8 @@
 package server_test
 
 import (
+	"time"
+
 	"context"
 	"encoding/json"
 	"net/http"
@@ -56,7 +58,7 @@ func TestEveryRouteIsUnique(t *testing.T) {
 	}
 }
 
-func TestBodilessRequestsCarryOnlyScalars(t *testing.T) {
+func TestBodilessRequestsCarryOnlyScalarsAndTimes(t *testing.T) {
 	for _, o := range server.Operations() {
 		for _, name := range append(o.QueryParams(), o.PathParams()...) {
 			i := slices.IndexFunc(server.Fields(reflect.TypeOf(o.In()).Elem()), func(f server.Field) bool { return f.Name == name })
@@ -64,8 +66,13 @@ func TestBodilessRequestsCarryOnlyScalars(t *testing.T) {
 				t.Errorf("%s: %s is not a field", o.ID, name)
 				continue
 			}
-			switch server.Fields(reflect.TypeOf(o.In()).Elem())[i].Type.Kind() {
+			typ := server.Fields(reflect.TypeOf(o.In()).Elem())[i].Type
+			switch typ.Kind() {
 			case reflect.String, reflect.Int, reflect.Int64, reflect.Bool:
+			case reflect.Struct:
+				if typ != server.TimeType {
+					t.Errorf("%s: %s cannot come from a URL", o.ID, name)
+				}
 			default:
 				t.Errorf("%s: %s cannot come from a URL", o.ID, name)
 			}
@@ -83,6 +90,13 @@ func TestFillParsesQueryTypes(t *testing.T) {
 	}
 	if err := server.Fill(in, map[string]string{"nope": "1"}); !port.IsCode(err, port.CodeInvalidArgument) {
 		t.Fatalf("unknown field: %v", err)
+	}
+	calls := &server.ListCallsRequest{}
+	if err := server.Fill(calls, map[string]string{"since": "2026-11-18T09:00:00Z", "limit": "5"}); err != nil || !calls.Since.Equal(time.Date(2026, 11, 18, 9, 0, 0, 0, time.UTC)) || calls.Limit != 5 {
+		t.Fatalf("%+v %v", calls, err)
+	}
+	if err := server.Fill(calls, map[string]string{"since": "yesterday"}); !port.IsCode(err, port.CodeInvalidArgument) {
+		t.Fatalf("bad time: %v", err)
 	}
 }
 

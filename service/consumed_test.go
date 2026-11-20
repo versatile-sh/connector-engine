@@ -113,7 +113,7 @@ func TestARemovedApproverNeitherDecidesNorSeesTheApproval(t *testing.T) {
 	w.row(port.ScopeAgent, "x", "*", port.ModeAsk)
 	held := w.call(w.agent("x", "s1"), "s__search", `{}`)
 	bob := w.Person(tenant, "bob")
-	want(t, len(st.Ok(w.Svc.ListApprovals(w.Ctx, bob, port.ApprovalFilter{}))), 1, "bob is named")
+	want(t, len(st.Ok(w.Svc.ListApprovals(w.Ctx, bob, port.ApprovalFilter{}, 0))), 1, "bob is named")
 	sys := w.Operator()
 	sys.Claims.Tenant = tenant
 	if err := w.Svc.RemovePerson(w.Ctx, sys, "bob", ""); err != nil {
@@ -122,6 +122,6 @@ func TestARemovedApproverNeitherDecidesNorSeesTheApproval(t *testing.T) {
 	if _, err := w.Svc.DecideApproval(w.Ctx, bob, held.Approval.ID, port.DecisionApprove, "", "test"); !port.IsCode(err, port.CodeNotAnApprover) {
 		t.Fatalf("a removed approver decides nothing: %v", err)
 	}
-	want(t, len(st.Ok(w.Svc.ListApprovals(w.Ctx, bob, port.ApprovalFilter{}))), 0, "a removed approver no longer sees it")
+	want(t, len(st.Ok(w.Svc.ListApprovals(w.Ctx, bob, port.ApprovalFilter{}, 0))), 0, "a removed approver no longer sees it")
 	want(t, st.Ok(w.Svc.DecideApproval(w.Ctx, w.Person(tenant, "carol"), held.Approval.ID, port.DecisionApprove, "", "test")).State, port.ApprovalApproved, "carol still decides")
 }

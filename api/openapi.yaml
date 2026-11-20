@@ -241,11 +241,6 @@ components:
         - state
         - created_at
         - expires_at
-        - decided_at
-        - delivered_at
-        - execution_started_at
-        - result_expires_at
-        - token_expires_at
       type: object
     ApprovalDetail:
       properties:
@@ -448,7 +443,6 @@ components:
         - state
         - started_at
         - deadline
-        - finished_at
       type: object
     CallRequest:
       properties:
@@ -678,9 +672,6 @@ components:
         - alias
         - listing
         - enabled
-        - last_relist_at
-        - relist_after
-        - removed_at
         - revision
       type: object
     ConnectorRequest:
@@ -778,12 +769,8 @@ components:
         - connector
         - kind
         - secret
-        - expires_at
-        - refresh_after
         - status
         - created_at
-        - last_used_at
-        - last_refreshed_at
         - revision
       type: object
     CredentialInput:
@@ -1112,7 +1099,6 @@ components:
         - definition_hash
         - state
         - open_world
-        - accepted_at
       type: object
     FunctionDef:
       properties:
@@ -1258,7 +1244,6 @@ components:
         - scope_id
         - selector
         - mode
-        - expires_at
         - created_at
         - origin
       type: object
@@ -1416,7 +1401,12 @@ components:
           type: string
         connector:
           type: string
+        limit:
+          type: integer
         session:
+          type: string
+        since:
+          format: date-time
           type: string
         state:
           type: string
@@ -1438,7 +1428,12 @@ components:
           type: string
         connector:
           type: string
+        limit:
+          type: integer
         session:
+          type: string
+        since:
+          format: date-time
           type: string
         state:
           type: string
@@ -1833,10 +1828,8 @@ components:
         - agent
         - connector
         - paused
-        - paused_at
         - consecutive
         - total
-        - expires_at
       type: object
     PauseRequest:
       properties:
@@ -2357,7 +2350,6 @@ components:
         - id
         - state
         - created_at
-        - removed_at
       type: object
     TenantRequest:
       properties:
@@ -2580,6 +2572,17 @@ paths:
           required: false
           schema:
             type: string
+        - in: query
+          name: since
+          required: false
+          schema:
+            format: date-time
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           content:
@@ -2716,6 +2719,17 @@ paths:
           required: false
           schema:
             type: string
+        - in: query
+          name: since
+          required: false
+          schema:
+            format: date-time
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           content:
@@ -3786,7 +3800,6 @@ paths:
                 - scope_id
                 - selector
                 - mode
-                - expires_at
                 - created_at
                 - origin
               type: object

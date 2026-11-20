@@ -428,7 +428,7 @@ func (t *tx) UpdateCall(c port.Call, from port.CallState) error {
 
 func (t *tx) ListCalls(f port.CallFilter) ([]port.Call, error) {
 	return list[port.Call](t, kindCall, want("agent", string(f.Agent), "session", string(f.Session), "connector", string(f.Connector), "state", string(f.State)),
-		"(doc->>'started_at')::timestamptz, k", nil)
+		"(doc->>'started_at')::timestamptz, k", f.Match)
 }
 
 func (t *tx) GetClient(issuer string) (port.ClientRegistration, bool, error) {

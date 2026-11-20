@@ -243,11 +243,11 @@ var operations = []Operation{
 	}),
 	op("listAgentFunctions", get, "/v1/agents/{agent}/functions", "ListAgentFunctions", ok200, agentFunctions),
 	op("listApprovals", get, "/v1/approvals", "ListApprovals", ok200, func(ctx context.Context, e *Env, p port.Principal, in ListApprovalsRequest) (Approvals, error) {
-		f := port.ApprovalFilter{Session: in.Session, Agent: in.Agent, Connector: in.Connector}
+		f := port.ApprovalFilter{Session: in.Session, Agent: in.Agent, Connector: in.Connector, Since: in.Since}
 		if in.State != "" {
 			f.States = []port.ApprovalState{in.State}
 		}
-		return items[Approvals](e.Svc.ListApprovals(ctx, p, f))
+		return items[Approvals](e.Svc.ListApprovals(ctx, p, f, in.Limit))
 	}),
 	op("getApproval", get, "/v1/approvals/{id}", "GetApproval", ok200, func(ctx context.Context, e *Env, p port.Principal, in ApprovalRequest) (service.ApprovalDetail, error) {
 		return e.Svc.GetApproval(ctx, p, in.ID)
@@ -289,7 +289,7 @@ var operations = []Operation{
 		return e.Svc.PutClientRegistration(ctx, p, in)
 	}),
 	op("listCalls", get, "/v1/calls", "ListCalls", ok200, func(ctx context.Context, e *Env, p port.Principal, in ListCallsRequest) (Calls, error) {
-		return items[Calls](e.Svc.ListCalls(ctx, p, port.CallFilter{Agent: in.Agent, Session: in.Session, Connector: in.Connector, State: in.State}))
+		return items[Calls](e.Svc.ListCalls(ctx, p, port.CallFilter{Agent: in.Agent, Session: in.Session, Connector: in.Connector, State: in.State, Since: in.Since}, in.Limit))
 	}),
 	op("listSources", get, "/v1/sources", "ListSources", ok200, func(ctx context.Context, e *Env, p port.Principal, _ none) (Sources, error) {
 		return items[Sources](e.Svc.ListSources(ctx, p))

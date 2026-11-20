@@ -55,6 +55,7 @@ type ApprovalFilter struct {
 	Agent     AgentID
 	Connector ConnectorID
 	CallHash  Hash
+	Since     time.Time
 }
 
 // CallFilter narrows ListCalls; zero fields match all.
@@ -63,6 +64,7 @@ type CallFilter struct {
 	Session   SessionID
 	Connector ConnectorID
 	State     CallState
+	Since     time.Time
 }
 
 // CredentialFilter narrows ListCredentials; zero fields match all.

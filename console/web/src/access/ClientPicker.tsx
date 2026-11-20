@@ -16,13 +16,15 @@ function Blocks({ guide }: { guide: Guide }) {
     const block = guide.blocks[at] ?? guide.blocks[0];
     return (
       <>
-        <Segmented<string>
-          label={t("clients.language")}
-          value={String(at)}
-          onChange={(value) => setAt(Number(value))}
-          className="self-start"
-          options={guide.blocks.map((option, index) => ({ value: String(index), text: option.label ?? "" }))}
-        />
+        <div className="-m-1.5 max-w-[calc(100%+0.75rem)] self-start overflow-x-auto p-1.5">
+          <Segmented<string>
+            label={t("clients.language")}
+            value={String(at)}
+            onChange={(value) => setAt(Number(value))}
+            className="w-max"
+            options={guide.blocks.map((option, index) => ({ value: String(index), text: option.label ?? "" }))}
+          />
+        </div>
         {block ? <CopyBox key={at} label={label(block)} text={block.text} className="swap-in" /> : null}
       </>
     );

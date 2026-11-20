@@ -102,7 +102,7 @@ export function ImportLanding({ source }: { source: ImportSource }) {
               )}
             </div>
             {preview.isSuccess ? (
-              <div className="sticky bottom-0 mt-4 border-t border-line bg-ink/90 py-4 backdrop-blur-md">
+              <div className="sticky bottom-0 z-20 mt-4 border-t border-line bg-ink/90 py-4 backdrop-blur-md">
                 <p role="alert" className="min-h-5 text-sm text-amber">
                   {install.isError ? errorText(install.error) : ""}
                 </p>

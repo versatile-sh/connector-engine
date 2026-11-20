@@ -423,7 +423,9 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration)
 		}
 		installed = true
 		bind := c.bind
-		if c.isSkill(ctx, v.Connector) {
+		if skill, err := c.isSkill(ctx, v.Connector); err != nil {
+			return Agent{}, err
+		} else if skill {
 			bind = c.rebindSkill
 		}
 		if err := bind(ctx, string(v.Connector.ID), a); err != nil {
@@ -468,11 +470,20 @@ func (c *Console) Approvals(ctx context.Context) ([]port.Approval, error) {
 	return out.Items, err
 }
 
-// Decide approves or denies one waiting call as the owner.
+// Decide approves or denies one waiting call as the owner; approving an ask-once call, such as a skill load, approves it for the rest of its session.
 func (c *Console) Decide(ctx context.Context, id string, approve bool) error {
 	d := port.DecisionDeny
 	if approve {
 		d = port.DecisionApprove
+		var detail struct {
+			Approval port.Approval `json:"approval"`
+		}
+		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &detail); err != nil {
+			return err
+		}
+		if detail.Approval.Mode == port.ModeAskOnce {
+			d = port.DecisionApproveForSession
+		}
 	}
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":decide", map[string]any{"decision": d, "channel": "console"}, nil)
 }

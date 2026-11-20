@@ -138,6 +138,12 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 	if len(skills.Skills) != 1 || skills.Skills[0].State != string(port.FunctionActive) || skills.Skills[0].Access[0] != (console.KeyAccess{Agent: "claude-code", Access: console.AccessOff}) {
 		t.Fatalf("skills after an import set off: %+v", skills)
 	}
+	if skills.Skills[0].Publisher != "example" {
+		t.Fatalf("the publisher is not the repository owner: %q", skills.Skills[0].Publisher)
+	}
+	if status, _ := b.send("PUT", "/api/skills/no-such/keys/claude-code", map[string]string{"access": "on"}, nil); status < 400 {
+		t.Fatalf("a key choice on an unknown skill: %d", status)
+	}
 	var conns struct{ Connectors []console.ConnectorSummary }
 	b.ok("GET", "/api/connectors", nil, &conns)
 	if len(conns.Connectors) != 0 {
@@ -195,6 +201,30 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 		if skills.Skills[0].Access[0].Access != console.AccessOn {
 			t.Fatalf("a new token for the key reset its choice: %+v", skills.Skills[0].Access)
 		}
+	})
+	t.Run("on ask, the owner's approval lets the session load the skill", func(t *testing.T) {
+		b.ok("PUT", "/api/skills/"+imported.Skill+"/keys/claude-code", map[string]string{"access": "ask"}, nil)
+		res, err := load("")
+		if err != nil || structuredOf(t, res)["status"] != "pending_approval" {
+			t.Fatalf("%v %s", err, textOf(res))
+		}
+		id, _ := structuredOf(t, res)["approval_id"].(string)
+		b.ok("POST", "/api/approvals/"+id, map[string]any{"approve": true}, nil)
+		deadline := time.Now().Add(10 * time.Second)
+		for {
+			status, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "approval_status", Arguments: map[string]any{"approval_id": id}})
+			if err == nil && !status.IsError && structuredOf(t, status)["content"] == string(want) {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("the approved load never answered: %v %s", err, textOf(status))
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if res, err := load("reference/fields.md"); err != nil || res.IsError || structuredOf(t, res)["status"] == "pending_approval" {
+			t.Fatalf("the session still asks: %v %s", err, textOf(res))
+		}
+		b.ok("PUT", "/api/skills/"+imported.Skill+"/keys/claude-code", map[string]string{"access": "on"}, nil)
 	})
 	t.Run("a skill without a licence is metadata only", func(t *testing.T) {
 		unlicensed := catalogBase + "pdf-unlicensed.yaml"

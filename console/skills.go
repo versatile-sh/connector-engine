@@ -185,11 +185,21 @@ func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access
 	if !access.Valid() {
 		return fmt.Errorf("access %q is not off, on or ask", access)
 	}
-	i := slices.IndexFunc(c.liveAgents(), func(a Agent) bool { return a.Name == agent })
+	agents := c.liveAgents()
+	i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == agent })
 	if i < 0 {
 		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + agent}
 	}
-	return c.bindSkill(ctx, conn, c.liveAgents()[i], access)
+	var v connectorView
+	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn), nil, &v); err != nil {
+		return err
+	}
+	if skill, err := c.isSkill(ctx, v.Connector); err != nil {
+		return err
+	} else if !skill || !v.Connector.RemovedAt.IsZero() {
+		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
+	}
+	return c.bindSkill(ctx, conn, agents[i], access)
 }
 
 // Skills lists the workspace's installed skills with each access key's choice and the required connectors not installed.
@@ -215,7 +225,7 @@ func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
 			continue
 		}
 		s := m.Skill
-		sum := SkillSummary{ID: string(conn.ID), Alias: conn.Alias, Title: firstOf(m.Title, s.Name), Description: m.Description, Publisher: m.Publisher.Name, Version: conn.Listing.Version,
+		sum := SkillSummary{ID: string(conn.ID), Alias: conn.Alias, Title: firstOf(m.Title, s.Name), Description: m.Description, Publisher: skillcatalog.Publisher(s.Source.Repository, m.Publisher.Name), Version: conn.Listing.Version,
 			SkillPreview: SkillPreview{Name: s.Name, Category: s.Category, Source: s.Source, Licence: s.Licence, Redistribution: s.Redistribution, HasScripts: s.HasScripts,
 				Files: fileViews(s.Files), Keys: []string{}}, Access: []KeyAccess{}}
 		if f, err := c.skillFunction(ctx, string(conn.ID)); err == nil {
@@ -268,7 +278,7 @@ func (c *Console) rebindSkill(ctx context.Context, conn string, a Agent) error {
 	return c.bindSkill(ctx, conn, a, access)
 }
 
-func (c *Console) isSkill(ctx context.Context, conn port.Connector) bool {
+func (c *Console) isSkill(ctx context.Context, conn port.Connector) (bool, error) {
 	m, err := c.manifestOf(ctx, conn)
-	return err == nil && m.Kind == port.KindSkill
+	return m.Kind == port.KindSkill, err
 }

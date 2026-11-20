@@ -40,8 +40,9 @@ type Store struct {
 	*ring.Ring
 	dir    string
 	mu     sync.Mutex
-	root   []byte
-	unlock []byte
+	root     []byte
+	unlock   []byte
+	restored bool
 }
 
 // FormOf reports how the root key in dir rests; a plaintext file wins over a wrapped one, as after an interrupted migration.
@@ -192,6 +193,9 @@ func (s *Store) name(base string) string {
 func (s *Store) save(st ring.State, newRoot []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.restored {
+		return port.Errorf(port.CodeUnavailable, "the key store in %s was restored: open it again", s.dir)
+	}
 	b, err := json.Marshal(st)
 	if err != nil {
 		return err

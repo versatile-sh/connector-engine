@@ -85,22 +85,3 @@ func SkillIndex(base string, skills []service.ServedSkill) string {
 	}
 	return b.String()
 }
-
-func (g *Gateway) instructed(ctx context.Context, req mcp.Request, res mcp.Result) {
-	var instructions *string
-	switch r := res.(type) {
-	case *mcp.InitializeResult:
-		instructions = &r.Instructions
-	case *mcp.DiscoverResult:
-		instructions, r.CacheScope = &r.Instructions, "private"
-	default:
-		return
-	}
-	p, err := principalOf(req)
-	if err != nil {
-		return
-	}
-	if fl, err := g.core.ListFunctions(ctx, p); err == nil {
-		*instructions = SkillIndex(*instructions, fl.Skills)
-	}
-}

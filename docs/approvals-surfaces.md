@@ -88,6 +88,8 @@ Everything new lives in three places:
 
 From this change on, the console writes "Ask" as mode `ask_once` instead of `ask`. The two are the same to the approver except that `ask_once` also allows `approve_for_session`. When the exposure check forces `ask` (§15.2, step 13), the record carries `ask` and the session answer is not offered. Rows written earlier stay `ask` until the owner touches the function again.
 
+Skill loads are held like calls, with mode `ask_once` on the access key's agent row. A skill approval has the function `skill` on a skill-kind connector. Every surface shows the skill's name (the connector alias that the agent passes to `skill_load`) and its title, labelled "Skill". "Always allow" on a skill turns that one access key On for the skill (`SetSkillAccess`), not the whole workspace.
+
 A session is the `session` claim of the agent token. The console mints one per access key, and one per hourly OAuth access token. "Allow for this session" therefore lasts until the app's current token renews: at most one hour for an app signed in through the browser. The UI says so.
 
 ### 4.2 The relay and the universal channel interface (`surface/`)

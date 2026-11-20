@@ -32,6 +32,16 @@ export const skillsQuery = queryOptions({
 /** The access keys an AI app connects with. */
 export const keysQuery = queryOptions({ queryKey: ["agents"], queryFn: () => api<KeysData>("GET", "/api/agents") });
 
+/** The access keys as the Access page reads them: a list that arrives with new keys tells the console they were seen, so the flags show this once; a failed mark only leaves them for the next visit. */
+export const keysPageQuery = queryOptions({
+  queryKey: [...keysQuery.queryKey, "page"],
+  queryFn: async () => {
+    const data = await api<KeysData>("GET", "/api/agents");
+    if (data.agents.some((key) => key.new)) await api("POST", "/api/agents/seen").catch(() => undefined);
+    return data;
+  },
+});
+
 /** Calls held for the owner, polled every few seconds. */
 export const approvalsQuery = queryOptions({
   queryKey: ["approvals"],

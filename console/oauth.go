@@ -206,10 +206,9 @@ func oauthError(w http.ResponseWriter, status int, code, detail string) {
 func (c *Console) register(w http.ResponseWriter, r *http.Request) {
 	c.asMu.Lock()
 	now := time.Now()
-	c.registered = slices.DeleteFunc(c.registered, func(t time.Time) bool { return now.Sub(t) > time.Minute })
-	limited := len(c.registered) >= registrationsPerMin
+	limited := c.registered.full(now, registrationsPerMin)
 	if !limited {
-		c.registered = append(c.registered, now)
+		c.registered.hit(now)
 	}
 	c.asMu.Unlock()
 	if limited {
@@ -300,10 +299,12 @@ func (c *Console) authorize(w http.ResponseWriter, r *http.Request) {
 	id := randomID()
 	now := time.Now()
 	c.asMu.Lock()
-	for k, v := range c.pending {
-		if now.After(v.expires) || len(c.pending) >= maxPendingAuth {
-			delete(c.pending, k)
+	expire(c.pending, now, func(v authRequest) time.Time { return v.expires })
+	for k := range c.pending {
+		if len(c.pending) < maxPendingAuth {
+			break
 		}
+		delete(c.pending, k)
 	}
 	c.pending[id] = authRequest{client: cl, redirect: redirect, state: qv.Get("state"), challenge: qv.Get("code_challenge"), resource: qv.Get("resource"), expires: now.Add(authRequestTTL)}
 	c.asMu.Unlock()
@@ -375,8 +376,7 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 	c.loginMu.Lock()
 	defer c.loginMu.Unlock()
 	now := time.Now()
-	c.consentFails = slices.DeleteFunc(c.consentFails, func(t time.Time) bool { return now.Sub(t) > time.Minute })
-	if len(c.consentFails) >= consentFailsPerMin {
+	if c.consentFails.full(now, consentFailsPerMin) {
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
 		return false
@@ -387,7 +387,7 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 		return false
 	}
 	if !ok {
-		c.consentFails = append(c.consentFails, now)
+		c.consentFails.hit(now)
 		time.Sleep(500 * time.Millisecond)
 		writeJSON(w, http.StatusForbidden, apiError{Error: "wrong password", Code: "wrong_password"})
 		return false
@@ -436,11 +436,7 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	code := randomID()
 	c.asMu.Lock()
 	now := time.Now()
-	for k, v := range c.codes {
-		if now.After(v.expires) {
-			delete(c.codes, k)
-		}
-	}
+	expire(c.codes, now, func(v authCode) time.Time { return v.expires })
 	c.codes[code] = authCode{clientID: req.client.ID, redirect: req.redirect, challenge: req.challenge, resource: req.resource, agent: a.Name, expires: now.Add(authCodeTTL)}
 	c.asMu.Unlock()
 	params["code"] = code

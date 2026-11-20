@@ -84,11 +84,7 @@ func (s *spentSet) spend(nonce string, until time.Time) bool {
 	if s.used == nil {
 		s.used = map[string]time.Time{}
 	}
-	for k, v := range s.used {
-		if now.After(v) {
-			delete(s.used, k)
-		}
-	}
+	expire(s.used, now, func(v time.Time) time.Time { return v })
 	if _, ok := s.used[nonce]; ok {
 		return false
 	}

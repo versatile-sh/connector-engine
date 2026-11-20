@@ -64,11 +64,7 @@ func (s *Sessions) Start(w http.ResponseWriter) string {
 	id, csrf := randomID(), randomID()
 	now := time.Now()
 	s.mu.Lock()
-	for k, v := range s.byKey {
-		if now.After(v.Expires) {
-			delete(s.byKey, k)
-		}
-	}
+	expire(s.byKey, now, func(v StoredSession) time.Time { return v.Expires })
 	s.byKey[sessionKey(id)] = StoredSession{CSRF: csrf, Expires: now.Add(sessionTTL)}
 	s.persist()
 	s.mu.Unlock()

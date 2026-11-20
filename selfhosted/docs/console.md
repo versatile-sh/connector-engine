@@ -45,18 +45,19 @@ The review shows the origin, title, icon, publisher and each function's proposed
 
 ## Access keys on a connector
 
-A connector keeps one credential that every key shares; keys differ only in permissions. The **Profile** picker above a connector's functions shows the **Default**, the connector's own off, on or ask that every key follows, or one key's profile. `?profile=<key>` in the address opens that key's.
+A connector keeps one credential that every key shares; keys differ only in permissions. The **Profile** picker above a connector's functions shows **Default (all keys)**, the connector's own off, on or ask that every key follows, or one key's profile. `?profile=<key>` in the address opens that key's.
 
 | Mode | The key | Engine rows |
 |---|---|---|
 | Off | cannot see the connector: no tool, prompt or resource is listed, and a call answers like an unknown tool | no binding |
-| Default | gets the default choices and follows every change to them | a binding and the agent wildcards (`*`, `instructions:*`, `prompt:*`, `res:*`) |
+| Follow default | gets the default choices and follows every change to them | a binding and the agent wildcards (`*`, `instructions:*`, `prompt:*`, `res:*`) |
 | Custom | narrows some functions and items below the default; every other row follows it | the same, plus an agent-scoped `fn:` or item row for each narrowing |
 
 - An override can only narrow. The engine takes the stricter of the workspace row and the key's row, so a key never gets more than the default; choices above it show but cannot be taken. Choosing the default's own value, or **Reset to default**, removes the override.
 - An override is kept while the default drops below it, and applies again when the default comes back.
 - A row whose engine answer differs from the console's choice says so, with the engine's reason (for example `forced_ask` from the exposure check). The console reads it from `/v1/access:explain`.
-- **Every key** sets all keys to off or the default in one request, which reports each key's result.
+- Off unbinds the key, which drops its overrides; turning it back to custom starts from the default.
+- **Every key** sets all keys to off or the default in one request, which reports each key's result; either drops every key's overrides.
 - **New keys start off** makes keys made from then on start off on this connector; by default they follow it. Renewing a key keeps its profile on every connector.
 - Always allow on a held call also removes the calling key's override of that function.
 - The **Access** page lists, for each key, every connector with its mode and a link to its profile.

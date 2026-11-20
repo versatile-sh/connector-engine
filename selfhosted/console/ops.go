@@ -329,7 +329,7 @@ func (c *Console) openToWorkspace(ctx context.Context, target string) error {
 	return nil
 }
 
-// Remove uninstalls a connector and forgets its new-key default; with a key made, the first-run guide was finished and stays so.
+// Remove uninstalls a connector and forgets its new-key default and waiting profiles; with a key made, the first-run guide was finished and stays so.
 func (c *Console) Remove(ctx context.Context, conn string) error {
 	if len(c.State.Agents()) > 0 {
 		if err := c.State.DismissOnboarding(); err != nil {

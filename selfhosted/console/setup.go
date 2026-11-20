@@ -280,10 +280,8 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte) (SetupResult, err
 		id, _, err := c.importOne(ctx, in)
 		if err != nil {
 			res.Failed[name] = err.Error()
-			return "", false
 		}
-		res.Added = append(res.Added, name)
-		return id, true
+		return id, err == nil
 	}
 	for _, sc := range s.Connectors {
 		if sc.Exists {
@@ -296,15 +294,19 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte) (SetupResult, err
 		}
 		res.SignIns = append(res.SignIns, sc.Name)
 		if err := c.adoptProfiles(ctx, id, sc); err != nil {
-			res.Failed[sc.Name] = err.Error()
+			res.Failed[sc.Name] = "installed without its access key profiles: " + err.Error()
+			continue
 		}
+		res.Added = append(res.Added, sc.Name)
 	}
 	for _, sk := range s.Skills {
 		if sk.Exists {
 			res.Kept = append(res.Kept, sk.Name)
 			continue
 		}
-		_, _ = add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest})
+		if _, ok := add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest}); ok {
+			res.Added = append(res.Added, sk.Name)
+		}
 	}
 	return res, nil
 }

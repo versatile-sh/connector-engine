@@ -3,10 +3,12 @@ package console_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
@@ -293,5 +295,37 @@ func TestAWaitingProfileNeverStopsItsKeyBeingMade(t *testing.T) {
 	}
 	if got := toolsOf(t, beta); !slices.Equal(got, []string{"file"}) {
 		t.Fatalf("beta lists %v", got)
+	}
+}
+
+type refuseOverrides struct{ next http.RoundTripper }
+
+func (r refuseOverrides) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodPost && req.URL.Path == "/v1/grants" && req.Body != nil {
+		raw, _ := io.ReadAll(req.Body)
+		req.Body = io.NopCloser(bytes.NewReader(raw))
+		if bytes.Contains(raw, []byte(`"mode":"deny"`)) {
+			return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{"code":"internal","detail":"refused"}`)), Header: http.Header{}, Request: req}, nil
+		}
+	}
+	return r.next.RoundTrip(req)
+}
+
+func TestAConnectorWhoseProfilesFailIsReportedOnce(t *testing.T) {
+	src := profiledStack(t)
+	src.mint("alpha")
+	src.narrow("alpha", "lookup", console.AccessOff)
+	file := src.exportSetup()
+
+	dst := profiled{stack: freshOwner(t, personRelays)}
+	dst.mint("alpha")
+	dst.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: refuseOverrides{next: http.DefaultTransport}}
+	var res console.SetupResult
+	status, raw := dst.upload("/api/backup/import", file, "")
+	if err := json.Unmarshal(raw, &res); status != http.StatusOK || err != nil {
+		t.Fatalf("import: %d %s", status, raw)
+	}
+	if _, failed := res.Failed["notes"]; !failed || slices.Contains(res.Added, "notes") {
+		t.Fatalf("result %+v", res)
 	}
 }

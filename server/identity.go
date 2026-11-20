@@ -27,7 +27,7 @@ func Bearer(header string) string {
 }
 
 // Authenticate resolves the caller of o: no token is unauthenticated except on a public operation, and a token with an agent
-// claim is refused before anyone asks the Authorizer (§13.2 P1); a view token is an agent token too.
+// claim is refused before anyone asks the Authorizer; a view token is an agent token too.
 func Authenticate(ctx context.Context, o Operation, authn Authenticator, token string) (port.Principal, error) {
 	if token == "" {
 		if o.Public {

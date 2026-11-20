@@ -1,4 +1,4 @@
-// Package tools is the agent CLI of OD-49: list, search and call through the agent endpoint, results to a file and a short summary on stdout.
+// Package tools is the agent CLI of list, search and call through the agent endpoint, results to a file and a short summary on stdout.
 package tools
 
 import (

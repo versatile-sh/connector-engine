@@ -11,17 +11,17 @@ type Clock interface {
 	Now() time.Time
 }
 
-// EventSink delivers outbox rows as CloudEvents signed as Standard Webhooks; one sink per installation (§4.4).
+// EventSink delivers outbox rows as CloudEvents signed as Standard Webhooks; one sink per installation.
 type EventSink interface {
 	Deliver(ctx context.Context, events []Event) error
 }
 
-// PrincipalVerifier verifies the bearer token of a request for one audience and returns the principal (§4.3).
+// PrincipalVerifier verifies the bearer token of a request for one audience and returns the principal.
 type PrincipalVerifier interface {
 	Verify(ctx context.Context, token, audience string) (Principal, error)
 }
 
-// Query is the AuthZEN-shaped question of one function; Arguments is nil for the list-time query (§3.2, §7.1 step 15).
+// Query is the AuthZEN-shaped question of one function; Arguments is nil for the list-time query.
 type Query struct {
 	Tenant     TenantID        `json:"tenant"`
 	Workspace  WorkspaceID     `json:"workspace"`
@@ -36,7 +36,7 @@ type Query struct {
 	Arguments  json.RawMessage `json:"arguments,omitempty"`
 }
 
-// AccessDecision is the mode of one function and the step, reason and rows that gave it (§7.1).
+// AccessDecision is the mode of one function and the step, reason and rows that gave it.
 type AccessDecision struct {
 	Mode    Mode      `json:"mode"`
 	Reason  Code      `json:"reason,omitempty"`
@@ -62,14 +62,14 @@ type Subject struct {
 	Caller     Caller      `json:"caller"`
 }
 
-// Permission is a question of §4.2: may principal act on resource; the engine names the permission.
+// Permission is a question: may principal act on resource; the engine names the permission.
 type Permission struct {
 	Principal Principal `json:"principal"`
 	Action    string    `json:"action"`
 	Resource  string    `json:"resource"`
 }
 
-// Authorizer decides calls (Evaluate, Search, AuthZEN-shaped) and answers the role and group questions of §4.2.
+// Authorizer decides calls (Evaluate, Search, AuthZEN-shaped) and answers the role and group questions.
 type Authorizer interface {
 	Evaluate(ctx context.Context, q Query) (AccessDecision, error)
 	Search(ctx context.Context, s Subject, connector ConnectorID) ([]FunctionDecision, error)
@@ -83,7 +83,7 @@ type ListingPage struct {
 	Next      string     `json:"next,omitempty"`
 }
 
-// ListingSource lists and fetches listings from one catalog; every import is unreviewed (§3.1).
+// ListingSource lists and fetches listings from one catalog; every import is unreviewed.
 type ListingSource interface {
 	Name() string
 	List(ctx context.Context, cursor string) (ListingPage, error)
@@ -97,12 +97,12 @@ type Verification struct {
 	Identity       string `json:"identity,omitempty"`
 }
 
-// ArtifactVerifier verifies the digest and, when present, the signature of a listing version (§5.4).
+// ArtifactVerifier verifies the digest and, when present, the signature of a listing version.
 type ArtifactVerifier interface {
 	Verify(ctx context.Context, m Manifest, artifact []byte) (Verification, error)
 }
 
-// RuntimeCapabilities is what a runtime adapter states (§3.3).
+// RuntimeCapabilities is what a runtime adapter states.
 type RuntimeCapabilities struct {
 	Kinds         []Kind `json:"kinds"`
 	Isolation     string `json:"isolation"`
@@ -122,7 +122,7 @@ type SecretsRef struct {
 // Handle names one started connector instance.
 type Handle string
 
-// RawDefinition keeps a tool definition as received, so a hash sees an absent field and an explicit false apart (§3.2).
+// RawDefinition keeps a tool definition as received, so a hash sees an absent field and an explicit false apart.
 type RawDefinition struct {
 	Name string          `json:"name"`
 	Raw  json.RawMessage `json:"raw"`
@@ -143,7 +143,7 @@ type Result struct {
 	IsError    bool            `json:"is_error,omitempty"`
 }
 
-// ConnectorRuntime starts a connector instance, lists its functions and calls one (§3.2).
+// ConnectorRuntime starts a connector instance, lists its functions and calls one.
 type ConnectorRuntime interface {
 	Describe() RuntimeCapabilities
 	Start(ctx context.Context, c Connector, m Manifest, secrets SecretsRef) (Handle, error)
@@ -152,7 +152,7 @@ type ConnectorRuntime interface {
 	Stop(ctx context.Context, h Handle) error
 }
 
-// ContentRuntime is the optional part of a ConnectorRuntime that lists a connector's prompts, resources and templates as items and serves them (§10.3).
+// ContentRuntime is the optional part of a ConnectorRuntime that lists a connector's prompts, resources and templates as items and serves them.
 type ContentRuntime interface {
 	ListContent(ctx context.Context, h Handle) ([]RawDefinition, error)
 	Content(ctx context.Context, h Handle, item string, arguments json.RawMessage, deadline time.Time) (Result, error)
@@ -168,7 +168,7 @@ type OAuthClient struct {
 	RedirectURL  string       `json:"redirect_url,omitempty"`
 }
 
-// AuthorizationRequest begins an authorization for one bound person (§11.3).
+// AuthorizationRequest begins an authorization for one bound person.
 type AuthorizationRequest struct {
 	Client   OAuthClient `json:"client"`
 	Resource string      `json:"resource,omitempty"`
@@ -185,7 +185,7 @@ type TokenSet struct {
 	Scopes       []string  `json:"scopes,omitempty"`
 }
 
-// OAuthBroker begins and completes an authorization, refreshes and revokes (§3.1).
+// OAuthBroker begins and completes an authorization, refreshes and revokes.
 type OAuthBroker interface {
 	Begin(ctx context.Context, r AuthorizationRequest) (string, error)
 	Complete(ctx context.Context, r AuthorizationRequest, code string) (TokenSet, error)
@@ -193,18 +193,18 @@ type OAuthBroker interface {
 	Revoke(ctx context.Context, c OAuthClient, token []byte) error
 }
 
-// ClientRegistrar resolves the OAuth client for an issuer: pre-registered, CIMD, DCR, then manual (§11.3).
+// ClientRegistrar resolves the OAuth client for an issuer: pre-registered, CIMD, DCR, then manual.
 type ClientRegistrar interface {
 	Resolve(ctx context.Context, tenant TenantID, issuer string) (OAuthClient, error)
 }
 
-// KeyScope is what Rotate re-wraps: the root key, or one tenant's key-encryption key (§4.4).
+// KeyScope is what Rotate re-wraps: the root key, or one tenant's key-encryption key.
 type KeyScope struct {
 	Root   bool     `json:"root"`
 	Tenant TenantID `json:"tenant,omitempty"`
 }
 
-// SecretStore seals records under a per-tenant key-encryption key and destroys that key for crypto-shredding (§4.4).
+// SecretStore seals records under a per-tenant key-encryption key and destroys that key for crypto-shredding.
 type SecretStore interface {
 	Seal(ctx context.Context, tenant TenantID, plaintext []byte) (Sealed, error)
 	Open(ctx context.Context, tenant TenantID, s Sealed) ([]byte, error)
@@ -218,12 +218,12 @@ type Outbound struct {
 	Env     map[string]string   `json:"env,omitempty"`
 }
 
-// CredentialInjector applies an opened credential to an outbound request (§3.1).
+// CredentialInjector applies an opened credential to an outbound request.
 type CredentialInjector interface {
 	Inject(ctx context.Context, kind CredentialKind, secret []byte, out *Outbound) error
 }
 
-// ApprovalChannel optionally delivers an approval prompt directly; events are always published (§3.1).
+// ApprovalChannel optionally delivers an approval prompt directly; events are always published.
 type ApprovalChannel interface {
 	Deliver(ctx context.Context, a Approval) error
 }
@@ -235,7 +235,7 @@ type Finding struct {
 	Detail   string `json:"detail,omitempty"`
 }
 
-// DefinitionScanner inspects a definition at pin time; findings never clear a quarantine (§3.1).
+// DefinitionScanner inspects a definition at pin time; findings never clear a quarantine.
 type DefinitionScanner interface {
 	Scan(ctx context.Context, d RawDefinition) ([]Finding, error)
 }
@@ -247,24 +247,24 @@ type ToolDoc struct {
 	Description string `json:"description,omitempty"`
 }
 
-// ToolIndex searches the functions granted to an agent; it returns only names in allowed (§10.2 L5).
+// ToolIndex searches the functions granted to an agent; it returns only names in allowed.
 type ToolIndex interface {
 	Put(ctx context.Context, tenant TenantID, docs []ToolDoc) error
 	Search(ctx context.Context, tenant TenantID, query string, allowed []string, limit int) ([]ToolDoc, error)
 }
 
-// ResultFilter redacts a result and returns a count of findings per kind, never their values (§10.3 C11).
+// ResultFilter redacts a result and returns a count of findings per kind, never their values.
 type ResultFilter interface {
 	Filter(ctx context.Context, r Result) (Result, map[string]int, error)
 }
 
-// Suggestion is a proposed title and description; it is untrusted until a person accepts it (§9.1).
+// Suggestion is a proposed title and description; it is untrusted until a person accepts it.
 type Suggestion struct {
 	Title       string `json:"title,omitempty"`
 	Description string `json:"description"`
 }
 
-// DescriptionSuggester proposes a description overlay for a function; it is never applied by itself (§9.1).
+// DescriptionSuggester proposes a description overlay for a function; it is never applied by itself.
 type DescriptionSuggester interface {
 	Suggest(ctx context.Context, d RawDefinition) (Suggestion, error)
 }

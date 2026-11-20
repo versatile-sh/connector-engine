@@ -1,4 +1,4 @@
-// Package listing validates listing manifests (§5.2), resolves the class of a function in class_source order and computes trust_level.
+// Package listing validates listing manifests, resolves the class of a function in class_source order and computes trust_level.
 package listing
 
 import (
@@ -16,7 +16,7 @@ var (
 	kinds      = []port.Kind{port.KindMCPRemote, port.KindMCPPackage, port.KindRESTDeclarative, port.KindGRPCDeclarative, port.KindSkill}
 )
 
-// Lint returns every problem of a manifest; requireDigest is listing.requireDigest (§14).
+// Lint returns every problem of a manifest; requireDigest is listing.requireDigest.
 func Lint(m port.Manifest, requireDigest bool) []port.Finding {
 	var out []port.Finding
 	bad := func(format string, args ...any) {
@@ -111,7 +111,7 @@ func Validate(m port.Manifest, requireDigest bool) error {
 	return port.Errorf(port.CodeInvalidManifest, "%s", strings.Join(details, "; "))
 }
 
-// Private sets what the engine owns on a private listing: owner, source private, the tenant as publisher (§5.2).
+// Private sets what the engine owns on a private listing: owner, source private, the tenant as publisher.
 func Private(m port.Manifest, tenant port.TenantID) port.Manifest {
 	m.Owner = tenant
 	m.Source = &port.SourceInfo{Registry: port.PrivateSource}
@@ -134,7 +134,7 @@ type ClassInput struct {
 	GRPCIdempotency string
 }
 
-// Class resolves the trusted class in class_source order and a suggested class that is shown, never applied (§5.2).
+// Class resolves the trusted class in class_source order and a suggested class that is shown, never applied.
 func Class(in ClassInput) (port.Class, port.ClassSource, port.Class) {
 	suggested := suggest(in)
 	switch {
@@ -176,7 +176,7 @@ type Evidence struct {
 	FirstParty        bool
 }
 
-// Trust computes trust_level: first_party only for an installation listing the operator built; reviewed when the review covers every current hash (§5.2).
+// Trust computes trust_level: first_party only for an installation listing the operator built; reviewed when the review covers every current hash.
 func Trust(m port.Manifest, e Evidence) port.TrustLevel {
 	switch {
 	case e.FirstParty && m.Owner == port.Installation:
@@ -203,7 +203,7 @@ func covered(m port.Manifest) bool {
 	return true
 }
 
-// InstallLevel is the workspace level a new install gets: write for reviewed and first_party, off for the rest (OD-5).
+// InstallLevel is the workspace level a new install gets: write for reviewed and first_party, off for the rest.
 func InstallLevel(t port.TrustLevel) port.Level {
 	if t == port.TrustReviewed || t == port.TrustFirstParty {
 		return port.LevelWrite

@@ -37,27 +37,27 @@ func TestDefinitionHash(t *testing.T) {
 	}
 	base := h(`{"name":"f","description":"d","inputSchema":{"type":"object"}}`)
 	if h(`{"inputSchema":{"type":"object"},"description":"d","name":"f","icons":[{"src":"x"}],"_meta":{"other":1}}`) != base {
-		t.Fatal("§9: icons, other _meta keys and key order are not hashed")
+		t.Fatal("icons, other _meta keys and key order are not hashed")
 	}
 	if h(`{"name":"f","description":"d","inputSchema":{"type":"object"},"annotations":{"readOnlyHint":false}}`) == base {
-		t.Fatal("§3.2: an explicit readOnlyHint false differs from an absent one")
+		t.Fatal("an explicit readOnlyHint false differs from an absent one")
 	}
 	if h(`{"name":"f","description":"d","inputSchema":{"type":"object"},"_meta":{"ui":{"resourceUri":"ui://a"}}}`) == base {
-		t.Fatal("§9: _meta ui.resourceUri is hashed")
+		t.Fatal("_meta ui.resourceUri is hashed")
 	}
 	fields, err := pinning.ChangedFields("f", []byte(`{"name":"f","description":"d"}`), []byte(`{"name":"f","description":"e","title":"t"}`))
 	if err != nil || len(fields) != 2 || fields[0] != "title" || fields[1] != "description" {
 		t.Fatalf("changed fields %v %v", fields, err)
 	}
 	if pinning.OverlayHash("a", "b") == pinning.OverlayHash("a", "c") || pinning.InstructionsHash("x") == pinning.InstructionsHash("y") {
-		t.Fatal("§9.1: hashes distinguish their texts")
+		t.Fatal("hashes distinguish their texts")
 	}
 	a := port.Approval{Tenant: "t", Agent: "a", Connector: "c", Function: "f", DefinitionHash: "h"}
 	x, _ := pinning.CallHash(a, []byte(`{"b":1,"a":2}`))
 	y, _ := pinning.CallHash(a, []byte(`{ "a":2, "b":1 }`))
 	z, _ := pinning.CallHash(a, []byte(`{"a":2,"b":2}`))
 	if x != y || x == z {
-		t.Fatal("§8.1: call_hash is canonical over the arguments and binds them exactly")
+		t.Fatal("call_hash is canonical over the arguments and binds them exactly")
 	}
 }
 
@@ -81,14 +81,14 @@ func TestReconcile(t *testing.T) {
 	want := map[string]port.FunctionState{"a": port.FunctionActive, "b": port.FunctionQuarantined, "c": port.FunctionRemoved, "d": port.FunctionActive, "e": port.FunctionQuarantined, "n": port.FunctionQuarantined}
 	for k, v := range want {
 		if state[k] != v {
-			t.Errorf("§5.3, §9: %s is %s, want %s", k, state[k], v)
+			t.Errorf("%s is %s, want %s", k, state[k], v)
 		}
 	}
 	kinds := map[string]pinning.ChangeKind{}
 	for _, c := range changes {
 		kinds[c.Function] = c.Kind
 		if c.Kind == pinning.ChangeChanged && (!c.Effects.DropSessionRows || c.Effects.Cancel != port.ReasonQuarantined) {
-			t.Errorf("§9 hash changed: session grants deleted, pending approvals cancelled: %+v", c)
+			t.Errorf("hash changed: session grants deleted, pending approvals cancelled: %+v", c)
 		}
 	}
 	if kinds["b"] != pinning.ChangeChanged || kinds["c"] != pinning.ChangeRemoved || kinds["d"] != pinning.ChangeReturned || kinds["n"] != pinning.ChangeNew || kinds["e"] != pinning.ChangeChanged || len(changes) != 5 {
@@ -99,28 +99,28 @@ func TestReconcile(t *testing.T) {
 func TestAcceptAndReclassify(t *testing.T) {
 	f := pinning.New(port.Function{Name: "f", DefinitionHash: "h2", Class: port.ClassRead})
 	if _, err := pinning.Accept(f, "h1", "admin", time.Time{}); !port.IsCode(err, port.CodeDefinitionChanged) {
-		t.Fatalf("§9: accepting names the hash seen: %v", err)
+		t.Fatalf("accepting names the hash seen: %v", err)
 	}
 	f, err := pinning.Accept(f, "h2", "admin", time.Time{})
 	if err != nil || f.State != port.FunctionActive {
 		t.Fatalf("accept: %v %s", err, f.State)
 	}
 	if _, eff := pinning.Reclassify(f, port.ClassWrite, port.ClassSourceAdmin); !eff.DropSessionRows || eff.Cancel != port.CodeClassChanged {
-		t.Fatal("§6.4 G7: a raised class drops session rows and cancels pending approvals")
+		t.Fatal("G7: a raised class drops session rows and cancels pending approvals")
 	}
 	if _, eff := pinning.Reclassify(port.Function{Class: port.ClassDestructive}, port.ClassRead, port.ClassSourceAdmin); eff.DropSessionRows {
-		t.Fatal("§6.4 G7: lowering a class drops nothing")
+		t.Fatal("G7: lowering a class drops nothing")
 	}
 	if _, eff := pinning.Reclassify(port.Function{}, port.ClassDestructive, port.ClassSourceAdmin); eff.DropSessionRows {
 		t.Fatal("unclassified is already destructive")
 	}
 	if pinning.Captured(port.Function{}, port.TrustSigned).State != port.FunctionQuarantined || pinning.Captured(port.Function{}, port.TrustReviewed).State != port.FunctionActive {
-		t.Fatal("§5.3: captured at install of a reviewed listing is active, else quarantined")
+		t.Fatal("captured at install of a reviewed listing is active, else quarantined")
 	}
 	review := &port.Review{DefinitionHashes: []port.Hash{"h2"}}
 	read := port.Function{DefinitionHash: "h2", Class: port.ClassRead, ClassSource: port.ClassSourceReviewed}
 	if pinning.AutoAccept(read, review, "none") || !pinning.AutoAccept(read, review, "read") {
-		t.Fatal("§9: auto-accept only with pinning.autoAcceptReviewed = read")
+		t.Fatal("auto-accept only with pinning.autoAcceptReviewed = read")
 	}
 }
 

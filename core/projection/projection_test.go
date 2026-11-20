@@ -15,11 +15,11 @@ func TestValidate(t *testing.T) {
 	}
 	for _, p := range []string{"/nope", "items", "/items/x/id", "/total~2"} {
 		if err := projection.Validate([]byte(schema), []string{p}, 20); !port.IsCode(err, port.CodeInvalidPath) {
-			t.Errorf("§10.5: %s: %v", p, err)
+			t.Errorf("%s: %v", p, err)
 		}
 	}
 	if projection.Validate(nil, []string{"/total"}, 20) == nil {
-		t.Fatal("§10.5: no outputSchema, not projectable")
+		t.Fatal("no outputSchema, not projectable")
 	}
 	if projection.Validate([]byte(schema), []string{"/total", "/items"}, 1) == nil {
 		t.Fatal("projection.maxPaths")
@@ -30,7 +30,7 @@ func TestProject(t *testing.T) {
 	in := `{"items":[{"id":12345678901234567890,"a/b":"x","big":"drop"},{"id":2},{"id":3}],"total":3,"secret":"s"}`
 	out, err := projection.Project([]byte(in), []string{"/items/0/id", "/items/2", "/total", "/missing"})
 	if err != nil || string(out) != `{"items":[{"id":12345678901234567890},{"id":3}],"total":3}` {
-		t.Fatalf("§10.5: %s %v", out, err)
+		t.Fatalf("%s %v", out, err)
 	}
 	if out, _ := projection.Project([]byte(in), []string{"/missing"}); string(out) != `{}` {
 		t.Fatalf("nothing kept: %s", out)

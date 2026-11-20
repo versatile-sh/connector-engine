@@ -115,7 +115,7 @@ func (c Config) Mutations() []string {
 	return slices.DeleteFunc(slices.Clone(c.Manage.MCP.Operations), func(s string) bool { return s == ReadOnly })
 }
 
-// Check validates the values and applies the refusals of §14: in production each is an error unless acknowledged, in dev a warning.
+// Check validates the values and applies the refusals: in production each is an error unless acknowledged, in dev a warning.
 func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	var fs adapters.Findings
 	level := adapters.LevelWarning

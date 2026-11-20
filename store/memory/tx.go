@@ -237,7 +237,7 @@ func (t *tx) ListGrants(f port.GrantFilter) ([]port.Grant, error) {
 func (t *tx) PutGrant(g port.Grant) error {
 	for id, r := range t.d.grants.rows {
 		if id != string(g.ID) && r.tenant == g.Tenant && r.v.Key() == g.Key() {
-			return port.Errorf(port.CodeConflict, "grant %s has the key of %s (§6.4 G1)", g.ID, id)
+			return port.Errorf(port.CodeConflict, "grant %s has the key of %s", g.ID, id)
 		}
 	}
 	_, err := put(t, t.d.grants, string(g.ID), g.Tenant, g, port.AnyRevision)
@@ -287,7 +287,7 @@ func (t *tx) openTwin(a port.Approval) error {
 	}
 	for id, r := range t.d.approvals.rows {
 		if id != string(a.ID) && r.tenant == a.Tenant && r.v.State.Open() && r.v.Session == a.Session && r.v.CallHash == a.CallHash {
-			return port.Errorf(port.CodeConflict, "approval %s is open for this session and call hash (§8.1)", id)
+			return port.Errorf(port.CodeConflict, "approval %s is open for this session and call hash", id)
 		}
 	}
 	return nil
@@ -491,7 +491,7 @@ func (t *tx) PutFanOut(f port.FanOut) error {
 	return err
 }
 
-// DueWork is the one view across tenants (§4.4), by the times stored on each row; the worker re-checks each item
+// DueWork is the one view across tenants, by the times stored on each row; the worker re-checks each item
 // against its own rule (approval.executeGrace is added by core/approval), so an item may be listed early.
 func (t *tx) DueWork(now time.Time, limit int) ([]port.WorkItem, error) {
 	if !t.scope.Installation {

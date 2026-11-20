@@ -73,7 +73,7 @@ type Hash string
 // Installation is the owner of an installation listing, as opposed to a tenant.
 const Installation TenantID = ""
 
-// ListingRef is the identity of a listing, (owner, name): what rules, offers and tenant rows name (§5.1).
+// ListingRef is the identity of a listing, (owner, name): what rules, offers and tenant rows name.
 type ListingRef struct {
 	Owner TenantID `json:"owner,omitempty"`
 	Name  string   `json:"name"`

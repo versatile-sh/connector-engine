@@ -2,10 +2,10 @@ package port
 
 import "time"
 
-// PrincipalKind is who a request comes from (§4.3).
+// PrincipalKind is who a request comes from.
 type PrincipalKind string
 
-// Principal kinds of §4.3.
+// Principal kinds.
 const (
 	PrincipalAgent  PrincipalKind = "agent"
 	PrincipalView   PrincipalKind = "view"
@@ -14,7 +14,7 @@ const (
 	PrincipalWorker PrincipalKind = "worker"
 )
 
-// Claims are the verified claims of a bearer token (§4.3); a token with an agent claim is an agent principal.
+// Claims are the verified claims of a bearer token; a token with an agent claim is an agent principal.
 type Claims struct {
 	Issuer     string      `json:"iss"`
 	Subject    string      `json:"sub,omitempty"`
@@ -38,7 +38,7 @@ type Principal struct {
 	Token  string        `json:"-"`
 }
 
-// KindOf classifies claims: agent claim first, then caller view, then person (§4.3, §13.2 P1).
+// KindOf classifies claims: agent claim first, then caller view, then person.
 func KindOf(c Claims) PrincipalKind {
 	switch {
 	case c.Agent != "" && c.Caller == CallerView:

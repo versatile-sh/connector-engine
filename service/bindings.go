@@ -29,7 +29,7 @@ func defaultPolicy(m port.Manifest) port.CredentialPolicy {
 	return port.CredentialPerUser
 }
 
-// PutBinding gives an agent a connector; a binding for an agent whose owner may not see the listing is not found (§6.3).
+// PutBinding gives an agent a connector; a binding for an agent whose owner may not see the listing is not found.
 func (s *Service) PutBinding(ctx context.Context, p port.Principal, b port.Binding) (port.Binding, error) {
 	if err := port.CheckIDs("agent", string(b.Agent), "agent_owner", string(b.AgentOwner)); err != nil {
 		return b, err
@@ -120,7 +120,7 @@ func (s *Service) ListBindings(ctx context.Context, p port.Principal, f port.Bin
 	return out, err
 }
 
-// SetAgentLevel replaces the level rows of an agent on a connector (§6.4 G3) and returns the rows it wrote.
+// SetAgentLevel replaces the level rows of an agent on a connector and returns the rows it wrote.
 func (s *Service) SetAgentLevel(ctx context.Context, p port.Principal, connector port.ConnectorID, agent port.AgentID, level port.Level) ([]port.Grant, error) {
 	c, err := s.connectorOf(ctx, p, connector, authz.GrantAgent)
 	if err != nil {
@@ -138,7 +138,7 @@ func (s *Service) SetAgentLevel(ctx context.Context, p port.Principal, connector
 	return written, err
 }
 
-// GrantResult is a written row, the functions the destructive cap applies to today and the row it replaced (§6.2, §6.4 G1).
+// GrantResult is a written row, the functions the destructive cap applies to today and the row it replaced.
 type GrantResult struct {
 	Grant    port.Grant  `json:"grant"`
 	Capped   []string    `json:"capped,omitempty"`
@@ -160,7 +160,7 @@ func (s *Service) grantAuth(ctx context.Context, p port.Principal, g port.Grant)
 	return s.authorize(ctx, p, authz.GrantAgent, authz.Agent(tenant, string(c.Workspace), g.ScopeID))
 }
 
-// CreateGrant writes a settings row under the rules G1 to G10; a session row is never written here (§6.4 G5).
+// CreateGrant writes a settings row under the rules G1 to G10; a session row is never written here.
 func (s *Service) CreateGrant(ctx context.Context, p port.Principal, g port.Grant) (GrantResult, error) {
 	out := GrantResult{Grant: g}
 	if g.ScopeKind == port.ScopeSession {
@@ -209,7 +209,7 @@ func (s *Service) CreateGrant(ctx context.Context, p port.Principal, g port.Gran
 	return out, err
 }
 
-// DeleteGrant revokes a row and cancels the pending approvals it covered (§8.2 A7).
+// DeleteGrant revokes a row and cancels the pending approvals it covered.
 func (s *Service) DeleteGrant(ctx context.Context, p port.Principal, id port.GrantID) error {
 	g, err := s.grantOf(ctx, p, id)
 	if err != nil {
@@ -242,7 +242,7 @@ func (s *Service) grantOf(ctx context.Context, p port.Principal, id port.GrantID
 	return g, s.grantAuth(ctx, p, g)
 }
 
-// ConfirmGrant moves a stale fn: row to the function's current hash (§7.1 M4, §9).
+// ConfirmGrant moves a stale fn: row to the function's current hash.
 func (s *Service) ConfirmGrant(ctx context.Context, p port.Principal, id port.GrantID) (port.Grant, error) {
 	g, err := s.grantOf(ctx, p, id)
 	if err != nil {
@@ -279,7 +279,7 @@ func (s *Service) ListGrants(ctx context.Context, p port.Principal, f port.Grant
 	return out, err
 }
 
-// ListPauses returns the denial-brake rows of the caller's tenant (§8.3).
+// ListPauses returns the denial-brake rows of the caller's tenant.
 func (s *Service) ListPauses(ctx context.Context, p port.Principal) ([]port.Pause, error) {
 	if err := s.authorize(ctx, p, authz.ApprovalRead, s.tenantResource(p)); err != nil {
 		return nil, err
@@ -292,7 +292,7 @@ func (s *Service) ListPauses(ctx context.Context, p port.Principal) ([]port.Paus
 	return out, err
 }
 
-// ClearPause ends a pause and resets the consecutive count (§8.3).
+// ClearPause ends a pause and resets the consecutive count.
 func (s *Service) ClearPause(ctx context.Context, p port.Principal, id port.PauseID) error {
 	var pause port.Pause
 	if err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
@@ -321,7 +321,7 @@ func (s *Service) ClearPause(ctx context.Context, p port.Principal, id port.Paus
 	})
 }
 
-// EndSession ends a session: its rows go, its pending approvals are cancelled and a tombstone refuses its token (§12.2).
+// EndSession ends a session: its rows go, its pending approvals are cancelled and a tombstone refuses its token.
 func (s *Service) EndSession(ctx context.Context, p port.Principal, session port.SessionID) error {
 	if err := s.authorize(ctx, p, authz.SessionEnd, s.tenantResource(p)); err != nil {
 		return err
@@ -356,7 +356,7 @@ func (s *Service) EndSession(ctx context.Context, p port.Principal, session port
 	})
 }
 
-// RemoveAgent revokes the bindings and rows of an agent, destroys its credentials and cancels its pending approvals (§12.2).
+// RemoveAgent revokes the bindings and rows of an agent, destroys its credentials and cancels its pending approvals.
 func (s *Service) RemoveAgent(ctx context.Context, p port.Principal, agent port.AgentID) error {
 	if err := s.authorize(ctx, p, authz.AgentRemove, s.tenantResource(p)); err != nil {
 		return err
@@ -385,7 +385,7 @@ func (s *Service) RemoveAgent(ctx context.Context, p port.Principal, agent port.
 	})
 }
 
-// RemovePerson revokes a person's rows, roles and credentials in a workspace, or everywhere with the groups when empty, and tombstones the person (§12.2).
+// RemovePerson revokes a person's rows, roles and credentials in a workspace, or everywhere with the groups when empty, and tombstones the person.
 func (s *Service) RemovePerson(ctx context.Context, p port.Principal, person port.PersonID, workspace port.WorkspaceID) error {
 	if err := s.authorize(ctx, p, authz.PersonRemove, s.tenantResource(p)); err != nil {
 		return err
@@ -483,7 +483,7 @@ func (s *Service) forgetPerson(tx port.Tx, person port.PersonID, inScope map[por
 	return nil
 }
 
-// RestorePerson deletes the tombstone of a person and nothing else (§12.2).
+// RestorePerson deletes the tombstone of a person and nothing else.
 func (s *Service) RestorePerson(ctx context.Context, p port.Principal, person port.PersonID, workspace port.WorkspaceID) error {
 	if err := s.authorize(ctx, p, authz.PersonRemove, s.tenantResource(p)); err != nil {
 		return err

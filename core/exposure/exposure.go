@@ -1,4 +1,4 @@
-// Package exposure computes the trifecta check of §15.2: private data, untrusted content and a way out, over the functions an agent would be listed.
+// Package exposure computes the trifecta check: private data, untrusted content and a way out, over the functions an agent would be listed.
 package exposure
 
 import (

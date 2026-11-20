@@ -14,10 +14,10 @@ type Effects struct {
 	Cancel          port.Code `json:"cancel"`
 }
 
-// ChangeKind names what a re-list or an update found for one function (§9).
+// ChangeKind names what a re-list or an update found for one function.
 type ChangeKind string
 
-// Kinds of change of §9.
+// Kinds of change.
 const (
 	ChangeChanged  ChangeKind = "changed"
 	ChangeNew      ChangeKind = "new"
@@ -34,7 +34,7 @@ type Change struct {
 	Effects  Effects    `json:"effects"`
 }
 
-// Captured sets the state of a function captured at install: active for a reviewed or first_party listing, else quarantined (§5.3).
+// Captured sets the state of a function captured at install: active for a reviewed or first_party listing, else quarantined.
 func Captured(f port.Function, trust port.TrustLevel) port.Function {
 	f.State = port.FunctionQuarantined
 	if trust == port.TrustReviewed || trust == port.TrustFirstParty {
@@ -43,13 +43,13 @@ func Captured(f port.Function, trust port.TrustLevel) port.Function {
 	return f
 }
 
-// New quarantines a function new to the connector, whatever a review says (§5.3, OD-6).
+// New quarantines a function new to the connector, whatever a review says.
 func New(f port.Function) port.Function {
 	f.State = port.FunctionQuarantined
 	return f
 }
 
-// Changed pins a new definition: quarantined, session rows dropped, pending approvals cancelled (§9).
+// Changed pins a new definition: quarantined, session rows dropped, pending approvals cancelled.
 func Changed(f port.Function, definition []byte, hash port.Hash) (port.Function, Effects) {
 	f.Definition, f.DefinitionHash = definition, hash
 	return quarantine(f)
@@ -60,7 +60,7 @@ func quarantine(f port.Function) (port.Function, Effects) {
 	return f, Effects{DropSessionRows: true, Cancel: port.ReasonQuarantined}
 }
 
-// Reconcile compares the pinned functions with a capture and returns every function after the change and the changes (§5.3, §9).
+// Reconcile compares the pinned functions with a capture and returns every function after the change and the changes.
 func Reconcile(pinned, captured []port.Function) ([]port.Function, []Change) {
 	byName := map[string]port.Function{}
 	for _, f := range pinned {
@@ -103,7 +103,7 @@ func Reconcile(pinned, captured []port.Function) ([]port.Function, []Change) {
 	return out, changes
 }
 
-// Accept clears a quarantine when the admin names the hash they saw (§9 "Clearing").
+// Accept clears a quarantine when the admin names the hash they saw ("Clearing").
 func Accept(f port.Function, seen port.Hash, by string, at time.Time) (port.Function, error) {
 	switch {
 	case f.State != port.FunctionQuarantined:
@@ -115,7 +115,7 @@ func Accept(f port.Function, seen port.Hash, by string, at time.Time) (port.Func
 	return f, nil
 }
 
-// Reclassify sets a class; a raise drops the session rows and cancels pending approvals on the function (§6.4 G7).
+// Reclassify sets a class; a raise drops the session rows and cancels pending approvals on the function.
 func Reclassify(f port.Function, class port.Class, source port.ClassSource) (port.Function, Effects) {
 	raised := f.Class.Raises(class)
 	f.Class, f.ClassSource = class, source
@@ -126,7 +126,7 @@ func Reclassify(f port.Function, class port.Class, source port.ClassSource) (por
 }
 
 // AutoAccept reports whether an update activates a new hash without an admin: only with pinning.autoAcceptReviewed = read,
-// a hash the new review covers and a reviewed class read (§9).
+// a hash the new review covers and a reviewed class read.
 func AutoAccept(f port.Function, review *port.Review, setting string) bool {
 	return setting == "read" && review != nil && slices.Contains(review.DefinitionHashes, f.DefinitionHash) &&
 		f.ClassSource == port.ClassSourceReviewed && f.Class == port.ClassRead

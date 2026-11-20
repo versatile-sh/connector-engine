@@ -52,6 +52,17 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 
 A section page is a `PageTitle`, then one `PANEL` (or a few `SURFACE`s for pages of settings), the way the site's directory is. Cards in a panel use container queries (`@container` with `@xl:`/`@4xl:` columns), so the same card works in a panel, a dialog or a narrow column.
 
+## Layout principles
+
+- **Containers align with containers.** Card edge meets card edge and top meets top, never a card beside a line of text. Put a section's heading, counts and filter inside its card, so two columns start with two cards.
+- **One grid per page**, with the same gutters everywhere: `gap-6` between cards, `gap-10` between columns.
+- **Proximity and common region** (Gestalt): what belongs together sits in one card; what does not, in another.
+- **Hick**: few choices at once; a view shows at most three primary actions, and the rest go into one overflow menu (`Select` with a placeholder).
+- **Miller**: chunk long sets (a filter past six rows, counts in the heading, a select-all over what the filter shows).
+- **Fitts**: the primary action is large and close to what it acts on.
+- **Doherty**: feedback in under 400 ms; a pending control shows it at once.
+- **Tesler**: the complexity lives in the code, not on the screen; defaults and one-request batches do the work.
+
 ## Responsiveness
 
 - Every screen works at 360, 390, 768, 1024 and 1440px with no horizontal overflow.

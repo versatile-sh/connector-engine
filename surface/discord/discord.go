@@ -500,16 +500,6 @@ func (c *Channel) opName(method, target string) string {
 	return "discord " + method + " " + path
 }
 
-func (c *Channel) scrub(err error) string {
-	var ue *url.Error
-	if errors.As(err, &ue) {
-		err = ue.Err
-	}
-	var de *websocket.DialError
-	if errors.As(err, &de) {
-		err = de.Err
-	}
-	return c.scrubText(err.Error())
-}
+func (c *Channel) scrub(err error) string { return surface.Scrub(err, c.token) }
 
-func (c *Channel) scrubText(s string) string { return strings.ReplaceAll(s, c.token, "[redacted]") }
+func (c *Channel) scrubText(s string) string { return surface.ScrubText(s, c.token) }

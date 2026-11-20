@@ -105,7 +105,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/activity/settings", c.authed(c.activitySettings))
 	mux.HandleFunc("PUT /api/activity/settings", c.authed(c.setActivitySettings))
 	mux.HandleFunc("GET /api/activity/{id}", c.authed(c.activityDetail))
-	agent := c.gateMCP(c.refuseRevoked(c.capture(c.agentProxy())))
+	agent := c.gateMCP(c.refuseRevoked(c.capture(c.elicitProxy(c.agentProxy()))))
 	for _, m := range []string{"GET", "POST", "DELETE"} {
 		mux.Handle(m+" /mcp", agent)
 	}

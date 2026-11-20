@@ -27,6 +27,7 @@ type surfaces struct {
 	relay   *surface.Relay
 	links   spentSet
 	hub     deviceHub
+	el      elicitState
 }
 
 func (s *surfaces) markAlways(id string) {

@@ -41,6 +41,7 @@ type Console struct {
 	connects      connectStates
 	as            authServer
 	surf          surfaces
+	signing       signingKey
 	sep           separatorCache
 }
 

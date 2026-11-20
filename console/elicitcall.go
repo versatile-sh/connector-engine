@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/surface"
 )
@@ -323,7 +325,11 @@ func writeRPC(w http.ResponseWriter, id json.RawMessage, key string, v any) {
 func (c *Console) askStateless(w http.ResponseWriter, m rpcMessage, p callParams, v ApprovalView, agent, session string) {
 	state, err := c.sign(stateKind, v.ExpiresAt, v.ID, agent, session, callDigest(p))
 	if err != nil {
-		writeRPC(w, m.ID, "error", map[string]any{"code": -32603, "message": "cannot sign the request state"})
+		message := "cannot sign the request state"
+		if errors.Is(err, sealed.ErrLocked) {
+			message = gatewayLocked
+		}
+		writeRPC(w, m.ID, "error", map[string]any{"code": -32603, "message": message})
 		return
 	}
 	writeRPC(w, m.ID, "result", map[string]any{"resultType": "input_required", "requestState": state,

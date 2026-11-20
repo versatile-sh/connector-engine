@@ -218,6 +218,9 @@ func TestReconnectsAfterRestartToEveryProtocolEra(t *testing.T) {
 						if res, err := rt.Call(ctx, h, "plain", nil, time.Now().Add(5*time.Second)); err != nil || res.IsError {
 							t.Errorf("boot %d: call %v %+v", boot, err, res)
 						}
+						if _, err := rt.ListContent(ctx, h); err != nil {
+							t.Errorf("boot %d: content %v", boot, err)
+						}
 						return nil
 					})
 				}

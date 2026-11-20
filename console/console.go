@@ -35,12 +35,14 @@ type Console struct {
 	Secrets       *sealed.Box
 	NewChannel    ChannelFactory
 
-	loginMu      sync.Mutex
-	consentFails minuteWindow
-	icons        iconCache
-	connects     connectStates
-	as           authServer
-	surf         surfaces
+	loginMu       sync.Mutex
+	passwordFails minuteWindow
+	icons         iconCache
+	connects      connectStates
+	as            authServer
+	surf          surfaces
+	signing       signingKey
+	sep           separatorCache
 }
 
 // Handler returns every route behind the guard.
@@ -57,6 +59,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/connectors/{id}/items", c.authed(c.setItemAccess))
 	mux.HandleFunc("DELETE /api/connectors/{id}", c.authed(c.removeConnector))
 	mux.HandleFunc("GET /api/skills", c.authed(c.listSkills))
+	mux.HandleFunc("PUT /api/skills/{id}/keys", c.authed(c.setSkillAccessAll))
 	mux.HandleFunc("PUT /api/skills/{id}/keys/{agent}", c.authed(c.setSkillAccess))
 	mux.HandleFunc("DELETE /api/skills/{id}", c.authed(c.removeConnector))
 	mux.HandleFunc("POST /api/connectors/{id}/headers", c.authed(c.setHeaders))

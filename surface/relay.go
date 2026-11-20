@@ -84,11 +84,16 @@ func (r *Relay) clickOn(ch Channel) ClickFunc {
 	return func(ctx context.Context, c Click) (Outcome, error) {
 		r.mu.Lock()
 		h := r.byKey[c.Key]
+		live := h != nil && !h.done
+		var approval string
+		if live {
+			approval = h.prompt.Approval
+		}
 		r.mu.Unlock()
-		if h == nil || h.done {
+		if !live {
 			return Outcome{}, ErrExpired
 		}
-		return r.Desk.Decide(ctx, h.prompt.Approval, c.Choice, ch.Kind(), ch.Kind()+":"+c.User)
+		return r.Desk.Decide(ctx, approval, c.Choice, ch.Kind(), ch.Kind()+":"+c.User)
 	}
 }
 

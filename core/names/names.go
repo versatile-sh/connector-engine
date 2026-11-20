@@ -15,7 +15,30 @@ const (
 	MaxLength = 64
 )
 
-var alias = regexp.MustCompile(`^[a-z0-9-]+$`)
+var (
+	alias        = regexp.MustCompile(`^[a-z0-9-]+$`)
+	upstreamName = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,128}$`)
+	resourceURI  = regexp.MustCompile("^[^\\s\\x00-\\x1f\\x7f<>\\[\\]()\"`\\\\]+$")
+)
+
+// ValidUpstream refuses a tool or prompt name outside SEP-986, [A-Za-z0-9_.-] and 1 to 128 characters, and a resource URI over 2048 bytes or with whitespace, control or markup characters, so no captured name can inject markup into a message.
+func ValidUpstream(item string) error {
+	kind := port.ItemKind(item)
+	name := strings.TrimPrefix(item, kind)
+	switch kind {
+	case port.ItemInstructions:
+		return nil
+	case port.ItemResource:
+		if len(name) > 2048 || !resourceURI.MatchString(name) {
+			return port.Errorf(port.CodeInvalidManifest, "resource %q has whitespace, control or markup characters", name)
+		}
+		return nil
+	}
+	if !upstreamName.MatchString(name) {
+		return port.Errorf(port.CodeInvalidManifest, "name %q is not 1 to 128 characters of [A-Za-z0-9_.-] (SEP-986)", name)
+	}
+	return nil
+}
 
 // ValidAlias refuses an alias outside [a-z0-9-], so it never contains the separator.
 func ValidAlias(a string) error {

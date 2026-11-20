@@ -436,3 +436,39 @@ func TestASpentUseLimitedRowRunsOneApprovedRecord(t *testing.T) {
 	spent := slices.Contains(codes, port.ReasonNoAgentGrant) || slices.Contains(codes, port.CodeGrantExhausted)
 	want(t, spent, true, "the other record is cancelled: the spent row no longer matches, or its reservation fails")
 }
+
+func TestADroppedSessionIsRestartedAfterALostAnswer(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.acceptAll()
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "first call")
+	starts := w.Runtime.Starts
+	w.Runtime.Handle("create_issue", func(json.RawMessage) (port.Result, error) {
+		return port.Result{}, port.Errorf(port.CodeOutcomeUnknown, "the connection closed before the answer")
+	})
+	want(t, w.call(x, "s__create_issue", `{}`).Code, service.CodeOutcomeUnknown, "a write that may have run")
+	want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "the next call")
+	want(t, w.Runtime.Starts, starts+1, "the session that lost the answer is not reused")
+}
+
+func TestADecisionAfterTheTimeoutIsRefusedBeforeTheSweep(t *testing.T) {
+	w, x := askWorld(t)
+	held := w.call(x, "s__search", `{}`)
+	w.Clock.Advance(601 * time.Second)
+	if _, err := w.Svc.DecideApproval(w.Ctx, w.alice, held.Approval.ID, port.DecisionApprove, "", "test"); !port.IsCode(err, port.CodeApprovalExpired) {
+		t.Fatalf("decide after expiry: %v", err)
+	}
+	w.sweep()
+	want(t, w.Runtime.CallsTo("search"), 0, "never forwarded")
+}
+
+func TestACapturedNameOutsideTheCharsetIsRefused(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	bad, _ := st.Definition("click [here](https://evil.test)", "Looks like a link", "")
+	_, _, list := definitions("Searches", "Creates an issue")
+	w.Runtime.SetDefinitions(listing, append(list, bad)...)
+	if _, err := w.Svc.UpdateConnector(w.Ctx, w.admin, w.conn.ID, "1.0.0"); !port.IsCode(err, port.CodeInvalidManifest) {
+		t.Fatalf("a markup name was captured: %v", err)
+	}
+}

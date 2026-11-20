@@ -393,22 +393,7 @@ func (c *Channel) api(ctx context.Context, token, method string, body, out any) 
 }
 
 func (c *Channel) scrub(err error, secrets ...string) string {
-	var ue *url.Error
-	if errors.As(err, &ue) {
-		err = ue.Err
-	}
-	var de *websocket.DialError
-	if errors.As(err, &de) {
-		err = de.Err
-	}
-	return c.scrubText(err.Error(), secrets...)
+	return surface.Scrub(err, append([]string{c.app, c.bot}, secrets...)...)
 }
 
-func (c *Channel) scrubText(s string, secrets ...string) string {
-	for _, sec := range append([]string{c.app, c.bot}, secrets...) {
-		if sec != "" {
-			s = strings.ReplaceAll(s, sec, "[redacted]")
-		}
-	}
-	return s
-}
+func (c *Channel) scrubText(s string) string { return surface.ScrubText(s, c.app, c.bot) }

@@ -13,6 +13,7 @@ auth:
   localIssuer:
     enabled: false
     name: connector-engine-local
+    rotateEvery: 720h0m0s
   agentTokenMaxLifetime: 1h0m0s
   senderConstraint: none
   trustedProxy:
@@ -96,6 +97,8 @@ projection:
   maxPaths: 20
 resultFilter:
   adapter: none
+  locales:
+    - br
 overlay:
   suggester: none
 cli:
@@ -171,3 +174,9 @@ audit:
   hashChain: false
 outbox:
   signing: standard-webhooks
+retention:
+  every: 1h0m0s
+  deliveredEvents: 0s
+  idempotencyKeys: 0s
+  audit: 0s
+  calls: 0s

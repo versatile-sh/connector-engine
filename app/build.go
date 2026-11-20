@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"time"
 
 	"github.com/agents-control/plugkit/adapters"
 
 	"github.com/agents-control/connector-engine/auth/jwks"
+	"github.com/agents-control/connector-engine/auth/local"
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/credential"
 	filterbuiltin "github.com/agents-control/connector-engine/filter/builtin"
@@ -82,13 +84,24 @@ func (b builder) store(ctx context.Context) (port.Store, port.Outbox, func(), er
 	return s, s, s.Close, nil
 }
 
+func (b builder) localIssuer(ctx context.Context, secrets port.SecretStore) (*local.Issuer, error) {
+	c := b.cfg.Auth.LocalIssuer
+	if u, _ := b.one(config.PortSecrets); u.Tier == adapters.TierMemory {
+		return local.New(c.Name, b.clock.Now)
+	}
+	return local.Open(ctx, c.Name, b.clock.Now, local.Keyring{Path: filepath.Join(b.cfg.Secrets.Dir, "local-issuer.json"), Secrets: secrets,
+		RotateEvery: c.RotateEvery, Keep: max(time.Hour, b.cfg.Auth.AgentTokenMaxLifetime)})
+}
+
+var vaultHTTP = &http.Client{Timeout: 30 * time.Second}
+
 func (b builder) onePassword(ctx context.Context) (*secretslocal.Store, error) {
 	c := b.cfg.Secrets.OnePassword
 	token, err := resolveRef(b.lookup, c.TokenRef)
 	if err != nil {
 		return nil, fmt.Errorf("secrets.onePassword.tokenRef: %w", err)
 	}
-	return onepassword.Open(ctx, b.cfg.Secrets.Dir, onepassword.Config{ConnectURL: c.ConnectURL, Token: token, Vault: c.Vault, Item: c.Item, Field: c.Field}, http.DefaultClient)
+	return onepassword.Open(ctx, b.cfg.Secrets.Dir, onepassword.Config{ConnectURL: c.ConnectURL, Token: token, Vault: c.Vault, Item: c.Item, Field: c.Field}, vaultHTTP)
 }
 
 func (b builder) secrets(ctx context.Context) (port.SecretStore, func(), error) {
@@ -239,11 +252,15 @@ func (b builder) sink() (port.EventSink, error) {
 	return sinklog.New(b.log), nil
 }
 
-func (b builder) filter() port.ResultFilter {
-	if _, ok := b.one(config.PortFilter); ok {
-		return filterbuiltin.New()
+func (b builder) filter() (port.ResultFilter, error) {
+	if _, ok := b.one(config.PortFilter); !ok {
+		return nil, nil
 	}
-	return nil
+	f, err := filterbuiltin.New(b.cfg.ResultFilter.Locales...)
+	if err != nil {
+		return nil, fmt.Errorf("resultFilter.locales: %w", err)
+	}
+	return f, nil
 }
 
 func (b builder) index() port.ToolIndex { return lexical.New() }

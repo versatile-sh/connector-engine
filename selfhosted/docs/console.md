@@ -85,6 +85,7 @@ Each item is off, on or ask like a function, and quarantined on change. The engi
 | operator token, Postgres passwords | written on first boot to the `secrets` volume |
 | owner account (PBKDF2-SHA256) | the `console-data` volume |
 | notifier tokens and other console secrets | sealed by `selfhosted/console/sealed` (envelope encryption, keys in `console-data/secrets`); the state file holds only sealed records |
+| the key that signs approval links | sealed the same way; while the console is locked, a link answers 503 until `make unlock` |
 | engine and console root keys | wrapped by an unlock key in the OS keychain (macOS Keychain, Secret Service, DPAPI), delivered by `make unlock`; without a keychain they stay plaintext files and the console warns |
 
 `PROJECT` names the compose project and the keychain item. Delivery, migration and threat model: [SECRETS.md](SECRETS.md).

@@ -2,8 +2,6 @@ package console
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"maps"
 	"slices"
@@ -38,6 +36,8 @@ type notifyState struct {
 	Sealed   map[string]port.Sealed   `json:"channel_secrets,omitempty"`
 	LinkKey  string                   `json:"link_key,omitempty"`
 	Cursor   int64                    `json:"cursor,omitempty"`
+
+	SealedLinkKey *port.Sealed `json:"sealed_link_key,omitempty"`
 }
 
 // Channels returns a copy of the configured approval channels.
@@ -151,23 +151,17 @@ func (s *State) SetElicit(app string, on bool) error {
 	})
 }
 
-// LinkKey returns the key that signs approval links and request states, made on first use.
-func (s *State) LinkKey() ([]byte, error) {
-	var key string
-	err := s.update(func(d *stateFile) error {
-		if key = d.Notify.LinkKey; key != "" {
-			return errUnchanged
-		}
-		b := make([]byte, 32)
-		rand.Read(b)
-		key = hex.EncodeToString(b)
-		d.Notify.LinkKey = key
+func (s *State) linkKeyRecords() (*port.Sealed, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.Notify.SealedLinkKey, s.data.Notify.LinkKey
+}
+
+func (s *State) putSealedLinkKey(v port.Sealed) error {
+	return s.update(func(d *stateFile) error {
+		d.Notify.SealedLinkKey, d.Notify.LinkKey = &v, ""
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return hex.DecodeString(key)
 }
 
 // Cursor returns the last approval event sequence the relay handled.

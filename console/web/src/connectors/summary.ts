@@ -7,6 +7,12 @@ export const accessCounts = (choices: readonly { access: Access }[]): Record<Acc
   return counts;
 };
 
+/** The access every choice shares, or nothing when they differ or there is none. */
+export const commonAccess = (choices: readonly { access: Access }[]): Access | undefined => {
+  const first = choices[0]?.access;
+  return first && choices.every((choice) => choice.access === first) ? first : undefined;
+};
+
 /** Whether a stored credential, written `kind:status`, is the one that works. */
 export const isActive = (credential: string) => credential.endsWith(":active");
 

@@ -211,6 +211,9 @@ func (s *Service) captureFunctions(ctx context.Context, c port.Connector, m port
 	defs = append(defs, items...)
 	out := make([]port.Function, 0, len(defs))
 	for _, d := range defs {
+		if err := names.ValidUpstream(d.Name); err != nil {
+			return nil, meta, err
+		}
 		f, err := s.functionOf(c, m, d, meta)
 		if err != nil {
 			return nil, meta, err

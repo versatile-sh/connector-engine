@@ -8,6 +8,7 @@ import { Bubble } from "../ui/Bubble";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
+import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { HAIRLINE, SURFACE, button } from "../ui/styles";
@@ -128,11 +129,15 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
           ) : list.length === 0 ? (
             <p className="py-2 text-sm text-muted">{t("keys.empty", { endpoint })}</p>
           ) : (
-            <ul className="@container">
-              {list.map((key) => (
-                <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
-              ))}
-            </ul>
+            <LongList rows={list} textOf={(key) => key.name} label={t("keys.filter")}>
+              {(shown) => (
+                <ul className="@container">
+                  {shown.map((key) => (
+                    <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
+                  ))}
+                </ul>
+              )}
+            </LongList>
           )}
         </section>
       </div>

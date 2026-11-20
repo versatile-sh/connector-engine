@@ -214,7 +214,7 @@ func (s *Service) invoke(ctx context.Context, in invocation) invoked {
 	cctx, cancel := context.WithDeadline(ctx, in.Deadline)
 	defer cancel()
 	res, err := s.run(cctx, h.h, in)
-	if port.IsCode(err, port.CodeUnavailable) {
+	if port.IsCode(err, port.CodeUnavailable) || port.IsCode(err, port.CodeOutcomeUnknown) {
 		s.drop(h)
 	}
 	switch {

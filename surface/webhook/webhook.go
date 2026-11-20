@@ -214,15 +214,5 @@ func (c *Channel) send(ctx context.Context, method string, u *url.URL, h http.He
 }
 
 func (c *Channel) scrub(err error) string {
-	var ue *url.Error
-	if errors.As(err, &ue) {
-		err = ue.Err
-	}
-	s := err.Error()
-	for _, sec := range []string{c.url.String(), c.url.Path, c.url.RawQuery, c.token} {
-		if sec != "" && sec != "/" {
-			s = strings.ReplaceAll(s, sec, "[redacted]")
-		}
-	}
-	return s
+	return surface.Scrub(err, c.url.String(), c.url.Path, c.url.RawQuery, c.token)
 }

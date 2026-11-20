@@ -236,12 +236,6 @@ func (c *Channel) call(ctx context.Context, method string, body, out any) error 
 	return nil
 }
 
-func (c *Channel) scrub(err error) string {
-	var ue *url.Error
-	if errors.As(err, &ue) {
-		err = ue.Err
-	}
-	return c.scrubText(err.Error())
-}
+func (c *Channel) scrub(err error) string { return surface.Scrub(err, c.token) }
 
-func (c *Channel) scrubText(s string) string { return strings.ReplaceAll(s, c.token, "[redacted]") }
+func (c *Channel) scrubText(s string) string { return surface.ScrubText(s, c.token) }

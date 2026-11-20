@@ -167,6 +167,8 @@ func failed(ctx context.Context, err error, method, name string) error {
 	switch {
 	case errors.As(err, &rpc):
 		return port.Errorf(port.CodeInternal, "%s %s: %v", method, name, err)
+	case errors.Is(err, mcp.ErrConnectionClosed) && method == "tools/call":
+		return port.Errorf(port.CodeOutcomeUnknown, "%s %s: the connection closed before the answer: %v", method, name, err)
 	case errors.Is(err, mcp.ErrConnectionClosed):
 		return port.Errorf(port.CodeUnavailable, "%s %s: %v", method, name, err)
 	}

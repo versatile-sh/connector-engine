@@ -228,6 +228,15 @@ func (s *Service) CancelApproval(ctx context.Context, p port.Principal, id port.
 	if err != nil {
 		return out, err
 	}
+	var ws port.WorkspaceID
+	if err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
+		a, err := tx.GetApproval(id)
+		ws = a.Workspace
+		return err
+	}); err != nil {
+		return out, err
+	}
+	admin := s.authorize(ctx, p, authz.ApprovalCancel, authz.Workspace(string(p.Claims.Tenant), string(ws))) == nil
 	err = s.write(ctx, port.Scope{Tenant: p.Claims.Tenant}, "CancelApproval", func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
 		if err != nil {
@@ -237,7 +246,7 @@ func (s *Service) CancelApproval(ctx context.Context, p port.Principal, id port.
 		if err != nil {
 			return err
 		}
-		if !s.named(keys, tombs, p, a) && s.authorize(ctx, p, authz.ApprovalCancel, authz.Workspace(string(a.Tenant), string(a.Workspace))) != nil {
+		if !s.named(keys, tombs, p, a) && !admin {
 			return port.Errorf(port.CodeNotAnApprover, "%s is not an approver of %s", actor(p), id)
 		}
 		out, err = s.cancelOne(tx, a, reasonCancelledByApprover, actor(p))

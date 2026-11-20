@@ -24,9 +24,12 @@ const quarantined = (client: QueryClient, id: string, names: readonly string[]) 
   return [...(connector?.functions ?? []), ...(connector?.items ?? [])].some((row) => names.includes(row.name) && row.state === "quarantined");
 };
 
-/** After an access write the cache already holds: the engine's answers for this connector's keys are read again, and the whole list only when the write failed, refused a name, or accepted a quarantined row, whose new definition only the console knows. */
-const settleAccess = (client: QueryClient, id: string, names: readonly string[], reconcile: boolean) =>
-  invalidate(client, reconcile || quarantined(client, id, names) ? connectorsQuery.queryKey : [...connectorsQuery.queryKey, id]);
+/** After an access write the cache already holds: the write is laid over the list again, in case a read that started before it landed since, and the engine's answers for this connector's keys are read again; the whole list is read again instead when the write failed, refused a name, or accepted a quarantined row, whose new definition only the console knows. */
+const settleAccess = async (client: QueryClient, id: string, names: readonly string[], access: Access, failed: boolean) => {
+  const reconcile = failed || quarantined(client, id, names);
+  if (!reconcile) await patchConnector(client, id, withAccess(names, access));
+  return invalidate(client, reconcile ? connectorsQuery.queryKey : [...connectorsQuery.queryKey, id]);
+};
 
 /** Creates the owner on first visit or signs them in; the answer arms the CSRF token and the session is read again. */
 export const signIn = mutationOptions({
@@ -78,14 +81,14 @@ export const revokeKey = mutationOptions({
 export const setFunctionAccess = mutationOptions({
   mutationFn: ({ connector, name, access }: { connector: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "functions", name)}`, { access }),
   onMutate: ({ connector, name, access }, { client }) => patchConnector(client, connector, withAccess([name], access)),
-  onSettled: (_data, error, { connector, name }, _onMutate, { client }) => settleAccess(client, connector, [name], error !== null),
+  onSettled: (_data, error, { connector, name, access }, _onMutate, { client }) => settleAccess(client, connector, [name], access, error !== null),
 });
 
 /** Sets one item of a connector to off, on or ask, in the cached list at once, by name in the body since names hold `/` and `:`. */
 export const setItemAccess = mutationOptions({
   mutationFn: ({ connector, name, access }: { connector: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "items")}`, { name, access }),
   onMutate: ({ connector, name, access }, { client }) => patchConnector(client, connector, withAccess([name], access)),
-  onSettled: (_data, error, { connector, name }, _onMutate, { client }) => settleAccess(client, connector, [name], error !== null),
+  onSettled: (_data, error, { connector, name, access }, _onMutate, { client }) => settleAccess(client, connector, [name], access, error !== null),
 });
 
 /** Sets the named access keys, or every key, to off, follow or custom on a connector, in one request that answers each key. */
@@ -101,7 +104,7 @@ export type ItemResult = { name: string; error?: string; code?: string };
 export const setFunctionsAccess = mutationOptions({
   mutationFn: ({ connector, names, access }: { connector: string; names: readonly string[]; access: Access }) => api<{ items: ItemResult[] }>("PUT", `/api/connectors/${at(connector, "functions")}`, { names, access }),
   onMutate: ({ connector, names, access }, { client }) => patchConnector(client, connector, withAccess(names, access)),
-  onSettled: (data, error, { connector, names }, _onMutate, { client }) => settleAccess(client, connector, names, error !== null || (data?.items.some((item) => item.error) ?? true)),
+  onSettled: (data, error, { connector, names, access }, _onMutate, { client }) => settleAccess(client, connector, names, access, error !== null || (data?.items.some((item) => item.error) ?? true)),
 });
 
 /** Narrows many functions or items for one access key, or resets them to the connector's own access, in one request that answers each; names go in the body since item names hold `/` and `:`. */

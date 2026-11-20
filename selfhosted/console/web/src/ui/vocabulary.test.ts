@@ -33,6 +33,12 @@ describe("the console's design vocabulary", () => {
     assert.deepEqual(using(/<(select|datalist|option)\b/), []);
   });
 
+  test("fills with lime only a dot, the filter mark or the caret", () => {
+    const shapes = /\bsize-1\.5\b|\bw-0\.5\b|\bw-\[0\.42em\]/;
+    const fills = files.flatMap((file) => file.text.split("\n").filter((line) => /\b(bg|fill)-lime\b/.test(line) && !shapes.test(line)).map((line) => `${file.name}: ${line.trim()}`));
+    assert.deepEqual(fills, []);
+  });
+
   test("uses no colour or effect class the stylesheet no longer defines", () => {
     assert.deepEqual(using(/\b(text|bg|border|fill|stroke|outline|ring|decoration|from|via|to)-amber(?![\w-])|\bbackdrop-(grid|beam|glow)\b|\bride-in\b/), []);
   });

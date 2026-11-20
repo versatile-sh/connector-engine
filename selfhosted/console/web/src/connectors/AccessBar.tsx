@@ -1,8 +1,8 @@
 import type { Access } from "../api";
 
-const FILL = { on: "bg-paper", ask: "bg-lime" } as const;
+const FILL = { on: "bg-paper", ask: "bg-paper/40" } as const;
 
-/** How a set of choices splits between on, in paper, and ask, in lime, as one thin bar whose empty track is off. */
+/** How a set of choices splits between on, in paper, and ask, in paper at 40%, as one thin bar whose empty track is off. */
 export function AccessBar({ counts, className = "" }: { counts: Record<Access, number>; className?: string }) {
   const total = counts.off + counts.on + counts.ask;
   return (

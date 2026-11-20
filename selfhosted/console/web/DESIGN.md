@@ -20,7 +20,7 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 | `amber-400` | errors, cautions and the destructive button |
 | `sky-400`, `red-400` | what a function does: reads, deletes |
 
-**One live colour.** Inside one card or figure only one thing is lime. Lime is a word, a dot, a numeral or a hairline, never a fill. Selection is paper at 10%, never lime. The one exception, from the site: a filter list marks its chosen row with a short lime bar and a lime count.
+**One live colour.** Inside one card or figure only one thing is lime. Lime is a word, a dot, a numeral or a hairline, never a fill. Selection is paper at 10%, never lime. The one exception, from the site: a filter list marks its chosen row with a short lime bar and a lime count. A bar or a chart draws its parts in paper tints, amber and red, never lime. `src/ui/vocabulary.test.ts` fails the build on a lime fill that is not a dot, the filter mark or the caret.
 
 ## Typography
 

@@ -241,11 +241,15 @@ func (b builder) sink() (port.EventSink, error) {
 	return sinklog.New(b.log), nil
 }
 
-func (b builder) filter() port.ResultFilter {
-	if _, ok := b.one(config.PortFilter); ok {
-		return filterbuiltin.New()
+func (b builder) filter() (port.ResultFilter, error) {
+	if _, ok := b.one(config.PortFilter); !ok {
+		return nil, nil
 	}
-	return nil
+	f, err := filterbuiltin.New(b.cfg.ResultFilter.Locales...)
+	if err != nil {
+		return nil, fmt.Errorf("resultFilter.locales: %w", err)
+	}
+	return f, nil
 }
 
 func (b builder) index() port.ToolIndex { return lexical.New() }

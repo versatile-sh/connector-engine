@@ -90,7 +90,7 @@ func newRelay(t *testing.T, tune func(*service.Config, *gateway.Config)) *relay 
 	gcfg.HoldWindow, gcfg.HoldPoll = 80*time.Millisecond, 5*time.Millisecond
 	r := &relay{t: t}
 	r.Env = st.New(t, func(c *service.Config, d *service.Deps) {
-		d.Filter = builtin.New()
+		d.Filter, _ = builtin.New(builtin.DefaultLocales...)
 		d.Runtime, _ = mux.New(remote.New(credential.Applier{}, nil, egress.Guard{AllowPrivate: true}), rtskill.New())
 		if tune != nil {
 			tune(c, &gcfg)

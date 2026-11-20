@@ -133,7 +133,10 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		}
 	}
 	svcCfg := a.Config.Service()
-	a.Filter, a.Index = b.filter(), b.index()
+	if a.Filter, err = b.filter(); err != nil {
+		return err
+	}
+	a.Index = b.index()
 	a.Service, err = service.New(service.Deps{
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
 		Authorizer: table.New(store, a.Clock, table.Settings{DestructiveMax: svcCfg.DestructiveMax, ForceAsk: svcCfg.ForceAsk}),

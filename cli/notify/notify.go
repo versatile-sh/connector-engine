@@ -2,7 +2,7 @@
 package notify
 
 import (
-	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -52,8 +52,8 @@ func Command(ctx context.Context, args []string, getenv func(string) string, std
 	fs := flag.NewFlagSet("cnctl notify", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	home, _ := os.UserHomeDir()
-	base := fs.String("console", firstOf(getenv("CN_CONSOLE"), defaultConsole), "address of the local console")
-	keyFile := fs.String("key-file", firstOf(getenv("CN_NOTIFY_KEY_FILE"), filepath.Join(home, ".config", "versatile", "notify.key")), "file holding the device key from Notifications")
+	base := fs.String("console", cmp.Or(getenv("CN_CONSOLE"), defaultConsole), "address of the local console")
+	keyFile := fs.String("key-file", cmp.Or(getenv("CN_NOTIFY_KEY_FILE"), filepath.Join(home, ".config", "versatile", "notify.key")), "file holding the device key from Notifications")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -71,15 +71,6 @@ func Command(ctx context.Context, args []string, getenv func(string) string, std
 		return 1
 	}
 	return 0
-}
-
-func firstOf(v ...string) string {
-	for _, s := range v {
-		if s != "" {
-			return s
-		}
-	}
-	return ""
 }
 
 // Run follows the stream and reconnects after a loss until ctx ends or the key is refused.
@@ -131,19 +122,13 @@ func (h *Helper) follow(ctx context.Context) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("the console answered %d", resp.StatusCode)
 	}
-	sc := bufio.NewScanner(resp.Body)
-	sc.Buffer(make([]byte, 64<<10), 1<<20)
-	for sc.Scan() {
-		data, ok := strings.CutPrefix(sc.Text(), "data: ")
-		if !ok {
-			continue
-		}
+	err = console.ReadEvents(resp.Body, func(data []byte) {
 		var ev console.HubEvent
-		if json.Unmarshal([]byte(data), &ev) == nil {
+		if json.Unmarshal(data, &ev) == nil {
 			h.handle(ctx, ev)
 		}
-	}
-	if err := sc.Err(); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 	return errors.New("the stream ended")
@@ -152,7 +137,7 @@ func (h *Helper) follow(ctx context.Context) error {
 // Text is the title and body of a prompt's notification.
 func Text(ev console.HubEvent) (string, string) {
 	p := ev.Prompt
-	fn := firstOf(p.FunctionTitle, p.Function)
+	fn := cmp.Or(p.FunctionTitle, p.Function)
 	return fmt.Sprintf("Allow %s: %s?", p.Connector, fn),
 		fmt.Sprintf("%s wants to run %s. Click to answer before %s.", p.App, p.Function, p.ExpiresAt.Local().Format("15:04"))
 }

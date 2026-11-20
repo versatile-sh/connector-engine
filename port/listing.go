@@ -114,6 +114,9 @@ const (
 	RedistributionMetadataOnly Redistribution = "metadata_only"
 )
 
+// SkillMetaKey is the _meta key of a skill function definition and of a skill load's structured result.
+const SkillMetaKey = "connector-engine/skill"
+
 // Skill is the pinned Agent Skills folder of a skill listing: its provenance, licence and files.
 type Skill struct {
 	Name           string         `json:"name"`

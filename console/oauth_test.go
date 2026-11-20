@@ -360,6 +360,29 @@ func TestTheConsentPage(t *testing.T) {
 		}
 	})
 
+	t.Run("marks the key new until the owner opens the key list", func(t *testing.T) {
+		o.b.ok("POST", "/api/agents", map[string]any{"name": "by-hand", "ttl_hours": 24}, nil)
+		var list struct{ Agents []console.AgentView }
+		o.b.ok("GET", "/api/agents", nil, &list)
+		byName := map[string]console.AgentView{}
+		for _, a := range list.Agents {
+			byName[a.Name] = a
+		}
+		if a := byName["claude-code"]; !a.ViaBrowser || !a.New || a.ConnectedAt.IsZero() {
+			t.Fatalf("the app connected through the browser: %+v", a)
+		}
+		if a := byName["by-hand"]; a.ViaBrowser || a.New {
+			t.Fatalf("a key made by hand: %+v", a)
+		}
+		o.b.ok("POST", "/api/agents/seen", nil, nil)
+		o.b.ok("GET", "/api/agents", nil, &list)
+		for _, a := range list.Agents {
+			if a.New || (a.Name == "claude-code") != a.ViaBrowser {
+				t.Fatalf("after the owner saw the list: %+v", a)
+			}
+		}
+	})
+
 	t.Run("caps wrong passwords at five a minute", func(t *testing.T) {
 		path := o.requestConsent(clientID, callback)
 		for range 4 {

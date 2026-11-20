@@ -107,7 +107,7 @@ export type Preview = {
 
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
 
-export type Agent = { name: string; expires_at: string };
+export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean };
 
 export type AgentToken = { agent: string; token: string; expires_at: string; mcp_url: string };
 

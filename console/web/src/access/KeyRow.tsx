@@ -6,7 +6,7 @@ import type { RevokeEvent, RevokeState } from "./revoke";
 
 type KeyRowProps = { entry: Agent; flow: RevokeState; error?: string; dispatch(event: RevokeEvent): void; onConfirm(): void };
 
-/** One access key: its name and expiry, a visible Revoke, and in place of it the inline question that revokes the key for good. In a list narrower than 28rem the name takes its own line. */
+/** One access key: its name and expiry, whether an app connected it through the browser sign-in (new until the owner has seen it), a visible Revoke, and in place of it the inline question that revokes the key for good. In a list narrower than 28rem the name takes its own line. */
 export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps) {
   const t = useT();
   const locale = useLocale();
@@ -34,6 +34,12 @@ export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps)
           </button>
         )}
       </div>
+      {entry.via_browser ? (
+        <p className="mt-1 flex flex-wrap items-center gap-2 pl-6 font-mono text-xs text-muted">
+          {entry.new ? <Bubble tone="accent">{t("keys.newBadge")}</Bubble> : null}
+          {t("keys.viaBrowser")}
+        </p>
+      ) : null}
       {asking ? (
         <div
           role="group"

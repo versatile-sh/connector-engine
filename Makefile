@@ -13,7 +13,7 @@ ENGINE   := $(if $(filter headless,$(PROFILE)),engine-headless,engine)
 
 KEYS     = COMPOSE="$(COMPOSE) --profile person" CNCTL="$(CNCTL)" PROJECT="$(PROJECT)" scripts/keychain.sh
 
-.PHONY: up down logs ps cli admin build test vendor check cnctl unlock keychain-status keychain-migrate keychain-revert keychain-recovery keychain-import
+.PHONY: up down logs ps cli admin build test vendor check cnctl unlock keychain-status keychain-migrate keychain-revert keychain-recovery keychain-import notify
 
 up: vendor
 	$(COMPOSE) --profile $(PROFILE) up -d --build
@@ -72,3 +72,6 @@ keychain-import: cnctl
 
 check: vendor
 	scripts/console-check.sh
+
+notify: cnctl
+	$(CNCTL) notify --console http://127.0.0.1:$(CONSOLE_PORT)

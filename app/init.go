@@ -76,4 +76,3 @@ func initSecrets(_ config.Config, args []string, _ io.Reader, stdout, stderr io.
 	}
 	return 0
 }
-

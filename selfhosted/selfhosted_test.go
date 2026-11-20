@@ -12,7 +12,7 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted"
 )
 
-const profile = "../deploy/profiles/person/"
+const profile = "deploy/profiles/person/"
 
 func TestThePersonProfileNeedsTheSelfHostedBuild(t *testing.T) {
 	cfg, err := config.Load(profile + "connector-engine.yaml")

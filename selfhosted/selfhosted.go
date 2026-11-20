@@ -8,12 +8,12 @@ import (
 
 	"github.com/versatile-sh/connector-engine/app"
 	"github.com/versatile-sh/connector-engine/cli"
-	"github.com/versatile-sh/connector-engine/cli/keychain"
-	"github.com/versatile-sh/connector-engine/cli/notify"
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 	"github.com/versatile-sh/connector-engine/port"
-	"github.com/versatile-sh/connector-engine/secrets/hostkey"
+	"github.com/versatile-sh/connector-engine/selfhosted/cli/keychain"
+	"github.com/versatile-sh/connector-engine/selfhosted/cli/notify"
+	"github.com/versatile-sh/connector-engine/selfhosted/secrets/hostkey"
 )
 
 // Register adds the self-hosted adapters to r.

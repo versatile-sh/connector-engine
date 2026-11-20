@@ -159,6 +159,12 @@ export const pairDevice = mutationOptions({
   onSuccess: (_paired, _name, _onMutate, { client }) => invalidate(client, notificationsQuery.queryKey),
 });
 
+/** Names a paired computer again; an empty name is the console's default. */
+export const renameDevice = mutationOptions({
+  mutationFn: ({ id, name }: { id: string; name: string }) => api("PATCH", `/api/notifications/devices/${at(id)}`, { name }),
+  onSettled: (_data, _error, _rename, _onMutate, { client }) => invalidate(client, notificationsQuery.queryKey),
+});
+
 /** Revokes a paired computer's key. */
 export const revokeDevice = mutationOptions({
   mutationFn: (id: string) => api("DELETE", `/api/notifications/devices/${at(id)}`),

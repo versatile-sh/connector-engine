@@ -1,12 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { errorText, type DeviceView, type PairedDevice } from "../api";
-import { useLocale, useT } from "../i18n/I18nProvider";
+import { useT } from "../i18n/I18nProvider";
 import { pairDevice, revokeDevice } from "../mutations";
 import { CopyBox } from "../ui/CopyBox";
-import { Field } from "../ui/Field";
+import { Icon } from "../ui/Icon";
 import { HAIRLINE, button } from "../ui/styles";
-import { InlineConfirm } from "./InlineConfirm";
+import { browserFacts, deviceName, pairedHere, rememberPairedHere } from "./device";
+import { DeviceRow } from "./DeviceRow";
 import { Section } from "./Section";
 import { useRemove } from "./useRemove";
 
@@ -27,65 +28,36 @@ function Paired({ paired, onDone }: { paired: PairedDevice; onDone(): void }) {
   );
 }
 
-/** Desktop popups: pair this computer for `cnctl notify`, the key and command shown once, and every paired computer with an inline revoke. */
+/** Desktop popups: pair this computer for `cnctl notify` in one click, named after its system and browser, the key and command shown once, and every paired computer, the one paired here marked, renamed in place or revoked inline. */
 export function DevicesSection({ devices }: { devices: DeviceView[] }) {
   const t = useT();
-  const locale = useLocale();
-  const [name, setName] = useState("");
   const pair = useMutation(pairDevice);
   const remove = useRemove(revokeDevice);
-  const onSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    pair.mutate(name.trim(), { onSuccess: () => setName("") });
-  };
-  const date = (iso: string) => new Date(iso).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
+  const [here, setHere] = useState(pairedHere);
+  const onPair = () => pair.mutate(deviceName(browserFacts(navigator)), { onSuccess: (paired) => setHere(rememberPairedHere(paired.device.id)) });
   return (
-    <Section id="devices-title" icon="terminal" title={t("notify.devices.title")} intro={t("notify.devices.intro")}>
-      {pair.data ? <Paired key={pair.data.key} paired={pair.data} onDone={() => pair.reset()} /> : null}
-      <form onSubmit={onSubmit} className="grid gap-x-3 @md:grid-cols-[minmax(0,1fr)_auto] @md:items-start">
-        <Field
-          label={t("notify.devices.name")}
-          hint={t("notify.devices.nameHint")}
-          className="min-w-0"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-          autoComplete="off"
-          spellCheck={false}
-          error={pair.isError ? errorText(pair.error) : undefined}
-        />
-        <button type="submit" disabled={pair.isPending} className={`${button({ variant: "accent" })} mb-4 @md:mt-7 @md:mb-0`}>
+    <Section
+      id="devices-title"
+      icon="terminal"
+      title={t("notify.devices.title")}
+      intro={t("notify.devices.intro")}
+      action={
+        <button type="button" disabled={pair.isPending} className={button({ variant: "accent", size: "sm" })} onClick={onPair}>
+          <Icon name="plus" className="size-4" />
           {pair.isPending ? t("notify.devices.pairing") : t("notify.devices.pair")}
         </button>
-      </form>
+      }
+    >
+      <p role="alert" className="mb-4 text-sm text-amber empty:hidden">
+        {pair.isError ? errorText(pair.error) : ""}
+      </p>
+      {pair.data ? <Paired key={pair.data.key} paired={pair.data} onDone={() => pair.reset()} /> : null}
       {devices.length === 0 ? (
         <p className="text-sm text-muted">{t("notify.devices.empty")}</p>
       ) : (
         <ul>
           {devices.map((device) => (
-            <li key={device.id} className={`border-b border-line py-3 transition-opacity duration-300 last:border-b-0 ${remove.busy && remove.asking(device.id) ? "opacity-60" : ""}`}>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span title={device.name} className="min-w-0 grow basis-full truncate font-medium @md:basis-0">{device.name}</span>
-                <span className="min-w-0 grow font-mono text-xs text-muted @md:grow-0">{device.last_seen ? t("notify.devices.seen", { when: date(device.last_seen) }) : t("notify.devices.never")}</span>
-                {remove.asking(device.id) ? null : (
-                  <button type="button" autoFocus={remove.returning(device.id)} aria-label={t("notify.devices.revokeLabel", { name: device.name })} className={button({ variant: "danger", size: "xs" })} onClick={() => remove.ask(device.id)}>
-                    {t("notify.revoke")}
-                  </button>
-                )}
-              </div>
-              {remove.asking(device.id) ? (
-                <InlineConfirm
-                  label={t("notify.devices.revokeLabel", { name: device.name })}
-                  question={t("notify.devices.revokeAsk", { name: device.name })}
-                  confirm={t("notify.revoke")}
-                  working={t("notify.revoking")}
-                  busy={remove.busy}
-                  error={remove.error}
-                  onCancel={remove.cancel}
-                  onConfirm={remove.confirm}
-                />
-              ) : null}
-            </li>
+            <DeviceRow key={device.id} device={device} here={device.id === here} remove={remove} />
           ))}
         </ul>
       )}

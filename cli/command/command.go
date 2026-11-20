@@ -197,7 +197,7 @@ func (c *Command) groupHelp(path string, w io.Writer) {
 		}
 		fmt.Fprintf(tw, "  %s\t%s\n", name, s.Summary)
 	}
-	tw.Flush()
+	_ = tw.Flush()
 	fmt.Fprintf(w, "\nRun '%s <command> --help' for details.\n", path)
 }
 
@@ -231,7 +231,7 @@ func (c *Command) leafHelp(path string, fs *flag.FlagSet, w io.Writer) {
 		}
 		fmt.Fprintf(tw, "  %s\t%s\n", left, usage)
 	})
-	tw.Flush()
+	_ = tw.Flush()
 }
 
 // Getenv reads a variable from environ, a KEY=VALUE list.

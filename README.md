@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/versatile-sh/connector-engine/actions/workflows/ci.yml"><img src="https://github.com/versatile-sh/connector-engine/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/versatile-sh/connector-engine" alt="License: MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0%20%2B%20terms-blue" alt="License: PolyForm Shield 1.0.0 with additional terms (source-available)"></a>
   <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/versatile-sh/connector-engine" alt="Go version"></a>
 </p>
 
@@ -91,7 +91,7 @@ Cursor and VS Code have one-click links on the console's **Access** page. Claude
 | **Connector catalog**<br/>Import MCP servers by URL or install link; REST through OpenAPI, gRPC through reflection. | **Per-function permissions**<br/>Off, on or ask for every function, per access key. | **Approvals anywhere**<br/>Answer in the console, a desktop popup, Discord, Slack, Telegram, or the AI app. |
 | **Pinned definitions**<br/>A changed tool or a new one is quarantined until you accept it. | **Skills**<br/>Pinned skill packages, granted per key, loaded on demand. | **One-click app sign-in**<br/>OAuth 2.1 with PKCE for every AI app; no keys to paste. |
 | **Secrets at rest**<br/>Envelope encryption; root keys wrapped by your OS keychain. | **Activity and events**<br/>Every call on record, redacted; a CloudEvent for every decision. | **Backups**<br/>Encrypted full backups, and shareable setups without credentials. |
-| **Headless engine**<br/>No console: your IdP, the operator API, your product decides. | **Adapters**<br/>Postgres, 1Password, webhooks, or your own through one registry. | **Self-hosted**<br/>Runs on your machine or your cloud. MIT licensed. |
+| **Headless engine**<br/>No console: your IdP, the operator API, your product decides. | **Adapters**<br/>Postgres, 1Password, webhooks, or your own through one registry. | **Self-hosted**<br/>Runs on your machine or your cloud. Source-available. |
 
 > Never expose the person console to the internet: it is a single-owner app for `127.0.0.1`. On a server, reach it through an SSH tunnel, or run the headless engine behind TLS and OIDC ([VPS guide](docs/self-hosted/vps.md)).
 
@@ -114,4 +114,8 @@ Community templates for Render, Railway and Fly.io, not tested by maintainers: [
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+connector-engine is source-available under the PolyForm Shield License 1.0.0 with Versatile's additional terms, see [LICENSE](LICENSE). Third-party components keep their own licenses, see [NOTICE](NOTICE).
+Anyone, people and companies alike, may use and change it free of charge, including in production inside their own organisation.
+Nobody but Versatile may sell it, offer it as a paid service, or build a competing product with it; for a commercial license, see [versatile.sh/contact](https://versatile.sh/contact).
+
+Versions published up to and including commit 3858237 (2026-11-20) were released under the MIT License.

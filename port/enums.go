@@ -222,7 +222,7 @@ const (
 // Audience says whether a tenant or workspace rule shows a listing to all or only to named subjects.
 type Audience string
 
-// Audiences V8.
+// Audiences of a tenant or workspace rule.
 const (
 	AudienceAll   Audience = "all"
 	AudienceNamed Audience = "named"
@@ -313,7 +313,7 @@ func (s ApprovalState) Open() bool {
 	return s == ApprovalPending || s == ApprovalApproved || s == ApprovalExecuting
 }
 
-// Terminal reports whether no transition but A13 and A14 leaves the state.
+// Terminal reports whether the state is final: only retention and delivery still touch the record.
 func (s ApprovalState) Terminal() bool { return s != "" && !s.Open() }
 
 // Decision is what an approver answers.

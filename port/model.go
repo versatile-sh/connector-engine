@@ -335,7 +335,7 @@ type FanOut struct {
 // WorkKind names a kind of due work the worker finds through the one cross-tenant view.
 type WorkKind string
 
-// Kinds of due work and C12.
+// Kinds of due work, the call-deadline sweep included.
 const (
 	WorkApprovalExpiry  WorkKind = "approval_expiry"
 	WorkApprovedRecord  WorkKind = "approved_record"
@@ -389,8 +389,7 @@ func SourceOf(t TenantID) string {
 	return SourcePrefix + string(t)
 }
 
-// RoleAssignment gives the person of an issuer a role over a resource scope; an empty Tenant is an installation role.
-// An installation role names its issuer; a tenant role without one matches the person of any issuer.
+// RoleAssignment gives the person of an issuer a role over a scope; an installation role (empty Tenant) names its issuer, a tenant role without one matches any issuer.
 type RoleAssignment struct {
 	Tenant TenantID `json:"tenant,omitempty"`
 	Issuer string   `json:"issuer,omitempty"`

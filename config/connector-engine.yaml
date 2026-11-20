@@ -148,7 +148,6 @@ credentials:
   fallback: none
   clients: []
 secrets:
-  adapter: localfile
   dataKeyCache: 5m0s
   dir: /var/lib/connector-engine/secrets
   unlockSocket: ""

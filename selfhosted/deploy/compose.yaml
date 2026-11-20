@@ -1,7 +1,7 @@
 name: connector-engine
 
 include:
-  - ../../deploy/compose.yaml
+  - path: [../../deploy/compose.yaml, ./compose.person-init.yaml]
 
 x-image: &image
   image: ${CN_IMAGE:-connector-engine:local}

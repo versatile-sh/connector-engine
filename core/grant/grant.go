@@ -34,7 +34,7 @@ type Policy struct {
 	AlwaysMax time.Duration
 }
 
-// Validate refuses a row the rules and G5, G8, G9 and G10 forbid, with code row_refused.
+// Validate refuses, with code row_refused, a row whose selector, mode, scope, hash, expiry or max_uses the grant rules forbid.
 func Validate(g port.Grant, p Policy) error {
 	refuse := func(why string) error { return port.Errorf(port.CodeRowRefused, "%s", why) }
 	sel := g.Selector
@@ -45,24 +45,24 @@ func Validate(g port.Grant, p Policy) error {
 		return refuse("unknown mode " + string(g.Mode))
 	}
 	if g.MaxUses < 0 || (g.MaxUses > 0 && (g.Mode == port.ModeDeny || g.Mode == port.ModeAsk)) {
-		return refuse("max_uses is refused on deny and ask rows (G9)")
+		return refuse("max_uses is refused on deny and ask rows")
 	}
 	if g.ScopeKind == port.ScopeTenant {
 		switch {
 		case g.Mode == port.ModeAllow:
-			return refuse("a tenant row never says allow (G8)")
+			return refuse("a tenant row never says allow")
 		case g.DefinitionHash != "" || !g.ExpiresAt.IsZero() || g.MaxUses != 0:
-			return refuse("a tenant row carries no hash, expiry or max_uses (G8)")
+			return refuse("a tenant row carries no hash, expiry or max_uses")
 		case g.Connector != "" || g.Listing == nil:
-			return refuse("a tenant row names a listing, never a connector (G8)")
+			return refuse("a tenant row names a listing, never a connector")
 		case g.Mode == port.ModeInherit && Specificity(sel) != 2:
-			return refuse("inherit is accepted on an fn: selector only (G10)")
+			return refuse("inherit is accepted on an fn: selector only")
 		}
 		return nil
 	}
 	switch {
 	case g.Mode == port.ModeInherit:
-		return refuse("inherit exists only on a tenant fn: row (G10)")
+		return refuse("inherit exists only on a tenant fn: row")
 	case g.Listing != nil || g.Connector == "":
 		return refuse("a row below the tenant names a connector")
 	case Specificity(sel) == 2 && g.DefinitionHash == "":
@@ -72,7 +72,7 @@ func Validate(g port.Grant, p Policy) error {
 	case port.ScopeWorkspace, port.ScopeAgent, port.ScopeUser:
 	case port.ScopeSession:
 		if g.Agent == "" || g.ExpiresAt.IsZero() || g.Origin != port.OriginApproval || Specificity(sel) != 2 {
-			return refuse("a session row is an fn: row written by an approval, with an agent and an expiry (G5)")
+			return refuse("a session row is an fn: row written by an approval, with an agent and an expiry")
 		}
 		return nil
 	default:
@@ -148,7 +148,7 @@ func Live(g port.Grant, now time.Time) bool {
 	return (g.ExpiresAt.IsZero() || now.Before(g.ExpiresAt)) && (g.MaxUses == 0 || g.Uses < g.MaxUses)
 }
 
-// Match applies M1 to M5 to the rows of one layer; an inherit answer is no answer.
+// Match answers with the live row of one layer that covers the function, most specific first and strictest on a tie; an inherit answer is no answer.
 func Match(rows []port.Grant, f port.Function, now time.Time) Answer {
 	var best *port.Grant
 	top := -1
@@ -183,7 +183,7 @@ func Stale(g port.Grant, f port.Function) bool {
 	return (g.Mode == port.ModeAllow || g.Mode == port.ModeAskOnce) && g.DefinitionHash != f.DefinitionHash
 }
 
-// SessionRow builds the session row of A4: fn:F allow at the current hash, ending at the earlier of exp and now plus max.
+// SessionRow builds the row an approval for the session writes: fn:F allow at the current hash, ending at the earlier of exp and now plus max.
 func SessionRow(a port.Approval, now, tokenExp time.Time, max time.Duration) port.Grant {
 	exp := now.Add(max)
 	if !tokenExp.IsZero() && tokenExp.Before(exp) {

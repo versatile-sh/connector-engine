@@ -76,7 +76,9 @@ func Command(ctx context.Context, args []string, getenv func(string) string, std
 // Run follows the stream and reconnects after a loss until ctx ends or the key is refused.
 func (h *Helper) Run(ctx context.Context) error {
 	if h.HTTP == nil {
-		h.HTTP = &http.Client{}
+		t := http.DefaultTransport.(*http.Transport).Clone()
+		t.ResponseHeaderTimeout = 30 * time.Second
+		h.HTTP = &http.Client{Transport: t}
 	}
 	if h.Log == nil {
 		h.Log = io.Discard

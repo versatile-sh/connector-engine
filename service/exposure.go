@@ -138,7 +138,7 @@ func (s *Service) exposureEntries(ctx context.Context, tenant port.TenantID, age
 	return entries, nil
 }
 
-// RefreshExposure computes the trifecta check of an agent, stores it and emits event 13 when it is or was exposed and changed.
+// RefreshExposure computes the trifecta check of an agent, stores it and emits connector.agent.exposure_warning when it is or was exposed and changed.
 func (s *Service) RefreshExposure(ctx context.Context, tenant port.TenantID, agent port.AgentID) (port.Exposure, error) {
 	entries, err := s.exposureEntries(ctx, tenant, agent)
 	if err != nil {

@@ -36,12 +36,6 @@ func New(getenv func(string) string) *Command {
 	return &Command{getenv: getenv}
 }
 
-// Name is the word that selects the group.
-func (*Command) Name() string { return "tools" }
-
-// Summary is the one-line help of the group.
-func (*Command) Summary() string { return "list, search and call the functions granted to this agent" }
-
 const usage = `usage: tools list [--out FILE]
        tools search QUERY [--limit N] [--out FILE]
        tools call NAME [--args JSON] [--fields /a,/b] [--out FILE]

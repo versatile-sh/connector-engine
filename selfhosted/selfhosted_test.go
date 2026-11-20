@@ -46,12 +46,8 @@ func TestHostkeyNeedsItsUnlockSocket(t *testing.T) {
 	r := app.Core()
 	selfhosted.Register(r)
 	cfg := config.Default().With(r.Builtins()...)
-	cfg.Secrets.Adapter = "hostkey"
-	found := false
-	for _, f := range cfg.Check(func(string) bool { return true }) {
-		found = found || f.Where == "secrets.unlockSocket"
-	}
-	if !found {
+	_, err := cfg.LoadAdapters([]byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: production\nports:\n  secrets: {use: builtin:hostkey}\n"), nil)
+	if err == nil || !strings.Contains(err.Error(), "secrets.unlockSocket") {
 		t.Fatal("hostkey without secrets.unlockSocket is accepted")
 	}
 }
@@ -92,7 +88,7 @@ func TestTheHostkeyAdapterOpensThroughTheRegistryAndReportsHowItsRootKeyRests(t 
 	cfg.Server.PublicURL = "http://engine.test"
 	cfg.Auth.LocalIssuer.Enabled = true
 	cfg.Auth.Operator.TokenRef = "env:CN_OPERATOR_TOKEN"
-	cfg.Secrets.Adapter, cfg.Secrets.Dir, cfg.Secrets.UnlockSocket = "hostkey", filepath.Join(dir, "keys"), filepath.Join(dir, "unlock.sock")
+	cfg.Secrets.Dir, cfg.Secrets.UnlockSocket = filepath.Join(dir, "keys"), filepath.Join(dir, "unlock.sock")
 	if _, err := secretslocal.Open(cfg.Secrets.Dir); err != nil {
 		t.Fatal(err)
 	}

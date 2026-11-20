@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"net/url"
 	"regexp"
@@ -109,11 +110,4 @@ func ManifestFor(p Probed, headerSecret bool) (port.Manifest, error) {
 	return m, nil
 }
 
-func firstOf(v ...string) string {
-	for _, s := range v {
-		if s != "" {
-			return s
-		}
-	}
-	return ""
-}
+var firstOf = cmp.Or[string]

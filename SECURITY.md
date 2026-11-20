@@ -17,11 +17,9 @@ We acknowledge a report within 5 working days and agree on a disclosure date wit
 
 | Version | Supported |
 |---|---|
-| latest release | yes |
-| `main` | yes, best effort |
-| older releases | no; upgrade to the latest release |
+| `main` | yes |
 
-Until 1.0, only the latest minor release receives security fixes.
+No release is tagged yet. Once releases exist, only the latest minor release receives security fixes until 1.0.
 
 ## Threat model summary
 

@@ -383,7 +383,7 @@ func TestTheSessionRowEndsWithTheAgentToken(t *testing.T) {
 	w.decide(held.Approval.ID, port.DecisionApproveForSession)
 	rows := st.Ok(w.Svc.ListGrants(w.Ctx, w.admin, port.GrantFilter{ScopeKind: port.ScopeSession, ScopeID: "s1"}))
 	if len(rows) != 1 || !rows[0].ExpiresAt.Equal(exp) {
-		t.Fatalf("the session row ends with the token (G5): %+v", rows)
+		t.Fatalf("the session row ends with the token: %+v", rows)
 	}
 }
 

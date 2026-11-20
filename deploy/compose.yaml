@@ -1,10 +1,11 @@
 name: connector-engine
 
 x-image: &image
-  image: ${CN_IMAGE:-connector-engine:local}
+  image: ${CN_HEADLESS_IMAGE:-connector-engine-headless:local}
   build:
     context: ..
     dockerfile: Dockerfile
+    target: headless
 
 x-secrets-ro: &secrets-ro secrets:/run/connector-engine:ro
 

@@ -11,7 +11,7 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-// ExpireApproval is A6: it acts only when the record is pending and its expiry passed.
+// ExpireApproval expires a record: it acts only when the record is pending and its expiry passed.
 func (s *Service) ExpireApproval(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
@@ -29,7 +29,7 @@ func (s *Service) ExpireApproval(ctx context.Context, tenant port.TenantID, id p
 	})
 }
 
-// RetainApproval is A13: it destroys the stored result and the sealed arguments once retention ended.
+// RetainApproval destroys the stored result and the sealed arguments once retention ended.
 func (s *Service) RetainApproval(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
@@ -44,7 +44,7 @@ func (s *Service) RetainApproval(ctx context.Context, tenant port.TenantID, id p
 	})
 }
 
-// MarkExecutionUnknown is A12 with its audit row and event 27: the deadline plus grace passed with no answer.
+// MarkExecutionUnknown moves an executing record to outcome_unknown with its audit row and connector.call.outcome_unknown once the deadline plus grace passed.
 func (s *Service) MarkExecutionUnknown(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
@@ -78,7 +78,7 @@ func (s *Service) callUnknown(tx port.Tx, call port.Call) error {
 	return s.record(tx, call.Tenant, "worker", string(call.ID), evCallUnknown, catalog.CallOutcomeUnknown{Call: string(call.ID), Approval: string(call.Approval), Function: call.Function, StartedAt: call.StartedAt})
 }
 
-// SweepCall is C12 for a call that was never held: a row left in started beyond its deadline plus grace becomes outcome_unknown.
+// SweepCall sweeps a call that was never held: a row left in started beyond its deadline plus grace becomes outcome_unknown.
 func (s *Service) SweepCall(ctx context.Context, tenant port.TenantID, id port.CallID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		call, err := tx.GetCall(id)
@@ -92,7 +92,7 @@ func (s *Service) SweepCall(ctx context.Context, tenant port.TenantID, id port.C
 	})
 }
 
-// ExpireGrant deletes a row whose expiry passed and publishes event 12.
+// ExpireGrant deletes a row whose expiry passed and publishes connector.grant.expired.
 func (s *Service) ExpireGrant(ctx context.Context, tenant port.TenantID, id port.GrantID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		g, err := tx.GetGrant(id)
@@ -213,8 +213,7 @@ func (s *Service) loadHeld(ctx context.Context, tenant port.TenantID, id port.Ap
 	return h, true, err
 }
 
-// ExecuteApproved is A8 and A9 for one approved record: re-list, re-check and guards, then one forward; a failed re-list leaves it approved
-// for the next sweep until it is stale (A9), a failed guard cancels it.
+// ExecuteApproved re-lists, re-checks and guards one approved record, then forwards it once; a failed re-list retries until stale, a failed guard cancels it.
 func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	h, ok, err := s.loadHeld(ctx, tenant, id)
 	if err != nil || !ok {

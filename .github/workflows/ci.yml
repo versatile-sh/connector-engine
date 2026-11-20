@@ -30,6 +30,10 @@ jobs:
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
         with:
           go-version-file: go.mod
+      - name: No tracked file over 1 MB
+        run: |
+          big="$(git ls-files -z | xargs -0 -r stat -c '%s %n' -- | awk '$1 > 1048576')"
+          if [ -n "$big" ]; then echo "tracked files over 1 MB:" >&2; echo "$big" >&2; exit 1; fi
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race -short ./...

@@ -4,3 +4,8 @@ coverage/
 .claude/
 vendor/
 deploy/.env
+/connector-engine
+/connector-engine-selfhosted
+/connector-console
+/cnctl
+/testmcp

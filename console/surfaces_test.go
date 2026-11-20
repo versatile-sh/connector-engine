@@ -87,6 +87,7 @@ type rig struct {
 	fake *fakeChannel
 	eng  *console.Engine
 	path string
+	keys port.SecretStore
 }
 
 func newRig(t *testing.T) *rig {
@@ -107,8 +108,9 @@ func newRig(t *testing.T) *rig {
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+	keys := memory.New()
 	box := &sealed.Box{}
-	box.Unlock(memory.New())
+	box.Unlock(keys)
 	act, err := console.OpenActivity(t.TempDir()+"/activity", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -129,7 +131,7 @@ func newRig(t *testing.T) *rig {
 	go func() { c.RunNotifications(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done; srv.Close() })
 	jar, _ := cookiejar.New(nil)
-	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake, eng: eng, path: statePath}
+	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake, eng: eng, path: statePath, keys: keys}
 	var setup struct{ CSRF string }
 	r.b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
 	r.b.csrf = setup.CSRF
@@ -402,4 +404,37 @@ func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
 		t.Fatal("always for one key turned the skill on for another key")
 	}
 
+}
+
+func TestChannelsComeUpWhenTheConsoleSecretsUnlock(t *testing.T) {
+	r := newRig(t)
+	const token = "123456:ABCDEFGHIJKLMNOPQRST"
+	r.b.ok("POST", "/api/notifications/channels", map[string]any{"kind": "telegram", "settings": map[string]string{"token": token, "owner_user_id": "42"}}, nil)
+	within(t, r.fake.listened, 5*time.Second)
+
+	state, err := console.OpenState(r.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	built := make(chan map[string]string, 4)
+	locked := &sealed.Box{}
+	c := &console.Console{Engine: r.eng, State: state, Sessions: console.NewSessions(state), MCPURL: r.base + "/mcp", Secrets: locked,
+		NewChannel: func(_ string, s map[string]string) (surface.Channel, error) {
+			built <- s
+			return &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}, nil
+		}}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { c.RunNotifications(ctx); close(done) }()
+	defer func() { cancel(); <-done }()
+
+	select {
+	case s := <-built:
+		t.Fatalf("a channel was built while the secrets were locked: %v", s)
+	case <-time.After(300 * time.Millisecond):
+	}
+	locked.Unlock(r.keys)
+	if s := within(t, built, 5*time.Second); s["token"] != token {
+		t.Fatalf("the channel came up without its secret: %v", s)
+	}
 }

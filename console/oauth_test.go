@@ -66,7 +66,7 @@ func newOAuthRig(t *testing.T) *oauthRig {
 	var setup struct{ CSRF string }
 	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
 	b.csrf = setup.CSRF
-	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"search": "read"}}, nil)
+	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"search": "on"}}, nil)
 	var list struct{ Connectors []console.ConnectorSummary }
 	b.ok("GET", "/api/connectors", nil, &list)
 	noRedo := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}

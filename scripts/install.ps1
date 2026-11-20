@@ -67,8 +67,6 @@ Write-Host ""
 if ($profileName -eq 'person') {
   Write-Host "Next step: start it; it opens the console in your browser."
   Write-Host "  connector-engine-selfhosted up --open"
-  Write-Host "The 'up' command ships with the no-Docker runtime, from the next release."
-  Write-Host "Until then, use the Docker quick start: https://github.com/$repo/blob/main/docs/getting-started/install.md"
 } else {
   Write-Host "Next step: write connector-engine.yaml and adapters.yaml, then run"
   Write-Host "  connector-engine --config connector-engine.yaml --adapters adapters.yaml adapters check"

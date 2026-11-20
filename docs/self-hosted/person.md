@@ -31,7 +31,7 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 
 ## Without Docker
 
-From the next release. One binary, `connector-engine-selfhosted`, runs the engine and the console in one process on `127.0.0.1`, over an embedded SQLite store. It needs no Docker, no Postgres and no Go.
+One binary, `connector-engine-selfhosted`, runs the engine and the console in one process on `127.0.0.1`, over an embedded SQLite store. It needs no Docker, no Postgres and no Go. The installers that put it on your machine are available after the first release (v0.1.0); until then, [build it from source](../../selfhosted/README.md#build).
 
 ```sh
 connector-engine-selfhosted up --open
@@ -39,25 +39,55 @@ connector-engine-selfhosted up --open
 
 | Command | Flags | Does |
 |---|---|---|
-| `up` | `--data DIR`, `--port 7465`, `--open`, `--no-keychain` | runs in the foreground until Ctrl-C, `stop` or SIGTERM; prints the console URL and the agent endpoint |
+| `up` | `--data DIR`, `--port 7465`, `--open`, `--no-keychain` | runs in the foreground until Ctrl-C, `stop` or SIGTERM; prints the console URL and the agent endpoint (`<console>/mcp`) |
 | `stop` | `--data DIR` | asks the running install to stop and waits |
 | `status` | `--data DIR` | prints the pid, version, console URL and data directory; exits 3 when nothing runs |
-| `export` | `--data DIR`, `--out FILE`, `--setup`, `--yes` | full encrypted backup, or a shareable setup with `--setup` |
-| `import FILE` | `--data DIR`, `--yes` | restores a backup or adds a setup |
+| `export` | `--data DIR`, `--out FILE`, `--setup`, `--yes` | a full encrypted backup (`.cebak`, asks a passphrase twice), or a shareable setup with `--setup`; the default file is dated, in `$BACKUP_DIR` or `~/connector-engine-backups` |
+| `import FILE` | `--data DIR`, `--yes` | shows what the file holds, asks, then restores it; a full backup replaces everything and restarts the engine and the console on the restored data |
 | `reset-password` | `--data DIR` | sets a new console password and signs every session out |
-| `uninstall` | `--data DIR`, `--keep-data` or `--purge`, `--yes`, `--no-keychain` | stops the install; `--purge` also deletes the data and the unlock key |
+| `uninstall` | `--data DIR`, `--keep-data` or `--purge`, `--yes`, `--no-keychain` | stops the install; `--purge` also deletes the data directory (only one that holds an install) and the unlock key |
 
-`export`, `import` and `reset-password` talk to the running process, so the install must be up.
+`export`, `import` and `reset-password` reach the running process through its control socket, so the install must be up.
 
-| OS | Data directory (`--data`, or `$CN_DATA_DIR`) |
+### Data directory
+
+`--data`, else `$CN_DATA_DIR`, else:
+
+| OS | Default |
 |---|---|
-| Linux | `$XDG_DATA_HOME/connector-engine`, else `~/.local/share/connector-engine` |
+| Linux and the BSDs | `$XDG_DATA_HOME/connector-engine`, else `~/.local/share/connector-engine` |
 | macOS | `~/Library/Application Support/connector-engine` |
 | Windows | `%AppData%\connector-engine` |
 
-- The unlock key is read from the OS keychain at start: no `make unlock`. Without a keychain (or with `--no-keychain`) the root keys stay plaintext files and the console warns.
-- To run it at login, point a systemd user unit, a launchd agent or a Windows scheduled task at `connector-engine-selfhosted up`; it stops cleanly on SIGTERM.
-- Moving from Docker: `make export`, `make down`, `connector-engine-selfhosted up`, then `connector-engine-selfhosted import <file>.cebak` in another terminal.
+It is created with mode 0700, and `up` refuses one that group or others can open.
+
+| Path | Holds |
+|---|---|
+| `engine/store.db` (and `-wal`, `-shm`) | the engine's database: SQLite in WAL mode, `synchronous=FULL`, a 5 s busy timeout |
+| `engine/secrets/` | the engine's key store: the root key, the key ring and the local issuer's signing keys |
+| `console/` | the owner account, access keys and agents, OAuth clients, activity, settings, and the console's key store in `console/secrets/` |
+| `operator-token` | the token the console uses on the engine's operator listener, mode 0600 |
+| `control.sock` | the control socket of the running process, mode 0600; it also refuses a second `up` on the same directory |
+
+### Network and keychain
+
+- The console listens on `127.0.0.1:7465` (`--port`). The engine's listeners take free ports on `127.0.0.1`; nothing listens on another interface.
+- The settings are those of the person profile, with the listeners on the loopback, the key stores in the data directory, no unlock socket and no `host.docker.internal`.
+- The unlock key is read from the OS keychain at start: no `make unlock`, no locked state after a restart. Its account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item ([keychain](keychain.md#without-docker)).
+- Without a keychain (or with `--no-keychain`) the root keys stay plaintext files and the console warns; a wrapped root key never falls back to plaintext.
+
+### Move a Docker install here
+
+1. On the Docker install: `make export`. Keep the `.cebak` file and its passphrase.
+2. `make down`: both installs use port 7465, and `down` keeps the Docker volumes.
+3. `connector-engine-selfhosted up`.
+4. In another terminal: `connector-engine-selfhosted import ~/connector-engine-backups/connector-engine-backup-<stamp>.cebak`, and type the passphrase.
+
+The root keys are wrapped again by this machine's keychain, and the access keys your apps already hold keep working. The way back (SQLite to Postgres) is not supported yet.
+
+### Run it as a service
+
+`up` stays in the foreground and stops cleanly on SIGTERM. Point a systemd user unit (`ExecStart=/path/to/connector-engine-selfhosted up`, `Restart=on-failure`), a launchd agent (`ProgramArguments` with `up`, `KeepAlive`) or a Windows scheduled task at logon at it.
 
 ## Port and host
 

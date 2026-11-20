@@ -40,7 +40,7 @@ bin/cnctl keychain delete --name connector-engine
 
 ## Without Docker
 
-From the next release. `uninstall` stops the install; `--purge` also deletes the data directory and the unlock key in the keychain. Export first:
+`uninstall` stops the install; `--purge` also deletes the data directory and the unlock key in the keychain. Export first:
 
 ```sh
 connector-engine-selfhosted export

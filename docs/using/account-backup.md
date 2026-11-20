@@ -46,7 +46,7 @@ make export MODE=setup       # shareable setup, no credentials
 wrote /home/you/connector-engine-backups/connector-engine-backup-20261120T180000Z.cebak (the 7 newest backups are kept in /home/you/connector-engine-backups)
 ```
 
-Without Docker (from the next release), the same files come from `connector-engine-selfhosted export` (add `--setup` for a shareable setup), and restore with `connector-engine-selfhosted import FILE`.
+Without Docker, the same files come from `connector-engine-selfhosted export` (add `--setup` for a shareable setup), and restore with `connector-engine-selfhosted import FILE`.
 
 ### Full backups
 

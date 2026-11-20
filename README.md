@@ -33,9 +33,9 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 | Platform | Command | |
 |---|---|---|
 | **Docker** (any OS) | `git clone https://github.com/versatile-sh/connector-engine && cd connector-engine && make up` | works today |
-| **Linux, macOS** | `curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh \| sh`, then `connector-engine-selfhosted up --open` | from the next release |
-| **Windows** | `irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 \| iex` | from the next release |
-| **Docker, no clone** (Linux) | `docker run -d --network host -v connector-engine:/var/lib/connector-engine --entrypoint /usr/local/bin/connector-engine-selfhosted ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain` | from the next release |
+| **Linux, macOS** | `curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh \| sh`, then `connector-engine-selfhosted up --open` | after v0.1.0 |
+| **Windows** | `irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 \| iex` | after v0.1.0 |
+| **Docker, no clone** (Linux) | `docker run -d --network host -v connector-engine:/var/lib/connector-engine --entrypoint /usr/local/bin/connector-engine-selfhosted ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain` | after v0.1.0 |
 
 Works today, with Docker:
 
@@ -45,7 +45,7 @@ cd connector-engine
 make up
 ```
 
-From the next release, without Docker:
+Without Docker, available after the first release (v0.1.0):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh | sh

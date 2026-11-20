@@ -7,11 +7,11 @@ Pick the line for your machine. Each option installs the `person` profile: the e
 | You have | Run | Status |
 |---|---|---|
 | Docker and Git | [Docker, from a clone](#docker-from-a-clone) | works today |
-| Linux or macOS, no Docker | [`install.sh`](#linux-and-macos) | from the next release |
-| Windows, no Docker | [`install.ps1`](#windows) | from the next release |
-| Docker, no clone | [`docker run`](#docker-without-a-clone) | from the next release |
+| Linux or macOS, no Docker | [`install.sh`](#linux-and-macos) | available after the first release (v0.1.0) |
+| Windows, no Docker | [`install.ps1`](#windows) | available after the first release (v0.1.0) |
+| Docker, no clone | [`docker run`](#docker-without-a-clone) | available after the first release (v0.1.0) |
 
-"From the next release" means the option needs a published release and the no-Docker runtime: one binary, `connector-engine-selfhosted`, that runs the engine and the console in one process over an embedded SQLite store, with the root keys in your OS keychain. Until it ships, use Docker from a clone. Daily use without Docker: [the person profile](../self-hosted/person.md#without-docker).
+The installers and the published images are available after the first release (v0.1.0): they download release files, and no release is tagged yet. The no-Docker runtime they install is on `main`: one binary, `connector-engine-selfhosted`, that runs the engine and the console in one process over an embedded SQLite store, with the root keys in your OS keychain. Until the release, use Docker from a clone, or build the binary from source ([build](../../selfhosted/README.md#build)). Daily use without Docker: [the person profile](../self-hosted/person.md#without-docker).
 
 ## Docker, from a clone
 
@@ -33,7 +33,7 @@ Port 7465 taken? Run `make up CONSOLE_PORT=9123`. Next: [first run](first-run.md
 
 ## Linux and macOS
 
-From the next release.
+Available after the first release (v0.1.0).
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh | sh
@@ -90,7 +90,7 @@ Each archive also has an SPDX SBOM next to it (`<archive>.sbom.json`).
 
 ## Windows
 
-From the next release. In PowerShell:
+Available after the first release (v0.1.0). In PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 | iex
@@ -106,7 +106,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ## Docker without a clone
 
-From the next release, and Linux only; this line has not been run yet. It runs the no-Docker runtime inside the published image. That runtime listens on `127.0.0.1` only, so the container shares the host's network instead of publishing a port.
+Available after the first release (v0.1.0), and Linux only; this line has not been run yet. It runs the no-Docker runtime inside the published image. That runtime listens on `127.0.0.1` only, so the container shares the host's network instead of publishing a port.
 
 ```sh
 docker run -d --name connector-engine --network host --restart unless-stopped \

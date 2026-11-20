@@ -92,8 +92,6 @@ say ""
 if [ "$profile" = person ]; then
   say "Next step: start it; it opens the console in your browser."
   say "  connector-engine-selfhosted up --open"
-  say "The 'up' command ships with the no-Docker runtime, from the next release."
-  say "Until then, use the Docker quick start: https://github.com/$repo/blob/main/docs/getting-started/install.md"
 else
   say "Next step: write connector-engine.yaml and adapters.yaml, then run"
   say "  connector-engine --config connector-engine.yaml --adapters adapters.yaml adapters check"

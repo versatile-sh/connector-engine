@@ -22,7 +22,7 @@ To pin a version once releases exist, check out its tag instead of `main`: `git 
 
 ## Without Docker
 
-From the next release. Back up, stop, run the installer again (it replaces the binaries in place), start:
+Installed with the installer (available after the first release (v0.1.0)): back up, stop, run the installer again (it replaces the binaries in place), start:
 
 ```sh
 connector-engine-selfhosted export

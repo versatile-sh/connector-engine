@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { api, errorText, type DeviceView, type PairedDevice } from "../api";
+import { errorText, type DeviceView, type PairedDevice } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
+import { pairDevice, revokeDevice } from "../mutations";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { HAIRLINE, button } from "../ui/styles";
@@ -30,19 +31,12 @@ function Paired({ paired, onDone }: { paired: PairedDevice; onDone(): void }) {
 export function DevicesSection({ devices }: { devices: DeviceView[] }) {
   const t = useT();
   const locale = useLocale();
-  const queryClient = useQueryClient();
   const [name, setName] = useState("");
-  const pair = useMutation({
-    mutationFn: () => api<PairedDevice>("POST", "/api/notifications/devices", { name: name.trim() }),
-    onSuccess: () => {
-      setName("");
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    },
-  });
-  const remove = useRemove((id) => `/api/notifications/devices/${encodeURIComponent(id)}`);
+  const pair = useMutation(pairDevice);
+  const remove = useRemove(revokeDevice);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    pair.mutate();
+    pair.mutate(name.trim(), { onSuccess: () => setName("") });
   };
   const date = (iso: string) => new Date(iso).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
   return (

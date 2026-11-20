@@ -1,6 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, errorText, type NotificationsData } from "../api";
+import { useMutation } from "@tanstack/react-query";
+import { errorText, type NotificationsData } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { setElicit } from "../mutations";
 import { Notice } from "../ui/Notice";
 import { Switch } from "../ui/Switch";
 import { Warning } from "../approve/Warning";
@@ -9,11 +10,7 @@ import { Section } from "./Section";
 /** Ask in the AI app: MCP elicitation turned on per app, off by default, with the plain warning about apps that answer by themselves. */
 export function ElicitSection({ apps }: { apps: NotificationsData["apps"] }) {
   const t = useT();
-  const queryClient = useQueryClient();
-  const toggle = useMutation({
-    mutationFn: ({ name, elicit }: { name: string; elicit: boolean }) => api("PUT", `/api/notifications/apps/${encodeURIComponent(name)}`, { elicit }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
-  });
+  const toggle = useMutation(setElicit);
   return (
     <Section id="elicit-title" icon="chat" title={t("notify.elicit.title")} intro={t("notify.elicit.intro")}>
       <Warning>{t("notify.elicit.warning")}</Warning>

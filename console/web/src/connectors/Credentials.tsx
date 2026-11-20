@@ -1,14 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { api, errorText, type Connector } from "../api";
+import { errorText, type Connector } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { connectOAuth, sealHeader } from "../mutations";
 import { Bubble } from "../ui/Bubble";
 import { Field } from "../ui/Field";
 import { SURFACE, button } from "../ui/styles";
 import { isActive } from "./summary";
 
 /** What a connector's calls carry: the stored credentials, a secret header to seal, or a sign-in with the provider. */
-export function Credentials({ connector, onSaved }: { connector: Connector; onSaved(): void }) {
+export function Credentials({ connector }: { connector: Connector }) {
   const t = useT();
   const auth = connector.auth ?? [];
   const stored = connector.credentials ?? [];
@@ -16,25 +17,15 @@ export function Credentials({ connector, onSaved }: { connector: Connector; onSa
   const [value, setValue] = useState("");
   const [clientID, setClientID] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-  const path = `/api/connectors/${encodeURIComponent(connector.id)}`;
-  const saveHeader = useMutation({
-    mutationFn: () => api("POST", `${path}/headers`, { headers: { [header]: value } }),
-    onSuccess: () => {
-      setValue("");
-      onSaved();
-    },
-  });
-  const connect = useMutation({
-    mutationFn: () => api<{ url: string }>("POST", `${path}/oauth`, { client_id: clientID, client_secret: clientSecret }),
-    onSuccess: (result) => window.location.assign(result.url),
-  });
+  const saveHeader = useMutation(sealHeader);
+  const connect = useMutation(connectOAuth);
   const onHeader = (event: FormEvent) => {
     event.preventDefault();
-    saveHeader.mutate();
+    saveHeader.mutate({ connector: connector.id, header, value }, { onSuccess: () => setValue("") });
   };
   const onOAuth = (event: FormEvent) => {
     event.preventDefault();
-    connect.mutate();
+    connect.mutate({ connector: connector.id, clientID, clientSecret }, { onSuccess: (result) => window.location.assign(result.url) });
   };
   return (
     <section aria-labelledby="creds-title" className={`${SURFACE} p-5`}>

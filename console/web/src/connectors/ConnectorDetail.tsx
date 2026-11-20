@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, errorText, type Access, type Connector } from "../api";
+import { errorText, type Connector } from "../api";
 import { hrefOf } from "../activity/activity";
 import { useT } from "../i18n/I18nProvider";
+import { removeConnector, setFunctionAccess } from "../mutations";
 import { connectorsQuery } from "../queries";
 import { navigate } from "../router";
 import { Bubble } from "../ui/Bubble";
@@ -40,13 +41,8 @@ function Back() {
 
 function Functions({ connector }: { connector: Connector }) {
   const t = useT();
-  const queryClient = useQueryClient();
   const [filter, setFilter] = useState("");
-  const setAccess = useMutation({
-    mutationFn: ({ name, access }: { name: string; access: Access }) =>
-      api("PUT", `/api/connectors/${encodeURIComponent(connector.id)}/functions/${encodeURIComponent(name)}`, { access }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["connectors"] }),
-  });
+  const setAccess = useMutation(setFunctionAccess);
   const functions = connector.functions ?? [];
   const needle = filter.trim().toLowerCase();
   const shown = functions.filter((fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`.toLowerCase().includes(needle));
@@ -103,7 +99,7 @@ function Functions({ connector }: { connector: Connector }) {
                 name={fn.name}
                 value={setAccess.isPending && setAccess.variables.name === fn.name ? setAccess.variables.access : fn.access}
                 disabled={setAccess.isPending && setAccess.variables.name === fn.name}
-                onChange={(access) => setAccess.mutate({ name: fn.name, access })}
+                onChange={(access) => setAccess.mutate({ connector: connector.id, name: fn.name, access })}
               />
             </FunctionRow>
           ))}
@@ -115,15 +111,7 @@ function Functions({ connector }: { connector: Connector }) {
 
 function Remove({ connector, onClose }: { connector: Connector; onClose(): void }) {
   const t = useT();
-  const queryClient = useQueryClient();
-  const remove = useMutation({
-    mutationFn: () => api("DELETE", `/api/connectors/${encodeURIComponent(connector.id)}`),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-      await queryClient.invalidateQueries({ queryKey: ["connectors"] });
-      navigate("/", { replace: true });
-    },
-  });
+  const remove = useMutation(removeConnector);
   return (
     <Sheet title={t("detail.removeTitle", { title: connector.title })} closeLabel={t("common.close")} onClose={onClose}>
       <p className="text-muted">{t("detail.removeBody")}</p>
@@ -134,7 +122,7 @@ function Remove({ connector, onClose }: { connector: Connector; onClose(): void 
         <button type="button" autoFocus className={button({ variant: "secondary" })} onClick={onClose}>
           {t("common.cancel")}
         </button>
-        <button type="button" disabled={remove.isPending} className={button({ variant: "danger" })} onClick={() => remove.mutate()}>
+        <button type="button" disabled={remove.isPending} className={button({ variant: "danger" })} onClick={() => remove.mutate(connector.id, { onSuccess: () => navigate("/", { replace: true }) })}>
           <Icon name="trash" className="size-4" />
           {t("detail.removeConfirm")}
         </button>
@@ -146,7 +134,6 @@ function Remove({ connector, onClose }: { connector: Connector; onClose(): void 
 /** One connector in full: who it is, every function and item with its access, its credentials, and its removal behind a confirmation. */
 export function ConnectorDetail({ id }: { id: string }) {
   const t = useT();
-  const queryClient = useQueryClient();
   const connectors = useQuery(connectorsQuery);
   const [removing, setRemoving] = useState(false);
   if (connectors.isPending) {
@@ -216,7 +203,7 @@ export function ConnectorDetail({ id }: { id: string }) {
           <ConnectorItems connector={connector} />
         </div>
         <aside className="flex flex-col gap-6">
-          <Credentials connector={connector} onSaved={() => void queryClient.invalidateQueries({ queryKey: ["connectors"] })} />
+          <Credentials connector={connector} />
           <dl className={`${SURFACE} grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 p-5 text-sm`}>
             {facts.map((fact) => (
               <div key={fact.label} className="contents">

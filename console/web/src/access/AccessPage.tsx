@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useReducer, useState, type FormEvent } from "react";
 import { api, errorText, type AgentToken } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { mintKey, revokeKey } from "../mutations";
 import { keysQuery } from "../queries";
 import { Bubble } from "../ui/Bubble";
 import { CopyBox } from "../ui/CopyBox";
@@ -45,18 +46,10 @@ function Created({ token }: { token: AgentToken }) {
 /** Connect an AI app: one endpoint for every MCP client, access keys made and revoked here, and for a new key the exact way into each app. */
 export function AccessPage() {
   const t = useT();
-  const queryClient = useQueryClient();
   const keys = useQuery(keysQuery);
   const [name, setName] = useState("");
   const [days, setDays] = useState(30);
-  const mint = useMutation({
-    mutationFn: () => api<AgentToken>("POST", "/api/agents", { name, ttl_hours: days * 24 }),
-    onSuccess: () => {
-      setName("");
-      void queryClient.invalidateQueries({ queryKey: ["agents"] });
-      void queryClient.invalidateQueries({ queryKey: ["session"] });
-    },
-  });
+  const mint = useMutation(mintKey);
   const markSeen = useMutation({ mutationFn: () => api("POST", "/api/agents/seen") }).mutate;
   const anyNew = keys.data?.agents.some((key) => key.new) ?? false;
   const settled = keys.isSuccess && !keys.isFetching;
@@ -67,19 +60,10 @@ export function AccessPage() {
     [anyNew, settled, markSeen],
   );
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
-  const revoke = useMutation({
-    mutationFn: (agent: string) => api("DELETE", `/api/agents/${encodeURIComponent(agent)}`),
-    onSuccess: async (_, agent) => {
-      dispatch({ type: "revoked" });
-      if (mint.data?.agent === agent) mint.reset();
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-      await queryClient.invalidateQueries({ queryKey: ["agents"] });
-    },
-    onError: () => dispatch({ type: "failed" }),
-  });
+  const revoke = useMutation(revokeKey);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    mint.mutate();
+    mint.mutate({ name, ttl_hours: days * 24 }, { onSuccess: () => setName("") });
   };
   const onRevokeEvent = (event: RevokeEvent) => {
     if (event.type === "ask") revoke.reset();
@@ -88,7 +72,13 @@ export function AccessPage() {
   const onConfirm = () => {
     if (flow.kind !== "confirming") return;
     dispatch({ type: "confirm" });
-    revoke.mutate(flow.name);
+    revoke.mutate(flow.name, {
+      onSuccess: (_, agent) => {
+        dispatch({ type: "revoked" });
+        if (mint.data?.agent === agent) mint.reset();
+      },
+      onError: () => dispatch({ type: "failed" }),
+    });
   };
   const maxDays = Math.max(1, Math.floor((keys.data?.max_ttl_hours ?? 720) / 24));
   const endpoint = keys.data?.mcp_url ?? "";

@@ -40,10 +40,13 @@ export const approvalsQuery = queryOptions({
   refetchInterval: 4_000,
 });
 
+/** The key every activity page shares, whatever its filter. */
+export const activityKey = ["activity"] as const;
+
 /** The activity page for a filter, its range ending at each fetch, refreshed while it is open. */
 export const activityQuery = (filter: ActivityFilter) =>
   queryOptions({
-    queryKey: ["activity", filter],
+    queryKey: [...activityKey, filter],
     queryFn: () => api<ActivityData>("GET", `/api/activity?${apiQueryOf(filter, new Date())}`),
     refetchInterval: 10_000,
     placeholderData: (previous) => previous,

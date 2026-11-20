@@ -139,7 +139,7 @@ export function Select<T extends string>({ label, value, options, onChange, disa
         ref={popup}
         popover="manual"
         onClick={(event) => event.target === event.currentTarget && close()}
-        className="select-list vignette-top inset-auto m-0 flex max-w-80 flex-col overflow-hidden rounded-xl border border-line-strong bg-ink-raised p-0 text-paper shadow-xl shadow-black/40 max-sm:inset-x-2 max-sm:bottom-2 max-sm:max-h-[min(24rem,70dvh)] max-sm:w-auto max-sm:max-w-none max-sm:rounded-2xl max-sm:backdrop:bg-ink-sunken/60 sm:top-(--select-top) sm:bottom-(--select-bottom) sm:left-(--select-left) sm:max-h-[min(20rem,var(--select-room,20rem))] sm:w-(--select-width)"
+        className="select-list vignette-top inset-auto m-0 max-w-80 flex-col open:flex overflow-hidden rounded-xl border border-line-strong bg-ink-raised p-0 text-paper shadow-xl shadow-black/40 max-sm:inset-x-2 max-sm:bottom-2 max-sm:max-h-[min(24rem,70dvh)] max-sm:w-auto max-sm:max-w-none max-sm:rounded-2xl max-sm:backdrop:bg-ink-sunken/60 sm:top-(--select-top) sm:bottom-(--select-bottom) sm:left-(--select-left) sm:max-h-[min(20rem,var(--select-room,20rem))] sm:w-(--select-width)"
       >
         {searchable ? (
           <SearchBox

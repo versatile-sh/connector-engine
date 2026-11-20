@@ -79,35 +79,60 @@ func (t *touched) affects(b port.Binding) bool {
 	return t.everyone() || t.agents[b.Agent] || t.conns[b.Connector]
 }
 
+func (s *Service) search(ctx context.Context, tenant port.TenantID, qs []port.SearchQuery) ([][]port.FunctionDecision, error) {
+	if b, ok := s.d.Authorizer.(port.BatchSearcher); ok {
+		return b.SearchBatch(ctx, tenant, qs)
+	}
+	out := make([][]port.FunctionDecision, len(qs))
+	for i, q := range qs {
+		var err error
+		if out[i], err = s.d.Authorizer.Search(ctx, q.Subject, q.Connector); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
 func (s *Service) exposureEntries(ctx context.Context, tenant port.TenantID, agent port.AgentID) ([]exposure.Entry, error) {
 	var conns []port.Connector
+	fns := map[port.ConnectorID]map[string]port.Function{}
 	if err := s.d.Store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) (err error) {
-		conns, err = s.boundConnectors(tx, port.Subject{Tenant: tenant, Agent: agent})
-		return err
+		if conns, err = s.boundConnectors(tx, port.Subject{Tenant: tenant, Agent: agent}); err != nil {
+			return err
+		}
+		for _, c := range conns {
+			list, err := tx.ListFunctions(c.ID)
+			if err != nil {
+				return err
+			}
+			fns[c.ID] = map[string]port.Function{}
+			for _, f := range list {
+				fns[c.ID][f.Name] = f
+			}
+		}
+		return nil
 	}); err != nil {
 		return nil, err
 	}
+	qs := make([]port.SearchQuery, len(conns))
+	for i, c := range conns {
+		qs[i] = port.SearchQuery{Subject: port.Subject{Tenant: tenant, Workspace: c.Workspace, Agent: agent}, Connector: c.ID}
+	}
+	answers, err := s.search(ctx, tenant, qs)
+	if err != nil {
+		return nil, err
+	}
 	var entries []exposure.Entry
-	for _, c := range conns {
-		decisions, err := s.d.Authorizer.Search(ctx, port.Subject{Tenant: tenant, Workspace: c.Workspace, Agent: agent}, c.ID)
-		if err != nil {
-			return nil, err
-		}
-		err = s.d.Store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
-			for _, d := range decisions {
-				if d.Decision.Mode == port.ModeDeny {
-					continue
-				}
-				f, err := tx.GetFunction(c.ID, d.Function)
-				if err != nil {
-					return err
-				}
-				entries = append(entries, exposure.Entry{Key: exposure.Key(c.ID, d.Function), Function: f})
+	for i, c := range conns {
+		for _, d := range answers[i] {
+			if d.Decision.Mode == port.ModeDeny {
+				continue
 			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
+			f, ok := fns[c.ID][d.Function]
+			if !ok {
+				return nil, port.Errorf(port.CodeNotFound, "function %s of %s not found", d.Function, c.ID)
+			}
+			entries = append(entries, exposure.Entry{Key: exposure.Key(c.ID, d.Function), Function: f})
 		}
 	}
 	return entries, nil

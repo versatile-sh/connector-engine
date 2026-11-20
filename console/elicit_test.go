@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/agents-control/connector-engine/console"
 )
 
 func TestTheAppAsksTheOwnerThroughElicitation(t *testing.T) {
@@ -53,6 +55,17 @@ func TestTheAppAsksTheOwnerThroughElicitation(t *testing.T) {
 				if r.up.count("create") != 2 {
 					t.Fatalf("upstream ran %d times", r.up.count("create"))
 				}
+				r.eventually("the elicited call in Activity", func() bool {
+					var p console.ActivityPage
+					r.b.ok("GET", "/api/activity", nil, &p)
+					ok := 0
+					for _, call := range p.Calls {
+						if call.Function == "create" && call.Outcome == console.OutcomeOK {
+							ok++
+						}
+					}
+					return ok == 2
+				})
 			})
 
 			t.Run("a destructive function is never asked in the app", func(t *testing.T) {

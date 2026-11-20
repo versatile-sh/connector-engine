@@ -102,9 +102,13 @@ func newRig(t *testing.T) *rig {
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+	act, err := console.OpenActivity(t.TempDir()+"/activity", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	fake := &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
-		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour,
+		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour, Activity: act,
 		NewChannel: func(_ string, s map[string]string) (surface.Channel, error) {
 			fake.mu.Lock()
 			fake.settings = s

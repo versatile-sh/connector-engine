@@ -1,6 +1,6 @@
 import type { MessageKey } from "./en";
 
-/** El diccionario en español. */
+/** The Spanish dictionary. */
 export const es: Record<MessageKey, string> = {
   "app.loading": "Cargando la consola",
   "app.failed": "La consola no pudo hablar con su servidor.",

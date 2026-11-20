@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"net/url"
 	"strings"
 	"time"
@@ -53,6 +54,7 @@ type Probed struct {
 	Icon         string       `json:"icon,omitempty"`
 	Instructions string       `json:"instructions,omitempty"`
 	Tools        []ProbedTool `json:"tools"`
+	Items        []Item       `json:"items"`
 }
 
 // Propose pre-classifies a tool from its hints, which come from an untrusted server: only readOnlyHint true is on; anything else waits for the owner.
@@ -123,8 +125,51 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 		}
 		out.Tools = append(out.Tools, ProbedTool{Name: tool.Name, Title: title, Description: tool.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
 	}
+	if out.Items, err = probeItems(ctx, session, out.Instructions); err != nil {
+		return out, fmt.Errorf("%w on %s", err, u.Host)
+	}
 	if out.Icon == "" {
 		out.Icon = faviconOf(out.WebsiteURL, u.String())
+	}
+	return out, nil
+}
+
+func listed[T any](out *[]Item, method string, list iter.Seq2[T, error], name func(T) string) error {
+	for v, err := range list {
+		if err != nil {
+			return fmt.Errorf("%s: %w", method, err)
+		}
+		raw, _ := json.Marshal(v)
+		if it, ok := ItemOf(name(v), raw); ok {
+			*out = append(*out, it)
+		}
+	}
+	return nil
+}
+
+func probeItems(ctx context.Context, session *mcp.ClientSession, instructions string) ([]Item, error) {
+	out := []Item{}
+	if instructions != "" {
+		raw, _ := json.Marshal(map[string]string{"instructions": instructions})
+		it, _ := ItemOf(port.InstructionsItem, raw)
+		out = append(out, it)
+	}
+	caps := session.InitializeResult().Capabilities
+	if caps == nil {
+		return out, nil
+	}
+	if caps.Prompts != nil {
+		if err := listed(&out, "prompts/list", session.Prompts(ctx, nil), func(p *mcp.Prompt) string { return port.ItemPrompt + p.Name }); err != nil {
+			return out, err
+		}
+	}
+	if caps.Resources != nil {
+		if err := listed(&out, "resources/list", session.Resources(ctx, nil), func(r *mcp.Resource) string { return port.ItemResource + r.URI }); err != nil {
+			return out, err
+		}
+		if err := listed(&out, "resources/templates/list", session.ResourceTemplates(ctx, nil), func(t *mcp.ResourceTemplate) string { return port.ItemResource + t.URITemplate }); err != nil {
+			return out, err
+		}
 	}
 	return out, nil
 }

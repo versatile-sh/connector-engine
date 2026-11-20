@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -46,8 +47,13 @@ func principalOf(req mcp.Request) (port.Principal, error) {
 	return port.Principal{}, &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: "no principal"}
 }
 
+func ownError(rpc int64, code port.Code, message string) *jsonrpc.Error {
+	data, _ := json.Marshal(map[string]any{"_meta": mcp.Meta{port.ErrorMeta: code}})
+	return &jsonrpc.Error{Code: rpc, Message: message, Data: data}
+}
+
 func unknownTool(name string) error {
-	return &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("unknown tool %q", name)}
+	return ownError(jsonrpc.CodeInvalidParams, port.CodeUnknownTool, fmt.Sprintf("unknown tool %q", name))
 }
 
 func (g *Gateway) failure(err error) error {
@@ -55,10 +61,10 @@ func (g *Gateway) failure(err error) error {
 	switch port.CodeOf(err) {
 	case port.CodeInvalidArgument:
 		errors.As(err, &pe)
-		return &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: pe.Detail}
+		return ownError(jsonrpc.CodeInvalidParams, port.CodeInvalidArgument, pe.Detail)
 	case port.CodePermissionDenied, port.CodeUnauthenticated, port.CodeAgentPrincipalRefused, port.CodeTenantRemoved:
-		return &jsonrpc.Error{Code: jsonrpc.CodeInvalidRequest, Message: "request refused"}
+		return ownError(jsonrpc.CodeInvalidRequest, port.CodePermissionDenied, "request refused")
 	}
 	g.cfg.Logger.Error("agent endpoint", "error", err)
-	return &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: "internal error"}
+	return ownError(jsonrpc.CodeInternalError, port.CodeInternal, "internal error")
 }

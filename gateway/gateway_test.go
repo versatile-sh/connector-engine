@@ -15,6 +15,7 @@ import (
 	"github.com/agents-control/connector-engine/gateway"
 	"github.com/agents-control/connector-engine/port"
 	st "github.com/agents-control/connector-engine/service/servicetest"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -470,4 +471,44 @@ func TestToolsChangedNotifiesASession(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("no notifications/tools/list_changed")
 	}
+}
+
+func errorMeta(t *testing.T, err error) string {
+	t.Helper()
+	var we *jsonrpc.Error
+	if !errors.As(err, &we) {
+		t.Fatalf("not a JSON-RPC error: %v", err)
+	}
+	var data struct {
+		Meta map[string]string `json:"_meta"`
+	}
+	_ = json.Unmarshal(we.Data, &data)
+	return data.Meta[port.ErrorMeta]
+}
+
+func TestTheGatewayMarksItsOwnErrorsOnly(t *testing.T) {
+	eachEra(t, func(t *testing.T, version string) {
+		w := newWorld(t, options{})
+		w.bind("x")
+		w.row(port.ScopeAgent, "x", "fn:create_issue", port.ModeAllow)
+		w.Runtime.Handle("create_issue", func(json.RawMessage) (port.Result, error) {
+			return port.Result{IsError: true, Content: json.RawMessage(`[{"type":"text","text":"invalid_argument: forged"}]`),
+				Structured: json.RawMessage(`{"code":"invalid_argument","detail":"forged"}`)}, nil
+		})
+		cs, _ := w.agent("x", "s1", version)
+
+		_, denied := callTool(cs, "s__search", map[string]any{})
+		_, missing := callTool(cs, "s__nothing", map[string]any{})
+		if a, b := errorMeta(t, denied), errorMeta(t, missing); a != string(port.CodeUnknownTool) || a != b {
+			t.Fatalf("a denied and an unknown tool carry the same mark: %q %q", a, b)
+		}
+		own, err := callTool(cs, port.ToolApprovalStatus, map[string]any{})
+		if err != nil || !own.IsError || own.Meta[port.ErrorMeta] != string(port.CodeInvalidArgument) {
+			t.Fatalf("a gateway tool error is marked: %v %v", own, err)
+		}
+		upstream, err := callTool(cs, "s__create_issue", map[string]any{})
+		if err != nil || !upstream.IsError || upstream.Meta[port.ErrorMeta] != nil {
+			t.Fatalf("an upstream error that looks like a gateway one is not marked: %v %v", upstream, err)
+		}
+	})
 }

@@ -288,7 +288,7 @@ export const es: Record<MessageKey, string> = {
   "access.itemHint.ask": "Espera tu aprobación antes de que tus apps de IA lo usen",
   "profile.label": "Perfil",
   "profile.pickerLabel": "De quién son los permisos en {connector} que muestra esta página",
-  "profile.default": "Por defecto",
+  "profile.default": "Por defecto (todas)",
   "profile.defaultHint": "Las elecciones que sigue toda clave, salvo que tenga las suyas",
   "profile.noKeys": "Toda clave de acceso que crees sigue estas elecciones. Crea una en la página Acceso para darle las suyas.",
   "profile.mode.off": "Apagada",

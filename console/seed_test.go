@@ -19,8 +19,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/console"
 )
 
 var (

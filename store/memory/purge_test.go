@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/store/memory"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/store/memory"
 )
 
 func TestPurgeTenantDeletesItsRowsOnly(t *testing.T) {

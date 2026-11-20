@@ -7,9 +7,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/hostkey"
-	"github.com/agents-control/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/secrets/hostkey"
+	"github.com/versatile-sh/connector-engine/secrets/local"
 )
 
 // Tenant is the key scope of every console secret in its SecretStore.

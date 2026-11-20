@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/internal/ring"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/secrets/internal/ring"
 )
 
 const (

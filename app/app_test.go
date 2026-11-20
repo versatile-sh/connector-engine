@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/app"
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/port"
-	secretslocal "github.com/agents-control/connector-engine/secrets/local"
-	"github.com/agents-control/connector-engine/store/storetest"
+	"github.com/versatile-sh/connector-engine/app"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/port"
+	secretslocal "github.com/versatile-sh/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 
 var pg *storetest.Postgres

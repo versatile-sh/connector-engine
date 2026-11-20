@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // FunctionView is one function of a connector as the console shows it: its class, what it does by nature, and the owner's choice read back from the engine's grants.

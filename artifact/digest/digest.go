@@ -4,8 +4,8 @@ package digest
 import (
 	"context"
 
-	internal "github.com/agents-control/connector-engine/internal/digest"
-	"github.com/agents-control/connector-engine/port"
+	internal "github.com/versatile-sh/connector-engine/internal/digest"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Verifier checks a digest; a signature is out of scope, so a listing is never reported as signed.

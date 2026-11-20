@@ -3,8 +3,8 @@ package gateway
 import (
 	"encoding/json"
 
-	"github.com/agents-control/connector-engine/port"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 const alwaysLoadMeta = "anthropic/alwaysLoad"

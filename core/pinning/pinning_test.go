@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func TestCanonical(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var ctx = context.Background()

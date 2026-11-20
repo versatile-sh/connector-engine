@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func expired(age time.Duration, now, at time.Time) bool { return age > 0 && now.Sub(at) > age }

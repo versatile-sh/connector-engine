@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/surface"
 )
 
 const token = "123456:SECRET-bot-token"

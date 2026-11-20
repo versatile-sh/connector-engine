@@ -3,8 +3,8 @@ package catalog_test
 import (
 	"testing"
 
-	"github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func TestCeilingMode(t *testing.T) {

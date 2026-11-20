@@ -11,8 +11,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/server"
 )
 
 // Options configure the handler; Env and Authn are required.

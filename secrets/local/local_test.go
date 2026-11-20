@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/local"
-	"github.com/agents-control/connector-engine/secrets/secretstest"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/secrets/secretstest"
 )
 
 var ctx = context.Background()

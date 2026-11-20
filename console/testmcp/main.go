@@ -9,7 +9,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/console/testmcp/notes"
+	"github.com/versatile-sh/connector-engine/console/testmcp/notes"
 )
 
 func main() {

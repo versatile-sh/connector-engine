@@ -4,12 +4,12 @@ import (
 	"context"
 	"slices"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/catalog"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/core/projection"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/core/projection"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // AcceptResult is an accepted function and the fn: rows its new hash left stale ("Clearing").

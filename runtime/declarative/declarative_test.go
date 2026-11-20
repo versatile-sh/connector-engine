@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/credential"
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/runtime/declarative"
+	"github.com/versatile-sh/connector-engine/credential"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/runtime/declarative"
 )
 
 type seen struct {

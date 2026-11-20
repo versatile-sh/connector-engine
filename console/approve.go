@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/agents-control/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/console/sealed"
 
-	"github.com/agents-control/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/surface"
 )
 
 func (c *Console) approvalPage(w http.ResponseWriter, r *http.Request) {

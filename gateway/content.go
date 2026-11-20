@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/internal/tokenscan"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/internal/tokenscan"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 const (

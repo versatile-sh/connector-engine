@@ -1,8 +1,8 @@
 package server
 
 import (
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 // The list answers: every list is an object with its items, so a page token can join it later and gRPC has a message to return.

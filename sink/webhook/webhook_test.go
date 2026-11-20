@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/sink/webhook"
 	plugout "github.com/agents-control/plugkit/outbox"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/sink/webhook"
 )
 
 var (

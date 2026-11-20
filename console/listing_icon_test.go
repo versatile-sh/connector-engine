@@ -3,7 +3,7 @@ package console_test
 import (
 	"testing"
 
-	"github.com/agents-control/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/console"
 )
 
 func TestResolveIcon(t *testing.T) {

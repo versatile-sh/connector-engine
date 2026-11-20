@@ -11,8 +11,8 @@ import (
 	"github.com/agents-control/plugkit/adapters"
 	"gopkg.in/yaml.v3"
 
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 var update = flag.Bool("update", false, "rewrite connector-engine.yaml from the defaults")

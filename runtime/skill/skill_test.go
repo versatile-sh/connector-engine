@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/runtime/skill"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/runtime/skill"
 )
 
 func file(p string, content []byte) port.SkillFile {
@@ -131,7 +131,7 @@ func TestTheSkillRuntimeCannotStartAProcess(t *testing.T) {
 	if testing.Short() {
 		t.Skip("go list")
 	}
-	out, err := exec.Command("go", "list", "-deps", "github.com/agents-control/connector-engine/runtime/skill").Output()
+	out, err := exec.Command("go", "list", "-deps", "github.com/versatile-sh/connector-engine/runtime/skill").Output()
 	if err != nil {
 		t.Fatal(err)
 	}

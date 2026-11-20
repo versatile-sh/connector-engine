@@ -12,8 +12,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/server"
 )
 
 // Options configure the surface; Mutations are the operation ids offered besides the reading ones, and the never-offered ones are refused at New.

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var now = time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC)

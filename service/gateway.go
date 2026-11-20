@@ -8,13 +8,13 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/core/projection"
-	"github.com/agents-control/connector-engine/internal/tokenscan"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service/internal/schemacheck"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/core/projection"
+	"github.com/versatile-sh/connector-engine/internal/tokenscan"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service/internal/schemacheck"
 )
 
 // ServedFunction is one entry of tools/list: the stored definition under its exposed name, with an accepted overlay's text.

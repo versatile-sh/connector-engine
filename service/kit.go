@@ -1,12 +1,12 @@
 package service
 
 import (
-	"github.com/agents-control/connector-engine/authz/table"
-	"github.com/agents-control/connector-engine/catalog"
-	"github.com/agents-control/connector-engine/core/approval"
-	corecatalog "github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/core/approval"
+	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func (s *Service) settings() table.Settings {

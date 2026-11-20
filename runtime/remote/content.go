@@ -11,8 +11,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	deadlines "github.com/agents-control/connector-engine/internal/deadline"
-	"github.com/agents-control/connector-engine/port"
+	deadlines "github.com/versatile-sh/connector-engine/internal/deadline"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var _ port.ContentRuntime = (*Runtime)(nil)

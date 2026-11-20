@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
 	plugout "github.com/agents-control/plugkit/outbox"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Config is the endpoint and the signing secret ("whsec_" base64 or at least 32 raw bytes); an empty secret leaves posts unsigned.

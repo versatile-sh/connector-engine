@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/cli/notify"
-	"github.com/agents-control/connector-engine/console"
-	"github.com/agents-control/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/cli/notify"
+	"github.com/versatile-sh/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/surface"
 )
 
 type shown struct {

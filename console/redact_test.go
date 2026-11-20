@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/console"
 )
 
 func TestRedactHidesSecretsAndKeepsTheRest(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"slices"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // ServedSkill is one entry of skill_list: a skill granted to the agent, named by its connector alias, with the required connectors the agent has no binding to.

@@ -3,10 +3,10 @@ package service
 import (
 	"time"
 
-	"github.com/agents-control/connector-engine/core/approval"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Config holds the keys that the use cases read; DefaultConfig is the defaults of that table.

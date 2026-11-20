@@ -7,10 +7,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/agents-control/connector-engine/console/sealed"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/local"
-	"github.com/agents-control/connector-engine/secrets/memory"
+	"github.com/versatile-sh/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/secrets/memory"
 )
 
 var ctx = context.Background()

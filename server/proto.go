@@ -119,7 +119,7 @@ func Proto() ([]byte, error) {
 	}
 	body := svc.String() + msgs.String()
 	var b strings.Builder
-	fmt.Fprintf(&b, "syntax = \"proto3\";\n\npackage %s;\n\noption go_package = \"github.com/agents-control/connector-engine/api/connectorengine/v1;connectorenginev1\";\n\n", ProtoPackage)
+	fmt.Fprintf(&b, "syntax = \"proto3\";\n\npackage %s;\n\noption go_package = \"github.com/versatile-sh/connector-engine/api/connectorengine/v1;connectorenginev1\";\n\n", ProtoPackage)
 	for _, w := range []string{"empty", "struct", "timestamp"} {
 		if strings.Contains(body, "google.protobuf."+strings.ToUpper(w[:1])+w[1:]) || (w == "struct" && strings.Contains(body, "google.protobuf.Value")) {
 			fmt.Fprintf(&b, "import \"google/protobuf/%s.proto\";\n", w)

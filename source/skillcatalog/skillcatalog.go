@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/core/listing"
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/internal/fetch"
-	"github.com/agents-control/connector-engine/internal/importer"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/listing"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/fetch"
+	"github.com/versatile-sh/connector-engine/internal/importer"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Registry is the name recorded as the provenance of a skill catalog import.

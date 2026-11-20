@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/catalog"
-	corecatalog "github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/core/listing"
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/catalog"
+	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/core/listing"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // InstallInput is one install: the listing, an optional version (newest that exists when empty) and the connector's settings.

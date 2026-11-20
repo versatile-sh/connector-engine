@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agents-control/connector-engine/auth/internal/wire"
-	"github.com/agents-control/connector-engine/port"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/versatile-sh/connector-engine/auth/internal/wire"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var algorithms = []jose.SignatureAlgorithm{jose.EdDSA, jose.RS256, jose.ES256}

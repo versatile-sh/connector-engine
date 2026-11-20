@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/credential"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/credential"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 type issuer struct {

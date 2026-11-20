@@ -6,9 +6,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // NewResolver opens the credential a SecretsRef names from the store of its tenant; OAuth credentials give their access token.

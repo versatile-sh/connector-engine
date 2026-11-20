@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	corecatalog "github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/port"
+	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 type (

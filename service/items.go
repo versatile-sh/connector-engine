@@ -8,8 +8,8 @@ import (
 
 	"github.com/yosida95/uritemplate/v3"
 
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // ServedItem is one connector item the agent may use: a prompt under <alias>__<name>, a resource or template under <alias>+<uri>, or accepted instructions under the alias.

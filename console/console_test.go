@@ -19,12 +19,12 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/app"
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/console"
-	"github.com/agents-control/connector-engine/console/sealed"
-	"github.com/agents-control/connector-engine/port"
-	secretslocal "github.com/agents-control/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/app"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/port"
+	secretslocal "github.com/versatile-sh/connector-engine/secrets/local"
 )
 
 const operatorToken = "console-test-operator"

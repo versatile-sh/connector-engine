@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agents-control/connector-engine/console/sealed"
-	"github.com/agents-control/connector-engine/source/skillcatalog"
+	"github.com/versatile-sh/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/source/skillcatalog"
 )
 
 const (

@@ -3,11 +3,11 @@ package console
 import (
 	"fmt"
 
-	"github.com/agents-control/connector-engine/surface"
-	"github.com/agents-control/connector-engine/surface/discord"
-	"github.com/agents-control/connector-engine/surface/slack"
-	"github.com/agents-control/connector-engine/surface/telegram"
-	"github.com/agents-control/connector-engine/surface/webhook"
+	"github.com/versatile-sh/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/surface/discord"
+	"github.com/versatile-sh/connector-engine/surface/slack"
+	"github.com/versatile-sh/connector-engine/surface/telegram"
+	"github.com/versatile-sh/connector-engine/surface/webhook"
 )
 
 // DefaultChannel builds the built-in approval channel of a kind from its stored settings.

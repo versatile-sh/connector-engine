@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/runtime/memory"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/runtime/memory"
 )
 
 func TestScriptedConnector(t *testing.T) {

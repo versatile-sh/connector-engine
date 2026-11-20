@@ -166,7 +166,7 @@ func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access
 	return results[0].Err
 }
 
-// KeyResult is what one access key's choice on a skill came to: set when Err is nil.
+// KeyResult is what one access key's choice on a skill or a connector came to: set when Err is nil.
 type KeyResult struct {
 	Agent string
 	Err   error
@@ -186,21 +186,36 @@ func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []st
 	} else if !skill || !v.RemovedAt.IsZero() {
 		return nil, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
 	}
+	return c.eachKey(names, func(a Agent) error { return c.bindSkill(ctx, conn, a, access) }), nil
+}
+
+func noKey(name string) error {
+	return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}
+}
+
+func (c *Console) liveAgent(name string) (Agent, error) {
 	agents := c.liveAgents()
+	if i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == name }); i >= 0 {
+		return agents[i], nil
+	}
+	return Agent{}, noKey(name)
+}
+
+func (c *Console) eachKey(names []string, set func(Agent) error) []KeyResult {
 	if len(names) == 0 {
-		for _, a := range agents {
+		for _, a := range c.liveAgents() {
 			names = append(names, a.Name)
 		}
 	}
 	results := make([]KeyResult, 0, len(names))
 	for _, name := range names {
-		r := KeyResult{Agent: name, Err: &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}}
-		if i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == name }); i >= 0 {
-			r.Err = c.bindSkill(ctx, conn, agents[i], access)
+		a, err := c.liveAgent(name)
+		if err == nil {
+			err = set(a)
 		}
-		results = append(results, r)
+		results = append(results, KeyResult{Agent: name, Err: err})
 	}
-	return results, nil
+	return results
 }
 
 // Skills lists the workspace's installed skills with each access key's choice and the required connectors not installed.

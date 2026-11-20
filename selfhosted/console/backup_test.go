@@ -57,7 +57,7 @@ type stack struct {
 	restarted chan struct{}
 }
 
-func durableEngine(t *testing.T, publicURL, dir string, store *storememory.Store) (string, string, chan error) {
+func durableEngine(t *testing.T, publicURL, dir string, store *storememory.Store, tweaks ...func(*config.Config)) (string, string, chan error) {
 	t.Helper()
 	c := config.Default()
 	c.Mode = config.ModeDev
@@ -67,6 +67,9 @@ func durableEngine(t *testing.T, publicURL, dir string, store *storememory.Store
 	c.Runtime.AllowPrivateHosts = true
 	c.Gateway.Skills = "tools"
 	c.Secrets.Adapter, c.Secrets.Dir = "localfile", filepath.Join(dir, "engine-secrets")
+	for _, tweak := range tweaks {
+		tweak(&c)
+	}
 	r := app.Core()
 	app.Register(r, app.Stores, app.Adapter{Name: "kept"}, func(context.Context, app.Env) (port.Store, func(), error) { return store, nil, nil })
 	file, err := c.With(r.Builtins()...).LoadAdapters([]byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: builtin:kept}\n  secrets: {use: builtin:localfile}\n  auth: {use: builtin:local}\n"), nil)
@@ -95,14 +98,14 @@ func durableEngine(t *testing.T, publicURL, dir string, store *storememory.Store
 	return "http://" + l.HTTP.Addr().String(), "http://" + l.Operator.Addr().String(), done
 }
 
-func openStack(t *testing.T, dir string, store *storememory.Store) *stack {
+func openStack(t *testing.T, dir string, store *storememory.Store, tweaks ...func(*config.Config)) *stack {
 	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	base := "http://" + lis.Addr().String()
-	public, operator, done := durableEngine(t, "http://console.test", dir, store)
+	public, operator, done := durableEngine(t, "http://console.test", dir, store, tweaks...)
 	state, err := console.OpenState(filepath.Join(dir, "state.json"))
 	if err != nil {
 		t.Fatal(err)

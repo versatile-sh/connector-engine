@@ -140,6 +140,10 @@ func (e *Engine) unbind(ctx context.Context, conn, agent string) error {
 	return nil
 }
 
+func (e *Engine) bindings(ctx context.Context, conn string) ([]port.Binding, error) {
+	return list[port.Binding](ctx, e, connectorPath(conn, "/bindings"))
+}
+
 func (e *Engine) grants(ctx context.Context, kind port.ScopeKind, scopeID, conn string) ([]port.Grant, error) {
 	return list[port.Grant](ctx, e, "/v1/grants"+q("scope_kind", string(kind), "scope_id", scopeID, "connector", conn))
 }
@@ -155,6 +159,16 @@ func (e *Engine) deleteGrants(ctx context.Context, rows []port.Grant) error {
 		}
 	}
 	return nil
+}
+
+func (e *Engine) confirmGrant(ctx context.Context, id port.GrantID) error {
+	return e.Call(ctx, http.MethodPost, "/v1/grants/"+esc(string(id))+":confirm", nil, nil)
+}
+
+func (e *Engine) explain(ctx context.Context, conn, agent, function string) (port.AccessDecision, error) {
+	var d port.AccessDecision
+	err := e.Call(ctx, http.MethodPost, "/v1/access:explain", map[string]any{"workspace": e.Workspace, "agent": agent, "on_behalf_of": e.Person, "connector": conn, "function": function}, &d)
+	return d, err
 }
 
 func (e *Engine) catalogRules(ctx context.Context) ([]port.CatalogRule, error) {

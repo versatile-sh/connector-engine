@@ -51,6 +51,10 @@ func (c *Console) setSkillAccessAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	results, err := c.SetSkillAccessAll(r.Context(), r.PathValue("id"), in.Keys, in.Access)
+	c.replyKeys(w, results, err)
+}
+
+func (c *Console) replyKeys(w http.ResponseWriter, results []KeyResult, err error) {
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -67,6 +71,56 @@ func (c *Console) setSkillAccessAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"keys": keys})
+}
+
+func (c *Console) setProfileMode(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Mode ProfileMode `json:"mode"`
+		Keys []string    `json:"keys"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	results, err := c.SetProfileMode(r.Context(), r.PathValue("id"), in.Keys, in.Mode)
+	c.replyKeys(w, results, err)
+}
+
+func (c *Console) setProfileAccess(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name   string `json:"name"`
+		Access Access `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.SetProfileAccess(r.Context(), r.PathValue("id"), r.PathValue("agent"), in.Name, in.Access); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) profileEffects(w http.ResponseWriter, r *http.Request) {
+	effects, err := c.ProfileEffects(r.Context(), r.PathValue("id"), r.PathValue("agent"))
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"effects": effects})
+}
+
+func (c *Console) setNewKeys(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Off bool `json:"off"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.SetNewKeysOff(r.Context(), r.PathValue("id"), in.Off); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (c *Console) setAccess(w http.ResponseWriter, r *http.Request) {

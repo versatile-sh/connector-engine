@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 )
@@ -66,6 +67,8 @@ type stateFile struct {
 	Notify              notifyState              `json:"notifications,omitzero"`
 	LastExport          time.Time                `json:"last_export,omitzero"`
 	Origins             map[string]Origin        `json:"origins,omitempty"`
+	NewKeysOff          map[string]bool          `json:"new_keys_off,omitempty"`
+	Pending             map[string][]Profile     `json:"pending_profiles,omitempty"`
 }
 
 // Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
@@ -423,4 +426,75 @@ func (s *State) OriginOf(id string) (Origin, bool) {
 	defer s.mu.Unlock()
 	o, ok := s.data.Origins[id]
 	return o, ok
+}
+
+// SetNewKeysOff records whether access keys made from now on start off on the connector instead of following its choices.
+func (s *State) SetNewKeysOff(conn string, off bool) error {
+	return s.update(func(d *stateFile) error {
+		if !off {
+			delete(d.NewKeysOff, conn)
+			return nil
+		}
+		put(&d.NewKeysOff, conn, true)
+		return nil
+	})
+}
+
+// NewKeysOff reports whether access keys made from now on start off on the connector.
+func (s *State) NewKeysOff(conn string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.NewKeysOff[conn]
+}
+
+// PutPendingProfile keeps a setup's profile for an access key not made yet, to apply on the connector when a key of that name is made.
+func (s *State) PutPendingProfile(conn string, p Profile) error {
+	return s.update(func(d *stateFile) error {
+		rest := slices.DeleteFunc(slices.Clone(d.Pending[conn]), func(q Profile) bool { return q.Agent == p.Agent })
+		put(&d.Pending, conn, append(rest, p))
+		return nil
+	})
+}
+
+// PendingProfile returns the setup's profile waiting on the connector for an access key of this name.
+func (s *State) PendingProfile(conn, agent string) (Profile, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := slices.IndexFunc(s.data.Pending[conn], func(p Profile) bool { return p.Agent == agent })
+	if i < 0 {
+		return Profile{}, false
+	}
+	return s.data.Pending[conn][i], true
+}
+
+// DropPendingProfiles forgets every profile waiting for an access key of this name, once the key is made.
+func (s *State) DropPendingProfiles(agent string) error {
+	return s.update(func(d *stateFile) error {
+		changed := false
+		for conn, list := range d.Pending {
+			rest := slices.DeleteFunc(slices.Clone(list), func(p Profile) bool { return p.Agent == agent })
+			switch {
+			case len(rest) == len(list):
+				continue
+			case len(rest) == 0:
+				delete(d.Pending, conn)
+			default:
+				d.Pending[conn] = rest
+			}
+			changed = true
+		}
+		if !changed {
+			return errUnchanged
+		}
+		return nil
+	})
+}
+
+// ForgetConnector drops the new-key default and the waiting profiles of a removed connector.
+func (s *State) ForgetConnector(conn string) error {
+	return s.update(func(d *stateFile) error {
+		delete(d.NewKeysOff, conn)
+		delete(d.Pending, conn)
+		return nil
+	})
 }

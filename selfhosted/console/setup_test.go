@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
 	storememory "github.com/versatile-sh/connector-engine/store/memory"
 )
@@ -40,9 +41,9 @@ func (s *stack) choices() map[string]map[string]console.Access {
 	return out
 }
 
-func freshOwner(t *testing.T) *stack {
+func freshOwner(t *testing.T, tweaks ...func(*config.Config)) *stack {
 	t.Helper()
-	s := openStack(t, t.TempDir(), storememory.New())
+	s := openStack(t, t.TempDir(), storememory.New(), tweaks...)
 	s.b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": ownerPassword}, nil)
 	s.signIn()
 	return s

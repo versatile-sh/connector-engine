@@ -29,6 +29,7 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 	if tenant == port.Installation {
 		return nil, port.Errorf(port.CodeInvalidArgument, "the installation is not a tenant")
 	}
+	s.outside()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	d := &s.d

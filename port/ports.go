@@ -77,6 +77,17 @@ type Authorizer interface {
 	Groups(ctx context.Context, tenant TenantID, person PersonID) ([]GroupID, error)
 }
 
+// SearchQuery is one Search question of a batch: a subject on a connector.
+type SearchQuery struct {
+	Subject   Subject
+	Connector ConnectorID
+}
+
+// BatchSearcher is the capability of an Authorizer to answer several Search questions of one tenant in one read, in the order asked.
+type BatchSearcher interface {
+	SearchBatch(ctx context.Context, tenant TenantID, qs []SearchQuery) ([][]FunctionDecision, error)
+}
+
 // ListingPage is one page of a ListingSource; Next is empty on the last page.
 type ListingPage struct {
 	Manifests []Manifest `json:"manifests"`

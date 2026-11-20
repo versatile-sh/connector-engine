@@ -72,6 +72,7 @@ func WithIdempotencyKey(ctx context.Context, key string) context.Context {
 
 func (s *Service) write(ctx context.Context, scope port.Scope, op string, fn func(port.Tx) error) error {
 	key, _ := ctx.Value(idemKey{}).(string)
+	var seen *touched
 	err := s.d.Store.Write(ctx, scope, func(tx port.Tx) error {
 		if key != "" {
 			fresh, err := tx.MarkInbox("idem:"+op+":"+key, s.now())
@@ -79,10 +80,11 @@ func (s *Service) write(ctx context.Context, scope port.Scope, op string, fn fun
 				return err
 			}
 		}
-		return fn(tx)
+		seen = newTouched(tx, slices.Contains(catalogOps, op))
+		return fn(seen)
 	})
 	if err == nil && scope.Tenant != "" && slices.Contains(exposureOps, op) {
-		s.refreshExposures(ctx, scope.Tenant)
+		s.refreshExposures(ctx, scope.Tenant, seen)
 	}
 	return err
 }

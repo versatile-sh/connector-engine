@@ -15,12 +15,13 @@ export const signIn = mutationOptions({
   },
 });
 
-/** Ends the owner's session and forgets every answer the console gave it. */
+/** Ends the owner's session, forgets every other answer and reads the session again, so the sign-in screen shows at once. */
 export const signOut = mutationOptions({
   mutationFn: () => api("POST", "/api/logout"),
-  onSettled: (_data, _error, _variables, _onMutate, { client }) => {
+  onSettled: async (_data, _error, _variables, _onMutate, { client }) => {
     setCsrf(undefined);
-    client.clear();
+    client.removeQueries({ predicate: (query) => query.queryKey[0] !== sessionQuery.queryKey[0] });
+    await client.resetQueries({ queryKey: sessionQuery.queryKey });
   },
 });
 

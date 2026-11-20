@@ -1,19 +1,17 @@
 package console
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"maps"
 	"slices"
+
+	"github.com/agents-control/connector-engine/console/sealed"
+	"github.com/agents-control/connector-engine/port"
 	"time"
 )
-
-// NotifierSecrets keeps the secret settings of approval channels; the console's state file is the default and a sealed store can replace it.
-type NotifierSecrets interface {
-	Get(channel string) (map[string]string, error)
-	Put(channel string, secrets map[string]string) error
-	Delete(channel string) error
-}
 
 // StoredChannel is one configured approval channel as the state file keeps it, without its secrets.
 type StoredChannel struct {
@@ -34,12 +32,12 @@ type Device struct {
 }
 
 type notifyState struct {
-	Channels map[string]StoredChannel     `json:"channels,omitempty"`
-	Devices  map[string]Device            `json:"devices,omitempty"`
-	Elicit   map[string]bool              `json:"elicit,omitempty"`
-	Secrets  map[string]map[string]string `json:"channel_secrets,omitempty"`
-	LinkKey  string                       `json:"link_key,omitempty"`
-	Cursor   int64                        `json:"cursor,omitempty"`
+	Channels map[string]StoredChannel `json:"channels,omitempty"`
+	Devices  map[string]Device        `json:"devices,omitempty"`
+	Elicit   map[string]bool          `json:"elicit,omitempty"`
+	Sealed   map[string]port.Sealed   `json:"channel_secrets,omitempty"`
+	LinkKey  string                   `json:"link_key,omitempty"`
+	Cursor   int64                    `json:"cursor,omitempty"`
 }
 
 // Channels returns a copy of the configured approval channels.
@@ -179,31 +177,53 @@ func (s *State) SetCursor(seq int64) error {
 	return s.save()
 }
 
-// StateSecrets keeps channel secrets in the console's state file, written with mode 0600.
-type StateSecrets struct{ State *State }
-
-// Get returns a copy of a channel's secrets.
-func (s StateSecrets) Get(channel string) (map[string]string, error) {
-	s.State.mu.Lock()
-	defer s.State.mu.Unlock()
-	return maps.Clone(s.State.data.Notify.Secrets[channel]), nil
+type channelSecrets struct {
+	state *State
+	box   *sealed.Box
 }
 
-// Put stores a channel's secrets.
-func (s StateSecrets) Put(channel string, secrets map[string]string) error {
-	s.State.mu.Lock()
-	defer s.State.mu.Unlock()
-	if s.State.data.Notify.Secrets == nil {
-		s.State.data.Notify.Secrets = map[string]map[string]string{}
+func (s channelSecrets) get(ctx context.Context, channel string) (map[string]string, error) {
+	s.state.mu.Lock()
+	v, ok := s.state.data.Notify.Sealed[channel]
+	s.state.mu.Unlock()
+	out := map[string]string{}
+	if !ok {
+		return out, nil
 	}
-	s.State.data.Notify.Secrets[channel] = maps.Clone(secrets)
-	return s.State.save()
+	if s.box == nil {
+		return nil, sealed.ErrLocked
+	}
+	plain, err := s.box.Open(ctx, v)
+	if err != nil {
+		return nil, err
+	}
+	return out, json.Unmarshal([]byte(plain), &out)
 }
 
-// Delete forgets a channel's secrets.
-func (s StateSecrets) Delete(channel string) error {
-	s.State.mu.Lock()
-	defer s.State.mu.Unlock()
-	delete(s.State.data.Notify.Secrets, channel)
-	return s.State.save()
+func (s channelSecrets) put(ctx context.Context, channel string, secrets map[string]string) error {
+	if s.box == nil {
+		return sealed.ErrLocked
+	}
+	raw, err := json.Marshal(secrets)
+	if err != nil {
+		return err
+	}
+	v, err := s.box.Seal(ctx, string(raw))
+	if err != nil {
+		return err
+	}
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	if s.state.data.Notify.Sealed == nil {
+		s.state.data.Notify.Sealed = map[string]port.Sealed{}
+	}
+	s.state.data.Notify.Sealed[channel] = v
+	return s.state.save()
+}
+
+func (s channelSecrets) remove(channel string) error {
+	s.state.mu.Lock()
+	defer s.state.mu.Unlock()
+	delete(s.state.data.Notify.Sealed, channel)
+	return s.state.save()
 }

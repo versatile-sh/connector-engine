@@ -180,10 +180,10 @@ func (c *Console) factory() ChannelFactory {
 	return DefaultChannel
 }
 
-func (c *Console) buildChannels() []surface.Channel {
+func (c *Console) buildChannels(ctx context.Context) []surface.Channel {
 	var out []surface.Channel
 	for _, sc := range c.State.Channels() {
-		settings, err := c.settingsOf(sc)
+		settings, err := c.settingsOf(ctx, sc)
 		t := tracked{id: sc.ID, secrets: secretValues(sc.Kind, settings), surf: &c.surf}
 		var ch surface.Channel
 		if err == nil {
@@ -211,7 +211,7 @@ func (c *Console) buildChannels() []surface.Channel {
 func (c *Console) RunNotifications(ctx context.Context) {
 	changed := c.surf.wakeChan()
 	for ctx.Err() == nil {
-		chans := c.buildChannels()
+		chans := c.buildChannels(ctx)
 		rctx, cancel := context.WithCancel(ctx)
 		done := make(chan struct{})
 		if len(chans) > 0 {

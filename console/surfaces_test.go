@@ -9,6 +9,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -19,7 +20,9 @@ import (
 
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/console"
+	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/secrets/memory"
 	"github.com/agents-control/connector-engine/surface"
 )
 
@@ -83,6 +86,7 @@ type rig struct {
 	tok  console.AgentToken
 	fake *fakeChannel
 	eng  *console.Engine
+	path string
 }
 
 func newRig(t *testing.T) *rig {
@@ -94,7 +98,8 @@ func newRig(t *testing.T) *rig {
 	base := "http://" + lis.Addr().String()
 	public, operator := bootEngine(t, base, func(c *config.Config) { c.Approval.HoldWindow, c.Gateway.Skills = 10*time.Second, "tools" })
 	up := newUpstream(t)
-	state, err := console.OpenState(t.TempDir() + "/state.json")
+	statePath := t.TempDir() + "/state.json"
+	state, err := console.OpenState(statePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,13 +107,15 @@ func newRig(t *testing.T) *rig {
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+	box := &sealed.Box{}
+	box.Unlock(memory.New())
 	act, err := console.OpenActivity(t.TempDir()+"/activity", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	fake := &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
-		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour, Activity: act,
+		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour, Activity: act, Secrets: box,
 		NewChannel: func(_ string, s map[string]string) (surface.Channel, error) {
 			fake.mu.Lock()
 			fake.settings = s
@@ -122,7 +129,7 @@ func newRig(t *testing.T) *rig {
 	go func() { c.RunNotifications(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done; srv.Close() })
 	jar, _ := cookiejar.New(nil)
-	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake, eng: eng}
+	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake, eng: eng, path: statePath}
 	var setup struct{ CSRF string }
 	r.b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
 	r.b.csrf = setup.CSRF
@@ -261,10 +268,13 @@ func TestAChatButtonDecidesAHeldCallAndTheCallResumes(t *testing.T) {
 		within(t, r.fake.settled, 5*time.Second)
 	})
 
-	t.Run("the settings never return a secret", func(t *testing.T) {
+	t.Run("the settings never return a secret and the state file seals it", func(t *testing.T) {
 		status, raw := r.b.send("GET", "/api/notifications", nil, nil)
 		if status != http.StatusOK || strings.Contains(string(raw), token) {
 			t.Fatalf("%d %s", status, raw)
+		}
+		if state, err := os.ReadFile(r.path); err != nil || strings.Contains(string(state), "ABCDEFGHIJKLMNOP") {
+			t.Fatalf("the state file holds the token in plaintext: %v", err)
 		}
 		if status, _ := r.b.send("POST", "/api/notifications/channels", map[string]any{"kind": "discord_webhook", "settings": map[string]string{"url": "https://evil.example/hook"}}, nil); status != http.StatusBadRequest {
 			t.Fatalf("a webhook off discord.com: %d", status)

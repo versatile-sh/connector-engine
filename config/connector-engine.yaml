@@ -149,6 +149,12 @@ secrets:
   dataKeyCache: 5m0s
   dir: /var/lib/connector-engine/secrets
   unlockSocket: ""
+  onePassword:
+    connectUrl: ""
+    tokenRef: ""
+    vault: ""
+    item: ""
+    field: ""
 runtime:
   adapters:
     - remote

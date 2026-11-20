@@ -84,7 +84,7 @@ var oneOf = map[string][]string{
 	"approval.proofOfReading":       {"off"},
 	"overlay.suggester":             {"none"},
 	"outbox.signing":                {"standard-webhooks"},
-	"secrets.adapter":               {"localfile", "memory", "hostkey"},
+	"secrets.adapter":               {"localfile", "memory", "hostkey", "onepassword"},
 	"credentials.fallback":          {"none"},
 	"exposure.onTrifecta":           {"warn", "force_ask"},
 	"apps.appOnlyFunctions":         {"refuse", "view_token"},
@@ -133,6 +133,9 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if c.Secrets.Adapter == "hostkey" && c.Secrets.UnlockSocket == "" {
 		add(adapters.LevelError, "secrets.unlockSocket", "the hostkey adapter waits for the unlock key on this socket; it is empty")
 	}
+	if op := c.Secrets.OnePassword; c.Secrets.Adapter == "onepassword" && (op.ConnectURL == "" || op.TokenRef == "" || op.Vault == "" || op.Item == "" || op.Field == "") {
+		add(adapters.LevelError, "secrets.onePassword", "the onepassword adapter needs connectUrl, tokenRef, vault, item and field")
+	}
 	if len(c.Auth.Issuers) == 0 && !c.Auth.LocalIssuer.Enabled {
 		add(level, "auth.issuers", "the list is empty: no token can be verified")
 	}
@@ -149,7 +152,7 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
 	}
 	switch {
-	case acknowledged(AckPlaintextRootKey):
+	case acknowledged(AckPlaintextRootKey), c.Secrets.Adapter == "onepassword":
 	case c.Secrets.Adapter == "hostkey":
 		add(level, "secrets.adapter", "hostkey keeps a plaintext root key on a host without a keychain and until it is migrated; acknowledge %s to run with it", AckPlaintextRootKey)
 	default:

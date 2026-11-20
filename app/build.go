@@ -27,6 +27,7 @@ import (
 	"github.com/agents-control/connector-engine/secrets/hostkey"
 	secretslocal "github.com/agents-control/connector-engine/secrets/local"
 	secretsmemory "github.com/agents-control/connector-engine/secrets/memory"
+	"github.com/agents-control/connector-engine/secrets/onepassword"
 	sinklog "github.com/agents-control/connector-engine/sink/log"
 	sinkmemory "github.com/agents-control/connector-engine/sink/memory"
 	sinkwebhook "github.com/agents-control/connector-engine/sink/webhook"
@@ -81,18 +82,32 @@ func (b builder) store(ctx context.Context) (port.Store, port.Outbox, func(), er
 	return s, s, s.Close, nil
 }
 
+func (b builder) onePassword(ctx context.Context) (*secretslocal.Store, error) {
+	c := b.cfg.Secrets.OnePassword
+	token, err := resolveRef(b.lookup, c.TokenRef)
+	if err != nil {
+		return nil, fmt.Errorf("secrets.onePassword.tokenRef: %w", err)
+	}
+	return onepassword.Open(ctx, b.cfg.Secrets.Dir, onepassword.Config{ConnectURL: c.ConnectURL, Token: token, Vault: c.Vault, Item: c.Item, Field: c.Field}, http.DefaultClient)
+}
+
 func (b builder) secrets(ctx context.Context) (port.SecretStore, func(), error) {
+	var s *secretslocal.Store
+	var err error
 	switch u, _ := b.one(config.PortSecrets); {
 	case u.Tier == adapters.TierMemory:
 		return secretsmemory.New(), func() {}, nil
 	case u.Name == "hostkey":
-		s, err := hostkey.Open(ctx, b.cfg.Secrets.Dir, b.cfg.Secrets.UnlockSocket, b.log)
+		hk, err := hostkey.Open(ctx, b.cfg.Secrets.Dir, b.cfg.Secrets.UnlockSocket, b.log)
 		if err != nil {
 			return nil, nil, err
 		}
-		return s, s.Close, nil
+		return hk, hk.Close, nil
+	case u.Name == "onepassword":
+		s, err = b.onePassword(ctx)
+	default:
+		s, err = secretslocal.Open(b.cfg.Secrets.Dir)
 	}
-	s, err := secretslocal.Open(b.cfg.Secrets.Dir)
 	if err != nil {
 		return nil, nil, err
 	}

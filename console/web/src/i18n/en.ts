@@ -17,7 +17,7 @@ export const en = {
   "common.save": "Save",
   "common.opensNewTab": "(opens in a new tab)",
   "list.noMatch": "Nothing matches.",
-  "list.showAll": "Show all {count}",
+  "list.showAll": "Show all ({count})",
   "common.credentials": "Credentials",
   "common.arguments": "Arguments",
   "common.session": "Session",

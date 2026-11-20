@@ -10,7 +10,7 @@ export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; acce
   const t = useT();
   if (tools.length === 0) return <p className="py-6 text-sm text-muted">{t("import.noTools")}</p>;
   return (
-    <LongList rows={tools} textOf={(tool) => `${tool.name} ${tool.title ?? ""} ${tool.description ?? ""}`} label={t("detail.filter")}>
+    <LongList rows={tools} textOf={(tool) => `${tool.name} ${tool.title ?? ""} ${tool.description ?? ""}`} label={t("detail.filter")} whole>
       {(shown) => (
         <ul>
           {shown.map((tool) => (

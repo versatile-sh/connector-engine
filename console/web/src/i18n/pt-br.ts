@@ -19,7 +19,7 @@ export const ptBR: Record<MessageKey, string> = {
   "common.save": "Salvar",
   "common.opensNewTab": "(abre em uma nova aba)",
   "list.noMatch": "Nada corresponde.",
-  "list.showAll": "Mostrar todos os {count}",
+  "list.showAll": "Mostrar tudo ({count})",
   "common.credentials": "Credenciais",
   "common.arguments": "Argumentos",
   "common.session": "Sessão",

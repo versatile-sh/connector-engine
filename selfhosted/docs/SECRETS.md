@@ -106,4 +106,6 @@ Limits:
 | A compromised engine or console process | the opened records | the same: the key is in memory while it runs |
 | Logs, `docker inspect`, process lists | no key | no key: pipes only |
 
+A full backup ([console.md](console.md#backups)) holds both root keys in plaintext inside a file encrypted under your passphrase (Argon2id, AES-256-GCM), so it opens on a machine without the old keychain. The import wraps them again with the new machine's key. Whoever holds the file and the passphrase holds every record: the passphrase is that file's only protection. To take the snapshot, the console reads the engine's keys in plaintext from the operator listener on the compose network (`server.snapshot: true`, person profile only). Whoever holds the operator token in the `secrets` volume and reaches that network can do the same, as they could already drive every operation of the engine.
+
 What it does not do: protect a running, unlocked install; protect against the owner's own account being compromised; replace backups (keep the recovery key).

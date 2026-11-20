@@ -59,10 +59,18 @@ func (s *Sessions) Get(r *http.Request) (string, bool) {
 	return v.CSRF, ok
 }
 
+// Key returns the state key of the request's session cookie, or "" without one.
+func (s *Sessions) Key(r *http.Request) string {
+	if c, err := r.Cookie(sessionCookie); err == nil {
+		return sessionKey(c.Value)
+	}
+	return ""
+}
+
 // End closes the request's session and clears its cookie.
 func (s *Sessions) End(w http.ResponseWriter, r *http.Request) error {
-	if c, err := r.Cookie(sessionCookie); err == nil {
-		if err := s.state.endSession(sessionKey(c.Value)); err != nil {
+	if k := s.Key(r); k != "" {
+		if err := s.state.endSession(k); err != nil {
 			return err
 		}
 	}

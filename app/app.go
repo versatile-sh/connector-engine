@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
@@ -64,6 +65,9 @@ type App struct {
 	secrets  port.SecretStore
 	build    string
 	closers  []func()
+
+	restored     chan struct{}
+	restoredOnce sync.Once
 }
 
 // New builds the engine: it checks the configuration against the adapters file, opens the store, writes the bootstrap roles and wires the service.
@@ -84,7 +88,7 @@ func New(ctx context.Context, cfg config.Config, file adapters.File, o Options) 
 	if o.Log == nil {
 		o.Log = slog.Default()
 	}
-	a := &App{Config: cfg, Adapters: file, Clock: o.Clock, log: o.Log, spec: cfg.AdaptersSpec(), build: o.Build}
+	a := &App{Config: cfg, Adapters: file, Clock: o.Clock, log: o.Log, spec: cfg.AdaptersSpec(), build: o.Build, restored: make(chan struct{})}
 	if err := a.compose(ctx, builder{cfg: cfg, file: file, lookup: o.Lookup, clock: o.Clock, log: o.Log, reg: o.Adapters}); err != nil {
 		a.Close()
 		return nil, err

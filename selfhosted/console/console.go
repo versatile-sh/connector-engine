@@ -34,8 +34,10 @@ type Console struct {
 	Activity      *Activity
 	Secrets       *sealed.Box
 	NewChannel    ChannelFactory
+	Restart       func()
 
 	loginMu       sync.Mutex
+	restoring     sync.Mutex
 	passwordFails minuteWindow
 	icons         iconCache
 	connects      connectStates
@@ -49,9 +51,16 @@ type Console struct {
 func (c *Console) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/session", c.session)
+	mux.HandleFunc("GET /api/ready", c.ready)
 	mux.HandleFunc("POST /api/setup", c.setup)
 	mux.HandleFunc("POST /api/login", c.login)
 	mux.HandleFunc("POST /api/logout", c.authed(c.logout))
+	mux.HandleFunc("GET /api/account", c.authed(c.account))
+	mux.HandleFunc("PUT /api/account/password", c.authed(c.changePassword))
+	mux.HandleFunc("PUT /api/account/username", c.authed(c.rename))
+	mux.HandleFunc("POST /api/backup/export", c.authed(c.exportBackup))
+	mux.HandleFunc("POST /api/backup/inspect", c.ownerOrFirstRun(c.inspectUpload))
+	mux.HandleFunc("POST /api/backup/import", c.ownerOrFirstRun(c.importUpload))
 	mux.HandleFunc("GET /api/connectors", c.authed(c.listConnectors))
 	mux.HandleFunc("POST /api/preview", c.authed(c.preview))
 	mux.HandleFunc("POST /api/import", c.authed(c.doImport))

@@ -40,6 +40,8 @@ CN_OPERATOR_TOKEN=dev connector-engine --config examples/dev/connector-engine.ya
 | gRPC | `server.grpcListen`, `:9090` | the same tokens as the public listener |
 | operator | `server.operatorListen`, off (`:8081` in the profiles) | the `CN_OPERATOR_TOKEN` bearer |
 
+With `server.snapshot: true` the operator listener also serves `GET /v1/snapshot` and `PUT /v1/snapshot`. The first returns every row of the store and, when the secrets adapter keeps its keys in a directory (`localfile`, `hostkey`), those keys in plaintext. The second replaces the rows and the keys, then stops the engine so that it starts again on the restored keys. The key store keeps its form: a wrapped root is wrapped again with this host's unlock key. Only the `person` profile turns it on, for the console's backups. The default and `headless` leave it off. Treat a snapshot like the root key itself.
+
 In dev mode the local issuer mints tokens at `POST /local/token`. In production, configure an OIDC/JWKS issuer (see `deploy/profiles/headless/connector-engine.yaml`).
 
 ## cnctl

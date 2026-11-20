@@ -1,6 +1,6 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, setCsrf, type Access, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
-import { activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries";
+import { api, apiFile, setCsrf, type Access, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
+import { accountQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
 
@@ -178,4 +178,52 @@ export const renameDevice = mutationOptions({
 export const revokeDevice = mutationOptions({
   mutationFn: (id: string) => api("DELETE", `/api/notifications/devices/${at(id)}`),
   onSuccess: (_data, _id, _onMutate, { client }) => invalidate(client, notificationsQuery.queryKey),
+});
+
+/** Changes the owner's password; the console ends every other session and keeps this one. */
+export const changePassword = mutationOptions({
+  mutationFn: (change: { current: string; password: string }) => api("PUT", "/api/account/password", change),
+});
+
+/** Renames the owner. */
+export const renameOwner = mutationOptions({
+  mutationFn: (username: string) => api("PUT", "/api/account/username", { username }),
+  onSuccess: (_data, _username, _onMutate, { client }) => invalidate(client, accountQuery.queryKey),
+});
+
+/** What POST /api/backup/export takes: a setup needs nothing else; a full backup needs the confirmation, the owner's password and a passphrase. */
+export type ExportRequest = { mode: "setup" } | { mode: "full"; confirm: boolean; password: string; passphrase: string };
+
+/** Makes a backup file and answers it to be saved; the account is read again for the date of the last export. */
+export const exportBackup = mutationOptions({
+  mutationFn: (request: ExportRequest) => apiFile("POST", "/api/backup/export", request),
+  onSuccess: (_file, _request, _onMutate, { client }) => invalidate(client, accountQuery.queryKey),
+});
+
+/** A backup file and its passphrase, empty for a setup, as a form; a signed-in full import adds the owner's password. */
+export type BackupUpload = { file: Blob; passphrase: string; password?: string };
+
+const formOf = ({ file, passphrase, password }: BackupUpload) => {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("passphrase", passphrase);
+  if (password !== undefined) form.append("password", password);
+  return form;
+};
+
+/** Reads what a backup file holds without importing anything. */
+export const inspectBackup = mutationOptions({
+  mutationFn: (upload: BackupUpload) => api<BackupSummary>("POST", "/api/backup/inspect", formOf(upload)),
+});
+
+/** What an import answered: a full backup answers its summary and the console restarts; a setup answers what it did. */
+export type ImportOutcome = { kind: "full"; summary: BackupSummary } | { kind: "setup"; result: SetupResult };
+
+/** Imports a backup file; after a setup, connectors, skills and the session are read again, while after a full backup nothing is, as the console is restarting. */
+export const importBackup = mutationOptions({
+  mutationFn: async (upload: BackupUpload): Promise<ImportOutcome> => {
+    const answer = await api<BackupSummary | SetupResult>("POST", "/api/backup/import", formOf(upload));
+    return "added" in answer ? { kind: "setup", result: answer } : { kind: "full", summary: answer };
+  },
+  onSuccess: (outcome, _upload, _onMutate, { client }) => (outcome.kind === "setup" ? invalidate(client, connectorsQuery.queryKey, skillsQuery.queryKey, sessionQuery.queryKey) : undefined),
 });

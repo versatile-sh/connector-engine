@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { apiQueryOf, type ActivityFilter } from "./activity/activity";
-import { api, setCsrf, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type NotificationsData, type Session, type Skill } from "./api";
+import { api, setCsrf, type Account, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type NotificationsData, type Session, type Skill } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -83,3 +83,6 @@ export const approvalQuery = (id: string, token: string | null) =>
 
 /** The notification channels, the paired computers and the per-app elicitation switches. */
 export const notificationsQuery = queryOptions({ queryKey: ["notifications"], queryFn: () => api<NotificationsData>("GET", "/api/notifications") });
+
+/** The owner's name and when the last full backup was made. */
+export const accountQuery = queryOptions({ queryKey: ["account"], queryFn: () => api<Account>("GET", "/api/account") });

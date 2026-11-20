@@ -34,6 +34,9 @@ func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
 	if cfg.Runtime.AllowPrivateHosts {
 		t.Fatal("headless reaches private hosts")
 	}
+	if cfg.Server.Snapshot {
+		t.Fatal("headless serves the snapshot routes")
+	}
 	if r := cfg.Retention; r.DeliveredEvents != 0 || r.IdempotencyKeys != 0 || r.Audit != 0 || r.Calls != 0 {
 		t.Fatalf("headless prunes history: %+v", r)
 	}

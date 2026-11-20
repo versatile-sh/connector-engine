@@ -4,18 +4,22 @@ package worker
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
 
+	"github.com/agents-control/connector-engine/internal/safe"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 )
 
-// Config holds approval.sweepInterval, the size of one batch of due work and how many approved records run at once.
+// Config holds approval.sweepInterval, the batch size, the executor count, and the logger and counter that Run reports failures to.
 type Config struct {
 	Interval  time.Duration
 	Batch     int
 	Executors int
+	Log       *slog.Logger
+	Failed    func()
 }
 
 // Stats counts what one sweep did.
@@ -55,17 +59,26 @@ func New(svc *service.Service, store port.Store, clock port.Clock, cfg Config) *
 	if cfg.Executors == 0 {
 		cfg.Executors = 8
 	}
+	if cfg.Log == nil {
+		cfg.Log = slog.New(slog.DiscardHandler)
+	}
+	if cfg.Failed == nil {
+		cfg.Failed = func() {}
+	}
 	return &Worker{svc: svc, store: store, clock: clock, cfg: cfg, slots: make(chan struct{}, cfg.Executors), retries: map[string]retry{}, running: map[string]bool{}}
 }
 
-// Run sweeps every Interval until ctx ends without waiting for the approved records it started; a failed item backs off.
+// Run sweeps every Interval until ctx ends and waits for the approved records it started; it logs and counts each failure, and a failed item backs off.
 func (w *Worker) Run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	t := time.NewTicker(w.cfg.Interval)
 	defer t.Stop()
 	for {
-		_, _ = w.sweep(ctx, &wg, nil)
+		w.failed(ctx, safe.Run(func() error {
+			_, err := w.sweep(ctx, &wg, func(err error) { w.failed(ctx, err) })
+			return err
+		}))
 		select {
 		case <-ctx.Done():
 			return nil
@@ -143,6 +156,14 @@ func (w *Worker) sweep(ctx context.Context, wg *sync.WaitGroup, report func(erro
 	return st, errors.Join(errs...)
 }
 
+func (w *Worker) failed(ctx context.Context, err error) {
+	if err == nil {
+		return
+	}
+	w.cfg.Failed()
+	w.cfg.Log.WarnContext(ctx, "worker sweep failed", "error", err)
+}
+
 func (w *Worker) waiting(now time.Time) int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -198,6 +219,10 @@ func (w *Worker) execute(ctx context.Context, wg *sync.WaitGroup, key string, it
 }
 
 func (w *Worker) dispatch(ctx context.Context, it port.WorkItem) error {
+	return safe.Run(func() error { return w.do(ctx, it) })
+}
+
+func (w *Worker) do(ctx context.Context, it port.WorkItem) error {
 	switch it.Kind {
 	case port.WorkApprovalExpiry:
 		return w.svc.ExpireApproval(ctx, it.Tenant, port.ApprovalID(it.ID))

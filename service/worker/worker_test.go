@@ -1,7 +1,12 @@
 package worker_test
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
 	"slices"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -133,5 +138,42 @@ func TestAFailingItemBacksOffAndDoesNotStarveTimers(t *testing.T) {
 	}
 	if f.Runtime.CallsTo("search") != 0 {
 		t.Fatal("the record whose re-list fails is not forwarded")
+	}
+}
+
+type brokenStore struct {
+	port.Store
+	panics bool
+}
+
+func (b brokenStore) Read(context.Context, port.Scope, func(port.Tx) error) error {
+	if b.panics {
+		panic("store bug")
+	}
+	return port.Errorf(port.CodeUnavailable, "store down")
+}
+
+func TestRunLogsCountsAndSurvivesFailingAndPanickingSweeps(t *testing.T) {
+	for _, panics := range []bool{false, true} {
+		f := newFixture(t)
+		var logs bytes.Buffer
+		var failures atomic.Int32
+		ctx, cancel := context.WithCancel(f.Ctx)
+		w := worker.New(f.Svc, brokenStore{Store: f.Store, panics: panics}, f.Clock, worker.Config{Interval: time.Millisecond,
+			Log: slog.New(slog.NewTextHandler(&logs, nil)), Failed: func() {
+				if failures.Add(1) == 3 {
+					cancel()
+				}
+			}})
+		done := make(chan error, 1)
+		go func() { done <- w.Run(ctx) }()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("panics=%v: Run did not report three failed sweeps", panics)
+		}
+		if !strings.Contains(logs.String(), "worker sweep failed") {
+			t.Fatalf("panics=%v: no log line: %q", panics, logs.String())
+		}
 	}
 }

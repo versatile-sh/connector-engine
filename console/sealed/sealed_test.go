@@ -67,3 +67,23 @@ func TestProtectionNamesHowTheRootKeyRests(t *testing.T) {
 		t.Fatalf("a plaintext root key: %q", b.Protection())
 	}
 }
+
+func TestReadyClosesOnTheFirstUnlock(t *testing.T) {
+	var b sealed.Box
+	ready := b.Ready()
+	select {
+	case <-ready:
+		t.Fatal("ready before a store")
+	default:
+	}
+	b.Unlock(memory.New())
+	b.Unlock(memory.New())
+	select {
+	case <-ready:
+	default:
+		t.Fatal("not ready after Unlock")
+	}
+	if (*sealed.Box)(nil).Ready() != nil {
+		t.Fatal("a nil box is never ready")
+	}
+}

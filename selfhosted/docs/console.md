@@ -2,6 +2,8 @@
 
 The console is the local web app of the `person` profile. It talks to the engine over HTTP only. Start it with `make up` and open `http://127.0.0.1:<CONSOLE_PORT>` (default 7465).
 
+Its design system (tokens, typography, components, responsive rules) is in [`console/web/DESIGN.md`](../console/web/DESIGN.md).
+
 ## Port and host
 
 - `CONSOLE_PORT` is the only port setting. Put it in `deploy/.env` to keep it.

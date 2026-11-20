@@ -125,7 +125,7 @@ func content(p surface.Prompt) []block {
 func buttons(p surface.Prompt) block {
 	var els []any
 	for _, ch := range p.Choices {
-		b := map[string]any{"type": "button", "text": plain(surface.Label(ch)), "action_id": surface.ButtonID(ch, p.Key), "value": surface.ButtonID(ch, p.Key)}
+		b := map[string]any{"type": "button", "text": plain(surface.Label(ch, p.SessionUntil)), "action_id": surface.ButtonID(ch, p.Key), "value": surface.ButtonID(ch, p.Key)}
 		switch ch {
 		case surface.ChoiceOnce, surface.ChoiceSession:
 			b["style"] = "primary"

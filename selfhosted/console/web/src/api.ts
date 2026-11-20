@@ -285,6 +285,7 @@ export type ApprovalView = {
   may_have_run: boolean;
   reaches_outside: boolean;
   choices: ApprovalChoice[];
+  session_until?: string;
   decided_by?: string;
   decided_at?: string;
   channel?: string;

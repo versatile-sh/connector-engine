@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/versatile-sh/connector-engine/port"
 )
@@ -24,6 +25,7 @@ type approvalDetail struct {
 	Arguments      []byte        `json:"arguments,omitempty"`
 	MayHaveRun     bool          `json:"may_have_run"`
 	ReachesOutside bool          `json:"reaches_outside"`
+	SessionUntil   time.Time     `json:"session_until,omitzero"`
 }
 
 func q(kv ...string) string {

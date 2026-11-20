@@ -441,18 +441,11 @@ func (c *Console) Approvals(ctx context.Context) ([]port.Approval, error) {
 	return out, err
 }
 
-// Decide approves or denies one waiting call as the owner; approving an ask-once call, such as a skill load, approves it for the rest of its session.
+// Decide approves that one waiting call, or denies it, as the owner.
 func (c *Console) Decide(ctx context.Context, id string, approve bool) error {
 	d := port.DecisionDeny
 	if approve {
 		d = port.DecisionApprove
-		detail, err := c.Engine.approval(ctx, id)
-		if err != nil {
-			return err
-		}
-		if detail.Approval.Mode == port.ModeAskOnce {
-			d = port.DecisionApproveForSession
-		}
 	}
 	_, err := c.Engine.decide(ctx, id, map[string]any{"decision": d, "channel": "console"})
 	return err

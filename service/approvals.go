@@ -16,7 +16,7 @@ import (
 
 const reasonCancelledByApprover port.Code = "cancelled_by_approver"
 
-// ApprovalDetail is a record with its arguments opened for the reader and the warnings.
+// ApprovalDetail is a record with its arguments opened for the reader, the warnings, and for a pending ask-once call when approving it for its session would end.
 type ApprovalDetail struct {
 	Approval       port.Approval   `json:"approval"`
 	Arguments      []byte          `json:"arguments,omitempty"`
@@ -25,6 +25,7 @@ type ApprovalDetail struct {
 	TrustLevel     port.TrustLevel `json:"trust_level"`
 	Publisher      string          `json:"publisher"`
 	ReachesOutside bool            `json:"reaches_outside"`
+	SessionUntil   time.Time       `json:"session_until,omitzero"`
 }
 
 func (s *Service) approverKeys(ctx context.Context, p port.Principal) ([]string, error) {
@@ -125,6 +126,9 @@ func (s *Service) GetApproval(ctx context.Context, p port.Principal, id port.App
 	d.ChangedRecent = !fn.AcceptedAt.IsZero() && s.now().Sub(fn.AcceptedAt) < time.Duration(s.cfg.ChangedWarningDays)*24*time.Hour
 	d.MayHaveRun = slices.ContainsFunc(siblings, func(o port.Approval) bool { return o.ID != id && o.State == port.ApprovalOutcomeUnknown })
 	d.TrustLevel, d.Publisher, d.ReachesOutside = lv.Manifest.TrustLevel, lv.Manifest.Publisher.Name, fn.OpenWorld
+	if d.Approval.Mode == port.ModeAskOnce && d.Approval.State == port.ApprovalPending {
+		d.SessionUntil = grant.SessionRow(d.Approval, s.now(), d.Approval.TokenExpiresAt, s.cfg.SessionGrantMax).ExpiresAt
+	}
 	return d, nil
 }
 

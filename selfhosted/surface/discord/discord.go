@@ -179,7 +179,7 @@ func (c *Channel) Notify(ctx context.Context, p surface.Prompt) (surface.Ref, er
 	if len(p.Choices) > 0 {
 		row := component{Type: 1}
 		for _, ch := range p.Choices {
-			row.Components = append(row.Components, component{Type: 2, Style: style(ch), Label: surface.Label(ch), CustomID: surface.ButtonID(ch, p.Key)})
+			row.Components = append(row.Components, component{Type: 2, Style: style(ch), Label: surface.Label(ch, p.SessionUntil), CustomID: surface.ButtonID(ch, p.Key)})
 		}
 		body["components"] = []component{row}
 	}

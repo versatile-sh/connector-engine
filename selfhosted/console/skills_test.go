@@ -202,14 +202,14 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 			t.Fatalf("a new token for the key reset its choice: %+v", skills.Skills[0].Access)
 		}
 	})
-	t.Run("on ask, the owner's approval lets the session load the skill", func(t *testing.T) {
+	t.Run("on ask, the owner's approval for the session lets the session load the skill", func(t *testing.T) {
 		b.ok("PUT", "/api/skills/"+imported.Skill+"/keys/claude-code", map[string]string{"access": "ask"}, nil)
 		res, err := load("")
 		if err != nil || structuredOf(t, res)["status"] != "pending_approval" {
 			t.Fatalf("%v %s", err, textOf(res))
 		}
 		id, _ := structuredOf(t, res)["approval_id"].(string)
-		b.ok("POST", "/api/approvals/"+id, map[string]any{"approve": true}, nil)
+		b.ok("POST", "/api/approvals/"+id+"/decide", map[string]any{"choice": "session"}, nil)
 		deadline := time.Now().Add(10 * time.Second)
 		for {
 			status, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "approval_status", Arguments: map[string]any{"approval_id": id}})

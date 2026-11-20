@@ -95,6 +95,11 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
 	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
 	mux.HandleFunc("GET /api/icon", c.authed(c.icon))
+	mux.HandleFunc("GET /api/activity", c.authed(c.listActivity))
+	mux.HandleFunc("DELETE /api/activity", c.authed(c.deleteActivity))
+	mux.HandleFunc("GET /api/activity/settings", c.authed(c.activitySettings))
+	mux.HandleFunc("PUT /api/activity/settings", c.authed(c.setActivitySettings))
+	mux.HandleFunc("GET /api/activity/{id}", c.authed(c.activityDetail))
 	agent := c.gateMCP(c.refuseRevoked(c.capture(c.agentProxy())))
 	for _, m := range []string{"GET", "POST", "DELETE"} {
 		mux.Handle(m+" /mcp", agent)

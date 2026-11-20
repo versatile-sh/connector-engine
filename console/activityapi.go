@@ -2,9 +2,6 @@ package console
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -89,50 +86,6 @@ func (f activityFilter) found(r ActivityCall) bool {
 	return f.search == "" || strings.Contains(strings.ToLower(r.Function), f.search) || strings.Contains(strings.ToLower(r.Skill), f.search)
 }
 
-type itemStream[T any] struct {
-	keep  func(T) bool
-	items []T
-}
-
-func (s *itemStream[T]) readBody(r io.Reader) error {
-	d := json.NewDecoder(r)
-	if tok, err := d.Token(); err != nil || tok != json.Delim('{') {
-		return unreachable(errors.Join(errors.New("the engine answered no object"), err))
-	}
-	for d.More() {
-		tok, err := d.Token()
-		if err != nil {
-			return err
-		}
-		if tok != "items" {
-			var skip json.RawMessage
-			if err := d.Decode(&skip); err != nil {
-				return err
-			}
-			continue
-		}
-		if tok, err = d.Token(); err != nil || tok == nil {
-			return err
-		}
-		if tok != json.Delim('[') {
-			return unreachable(errors.New("the engine answered items that are not a list"))
-		}
-		for d.More() {
-			var v T
-			if err := d.Decode(&v); err != nil {
-				return err
-			}
-			if s.keep(v) {
-				s.items = append(s.items, v)
-			}
-		}
-		if _, err := d.Token(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 type engineFacts struct {
 	calls     []port.Call
 	approvals map[port.ApprovalID]port.Approval
@@ -153,19 +106,19 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 			f.byAlias[v.Connector.Alias] = string(v.Connector.ID)
 		}
 	}
-	calls := &itemStream[port.Call]{keep: func(x port.Call) bool { return !x.StartedAt.Before(since) }}
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/calls"+q("agent", agent), nil, calls); err != nil {
+	calls, err := list[port.Call](ctx, c.Engine, "/v1/calls"+q("agent", agent, "since", since.UTC().Format(time.RFC3339Nano)))
+	if err != nil {
 		return engineFacts{}, err
 	}
-	approvals := &itemStream[port.Approval]{keep: func(x port.Approval) bool { return !x.CreatedAt.Before(since.Add(-activityWindow)) }}
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals"+q("agent", agent), nil, approvals); err != nil {
+	approvals, err := list[port.Approval](ctx, c.Engine, "/v1/approvals"+q("agent", agent, "since", since.Add(-activityWindow).UTC().Format(time.RFC3339Nano)))
+	if err != nil {
 		return engineFacts{}, err
 	}
-	for _, a := range approvals.items {
+	for _, a := range approvals {
 		a.Arguments = nil
 		f.approvals[a.ID] = a
 	}
-	f.calls = calls.items
+	f.calls = calls
 	for _, call := range f.calls {
 		if call.Function == port.SkillFunction {
 			f.skills[string(call.Connector)] = false

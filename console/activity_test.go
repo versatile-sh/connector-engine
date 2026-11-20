@@ -83,10 +83,11 @@ func (f *fakeEngine) handler() http.Handler {
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"functions": []map[string]string{{"name": "notes" + sep + "search", "connector": "c-notes", "function": "search"}}})
 	})
-	mux.HandleFunc("GET /v1/calls", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /v1/calls", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		items(w, f.calls)
+		since, _ := time.Parse(time.RFC3339Nano, r.URL.Query().Get("since"))
+		items(w, slices.DeleteFunc(slices.Clone(f.calls), func(c port.Call) bool { return c.StartedAt.Before(since) }))
 	})
 	mux.HandleFunc("GET /v1/calls/{id}", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -100,10 +101,11 @@ func (f *fakeEngine) handler() http.Handler {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"code": "not_found", "detail": "no call"})
 	})
-	mux.HandleFunc("GET /v1/approvals", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /v1/approvals", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		items(w, f.approvals)
+		since, _ := time.Parse(time.RFC3339Nano, r.URL.Query().Get("since"))
+		items(w, slices.DeleteFunc(slices.Clone(f.approvals), func(a port.Approval) bool { return a.CreatedAt.Before(since) }))
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()

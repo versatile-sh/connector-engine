@@ -11,6 +11,7 @@ import (
 	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 	"gopkg.in/yaml.v3"
 
+	"github.com/versatile-sh/connector-engine/app"
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/service"
 )
@@ -99,7 +100,7 @@ func has(fs adapters.Findings, where, level string) bool {
 }
 
 func TestProductionRefusesWhatSection14Lists(t *testing.T) {
-	base := config.Default()
+	base := core(config.Default())
 	base.Server.PublicURL = "https://engine.test"
 	base.Auth.Issuers = []config.Issuer{{Name: "idp", URL: "https://idp.test/jwks"}}
 	if err := base.Check(plaintext).Err(); err != nil {
@@ -137,7 +138,7 @@ func TestProductionRefusesWhatSection14Lists(t *testing.T) {
 }
 
 func TestAdaptersFileFollowsTheDefaultsAndTheAcknowledgements(t *testing.T) {
-	c := config.Default()
+	c := core(config.Default())
 	c.Mode = config.ModeDev
 	c.Auth.Issuers = []config.Issuer{{Name: "idp", URL: "https://idp.test/jwks"}}
 	f, err := c.LoadAdapters(nil, nil)
@@ -190,7 +191,7 @@ func TestKeysThisBuildDoesNotActOnAcceptOnlyTheirDefault(t *testing.T) {
 		"runtime.container":             func(c *config.Config) { c.Runtime.Container.CPU = 2 },
 		"grpc.unaryOnly":                func(c *config.Config) { c.GRPC.UnaryOnly = false },
 	} {
-		cfg := config.Default()
+		cfg := core(config.Default())
 		cfg.Mode = config.ModeDev
 		edit(&cfg)
 		if !has(cfg.Check(none), where, adapters.LevelError) {
@@ -218,7 +219,7 @@ func TestOnlyThePersonProfileRelaysServerGuidance(t *testing.T) {
 }
 
 func TestAnUnknownResultFilterLocaleIsRefused(t *testing.T) {
-	cfg := config.Default()
+	cfg := core(config.Default())
 	cfg.ResultFilter.Locales = []string{"br", "xx"}
 	if !has(cfg.Check(none), "resultFilter.locales", adapters.LevelError) {
 		t.Fatal("the unknown locale xx was accepted")
@@ -226,10 +227,12 @@ func TestAnUnknownResultFilterLocaleIsRefused(t *testing.T) {
 }
 
 func TestTheLocalIssuerNeedsTheOperatorToken(t *testing.T) {
-	cfg := config.Default()
+	cfg := core(config.Default())
 	cfg.Mode = config.ModeDev
 	cfg.Auth.LocalIssuer.Enabled, cfg.Auth.Operator.TokenRef = true, ""
 	if !has(cfg.Check(none), "auth.localIssuer.enabled", adapters.LevelError) {
 		t.Fatal("a local issuer without the operator token was accepted")
 	}
 }
+
+func core(c config.Config) config.Config { return c.With(app.Core().Builtins()...) }

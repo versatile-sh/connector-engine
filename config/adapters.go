@@ -53,10 +53,10 @@ func (c Config) sourceDefault() []string {
 }
 
 func (c Config) secretsDefault() []string {
-	switch c.Secrets.Adapter {
-	case "memory":
+	switch {
+	case c.Secrets.Adapter == "memory":
 		return []string{adapters.TierMemory}
-	case "hostkey", "onepassword":
+	case c.has(PortSecrets, c.Secrets.Adapter):
 		return use(adapters.TierBuiltin, c.Secrets.Adapter)
 	}
 	return use(adapters.TierBuiltin, "localfile")
@@ -69,25 +69,21 @@ func (c Config) filterDefault() []string {
 	return nil
 }
 
-// AdaptersSpec declares the ports of the engine; the defaults of a port follow the keys of connector-engine.yaml that name its adapter.
-// Plugin selections are refused: no port of this build speaks a plugin protocol yet.
+// AdaptersSpec declares the ports of the engine: their defaults follow the keys of connector-engine.yaml that name an adapter, and their adapters are those of With.
+// The auth port is the core's own. Plugin selections are refused: no port of this build speaks a plugin protocol yet.
 func (c Config) AdaptersSpec() adapters.Spec {
-	return adapters.Spec{Engine: Engine, EnvPrefix: EnvPrefix, Acknowledgements: Acknowledgements, Ports: map[string]adapters.PortSpec{
-		PortStore: {Default: use(adapters.TierBuiltin, "postgres"), Builtins: []string{"postgres"}, Memory: true, Stateful: true,
-			Capabilities:  map[string][]string{"memory": {"store.volatile"}, "builtin:postgres": {"store.transactional_outbox", "store.row_level_security"}},
-			BuiltinConfig: map[string]map[string]adapters.ConfigKind{"builtin:postgres": {"databaseUrlRef": adapters.ConfigRef}}},
-		PortSecrets: {Default: c.secretsDefault(), Builtins: []string{"localfile", "hostkey", "onepassword"}, Memory: true, Stateful: true, Sensitive: true,
-			Capabilities: map[string][]string{"builtin:localfile": {"secrets.envelope", "secrets.crypto_shredding"}, "builtin:hostkey": {"secrets.envelope", "secrets.crypto_shredding"},
-				"builtin:onepassword": {"secrets.envelope", "secrets.crypto_shredding", "secrets.root_key_wrapped"},
-				"memory":              {"secrets.volatile"}}},
+	ports := map[string]adapters.PortSpec{
+		PortStore:   {Default: use(adapters.TierBuiltin, "postgres"), Stateful: true},
+		PortSecrets: {Default: c.secretsDefault(), Stateful: true, Sensitive: true},
 		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Builtins: []string{"jwks", "local"}, Sensitive: true, Weak: []string{"builtin:local"}},
-		PortRuntime: {Default: c.runtimeDefault(), Builtins: []string{"remote", "declarative", "grpc", "skill"}, Memory: true, Multi: true},
-		PortSource:  {Default: c.sourceDefault(), Builtins: []string{"files", "official", "docker", "openapi", "reflection", "bsr", "skillcatalog"}, Memory: true, Multi: true},
-		PortSink: {Default: use(adapters.TierBuiltin, "log"), Builtins: []string{"log", "webhook"}, Memory: true,
-			BuiltinConfig: map[string]map[string]adapters.ConfigKind{"builtin:webhook": {"url": adapters.ConfigString, "secretRef": adapters.ConfigRef, "timeout": adapters.ConfigString}}},
-		PortFilter: {Default: c.filterDefault(), Builtins: []string{"builtin"}},
-		PortIndex:  {Default: use(adapters.TierBuiltin, "lexical"), Builtins: []string{"lexical"}},
-	}, Validate: c.validateAdapters}
+		PortRuntime: {Default: c.runtimeDefault(), Multi: true},
+		PortSource:  {Default: c.sourceDefault(), Multi: true},
+		PortSink:    {Default: use(adapters.TierBuiltin, "log")},
+		PortFilter:  {Default: c.filterDefault()},
+		PortIndex:   {Default: use(adapters.TierBuiltin, "lexical")},
+	}
+	c.declare(ports)
+	return adapters.Spec{Engine: Engine, EnvPrefix: EnvPrefix, Acknowledgements: Acknowledgements, Ports: ports, Validate: c.validateAdapters}
 }
 
 func (c Config) validateAdapters(f adapters.File) adapters.Findings {

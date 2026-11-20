@@ -17,7 +17,7 @@ import (
 	"github.com/versatile-sh/connector-engine/app"
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/port"
-	secretslocal "github.com/versatile-sh/connector-engine/secrets/local"
+	secretsmemory "github.com/versatile-sh/connector-engine/secrets/memory"
 	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 
@@ -69,12 +69,17 @@ type engine struct {
 
 func boot(t *testing.T, cfg config.Config, adaptersYAML string, env map[string]string) *engine {
 	t.Helper()
-	file, err := cfg.LoadAdapters([]byte(adaptersYAML), nil)
+	return bootWith(t, app.Core(), cfg, adaptersYAML, env)
+}
+
+func bootWith(t *testing.T, r *app.Registry, cfg config.Config, adaptersYAML string, env map[string]string) *engine {
+	t.Helper()
+	file, err := cfg.With(r.Builtins()...).LoadAdapters([]byte(adaptersYAML), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, stop := context.WithCancel(context.Background())
-	a, err := app.New(ctx, cfg, file, app.Options{Lookup: func(k string) string { return env[k] }})
+	a, err := app.New(ctx, cfg, file, app.Options{Lookup: func(k string) string { return env[k] }, Adapters: r})
 	if err != nil {
 		stop()
 		t.Fatal(err)
@@ -207,7 +212,7 @@ func TestBootsOnPostgresAndKeepsRolesAcrossARestart(t *testing.T) {
 }
 
 func TestProductionRefusesToBootWithoutIssuersAndWithTheLocalIssuerUnacknowledged(t *testing.T) {
-	cfg := config.Default()
+	cfg := config.Default().With(app.Core().Builtins()...)
 	cfg.Server.PublicURL = "https://engine.test"
 	base := "apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: production\nallowMemory: true\n%sports:\n  store: {use: memory}\n  secrets: {use: memory}\n"
 	if _, err := cfg.LoadAdapters([]byte(fmt.Sprintf(base, "")), nil); err == nil || !strings.Contains(err.Error(), "auth.issuers") {
@@ -307,21 +312,31 @@ func TestOperatorListenerServesMetrics(t *testing.T) {
 	}
 }
 
-func TestTheHostkeyAdapterReportsHowItsRootKeyRests(t *testing.T) {
+type vault struct{ port.SecretStore }
+
+func (vault) Capabilities() []string { return []string{"secrets.root_key_sealed"} }
+
+func TestAnAddedSecretsAdapterIsSelectableAndReportsItsCapabilities(t *testing.T) {
+	r := app.Core()
+	opened := false
+	app.Register(r, app.Secrets, app.Adapter{Name: "vault", Capabilities: []string{"secrets.envelope"}}, func(context.Context, app.Env) (port.SecretStore, func(), error) {
+		opened = true
+		return vault{secretsmemory.New()}, nil, nil
+	})
 	cfg := devConfig(t)
-	dir, err := os.MkdirTemp("", "hk")
-	if err != nil {
-		t.Fatal(err)
+	cfg.Secrets.Adapter, cfg.Secrets.Dir = "vault", t.TempDir()
+	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:vault}", 1)
+	e := bootWith(t, r, cfg, adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
+	if doc := adaptersDocument(t, e); !opened || !strings.Contains(doc, "secrets.envelope") || !strings.Contains(doc, "secrets.root_key_sealed") {
+		t.Fatalf("opened %v, /v1/adapters: %s", opened, doc)
 	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
-	cfg.Secrets.Adapter, cfg.Secrets.Dir, cfg.Secrets.UnlockSocket = "hostkey", filepath.Join(dir, "keys"), filepath.Join(dir, "unlock.sock")
-	if _, err := secretslocal.Open(cfg.Secrets.Dir); err != nil {
-		t.Fatal(err)
-	}
-	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:hostkey}", 1)
-	e := boot(t, cfg, adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
-	if doc := adaptersDocument(t, e); !strings.Contains(doc, "secrets.root_key_plaintext") {
-		t.Fatalf("/v1/adapters: %s", doc)
+}
+
+func TestTheCoreAloneRefusesAnAdapterItDoesNotHave(t *testing.T) {
+	cfg := devConfig(t).With(app.Core().Builtins()...)
+	_, err := cfg.LoadAdapters([]byte(strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:vault}", 1)), nil)
+	if err == nil || !strings.Contains(err.Error(), `"vault"`) {
+		t.Fatalf("builtin:vault in a core build: %v", err)
 	}
 }
 

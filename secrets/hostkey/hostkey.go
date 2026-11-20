@@ -218,3 +218,6 @@ func Send(ctx context.Context, socket string, req Request) (Reply, error) {
 		}
 	}
 }
+
+// Capabilities reports how the root key rests now, as secrets.root_key_<form>.
+func (s *Store) Capabilities() []string { return []string{"secrets.root_key_" + string(s.Form())} }

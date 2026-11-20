@@ -28,6 +28,7 @@ type ApprovalView struct {
 	Function       string           `json:"function"`
 	FunctionTitle  string           `json:"function_title,omitempty"`
 	Kind           port.Class       `json:"kind"`
+	Skill          bool             `json:"skill"`
 	App            string           `json:"app"`
 	Session        string           `json:"session"`
 	CreatedAt      time.Time        `json:"created_at"`
@@ -49,18 +50,17 @@ type approvalDetail struct {
 	ReachesOutside bool          `json:"reaches_outside"`
 }
 
-func (c *Console) connectorRef(ctx context.Context, conn port.ConnectorID) (ConnectorRef, error) {
+func (c *Console) connectorRef(ctx context.Context, conn port.ConnectorID) (ConnectorRef, port.Manifest, error) {
 	var v connectorView
 	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(string(conn)), nil, &v); err != nil {
-		return ConnectorRef{}, err
+		return ConnectorRef{}, port.Manifest{}, err
 	}
 	ref := ConnectorRef{ID: string(conn), Alias: v.Connector.Alias, Title: v.Connector.Alias}
-	l := v.Connector.Listing
-	var lv port.ListingVersion
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", c.Engine.Workspace, "owner", string(l.Listing.Owner), "name", l.Listing.Name, "version", l.Version), nil, &lv); err == nil {
-		ref.Title, ref.Icon = firstOf(lv.Manifest.Title, lv.Manifest.Name, ref.Alias), lv.Manifest.Icon
+	m, err := c.manifestOf(ctx, v.Connector)
+	if err == nil {
+		ref.Title, ref.Icon = firstOf(m.Title, m.Name, ref.Alias), m.Icon
 	}
-	return ref, nil
+	return ref, m, nil
 }
 
 // Approval reads one approval with its connector, its function's nature and the choices still open.
@@ -79,12 +79,15 @@ func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error)
 	if json.Valid(d.Arguments) {
 		v.Arguments = d.Arguments
 	}
-	ref, err := c.connectorRef(ctx, a.Connector)
+	ref, m, err := c.connectorRef(ctx, a.Connector)
 	if err != nil {
 		return ApprovalView{}, err
 	}
 	v.Connector = ref
-	if f, err := c.function(ctx, string(a.Connector), a.Function); err == nil {
+	if m.Kind == port.KindSkill {
+		v.Skill, v.Kind, v.Function, v.FunctionTitle = true, port.ClassRead, ref.Alias, firstOf(m.Title, ref.Alias)
+		v.Connector.Title = "Skill"
+	} else if f, err := c.function(ctx, string(a.Connector), a.Function); err == nil {
 		v.Kind = Nature(f)
 		v.FunctionTitle, _ = describe(f.Definition)
 	}
@@ -122,7 +125,11 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	lost := out.State == port.ApprovalPending || out.Channel != channel || out.DecisionNote != note
 	if choice == surface.ChoiceAlways && !lost {
 		c.surf.markAlways(id)
-		if err := c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn); err != nil {
+		set := func() error { return c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn) }
+		if v.Skill {
+			set = func() error { return c.SetSkillAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), AccessOn) }
+		}
+		if err := set(); err != nil {
 			return v, false, err
 		}
 	}

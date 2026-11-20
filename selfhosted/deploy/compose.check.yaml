@@ -2,7 +2,7 @@ services:
   testmcp:
     image: connector-engine-testmcp:local
     build:
-      context: ..
+      context: ../..
       dockerfile: Dockerfile
       target: testmcp
     profiles: [person]

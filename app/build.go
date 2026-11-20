@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"time"
 
 	"github.com/agents-control/plugkit/adapters"
 
 	"github.com/agents-control/connector-engine/auth/jwks"
+	"github.com/agents-control/connector-engine/auth/local"
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/credential"
 	filterbuiltin "github.com/agents-control/connector-engine/filter/builtin"
@@ -80,6 +82,15 @@ func (b builder) store(ctx context.Context) (port.Store, port.Outbox, func(), er
 		return nil, nil, nil, fmt.Errorf("store: migrate: %w", err)
 	}
 	return s, s, s.Close, nil
+}
+
+func (b builder) localIssuer(ctx context.Context, secrets port.SecretStore) (*local.Issuer, error) {
+	c := b.cfg.Auth.LocalIssuer
+	if u, _ := b.one(config.PortSecrets); u.Tier == adapters.TierMemory {
+		return local.New(c.Name, b.clock.Now)
+	}
+	return local.Open(ctx, c.Name, b.clock.Now, local.Keyring{Path: filepath.Join(b.cfg.Secrets.Dir, "local-issuer.json"), Secrets: secrets,
+		RotateEvery: c.RotateEvery, Keep: max(time.Hour, b.cfg.Auth.AgentTokenMaxLifetime)})
 }
 
 var vaultHTTP = &http.Client{Timeout: 30 * time.Second}

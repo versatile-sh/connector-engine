@@ -13,6 +13,7 @@ auth:
   localIssuer:
     enabled: false
     name: connector-engine-local
+    rotateEvery: 720h0m0s
   agentTokenMaxLifetime: 1h0m0s
   senderConstraint: none
   trustedProxy:

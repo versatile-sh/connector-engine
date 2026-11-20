@@ -164,7 +164,6 @@ export const en = {
 
   "keys.title": "*Connect* an AI app",
   "keys.intro": "Pick your app below and connect with the address only: the app opens this console in your browser and you allow it. Every connector shows up with the permissions you set.",
-  "keys.endpoint": "Endpoint",
   "keys.new": "New access key",
   "keys.name": "Name",
   "keys.namePlaceholder": "claude-desktop, cursor, chatgpt…",

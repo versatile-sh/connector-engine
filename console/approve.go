@@ -11,7 +11,7 @@ func (c *Console) approvalPage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if _, ok := c.Sessions.Get(r); !ok {
 		if _, _, err := c.checkLink(r.URL.Query().Get("t"), id); err != nil {
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in first"})
+			writeError(w, http.StatusUnauthorized, "sign in first")
 			return
 		}
 	}
@@ -42,25 +42,25 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 	}
 	id := r.PathValue("id")
 	if !in.Choice.Valid() {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the choice is once, session, always or deny"})
+		writeError(w, http.StatusBadRequest, "the choice is once, session, always or deny")
 		return
 	}
 	channel, note := "console", "console"
 	if in.Token != "" {
 		device, nonce, err := c.checkLink(in.Token, id)
 		if err != nil || !c.surf.links.spend(nonce, time.Now().Add(24*time.Hour)) {
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": errBadToken.Error()})
+			writeError(w, http.StatusUnauthorized, errBadToken.Error())
 			return
 		}
 		channel, note = "desktop", "desktop:"+c.deviceName(device)
 	} else {
 		csrf, ok := c.Sessions.Get(r)
 		if !ok {
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in first"})
+			writeError(w, http.StatusUnauthorized, "sign in first")
 			return
 		}
 		if !csrfOK(csrf, r.Header.Get(csrfHeader)) {
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "missing or wrong CSRF token"})
+			writeError(w, http.StatusForbidden, "missing or wrong CSRF token")
 			return
 		}
 	}

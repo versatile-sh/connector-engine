@@ -15,7 +15,10 @@ import (
 	"github.com/agents-control/connector-engine/surface"
 )
 
-const maxLabel = 60
+const (
+	maxLabel          = 60
+	defaultDeviceName = "This computer"
+)
 
 var (
 	digits    = regexp.MustCompile(`^[0-9]{1,24}$`)
@@ -77,31 +80,31 @@ func (c *Console) settingsOf(ctx context.Context, sc StoredChannel) (map[string]
 func checkSettings(kind string, in map[string]string) (map[string]string, error) {
 	spec, ok := kinds[kind]
 	if !ok {
-		return nil, fmt.Errorf("unknown channel kind %q", kind)
+		return nil, invalid("unknown channel kind %q", kind)
 	}
 	out := map[string]string{}
 	for _, k := range append(slices.Clone(spec.required), spec.optional...) {
 		v := strings.TrimSpace(in[k])
 		if v == "" && slices.Contains(spec.required, k) {
-			return nil, fmt.Errorf("%s is required", k)
+			return nil, invalid("%s is required", k)
 		}
 		if strings.ContainsAny(v, " \r\n\t") || len(v) > 2048 {
-			return nil, fmt.Errorf("%s has spaces or is too long", k)
+			return nil, invalid("%s has spaces or is too long", k)
 		}
 		if v != "" {
 			out[k] = v
 		}
 	}
 	if spec.owner != nil && !spec.owner.MatchString(out["owner_user_id"]) {
-		return nil, fmt.Errorf("owner_user_id does not look like a %s user id", kind)
+		return nil, invalid("owner_user_id does not look like a %s user id", kind)
 	}
 	if raw, ok := out["url"]; ok {
 		u, err := url.Parse(raw)
 		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
-			return nil, fmt.Errorf("the URL is an https address")
+			return nil, invalid("the URL is an https address")
 		}
 		if len(spec.hosts) > 0 && !slices.Contains(spec.hosts, strings.ToLower(u.Hostname())) {
-			return nil, fmt.Errorf("a %s URL is on %s", kind, strings.Join(spec.hosts, " or "))
+			return nil, invalid("a %s URL is on %s", kind, strings.Join(spec.hosts, " or "))
 		}
 	}
 	return out, nil
@@ -160,6 +163,7 @@ func (c *Console) surfaceRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/notifications/channels/{id}/test", c.authed(c.testChannel))
 	mux.HandleFunc("PUT /api/notifications/apps/{name}", c.authed(c.setElicit))
 	mux.HandleFunc("POST /api/notifications/devices", c.authed(c.pairDevice))
+	mux.HandleFunc("PATCH /api/notifications/devices/{id}", c.authed(c.renameDevice))
 	mux.HandleFunc("DELETE /api/notifications/devices/{id}", c.authed(c.revokeDevice))
 	mux.HandleFunc("GET /api/notify/stream", c.notifyStream)
 }
@@ -203,7 +207,7 @@ func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {
 		_, err = c.factory()(in.Kind, settings)
 	}
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": tracked{secrets: secretValues(in.Kind, in.Settings)}.scrub(err)})
+		writeError(w, http.StatusBadRequest, tracked{secrets: secretValues(in.Kind, in.Settings)}.scrub(err))
 		return
 	}
 	label := strings.TrimSpace(in.Label)
@@ -245,7 +249,7 @@ func (c *Console) removeChannel(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		c.fail(w, err)
 	case !ok:
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such channel"})
+		writeError(w, http.StatusNotFound, "no such channel")
 	default:
 		c.surf.wake()
 		w.WriteHeader(http.StatusNoContent)
@@ -255,7 +259,7 @@ func (c *Console) removeChannel(w http.ResponseWriter, r *http.Request) {
 func (c *Console) testChannel(w http.ResponseWriter, r *http.Request) {
 	sc, ok := c.storedChannel(r.PathValue("id"))
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such channel"})
+		writeError(w, http.StatusNotFound, "no such channel")
 		return
 	}
 	settings, err := c.settingsOf(r.Context(), sc)
@@ -288,7 +292,7 @@ func (c *Console) setElicit(w http.ResponseWriter, r *http.Request) {
 	}
 	name := r.PathValue("name")
 	if !slices.ContainsFunc(c.State.Agents(), func(a Agent) bool { return a.Name == name }) {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such app"})
+		writeError(w, http.StatusNotFound, "no such app")
 		return
 	}
 	if err := c.State.SetElicit(name, in.Elicit); err != nil {
@@ -305,9 +309,9 @@ func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	name := strings.TrimSpace(in.Name)
-	if name == "" || len([]rune(name)) > maxLabel {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "give the computer a name of at most 60 characters"})
+	name, ok := deviceName(in.Name)
+	if !ok {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("give the computer a name of at most %d characters", maxLabel))
 		return
 	}
 	key := "cnk_" + randomID()
@@ -321,6 +325,37 @@ func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"device": DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt}, "key": key, "command": cmd})
 }
 
+func deviceName(raw string) (string, bool) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		name = defaultDeviceName
+	}
+	return name, len([]rune(name)) <= maxLabel
+}
+
+func (c *Console) renameDevice(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name string `json:"name"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	name, ok := deviceName(in.Name)
+	if !ok {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("give the computer a name of at most %d characters", maxLabel))
+		return
+	}
+	found, err := c.State.RenameDevice(r.PathValue("id"), name)
+	switch {
+	case err != nil:
+		c.fail(w, err)
+	case !found:
+		writeError(w, http.StatusNotFound, "no such device")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func (c *Console) revokeDevice(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	ok, err := c.State.DeleteDevice(id)
@@ -328,7 +363,7 @@ func (c *Console) revokeDevice(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		c.fail(w, err)
 	case !ok:
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such device"})
+		writeError(w, http.StatusNotFound, "no such device")
 	default:
 		c.surf.hub.drop(id)
 		c.surf.wake()

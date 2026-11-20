@@ -82,11 +82,7 @@ func (s *State) RotateRefresh(old, next string, g RefreshGrant) error {
 		s.data.Refresh = map[string]RefreshGrant{}
 	}
 	now := time.Now()
-	for k, v := range s.data.Refresh {
-		if now.After(v.Expires) {
-			delete(s.data.Refresh, k)
-		}
-	}
+	expire(s.data.Refresh, now, func(v RefreshGrant) time.Time { return v.Expires })
 	delete(s.data.Refresh, old)
 	s.data.Refresh[next] = g
 	return s.save()

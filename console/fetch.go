@@ -18,7 +18,7 @@ const (
 )
 
 // ErrTooLarge is returned when a fetched body passes its limit.
-var ErrTooLarge = errors.New("the response is larger than the console accepts")
+var ErrTooLarge = unreachable(errors.New("the response is larger than the console accepts"))
 
 // Reach says which addresses a server-side fetch may dial: public https only, or, when the person ticked it for one import, local and http too.
 type Reach struct {
@@ -29,16 +29,16 @@ type Reach struct {
 func (r Reach) CheckURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" {
-		return nil, fmt.Errorf("%q is not an absolute URL", raw)
+		return nil, invalid("%q is not an absolute URL", raw)
 	}
 	if u.User != nil {
-		return nil, fmt.Errorf("a URL with credentials is refused")
+		return nil, invalid("a URL with credentials is refused")
 	}
 	switch {
 	case u.Scheme == "https":
 	case u.Scheme == "http" && r.Local:
 	default:
-		return nil, fmt.Errorf("only https URLs are fetched; tick \"local server\" for an http server on this machine or network")
+		return nil, invalid("only https URLs are fetched; tick \"local server\" for an http server on this machine or network")
 	}
 	return u, nil
 }
@@ -76,7 +76,7 @@ func (r Reach) Client() *http.Client {
 		Transport: capped{next: r.Transport()},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= maxRedirects {
-				return fmt.Errorf("too many redirects")
+				return unreachable(errors.New("too many redirects"))
 			}
 			_, err := r.CheckURL(req.URL.String())
 			return err
@@ -103,7 +103,7 @@ func (r Reach) Get(ctx context.Context, raw string, limit int64, accept string) 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
-		return nil, "", fmt.Errorf("%s answered %d", u.Host, resp.StatusCode)
+		return nil, "", unreachable(fmt.Errorf("%s answered %d", u.Host, resp.StatusCode))
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {

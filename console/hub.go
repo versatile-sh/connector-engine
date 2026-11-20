@@ -120,7 +120,7 @@ func (c *Console) notifyStream(w http.ResponseWriter, r *http.Request) {
 	scheme, key, _ := strings.Cut(r.Header.Get("Authorization"), " ")
 	d, ok := c.State.DeviceByKey(keyHash(strings.TrimSpace(key)))
 	if !strings.EqualFold(scheme, "Bearer") || !ok {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "pair this computer in Notifications first"})
+		writeError(w, http.StatusUnauthorized, "pair this computer in Notifications first")
 		return
 	}
 	d.LastSeen = time.Now().UTC().Truncate(time.Second)

@@ -3,7 +3,6 @@ package console
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"slices"
 	"time"
@@ -162,9 +161,9 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 		surface.ChoiceAlways: port.DecisionApprove, surface.ChoiceDeny: port.DecisionDeny}[choice]
 	switch {
 	case decision == "":
-		return v, false, fmt.Errorf("the choice is once, session, always or deny")
+		return v, false, invalid("the choice is once, session, always or deny")
 	case !slices.Contains(v.Choices, choice):
-		return v, false, fmt.Errorf("%s is not offered for this call", choice)
+		return v, false, invalid("%s is not offered for this call", choice)
 	}
 	var out port.Approval
 	if err := c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":decide", map[string]any{"decision": decision, "channel": channel, "note": note}, &out); err != nil {

@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 
 	connectorenginev1 "github.com/agents-control/connector-engine/api/connectorengine/v1"
+	"github.com/agents-control/connector-engine/internal/safe"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/server"
 )
@@ -106,9 +107,35 @@ func New(env *server.Env, authn server.Authenticator, log *slog.Logger, opts ...
 			desc.Methods = append(desc.Methods, grpc.MethodDesc{MethodName: op.RPC, Handler: h.unary})
 		}
 	}
+	opts = append([]grpc.ServerOption{grpc.ChainUnaryInterceptor(recoverUnary(log)), grpc.ChainStreamInterceptor(recoverStream(log))}, opts...)
 	s := grpc.NewServer(opts...)
 	s.RegisterService(desc, struct{}{})
 	return s, nil
+}
+
+func recovered(ctx context.Context, log *slog.Logger, method string, err error) error {
+	var p *safe.Panic
+	if errors.As(err, &p) {
+		log.ErrorContext(ctx, "grpc handler panicked", "method", method, "error", err)
+		return status.Error(codes.Internal, "internal error")
+	}
+	return err
+}
+
+func recoverUnary(log *slog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next grpc.UnaryHandler) (res any, err error) {
+		err = safe.Run(func() (err error) {
+			res, err = next(ctx, req)
+			return err
+		})
+		return res, recovered(ctx, log, info.FullMethod, err)
+	}
+}
+
+func recoverStream(log *slog.Logger) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, next grpc.StreamHandler) error {
+		return recovered(ss.Context(), log, info.FullMethod, safe.Run(func() error { return next(srv, ss) }))
+	}
 }
 
 func (h handler) unary(_ any, ctx context.Context, dec func(any) error, ic grpc.UnaryServerInterceptor) (any, error) {

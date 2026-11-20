@@ -166,3 +166,26 @@ func TestRunBacksOffExponentiallyAndRecovers(t *testing.T) {
 	}
 	equal(t, types(sink.Events()), []string{"a1"})
 }
+
+func TestRunSurvivesASinkThatPanics(t *testing.T) {
+	s, sink := memory.New(), sinkmem.New()
+	emit(t, s, "ta", "a1")
+	panics := 1
+	sink.FailWith(func([]port.Event) error {
+		if panics > 0 {
+			panics--
+			panic("sink bug")
+		}
+		return nil
+	})
+	runCtx, stop := context.WithCancel(ctx)
+	r := relay.Relay{Outbox: s, Sink: sink, Sleep: func(context.Context, time.Duration) error {
+		if len(sink.Events()) == 1 {
+			stop()
+			return runCtx.Err()
+		}
+		return nil
+	}}
+	r.Run(runCtx)
+	equal(t, types(sink.Events()), []string{"a1"})
+}

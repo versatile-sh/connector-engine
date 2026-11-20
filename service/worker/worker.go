@@ -4,18 +4,23 @@ package worker
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
 
+	"github.com/agents-control/connector-engine/internal/safe"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 )
 
-// Config holds approval.sweepInterval, the size of one batch of due work and how many approved records run at once.
+// Config holds approval.sweepInterval, the batch size, the executor count, the shutdown grace of running executions, and where Run reports failures.
 type Config struct {
 	Interval  time.Duration
 	Batch     int
 	Executors int
+	Grace     time.Duration
+	Log       *slog.Logger
+	Failed    func()
 }
 
 // Stats counts what one sweep did.
@@ -55,17 +60,28 @@ func New(svc *service.Service, store port.Store, clock port.Clock, cfg Config) *
 	if cfg.Executors == 0 {
 		cfg.Executors = 8
 	}
+	if cfg.Log == nil {
+		cfg.Log = slog.New(slog.DiscardHandler)
+	}
+	if cfg.Failed == nil {
+		cfg.Failed = func() {}
+	}
 	return &Worker{svc: svc, store: store, clock: clock, cfg: cfg, slots: make(chan struct{}, cfg.Executors), retries: map[string]retry{}, running: map[string]bool{}}
 }
 
-// Run sweeps every Interval until ctx ends without waiting for the approved records it started; a failed item backs off.
+// Run sweeps every Interval until ctx ends, then gives the approved records it started Grace to finish before it cancels them; it logs and counts each failure.
 func (w *Worker) Run(ctx context.Context) error {
+	exec, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	defer cancel()
 	var wg sync.WaitGroup
-	defer wg.Wait()
+	defer w.drain(&wg, cancel)
 	t := time.NewTicker(w.cfg.Interval)
 	defer t.Stop()
 	for {
-		_, _ = w.sweep(ctx, &wg, nil)
+		w.failed(ctx, safe.Run(func() error {
+			_, err := w.sweep(ctx, exec, &wg, func(err error) { w.failed(ctx, err) })
+			return err
+		}))
 		select {
 		case <-ctx.Done():
 			return nil
@@ -74,12 +90,23 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 
+func (w *Worker) drain(wg *sync.WaitGroup, cancel context.CancelFunc) {
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(w.cfg.Grace):
+		cancel()
+		<-done
+	}
+}
+
 // Sweep runs one pass: due work, the re-list of due connectors and credentials, and the pending fan-outs; it waits for the approved records it started.
 func (w *Worker) Sweep(ctx context.Context) (Stats, error) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var async []error
-	st, err := w.sweep(ctx, &wg, func(e error) {
+	st, err := w.sweep(ctx, ctx, &wg, func(e error) {
 		mu.Lock()
 		async = append(async, e)
 		mu.Unlock()
@@ -88,7 +115,7 @@ func (w *Worker) Sweep(ctx context.Context) (Stats, error) {
 	return st, errors.Join(append(async, err)...)
 }
 
-func (w *Worker) sweep(ctx context.Context, wg *sync.WaitGroup, report func(error)) (Stats, error) {
+func (w *Worker) sweep(ctx, exec context.Context, wg *sync.WaitGroup, report func(error)) (Stats, error) {
 	var st Stats
 	var items []port.WorkItem
 	var tenants []port.Tenant
@@ -118,7 +145,7 @@ func (w *Worker) sweep(ctx context.Context, wg *sync.WaitGroup, report func(erro
 		}
 		st.Items++
 		if it.Kind == port.WorkApprovedRecord {
-			w.execute(ctx, wg, key, it, report)
+			w.execute(exec, wg, key, it, report)
 			continue
 		}
 		err := w.dispatch(ctx, it)
@@ -141,6 +168,14 @@ func (w *Worker) sweep(ctx context.Context, wg *sync.WaitGroup, report func(erro
 		errs = append(errs, w.fanOut(ctx, f))
 	}
 	return st, errors.Join(errs...)
+}
+
+func (w *Worker) failed(ctx context.Context, err error) {
+	if err == nil {
+		return
+	}
+	w.cfg.Failed()
+	w.cfg.Log.WarnContext(ctx, "worker sweep failed", "error", err)
 }
 
 func (w *Worker) waiting(now time.Time) int {
@@ -198,6 +233,10 @@ func (w *Worker) execute(ctx context.Context, wg *sync.WaitGroup, key string, it
 }
 
 func (w *Worker) dispatch(ctx context.Context, it port.WorkItem) error {
+	return safe.Run(func() error { return w.do(ctx, it) })
+}
+
+func (w *Worker) do(ctx context.Context, it port.WorkItem) error {
 	switch it.Kind {
 	case port.WorkApprovalExpiry:
 		return w.svc.ExpireApproval(ctx, it.Tenant, port.ApprovalID(it.ID))

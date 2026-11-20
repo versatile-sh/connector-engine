@@ -145,7 +145,7 @@ func (s spec) mode() port.Mode {
 }
 
 func (s spec) toApproval(r record, i int) port.Approval {
-	a := port.Approval{State: states[r.State], Mode: s.mode(), Approvers: approverIDs, CreatedAt: t0.Add(time.Duration(i) * time.Second), ExpiresAt: t0, ExecutionStartedAt: t0, ResultExpiresAt: t0}
+	a := port.Approval{State: states[r.State], Mode: s.mode(), Approvers: approverIDs, CreatedAt: t0.Add(time.Duration(i) * time.Second), ExpiresAt: t0.Add(time.Second), ExecutionStartedAt: t0, ResultExpiresAt: t0}
 	if r.ArgsKept {
 		a.Arguments = sealed
 	}

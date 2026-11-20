@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/agents-control/plugkit/adapters"
+
+	"github.com/agents-control/connector-engine/filter/builtin"
 )
 
 // Modes of the engine; production refuses what §14 lists unless acknowledged.
@@ -222,9 +224,10 @@ type Projection struct {
 	MaxPaths int    `yaml:"maxPaths"`
 }
 
-// ResultFilter is resultFilter.*: none or builtin.
+// ResultFilter is resultFilter.*: none or builtin, and the locale pattern sets the builtin filter masks besides secrets, emails, cards and phones.
 type ResultFilter struct {
-	Adapter string `yaml:"adapter"`
+	Adapter string   `yaml:"adapter"`
+	Locales []string `yaml:"locales"`
 }
 
 // Overlay is overlay.*: no suggester ships in this build.
@@ -388,7 +391,7 @@ func Default() Config {
 		Exposure:     Exposure{OnTrifecta: "warn"},
 		Search:       Search{ThresholdTokens: 10000, ThresholdFunctions: 30, ResultMax: 5},
 		Projection:   Projection{Default: "off", MaxPaths: 20},
-		ResultFilter: ResultFilter{Adapter: "none"},
+		ResultFilter: ResultFilter{Adapter: "none", Locales: slices.Clone(builtin.DefaultLocales)},
 		Overlay:      Overlay{Suggester: "none"},
 		CLI:          CLI{DefaultForCodingAgents: true},
 		GRPC:         GRPC{UnaryOnly: true},

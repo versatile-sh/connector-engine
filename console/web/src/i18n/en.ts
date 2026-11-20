@@ -87,7 +87,7 @@ export const en = {
   "connectors.needsSignIn": "needs sign-in",
   "connectors.credentialSet": "credential set",
   "connectors.empty.title": "No connectors yet",
-  "connectors.empty.body": "A connector is an MCP server your AI apps reach through this gateway. Import one, then choose for every function whether they may read, write, or must ask you first.",
+  "connectors.empty.body": "A connector is an MCP server your AI apps reach through this gateway. Import one, then turn each function off, on, or set it to ask you first.",
 
   "access.off": "Off",
   "access.on": "On",

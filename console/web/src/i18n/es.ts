@@ -89,7 +89,7 @@ export const es: Record<MessageKey, string> = {
   "connectors.needsSignIn": "falta iniciar sesión",
   "connectors.credentialSet": "credencial guardada",
   "connectors.empty.title": "Aún no hay conectores",
-  "connectors.empty.body": "Un conector es un servidor MCP al que tus apps de IA llegan por este gateway. Importa uno y elige, para cada función, si pueden leer, escribir o deben pedirte permiso antes.",
+  "connectors.empty.body": "Un conector es un servidor MCP al que tus apps de IA llegan por este gateway. Importa uno y deja cada función apagada, activada o preguntándote antes.",
 
   "access.off": "Apagada",
   "access.on": "Activada",

@@ -38,7 +38,7 @@ Everything new lives in three places:
 
 - `selfhosted/surface/`: the relay and the channel adapters. It does not import `service`, `core`, `store` or `gateway`.
 - `selfhosted/console/`: the decision use case, the settings, the `/approve` page API and the elicitation proxy.
-- `selfhosted/cli/notify`: the `cnctl notify` host helper.
+- `selfhosted/cli/notify`: the `vsh notify` host helper.
 
 ## 3. Options considered
 
@@ -72,7 +72,7 @@ Everything new lives in three places:
   |    +-- device hub --SSE /api/notify/stream--+                 |
   +---------------------------------------------+-----------------+
                                                 |  bearer device key
-                                     host: cnctl notify  ->  notify-send / osascript / toast
+                                     host: vsh notify  ->  notify-send / osascript / toast
                                                 |  click
                                      browser: /approve/<id>?t=<single-use link token>
 ```
@@ -140,12 +140,12 @@ Messages name the connector, the function, the app and the expiry. They never in
 - The relay runs only when at least one channel or paired device is configured.
 - Channel secrets are sealed by the console's `sealed.Box`. While the box is locked, before `make unlock` in the person profile, chat channels show an error. The relay rebuilds them as soon as the box unlocks.
 
-### 4.4 Desktop popups (`cnctl notify`)
+### 4.4 Desktop popups (`vsh notify`)
 
 The console cannot reach the host's notification service. The host helper connects out to the console instead:
 
 1. In Notifications, "Pair this computer" creates a device key. It is shown once, and the state keeps only its SHA-256. The name is optional (`This computer` when empty, at most 60 characters) and can be changed later with `PATCH /api/notifications/devices/{id}`.
-2. `cnctl notify --console http://127.0.0.1:7465 --key-file ~/.config/versatile/notify.key` opens `GET /api/notify/stream` with the key as a bearer and reconnects on loss.
+2. `vsh notify --console http://127.0.0.1:7465 --key-file ~/.config/versatile/notify.key` opens `GET /api/notify/stream` with the key as a bearer and reconnects on loss.
 3. For each prompt the console mints a link token for that device and sends it in the stream. The helper shows a native notification:
    - Linux: `notify-send --action` through D-Bus;
    - macOS: `terminal-notifier -open`, or a `display dialog` through `osascript`;

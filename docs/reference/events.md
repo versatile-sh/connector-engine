@@ -52,4 +52,4 @@ curl -s http://127.0.0.1:8080/v1/event-types/connector.call.finished
 {"number":20,"name":"connector.call.finished","consumed":false,"schema":{"$id":"https://agents-control.dev/connector-engine/events/v1/connector.call.finished","$schema":"https://json-schema.org/draft/2020-12/schema",...}}
 ```
 
-`cnctl admin events list` prints every type the same way.
+`vsh admin events list` prints every type the same way.

@@ -35,7 +35,7 @@ The separator (`gateway.separator`, `__`) and the longest name (`gateway.toolNam
 In the console, a quarantined function says "The definition changed" on the connector's page; choosing on or ask accepts the current definition. Through the API, with a `tenant_admin` person token:
 
 ```sh
-cnctl admin functions accept <connector id> <function name>
+vsh admin functions accept <connector id> <function name>
 ```
 
 ## Server instructions, prompts and resources

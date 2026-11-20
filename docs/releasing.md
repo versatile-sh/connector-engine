@@ -42,7 +42,7 @@ The **Release** workflow then:
 
 | Job | Publishes |
 |---|---|
-| Binaries, checksums and SBOMs | a GitHub release with `connector-engine_<os>_<arch>` and `connector-engine-headless_<os>_<arch>` archives (Linux, macOS, Windows; amd64, arm64), `checksums.txt`, one SPDX SBOM per archive, `install.sh` and `install.ps1` |
+| Binaries, checksums and SBOMs | a GitHub release with `connector-engine_<os>_<arch>` archives holding the one `vsh` binary and `connector-engine-headless_<os>_<arch>` archives holding `connector-engine` and the core `vsh`, each with `LICENSE`, `NOTICE` and `README.md` (Linux, macOS, Windows; amd64, arm64), `checksums.txt`, one SPDX SBOM per archive, `install.sh` and `install.ps1` |
 | Container image (connector-engine) | `ghcr.io/versatile-sh/connector-engine:<version>`, `:<major>.<minor>`, `:latest` |
 | Container image (connector-engine-headless) | `ghcr.io/versatile-sh/connector-engine-headless`, same tags |
 

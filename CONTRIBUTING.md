@@ -51,7 +51,7 @@ go build ./...
 Lint exclusions in `.golangci.yml` are narrow and tied to a path or rule. The main ones:
 
 - `gosec` file and command checks (G204, G304) are off: the engine reads paths and starts processes named by its operator's configuration.
-- `gosec` permission checks (G301, G306) are off: `cnctl skills export` writes 0644 files on purpose.
+- `gosec` permission checks (G301, G306) are off: `vsh skills export` writes 0644 files on purpose.
 - The console session cookie has no `Secure` flag because the console serves plain HTTP on loopback.
 - `errcheck` ignores `fmt.Fprint*` and teardown calls (`Close`, `Stop`, `Serve`).
 
@@ -123,7 +123,7 @@ The user documentation lives in [`docs/`](docs/README.md), one page per task.
 | `secrets/`, `auth/`, `credential/` | envelope encryption, token verification and the local issuer, the credential broker |
 | `filter/`, `index/`, `sink/`, `relay/` | result filter, tool index, event sinks, outbox relay |
 | `app/`, `config/` | the composition root and the configuration files |
-| `cmd/connector-engine`, `cmd/cnctl` | the headless binaries |
+| `cmd/connector-engine`, `cmd/vsh` | the headless binaries |
 | `internal/plugkit` | in-module copy of the plugin kit (adapters, outbox, discovery) |
 | `selfhosted/` | the `person` profile: console, approval surfaces, host keychain, its binaries and compose file ([selfhosted/README.md](selfhosted/README.md)) |
 | `deploy/` | `compose.yaml`, the `headless` profile, the shared PaaS image (`deploy/cloud/`) and the community provider templates (`deploy/providers/`) |

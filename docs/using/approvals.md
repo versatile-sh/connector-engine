@@ -38,7 +38,7 @@ Nothing is sent until you add a surface.
 make notify
 ```
 
-`make notify` runs `cnctl notify --console http://127.0.0.1:<CONSOLE_PORT>`: it shows a desktop notification for each call waiting for you and opens a small approval page.
+`make notify` runs `vsh notify --console http://127.0.0.1:<CONSOLE_PORT>`: it shows a desktop notification for each call waiting for you and opens a small approval page.
 
 - Chat surfaces accept clicks only from the owner id you configure, and keep call arguments out of third-party messages.
 - Elicitation lets the app ask you inside the chat. Turn it on only for apps you answer by hand: an app with hooks or scripts that answer prompts could approve its own calls. Destructive functions are never asked there, and Always allow this app is never offered there.
@@ -50,9 +50,9 @@ Design and threat model: [approval surfaces](../self-hosted/approval-surfaces.md
 Your product decides approvals through the API and the `connector.approval.*` events, with a person token that holds an approving role (`approver` or `tenant_admin`):
 
 ```sh
-export CNCTL_URL=http://127.0.0.1:8080 CNCTL_TOKEN=<person token>
-cnctl admin approvals list
-cnctl admin approvals decide <id> --decision approve      # or approve_for_session, deny
+export VSH_ADMIN_URL=http://127.0.0.1:8080 VSH_ADMIN_TOKEN=<person token>
+vsh admin approvals list
+vsh admin approvals decide <id> --decision approve      # or approve_for_session, deny
 ```
 
 With nothing waiting, the list prints:
@@ -63,4 +63,4 @@ With nothing waiting, the list prints:
 }
 ```
 
-See [events](../reference/events.md) and [cnctl](../reference/cnctl.md).
+See [events](../reference/events.md) and [vsh](../reference/vsh.md).

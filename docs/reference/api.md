@@ -58,4 +58,4 @@ The operator token on tenant data is refused:
 | people and roles | `/v1/roles`, `/v1/groups/members`, `/v1/people/{id}`, `/v1/agents/{id}` |
 | platform | `/v1/adapters`, `/v1/operations/{id}`, `/v1/event-types`, `/v1/secrets:rotate` |
 
-From the command line, every operation is reachable through [`cnctl admin`](cnctl.md#admin).
+From the command line, every operation is reachable through [`vsh admin`](vsh.md#admin).

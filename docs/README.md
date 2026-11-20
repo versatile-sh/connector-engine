@@ -62,7 +62,7 @@ Start with **Install**, then **Use**. Every page is short and has runnable examp
 | Page | Covers |
 |---|---|
 | [Configuration](reference/config.md) | both YAML files, references, the keys you change |
-| [cnctl](reference/cnctl.md) | every command and group |
+| [vsh](reference/vsh.md) | every command and group |
 | [API](reference/api.md) | HTTP, gRPC and management MCP from one table |
 | [Events](reference/events.md) | CloudEvents types and the webhook sink |
 

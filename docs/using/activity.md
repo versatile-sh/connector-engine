@@ -21,7 +21,7 @@ The **Activity** page lists every call an AI app made through the console's `/mc
 The engine publishes every call as a [CloudEvent](../reference/events.md): `connector.call.started`, `finished`, `failed`, `denied` and `outcome_unknown`. Send them to your own store with the `webhook` sink. A person token with audit rights (`tenant_admin`) lists recent calls:
 
 ```sh
-CNCTL_URL=http://127.0.0.1:8080 CNCTL_TOKEN=<person token> cnctl admin calls list
+VSH_ADMIN_URL=http://127.0.0.1:8080 VSH_ADMIN_TOKEN=<person token> vsh admin calls list
 ```
 
 ```text

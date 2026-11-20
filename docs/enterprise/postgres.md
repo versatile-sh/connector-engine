@@ -44,8 +44,8 @@ The engine applies its embedded migrations at start, serialised by an advisory l
 Each tenant has its own key-encryption key; removing a tenant destroys the key, so its sealed data cannot be opened again.
 
 ```sh
-cnctl admin tenants create acme
-cnctl admin tenants remove acme
+vsh admin tenants create acme
+vsh admin tenants remove acme
 ```
 
 ## Retention

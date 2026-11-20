@@ -51,7 +51,7 @@ User=connector-engine
 Group=connector-engine
 StateDirectory=connector-engine
 StateDirectoryMode=0700
-ExecStart=/usr/local/bin/connector-engine-selfhosted up --data /var/lib/connector-engine --no-keychain
+ExecStart=/usr/local/bin/vsh up --data /var/lib/connector-engine --no-keychain
 Restart=on-failure
 NoNewPrivileges=yes
 ProtectSystem=strict
@@ -89,7 +89,7 @@ Keep it open, then browse to `http://127.0.0.1:7465` and create the owner accoun
 ### 4. Back up and update
 
 ```sh
-sudo -u connector-engine connector-engine-selfhosted export --data /var/lib/connector-engine
+sudo -u connector-engine vsh export --data /var/lib/connector-engine
 ```
 
 It asks for a passphrase twice and writes a dated `.cebak` file ([account and backup](../using/account-backup.md)). A full backup always needs that passphrase typed, so it cannot run from cron; `export --setup --yes` (no credentials) can.

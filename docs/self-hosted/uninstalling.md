@@ -24,11 +24,11 @@ docker image rm connector-engine:local
 
 `-v` removes the four volumes (`pgdata`, `engine-data`, `console-data`, `secrets`); `docker image rm` removes the image `make up` built.
 
-Then remove the unlock key from your OS keychain. `make cnctl` builds `bin/cnctl` if Go is installed:
+Then remove the unlock key from your OS keychain. `make vsh` builds `bin/vsh` if Go is installed:
 
 ```sh
-make cnctl
-bin/cnctl keychain delete --name connector-engine
+make vsh
+bin/vsh keychain delete --name connector-engine
 ```
 
 | Also left on the machine | Remove with |
@@ -43,14 +43,14 @@ bin/cnctl keychain delete --name connector-engine
 `uninstall` stops the install; `--purge` also deletes the data directory and the unlock key in the keychain. Export first:
 
 ```sh
-connector-engine-selfhosted export
-connector-engine-selfhosted uninstall --purge
+vsh export
+vsh uninstall --purge
 ```
 
 Then delete the binaries the installer wrote:
 
 ```sh
-rm ~/.local/bin/connector-engine-selfhosted ~/.local/bin/connector-console ~/.local/bin/cnctl
+rm ~/.local/bin/vsh
 ```
 
 On Windows, delete `%LOCALAPPDATA%\connector-engine`.

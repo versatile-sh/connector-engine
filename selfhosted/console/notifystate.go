@@ -85,6 +85,14 @@ func (s *State) Devices() []Device {
 	return slices.Collect(maps.Values(s.data.Notify.Devices))
 }
 
+// Device returns the paired host helper with this id.
+func (s *State) Device(id string) (Device, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	dev, ok := s.data.Notify.Devices[id]
+	return dev, ok && id != ""
+}
+
 // PutDevice stores a paired host helper.
 func (s *State) PutDevice(dev Device) error {
 	return s.update(func(d *stateFile) error {

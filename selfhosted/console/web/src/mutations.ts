@@ -164,7 +164,7 @@ export const removeChannel = mutationOptions({
 
 /** Pairs a computer for desktop popups; its key is in this answer only. */
 export const pairDevice = mutationOptions({
-  mutationFn: (name: string) => api<PairedDevice>("POST", "/api/notifications/devices", { name }),
+  mutationFn: ({ name, id }: { name: string; id?: string }) => api<PairedDevice>("POST", "/api/notifications/devices", { name, id }),
   onSuccess: (_paired, _name, _onMutate, { client }) => invalidate(client, notificationsQuery.queryKey),
 });
 

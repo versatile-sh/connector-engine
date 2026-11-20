@@ -452,6 +452,7 @@ export const en = {
   "notify.elicit.off": "Asks elsewhere only",
   "notify.devices.title": "Desktop popups",
   "notify.devices.intro": "A small helper on your computer shows a native notification for each held call; a click opens the call here.",
+  "notify.devices.repair": "New key for this computer",
   "notify.devices.pair": "Pair this computer",
   "notify.devices.pairing": "Pairing",
   "notify.devices.thisComputer": "this computer",

@@ -454,6 +454,7 @@ export const es: Record<MessageKey, string> = {
   "notify.elicit.off": "Pregunta solo en otros sitios",
   "notify.devices.title": "Avisos en el escritorio",
   "notify.devices.intro": "Un pequeño ayudante en tu equipo muestra una notificación nativa por cada llamada retenida; un clic abre la llamada aquí.",
+  "notify.devices.repair": "Nueva clave para este equipo",
   "notify.devices.pair": "Emparejar este equipo",
   "notify.devices.pairing": "Emparejando",
   "notify.devices.thisComputer": "este equipo",

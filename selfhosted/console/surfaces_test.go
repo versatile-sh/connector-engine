@@ -442,6 +442,36 @@ func TestChannelsComeUpWhenTheConsoleSecretsUnlock(t *testing.T) {
 	}
 }
 
+func TestPairingTheSameComputerAgainGivesItANewKeyInsteadOfAnotherEntry(t *testing.T) {
+	r := newRig(t)
+	var first, again struct {
+		Device console.DeviceView
+		Key    string
+	}
+	r.b.ok("POST", "/api/notifications/devices", map[string]any{"name": "Linux · Chromium"}, &first)
+	r.b.ok("POST", "/api/notifications/devices", map[string]any{"name": "Linux · Chromium", "id": first.Device.ID}, &again)
+	var list struct{ Devices []console.DeviceView }
+	r.b.ok("GET", "/api/notifications", nil, &list)
+	if len(list.Devices) != 1 || again.Device.ID != first.Device.ID {
+		t.Fatalf("pairing again added an entry: %+v", list.Devices)
+	}
+	if again.Key == first.Key {
+		t.Fatal("pairing again kept the old key")
+	}
+	req, _ := http.NewRequest(http.MethodGet, r.base+"/api/notify/stream", nil)
+	req.Header.Set("Authorization", "Bearer "+first.Key)
+	if res, err := http.DefaultClient.Do(req); err != nil || res.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("the old key still opens the stream: %v %v", res, err)
+	} else {
+		res.Body.Close()
+	}
+	r.b.ok("POST", "/api/notifications/devices", map[string]any{"id": "unknown"}, nil)
+	r.b.ok("GET", "/api/notifications", nil, &list)
+	if len(list.Devices) != 2 {
+		t.Fatalf("an unknown id must pair a new computer: %d", len(list.Devices))
+	}
+}
+
 func TestAComputerPairsWithoutANameAndIsRenamedLater(t *testing.T) {
 	r := newRig(t)
 	var paired struct{ Device console.DeviceView }

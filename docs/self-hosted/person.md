@@ -117,6 +117,7 @@ The console acts on the engine as engine persons, never as one shared account:
 - Background writes act for the key's owner: a refresh-token renewal, and a decision from a chat channel, a desktop link or an app's elicitation. "Always allow" acts as the user who chose it.
 - Reads and the approvals watch run as the service person; the console then shows each user what is theirs.
 - At every start, and after a restore, the console writes each user's engine role as the service person: `tenant_admin` over `t/<tenant>` for an Owner or Admin, `agent_configurer` over `t/<tenant>/w/<workspace>` for a Member, and membership of the managers group for Owners and Admins. It removes the rows of its users that should not be there and the old `owner` row once no user is `owner`; rows of other persons stay.
+- Upgrading with your own `connector-engine.yaml`: add the service person's row to `bootstrap.roles`, or the console logs "waiting for the engine" and every page stays empty. The old `owner` row can stay; the console then manages it.
 - Each access key has one owner, the user who made it; its agent tokens and bindings carry that person as `on_behalf_of` and `agent_owner`. Keys from an earlier console belong to the first Owner. A key name another user's key has is refused with "this name is taken".
 
 ## Profile settings

@@ -2,7 +2,7 @@
 
 # Account and backup
 
-The console has one owner account. This page covers the password, full backups, shareable setups, and restoring either.
+The console keeps its users and their access keys. This page covers the password, full backups, shareable setups, and restoring either.
 
 > **Your data lives in Docker volumes.** `docker compose down -v`, `docker system prune --volumes` and `docker volume prune -a` delete them, and with them every connector, credential, access key and the root keys. Nothing can bring them back. Export a backup first.
 

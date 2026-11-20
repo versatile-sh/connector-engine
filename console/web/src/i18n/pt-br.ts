@@ -310,8 +310,6 @@ export const ptBR: Record<MessageKey, string> = {
   "skills.remove": "Remover",
   "skills.removeAsk": "Remover {name}? Seus apps de IA deixam de vê-la na hora.",
   "skills.removeConfirm": "Remover skill",
-  "skills.maximize": "Maximizar {name}",
-  "skills.minimize": "Minimizar {name}",
   "import.skillChoose": "Revise a skill",
   "import.skillChooseIntro": "O que ela traz, de onde vem e quem pode carregá-la.",
   "import.skillKeys": "Para suas {count} chaves de acesso",

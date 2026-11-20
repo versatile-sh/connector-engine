@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -85,12 +84,40 @@ func OpenState(path string) (*State, error) {
 	return s, nil
 }
 
-func (s *State) save() error {
-	raw, err := json.MarshalIndent(s.data, "", "  ")
+var errUnchanged = errors.New("unchanged")
+
+func (s *State) update(fn func(d *stateFile) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	raw, err := json.Marshal(s.data)
 	if err != nil {
 		return err
 	}
-	return writeAtomic(s.path, raw)
+	var next stateFile
+	if err := json.Unmarshal(raw, &next); err != nil {
+		return err
+	}
+	switch err := fn(&next); {
+	case errors.Is(err, errUnchanged):
+		return nil
+	case err != nil:
+		return err
+	}
+	if raw, err = json.MarshalIndent(next, "", "  "); err != nil {
+		return err
+	}
+	if err := writeAtomic(s.path, raw); err != nil {
+		return err
+	}
+	s.data = next
+	return nil
+}
+
+func put[K comparable, V any](m *map[K]V, k K, v V) {
+	if *m == nil {
+		*m = map[K]V{}
+	}
+	(*m)[k] = v
 }
 
 func writeAtomic(path string, raw []byte) error {
@@ -138,17 +165,13 @@ func (s *State) CreateOwner(username, password string) error {
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Owner != nil {
-		return ErrOwnerExists
-	}
-	s.data.Owner = &Owner{Username: username, Salt: base64.StdEncoding.EncodeToString(salt), Hash: base64.StdEncoding.EncodeToString(hash), Iterations: pbkdf2Iterations}
-	if err := s.save(); err != nil {
-		s.data.Owner = nil
-		return err
-	}
-	return nil
+	return s.update(func(d *stateFile) error {
+		if d.Owner != nil {
+			return ErrOwnerExists
+		}
+		d.Owner = &Owner{Username: username, Salt: base64.StdEncoding.EncodeToString(salt), Hash: base64.StdEncoding.EncodeToString(hash), Iterations: pbkdf2Iterations}
+		return nil
+	})
 }
 
 // CheckLogin reports whether username and password are the owner's, comparing in constant time.
@@ -183,19 +206,26 @@ func (s *State) OwnerName() string {
 	return s.data.Owner.Username
 }
 
-// Sessions returns the stored sessions.
-func (s *State) Sessions() map[string]StoredSession {
+func (s *State) session(key string) (StoredSession, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return maps.Collect(maps.All(s.data.Sessions))
+	v, ok := s.data.Sessions[key]
+	return v, ok && time.Now().Before(v.Expires)
 }
 
-// PutSessions replaces the stored sessions.
-func (s *State) PutSessions(sessions map[string]StoredSession) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.data.Sessions = sessions
-	return s.save()
+func (s *State) putSession(key string, v StoredSession) error {
+	return s.update(func(d *stateFile) error {
+		expire(d.Sessions, time.Now(), func(v StoredSession) time.Time { return v.Expires })
+		put(&d.Sessions, key, v)
+		return nil
+	})
+}
+
+func (s *State) endSession(key string) error {
+	return s.update(func(d *stateFile) error {
+		delete(d.Sessions, key)
+		return nil
+	})
 }
 
 // Agents lists the connected agents.
@@ -211,88 +241,56 @@ func (s *State) Agents() []Agent {
 
 // PutAgent records an agent and the expiry of its newest token, keeping how and when it was connected.
 func (s *State) PutAgent(a Agent) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Agents == nil {
-		s.data.Agents = map[string]Agent{}
-	}
-	if old, ok := s.data.Agents[a.Name]; ok {
-		a.ViaBrowser, a.ConnectedAt, a.Seen = old.ViaBrowser, old.ConnectedAt, old.Seen
-	}
-	s.data.Agents[a.Name] = a
-	return s.save()
+	return s.update(func(d *stateFile) error {
+		if old, ok := d.Agents[a.Name]; ok {
+			a.ViaBrowser, a.ConnectedAt, a.Seen = old.ViaBrowser, old.ConnectedAt, old.Seen
+		}
+		put(&d.Agents, a.Name, a)
+		return nil
+	})
 }
 
 // MarkBrowserConnected records that an app connected the agent through the browser sign-in at at, unseen by the owner so far.
 func (s *State) MarkBrowserConnected(name string, at time.Time) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	a, ok := s.data.Agents[name]
-	if !ok {
-		return notFound("no agent is named %s", name)
-	}
-	old := a
-	a.ViaBrowser, a.ConnectedAt, a.Seen = true, at.UTC().Truncate(time.Second), false
-	s.data.Agents[name] = a
-	if err := s.save(); err != nil {
-		s.data.Agents[name] = old
-		return err
-	}
-	return nil
+	return s.update(func(d *stateFile) error {
+		a, ok := d.Agents[name]
+		if !ok {
+			return notFound("no agent is named %s", name)
+		}
+		a.ViaBrowser, a.ConnectedAt, a.Seen = true, at.UTC().Truncate(time.Second), false
+		d.Agents[name] = a
+		return nil
+	})
 }
 
 // SeeAgents records that the owner has seen every agent an app connected through the browser sign-in.
 func (s *State) SeeAgents() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var changed []string
-	for name, a := range s.data.Agents {
-		if a.ViaBrowser && !a.Seen {
-			a.Seen = true
-			s.data.Agents[name] = a
-			changed = append(changed, name)
+	return s.update(func(d *stateFile) error {
+		changed := errUnchanged
+		for name, a := range d.Agents {
+			if a.ViaBrowser && !a.Seen {
+				a.Seen, changed = true, nil
+				d.Agents[name] = a
+			}
 		}
-	}
-	if len(changed) == 0 {
-		return nil
-	}
-	if err := s.save(); err != nil {
-		for _, name := range changed {
-			a := s.data.Agents[name]
-			a.Seen = false
-			s.data.Agents[name] = a
-		}
-		return err
-	}
-	return nil
+		return changed
+	})
 }
 
 // RevokeAgent forgets the agent and refuses every token minted for it up to at; it reports false when no such agent was ever connected.
 func (s *State) RevokeAgent(name string, at time.Time) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	agent, known := s.data.Agents[name]
-	before, revoked := s.data.Revoked[name]
-	if !known && !revoked {
-		return false, nil
-	}
-	if s.data.Revoked == nil {
-		s.data.Revoked = map[string]time.Time{}
-	}
-	delete(s.data.Agents, name)
-	s.data.Revoked[name] = at.UTC()
-	if err := s.save(); err != nil {
-		if known {
-			s.data.Agents[name] = agent
+	found := false
+	err := s.update(func(d *stateFile) error {
+		_, known := d.Agents[name]
+		_, revoked := d.Revoked[name]
+		if found = known || revoked; !found {
+			return errUnchanged
 		}
-		if revoked {
-			s.data.Revoked[name] = before
-		} else {
-			delete(s.data.Revoked, name)
-		}
-		return false, err
-	}
-	return true, nil
+		delete(d.Agents, name)
+		put(&d.Revoked, name, at.UTC())
+		return nil
+	})
+	return found && err == nil, err
 }
 
 // Revoked reports whether a token of agent issued at iat (Unix seconds) was minted before the agent was revoked.
@@ -312,15 +310,11 @@ func (s *State) OnboardingDismissed() bool {
 
 // DismissOnboarding closes the first-run guide for good, on every browser and across restarts.
 func (s *State) DismissOnboarding() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.OnboardingDismissed {
+	return s.update(func(d *stateFile) error {
+		if d.OnboardingDismissed {
+			return errUnchanged
+		}
+		d.OnboardingDismissed = true
 		return nil
-	}
-	s.data.OnboardingDismissed = true
-	if err := s.save(); err != nil {
-		s.data.OnboardingDismissed = false
-		return err
-	}
-	return nil
+	})
 }

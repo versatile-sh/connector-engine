@@ -93,6 +93,11 @@ html {
   color-scheme: dark;
   scrollbar-color: var(--color-line-strong) var(--color-ink);
   scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+
+html:has(dialog:modal) {
+  overflow: hidden;
 }
 
 body {
@@ -317,12 +322,16 @@ svg {
   }
 }
 
-.sheet[open] {
+.sheet[open]:not(.morph) {
   animation: dialog-in 0.45s var(--ease-settle) both;
 }
 
 .sheet::backdrop {
   animation: backdrop-in 0.3s ease-out both;
+}
+
+.sheet.closing::backdrop {
+  animation: backdrop-out 0.25s var(--ease-glide) both;
 }
 
 @keyframes dialog-in {
@@ -335,6 +344,12 @@ svg {
 
 @keyframes backdrop-in {
   from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-out {
+  to {
     opacity: 0;
   }
 }

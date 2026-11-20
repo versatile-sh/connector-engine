@@ -503,7 +503,10 @@ func TestASessionOutlivesAConsoleRestartAndNotItsSignOut(t *testing.T) {
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
-	csrf := console.NewSessions(state).Start(rec)
+	csrf, err := console.NewSessions(state).Start(rec)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cookie := rec.Result().Cookies()[0]
 	raw, _ := os.ReadFile(path)
 	if strings.Contains(string(raw), cookie.Value) {
@@ -709,5 +712,29 @@ func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
 		if err != nil || !reopened.OnboardingDismissed() {
 			t.Fatalf("finish %v: the guide came back after a restart: %v", finish, err)
 		}
+	}
+}
+
+func TestAFailedStateWriteChangesNothing(t *testing.T) {
+	dir := t.TempDir()
+	state, err := console.OpenState(dir + "/s.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := state.PutAgent(console.Agent{Name: "a"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	if err := state.PutAgent(console.Agent{Name: "b"}); err == nil {
+		t.Skip("the directory stays writable for this user")
+	}
+	if ok, err := state.RevokeAgent("a", time.Now()); ok || err == nil {
+		t.Fatalf("a revoke that could not be written: %v %v", ok, err)
+	}
+	if got := state.Agents(); len(got) != 1 || got[0].Name != "a" || state.Revoked("a", 0) {
+		t.Fatalf("the state changed in memory: %+v", got)
 	}
 }

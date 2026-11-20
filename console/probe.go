@@ -31,6 +31,26 @@ func (a Access) Valid() bool {
 	return a == AccessOff || a == AccessOn || a == AccessAsk
 }
 
+func (a Access) mode() port.Mode {
+	switch a {
+	case AccessOn:
+		return port.ModeAllow
+	case AccessAsk:
+		return port.ModeAskOnce
+	}
+	return ""
+}
+
+func accessFor(m port.Mode) (Access, bool) {
+	switch m {
+	case port.ModeAllow:
+		return AccessOn, true
+	case port.ModeAsk, port.ModeAskOnce:
+		return AccessAsk, true
+	}
+	return AccessOff, false
+}
+
 // ProbedTool is one tool an MCP server listed, with its hints and the choice the console proposes.
 type ProbedTool struct {
 	Name        string     `json:"name"`
@@ -63,6 +83,18 @@ func Propose(a *mcp.ToolAnnotations) (readOnly, destructive bool, proposed Acces
 	}
 	destructive = a == nil || a.DestructiveHint == nil || *a.DestructiveHint
 	return false, destructive, AccessAsk
+}
+
+func probedTool(name, title, description string, hints *mcp.ToolAnnotations) ProbedTool {
+	ro, de, prop := Propose(hints)
+	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop}
+}
+
+func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
+	if a == nil {
+		return nil
+	}
+	return &mcp.ToolAnnotations{ReadOnlyHint: a.ReadOnlyHint != nil && *a.ReadOnlyHint, DestructiveHint: a.DestructiveHint}
 }
 
 // KindOf names what a tool does by its hints: read, destructive (the MCP default when not read-only) or write.
@@ -118,12 +150,11 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 		if err != nil {
 			return out, unreachable(fmt.Errorf("tools/list on %s: %w", u.Host, err))
 		}
-		ro, de, prop := Propose(tool.Annotations)
 		title := tool.Title
 		if title == "" && tool.Annotations != nil {
 			title = tool.Annotations.Title
 		}
-		out.Tools = append(out.Tools, ProbedTool{Name: tool.Name, Title: title, Description: tool.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
+		out.Tools = append(out.Tools, probedTool(tool.Name, title, tool.Description, tool.Annotations))
 	}
 	if out.Items, err = probeItems(ctx, session, instructions); err != nil {
 		return out, unreachable(fmt.Errorf("%w on %s", err, u.Host))

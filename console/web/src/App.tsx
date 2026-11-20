@@ -3,6 +3,7 @@ import { AccessPage } from "./access/AccessPage";
 import { ActivityPage } from "./activity/ActivityPage";
 import { errorText } from "./api";
 import { ApprovalsPage } from "./approvals/ApprovalsPage";
+import { ApprovePage } from "./approve/ApprovePage";
 import { Auth, waitingLinkHost } from "./Auth";
 import { Mark } from "./Brand";
 import { ConnectorDetail } from "./connectors/ConnectorDetail";
@@ -10,6 +11,7 @@ import { ConnectorsPage } from "./connectors/ConnectorsPage";
 import { Consent } from "./access/Consent";
 import { useT } from "./i18n/I18nProvider";
 import { ImportLanding } from "./import/ImportLanding";
+import { NotificationsPage } from "./notifications/NotificationsPage";
 import { sessionQuery } from "./queries";
 import { SkillsPage } from "./skills/SkillsPage";
 import { useLocation } from "./router";
@@ -24,7 +26,7 @@ const linkedSource = (path: string, query: URLSearchParams): ImportSource | unde
   return listing ? { listing } : mcp ? { mcp } : undefined;
 };
 
-const SECTIONS: Record<string, Section> = { "/access": "access", "/agents": "access", "/approvals": "approvals", "/skills": "skills", "/activity": "activity" };
+const SECTIONS: Record<string, Section> = { "/access": "access", "/agents": "access", "/approvals": "approvals", "/skills": "skills", "/activity": "activity", "/notifications": "notifications" };
 
 const sectionOf = (path: string): Section => SECTIONS[path] ?? "connectors";
 
@@ -55,6 +57,7 @@ export function App() {
   if (session.isError) return <Splash failure={errorText(session.error)} onRetry={() => void session.refetch()} />;
   const { owner_exists, signed_in, mcp_url } = session.data;
   if (!owner_exists) return <Auth mode="setup" endpoint={mcp_url} />;
+  if (path.startsWith("/approve/") && (signed_in || query.has("t"))) return <ApprovePage id={decodeURIComponent(path.slice("/approve/".length))} token={query.get("t")} signedIn={signed_in} />;
   if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} />;
   if (path === "/connect") return <Consent id={query.get("request") ?? ""} />;
   const linked = linkedSource(path, query);
@@ -71,6 +74,8 @@ export function App() {
         <SkillsPage />
       ) : section === "activity" ? (
         <ActivityPage />
+      ) : section === "notifications" ? (
+        <NotificationsPage />
       ) : detail ? (
         <ConnectorDetail id={detail} />
       ) : (

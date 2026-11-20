@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { apiQueryOf, type ActivityFilter } from "./activity/activity";
-import { api, setCsrf, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type Connector, type Session, type Skill } from "./api";
+import { api, setCsrf, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type NotificationsData, type Session, type Skill } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -55,3 +55,18 @@ export const activityCallQuery = (id: string) =>
 
 /** What the console keeps of each call. */
 export const activitySettingsQuery = queryOptions({ queryKey: ["activity-settings"], queryFn: () => api<ActivitySettings>("GET", "/api/activity/settings") });
+
+/** One held call for the /approve page, read with the session or the page's link token; it polls only while the call waits and has not expired. */
+export const approvalQuery = (id: string, token: string | null) =>
+  queryOptions({
+    queryKey: ["approval", id],
+    queryFn: () => api<ApprovalView>("GET", `/api/approvals/${encodeURIComponent(id)}${token ? `?t=${encodeURIComponent(token)}` : ""}`),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.state === "pending" && Date.parse(data.expires_at) > Date.now() ? 5_000 : false;
+    },
+    refetchOnWindowFocus: false,
+  });
+
+/** The notification channels, the paired computers and the per-app elicitation switches. */
+export const notificationsQuery = queryOptions({ queryKey: ["notifications"], queryFn: () => api<NotificationsData>("GET", "/api/notifications") });

@@ -1,4 +1,4 @@
-// Command cnctl is the command line of connector-engine: admin commands over HTTP, agent tools over MCP, and the unlock key in the host's keychain.
+// Command cnctl is the command line of connector-engine: admin commands over HTTP, agent tools over MCP, the unlock key in the host's keychain and the host notification helper of the local console.
 package main
 
 import (
@@ -12,6 +12,7 @@ import (
 
 	"github.com/agents-control/connector-engine/cli/admin"
 	"github.com/agents-control/connector-engine/cli/keychain"
+	"github.com/agents-control/connector-engine/cli/notify"
 	"github.com/agents-control/connector-engine/cli/skills"
 	"github.com/agents-control/connector-engine/cli/tools"
 )
@@ -31,6 +32,9 @@ var commands = map[string]command{
 	},
 	"keychain": func(ctx context.Context, args []string, stdout, stderr io.Writer, _ []string) int {
 		return keychain.Run(ctx, keychain.System(), args, os.Stdin, stdout, stderr)
+	},
+	"notify": func(ctx context.Context, args []string, _, stderr io.Writer, environ []string) int {
+		return notify.Command(ctx, args, getenv(environ), stderr)
 	},
 	"tools": func(ctx context.Context, args []string, stdout, stderr io.Writer, environ []string) int {
 		if err := tools.New(getenv(environ)).Run(ctx, args, stdout, stderr); err != nil {

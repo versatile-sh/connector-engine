@@ -90,6 +90,14 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 
 `runtime/grpc` failed once in a full `go test -race ./...` run on 2026-11-18 (and `internal/grpcdesc` once with "reflection: EOF" while another `go test` process ran). It did not reproduce in 5 isolated runs, 3 loaded runs, 2 more full runs and `-count=30` of both packages. Suspected: a reflection stream closed by a test server shutting down under load. Not fixed.
 
+`store/memory` can deadlock under concurrent reads and writes. Seen on 2026-11-20 in `./console` as hangs of the new surface tests and of the existing `TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart`, whose stack holds no approval-surface code. The chain:
+
+1. `Service.ListConnectors` (`service/connectors.go:560`) holds the store's read lock inside `Store.Read`.
+2. In that callback, `authorize` (`:570`) calls `TenantActive`, which takes a second, nested `Store.Read`.
+3. When a writer is already waiting, such as the outbox relay's `MarkDelivered` (`store/memory/memory.go:173`), Go's `sync.RWMutex` blocks the nested reader behind the writer, and both wait forever.
+
+The Postgres store, which the `person` profile runs, is not affected. Not fixed, because the approval-surfaces work does not change the engine. A fix lives in `service`: authorize before `Store.Read`, or pass the transaction down.
+
 ## Local console and packaging
 
 | Item | Level | Notes |
@@ -103,6 +111,7 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 | Activity: tool calls captured on the console's `/mcp` proxy (arguments, a 4 KB result excerpt, the JSON-RPC id, the MCP session and the token's session claim) and joined with the engine's `listCalls` and approvals, per hour and per connector, with filters by time, connector, app and outcome | Built | `console/activity_test.go`: JSON and SSE answers reach the client byte for byte and the first SSE event before the stream ends; the `call` meta-tool is unwrapped and `find` is not recorded; denied (unknown tool), held, failed and approved calls get their outcome, the approved one from the later `approval_status` answer and the engine row of its approval; two calls of one function in one session keep their own arguments; redaction, the settings toggles, a restart, 30-day pruning and delete-all; skill loads are named by the skill and joined to the call on its connector, and `skill_list` is not recorded; a real agent call through the in-process engine joins its engine record. Storage is one JSONL file per UTC day. The engine's `listCalls` has no time range or paging, so the console reads every row and filters by time; a call that did not pass the console shows the engine row only. The page was not checked in a browser |
 | Credentials from the console (header secret, OAuth with a pre-registered client) | Built | calls `createCredential`, `putClientRegistration`, `beginConnect`, `completeConnect`; no run against a real provider |
 | `headless` profile | Built | `adapters check` only; it needs a real JWKS issuer to run |
+| Approval surfaces (`surface/`, console Notifications, `/approve/<id>`, `cnctl notify`, MCP elicitation in the `/mcp` proxy) | Built | design and threat model in [approvals-surfaces.md](approvals-surfaces.md). `console/surfaces_test.go` runs a held call notified to a fake channel, decided by a button click (once, always) and answered in the same call; a desktop link decides once without a session and is refused the second time. `console/elicit_test.go` drives go-sdk clients of the session era and the 2026-07-28 era: off by default, accept answers before the hold window ends, destructive never asked, decline denies. Discord, Slack and Telegram adapters run against in-process fakes of their APIs only; no real bot was driven, and no real AI app was driven against elicitation |
 
 ## Skills
 

@@ -176,6 +176,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(), Secrets: box,
 		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log, Activity: activity}
 	go ensureTenant(ctx, eng, log)
+	go c.RunNotifications(ctx)
 	lis, err := net.Listen("tcp", *listen)
 	if err != nil {
 		fmt.Fprintln(stderr, err)

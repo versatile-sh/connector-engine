@@ -9,6 +9,7 @@ import (
 
 	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/secrets/local"
 	"github.com/agents-control/connector-engine/secrets/memory"
 )
 
@@ -44,5 +45,25 @@ func TestAnUnlockedBoxRoundTripsThroughJSONWithoutPlaintext(t *testing.T) {
 	}
 	if got, err := b.Open(ctx, back); err != nil || got != "xoxb-bot-token" {
 		t.Fatalf("open: %q %v", got, err)
+	}
+}
+
+func TestProtectionNamesHowTheRootKeyRests(t *testing.T) {
+	var nilBox *sealed.Box
+	var b sealed.Box
+	if nilBox.Protection() != "locked" || b.Protection() != "locked" {
+		t.Fatal("a box without a store is locked")
+	}
+	b.Unlock(memory.New())
+	if b.Protection() != "" {
+		t.Fatalf("a store without a key file: %q", b.Protection())
+	}
+	store, err := local.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.Unlock(store)
+	if b.Protection() != "plaintext" {
+		t.Fatalf("a plaintext root key: %q", b.Protection())
 	}
 }

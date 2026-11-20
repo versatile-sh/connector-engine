@@ -84,7 +84,7 @@ var oneOf = map[string][]string{
 	"approval.proofOfReading":       {"off"},
 	"overlay.suggester":             {"none"},
 	"outbox.signing":                {"standard-webhooks"},
-	"secrets.adapter":               {"localfile", "memory"},
+	"secrets.adapter":               {"localfile", "memory", "hostkey"},
 	"credentials.fallback":          {"none"},
 	"exposure.onTrifecta":           {"warn", "force_ask"},
 	"apps.appOnlyFunctions":         {"refuse", "view_token"},
@@ -130,6 +130,9 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 			add(adapters.LevelError, key, "%q is not one of %s", v, strings.Join(allowed, ", "))
 		}
 	}
+	if c.Secrets.Adapter == "hostkey" && c.Secrets.UnlockSocket == "" {
+		add(adapters.LevelError, "secrets.unlockSocket", "the hostkey adapter waits for the unlock key on this socket; it is empty")
+	}
 	if len(c.Auth.Issuers) == 0 && !c.Auth.LocalIssuer.Enabled {
 		add(level, "auth.issuers", "the list is empty: no token can be verified")
 	}
@@ -145,7 +148,11 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if len(c.Mutations()) > 0 && !acknowledged(AckManageMutations) {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
 	}
-	if !acknowledged(AckPlaintextRootKey) {
+	switch {
+	case acknowledged(AckPlaintextRootKey):
+	case c.Secrets.Adapter == "hostkey":
+		add(level, "secrets.adapter", "hostkey keeps a plaintext root key on a host without a keychain and until it is migrated; acknowledge %s to run with it", AckPlaintextRootKey)
+	default:
 		add(level, "secrets.adapter", "%s keeps the root key in plaintext; acknowledge %s to run with it", c.Secrets.Adapter, AckPlaintextRootKey)
 	}
 	if c.Runtime.AllowPrivateHosts && !acknowledged(AckPrivateEgress) {

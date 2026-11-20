@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/agents-control/plugkit/adapters"
@@ -19,6 +20,7 @@ import (
 	"github.com/agents-control/connector-engine/credential"
 	"github.com/agents-control/connector-engine/gateway"
 	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/secrets/hostkey"
 	"github.com/agents-control/connector-engine/server"
 	"github.com/agents-control/connector-engine/service"
 	"github.com/agents-control/connector-engine/service/worker"
@@ -59,6 +61,7 @@ type App struct {
 	env      *server.Env
 	agent    http.Handler
 	spec     adapters.Spec
+	secrets  port.SecretStore
 	build    string
 	closers  []func()
 }
@@ -92,10 +95,12 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	}
 	a.Store, a.outbox = store, outbox
 	a.closers = append(a.closers, closeStore)
-	secrets, err := b.secrets()
+	secrets, closeSecrets, err := b.secrets(ctx)
 	if err != nil {
 		return fmt.Errorf("secrets: %w", err)
 	}
+	a.secrets = secrets
+	a.closers = append(a.closers, closeSecrets)
 	runtime, err := b.runtime(store, secrets)
 	if err != nil {
 		return fmt.Errorf("runtime: %w", err)
@@ -173,6 +178,9 @@ func (a *App) document() discovery.Document {
 			u, _ := adapters.ParseUse(s)
 			row := discovery.EmbeddedRow(name, u.Name)
 			row.Tier, row.Capabilities = u.Tier, a.spec.Ports[name].Capabilities[s]
+			if hk, ok := a.secrets.(*hostkey.Store); ok && name == config.PortSecrets {
+				row.Capabilities = append(slices.Clone(row.Capabilities), "secrets.root_key_"+string(hk.Form()))
+			}
 			if u.Tier == adapters.TierMemory {
 				row.Name = adapters.TierMemory
 			}

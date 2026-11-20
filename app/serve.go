@@ -12,6 +12,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/relay"
@@ -218,7 +219,12 @@ func (a *App) Run(ctx context.Context, l Listeners) error {
 			}
 			return nil
 		})
-		g.Go(func() error { return srv.Serve(l.GRPC) })
+		g.Go(func() error {
+			if err := srv.Serve(l.GRPC); !errors.Is(err, grpc.ErrServerStopped) {
+				return err
+			}
+			return nil
+		})
 	}
 	g.Go(func() error { return a.worker.Run(ctx) })
 	g.Go(func() error {

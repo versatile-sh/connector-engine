@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/agents-control/connector-engine/app"
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/port"
+	secretslocal "github.com/agents-control/connector-engine/secrets/local"
 	"github.com/agents-control/connector-engine/store/storetest"
 )
 
@@ -302,5 +304,31 @@ func TestOperatorListenerServesMetrics(t *testing.T) {
 		if res.StatusCode == http.StatusOK {
 			t.Fatal("the public listener must not serve metrics")
 		}
+	}
+}
+
+func TestTheHostkeyAdapterReportsHowItsRootKeyRests(t *testing.T) {
+	cfg := devConfig(t)
+	dir, err := os.MkdirTemp("", "hk")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	cfg.Secrets.Adapter, cfg.Secrets.Dir, cfg.Secrets.UnlockSocket = "hostkey", filepath.Join(dir, "keys"), filepath.Join(dir, "unlock.sock")
+	if _, err := secretslocal.Open(cfg.Secrets.Dir); err != nil {
+		t.Fatal(err)
+	}
+	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:hostkey}", 1)
+	e := boot(t, cfg, adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
+	req, _ := http.NewRequest(http.MethodGet, e.operator+"/v1/adapters", nil)
+	req.Header.Set("Authorization", "Bearer op-secret")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	if res.StatusCode != http.StatusOK || !strings.Contains(string(body), "secrets.root_key_plaintext") {
+		t.Fatalf("/v1/adapters: %d\n%s", res.StatusCode, body)
 	}
 }

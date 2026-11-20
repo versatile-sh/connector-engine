@@ -28,7 +28,8 @@ The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the op
 | 3 | Ports | Built | the 16 interfaces in `port/`; conformance suite on `store/memory` and `store/postgres` |
 | 3 | `store/postgres` | Run | every e2e case; boot refuses a superuser or BYPASSRLS role (`store/postgres/postgres_test.go`); cross-tenant reads blocked by row-level security (same file); the restart case reopens the same database |
 | 3 | `store/memory` | Run | `CN_PG=0 scripts/e2e.sh` runs every case but the restart on it |
-| 3 | `secrets/local` | Run | the root key persists across the restart case; `Destroy` (crypto-shredding) only unit-tested (`service/admin_test.go`) |
+| 3 | `secrets/local` | Run | the root key persists across the restart case; `Destroy` (crypto-shredding) only unit-tested (`service/admin_test.go`); the wrapped root file, migrate and revert only in `secrets/local/wrapped_test.go` |
+| 3 | `secrets/hostkey`, `cnctl keychain` | Built | conformance and the unlock socket in `secrets/hostkey`; macOS and Secret Service command lines with a fake runner, the real Secret Service with `CN_SECRET_SERVICE_TEST=1` (`cli/keychain`); DPAPI only cross-compiled. Run once by hand on a throwaway compose project (upgrade from main, migrate, restart, revert, fresh installs with and without a keychain), not by `e2e/` |
 | 3 | `runtime/remote` | Run | `idea_*`, `owner_*`; session era against the go-sdk server. The stateless era and SSE variants are only in `runtime/remote/remote_test.go` |
 | 3 | `runtime/declarative` | Run | `idea_openapi_import_lands_unreviewed_and_calls_rest` (GET, POST, DELETE with a path parameter) |
 | 3 | `runtime/grpc` | Run | `idea_grpc_kind_call_through_reflection_import`, plaintext upstream with `grpc.insecure`; descriptor sets and reflection v1alpha are only in `runtime/grpc/grpc_test.go` |

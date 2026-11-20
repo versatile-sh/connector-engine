@@ -6,10 +6,12 @@ import { dropWaiting, setNewKeysOff, setProfileMode } from "../mutations";
 import { navigate } from "../router";
 import { Choice } from "../ui/Choice";
 import { InlineConfirm } from "../ui/InlineConfirm";
+import { rowMotion } from "../ui/kept";
 import { Switch } from "../ui/Switch";
 import { CAPTION, button } from "../ui/styles";
 import { Tabs } from "../ui/Tabs";
 import { Tag } from "../ui/Tag";
+import { useKept } from "../ui/useKept";
 import { commonMode, keysWithOverrides, overrideCount, profileHref } from "./profiles";
 
 const MODES: readonly ProfileMode[] = ["off", "follow", "custom"];
@@ -27,15 +29,15 @@ export function ProfileTabs({ connector, agent, panel, className }: { connector:
 function Waiting({ connector }: { connector: Connector }) {
   const t = useT();
   const drop = useMutation(dropWaiting);
-  const waiting = connector.waiting ?? [];
+  const waiting = useKept(connector.waiting ?? [], (p) => p.agent);
   if (waiting.length === 0) return null;
   return (
     <div className="px-4 py-3 sm:px-5">
       <p className="text-sm font-medium">{t("profile.waiting")}</p>
       <p className="text-[0.8125rem] leading-snug text-pretty text-muted">{t("profile.waitingHint")}</p>
       <ul className="mt-2">
-        {waiting.map((p) => (
-          <li key={p.agent} className="flex items-center justify-between gap-3 py-1">
+        {waiting.map(({ row: p, phase }) => (
+          <li key={p.agent} {...rowMotion(phase)} className="flex items-center justify-between gap-3 py-1">
             <span className="flex min-w-0 flex-wrap items-center gap-x-2">
               <code className="min-w-0 font-mono text-sm [overflow-wrap:anywhere]" translate="no">
                 {p.agent}

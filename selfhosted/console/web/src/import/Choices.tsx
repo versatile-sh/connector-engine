@@ -11,11 +11,11 @@ export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; acce
   const t = useT();
   if (tools.length === 0) return <p className="py-6 text-sm text-muted">{t("import.noTools")}</p>;
   return (
-    <LongList rows={tools} textOf={(tool) => `${tool.name} ${tool.title ?? ""} ${tool.description ?? ""}`} label={t("detail.filter")} whole>
+    <LongList rows={tools} textOf={(tool) => `${tool.name} ${tool.title ?? ""} ${tool.description ?? ""}`} keyOf={(tool) => tool.name} label={t("detail.filter")} whole>
       {(shown) => (
         <ul className={WELL}>
-          {shown.map((tool) => (
-            <ChoiceRow key={tool.name} name={tool.name} title={tool.title} description={tool.description} flags={<KindLabel kind={tool.kind} />}>
+          {shown.map(({ row: tool, phase }) => (
+            <ChoiceRow key={tool.name} phase={phase} name={tool.name} title={tool.title} description={tool.description} flags={<KindLabel kind={tool.kind} />}>
               <AccessPicker name={tool.name} value={accessOf(tool.name, tool.proposed)} onChange={(access) => choose(tool.name, access)} />
             </ChoiceRow>
           ))}

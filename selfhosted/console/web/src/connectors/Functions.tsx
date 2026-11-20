@@ -48,14 +48,15 @@ export function Functions({ connector, lens, scope, copy }: FunctionsProps) {
         <p className="px-4 py-6 text-sm text-muted sm:px-5">{t("detail.none")}</p>
       ) : (
         <div className="px-4 pb-3 sm:px-5">
-          <LongList rows={functions} textOf={(fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`} label={t("detail.filter")}>
+          <LongList rows={functions} textOf={(fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`} keyOf={(fn) => fn.name} label={t("detail.filter")}>
             {(shown, { matching, filtered }) => (
               <>
                 <FunctionTools connector={connector} lens={lens} functions={functions} matching={matching} filtered={filtered} selected={selected} onSelect={setSelected} copy={copy} />
                 <ul className="-mx-4 mt-3 border-t border-line sm:-mx-5">
-                  {shown.map((fn) => (
+                  {shown.map(({ row: fn, phase }) => (
                     <ChoiceRow
                       key={fn.name}
+                      phase={phase}
                       name={fn.name}
                       title={fn.title}
                       description={fn.description}

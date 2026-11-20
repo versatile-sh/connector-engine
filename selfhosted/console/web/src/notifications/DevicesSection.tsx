@@ -58,11 +58,11 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
       {devices.length === 0 ? (
         <p className="text-sm text-muted">{t("notify.devices.empty")}</p>
       ) : (
-        <LongList rows={devices} textOf={(device) => device.name} label={t("notify.devices.filter")}>
+        <LongList rows={devices} textOf={(device) => device.name} keyOf={(device) => device.id} label={t("notify.devices.filter")}>
           {(shown) => (
             <ul className={WELL}>
-              {shown.map((device) => (
-                <DeviceRow key={device.id} device={device} here={device.id === here} remove={remove} />
+              {shown.map(({ row: device, phase }) => (
+                <DeviceRow key={device.id} phase={phase} device={device} here={device.id === here} remove={remove} />
               ))}
             </ul>
           )}

@@ -319,6 +319,58 @@ svg {
     height 250ms var(--ease-settle);
 }
 
+[data-row] {
+  interpolate-size: allow-keywords;
+}
+
+[data-row="enter"] {
+  animation: row-in 0.25s var(--ease-settle) backwards;
+}
+
+[data-row="leave"] {
+  animation: row-out 0.25s var(--ease-glide) both;
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    translate: 0 -0.375rem;
+  }
+}
+
+@keyframes row-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@supports (interpolate-size: allow-keywords) {
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      block-size: 0;
+      padding-block: 0;
+      overflow: clip;
+    }
+    to {
+      overflow: clip;
+    }
+  }
+
+  @keyframes row-out {
+    from {
+      overflow: clip;
+    }
+    to {
+      opacity: 0;
+      block-size: 0;
+      padding-block: 0;
+      border-block-width: 0;
+      overflow: clip;
+    }
+  }
+}
+
 .tab-line {
   transition:
     transform 0.25s var(--ease-glide),

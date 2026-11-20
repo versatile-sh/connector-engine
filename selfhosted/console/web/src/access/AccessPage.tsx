@@ -130,11 +130,11 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
           ) : list.length === 0 ? (
             <p className="py-2 text-sm text-pretty text-muted">{t("keys.empty")}</p>
           ) : (
-            <LongList rows={list} textOf={(key) => key.name} label={t("keys.filter")}>
+            <LongList rows={list} textOf={(key) => key.name} keyOf={(key) => key.name} label={t("keys.filter")}>
               {(shown) => (
                 <ul className={`${WELL} @container`}>
-                  {shown.map((key) => (
-                    <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
+                  {shown.map(({ row: key, phase }) => (
+                    <KeyRow key={key.name} phase={phase} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
                   ))}
                 </ul>
               )}

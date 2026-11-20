@@ -7,12 +7,14 @@ import { useT } from "../i18n/I18nProvider";
 import { setSkillAccess, setSkillAccessAll } from "../mutations";
 import { LongList } from "../ui/LongList";
 import { WELL } from "../ui/styles";
+import type { RowPhase } from "../ui/kept";
 
-function KeyChoice({ skill, agent, access }: { skill: Skill; agent: string; access: Access }) {
+function KeyChoice({ skill, agent, access, phase }: { skill: Skill; agent: string; access: Access; phase: RowPhase }) {
   const t = useT();
   const set = useMutation(setSkillAccess);
   return (
     <ChoiceRow
+      phase={phase}
       name={agent}
       description={
         set.isError ? (
@@ -50,11 +52,11 @@ export function KeyChoices({ skill }: { skill: Skill }) {
       <p role="alert" className="mt-2 text-sm text-amber-400 empty:hidden">
         {all.isError ? errorText(all.error) : kept.length > 0 ? t("skills.allKeysKept", { keys: kept.map((key) => key.agent).join(", ") }) : ""}
       </p>
-      <LongList rows={skill.access} textOf={(key) => key.agent} label={t("keys.filter")}>
+      <LongList rows={skill.access} textOf={(key) => key.agent} keyOf={(key) => key.agent} label={t("keys.filter")}>
         {(shown) => (
           <ul className={WELL}>
-            {shown.map((key) => (
-              <KeyChoice key={key.agent} skill={skill} agent={key.agent} access={key.access} />
+            {shown.map(({ row: key, phase }) => (
+              <KeyChoice key={key.agent} skill={skill} agent={key.agent} access={key.access} phase={phase} />
             ))}
           </ul>
         )}

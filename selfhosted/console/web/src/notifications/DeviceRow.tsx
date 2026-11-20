@@ -8,6 +8,7 @@ import { FIELD, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { DEVICE_NAME_MAX } from "./device";
 import type { useRemove } from "./useRemove";
+import { rowMotion, type RowPhase } from "../ui/kept";
 
 function Rename({ device, onDone }: { device: DeviceView; onDone(): void }) {
   const t = useT();
@@ -53,17 +54,17 @@ function Rename({ device, onDone }: { device: DeviceView; onDone(): void }) {
   );
 }
 
-type DeviceRowProps = { device: DeviceView; here: boolean; remove: ReturnType<typeof useRemove> };
+type DeviceRowProps = { device: DeviceView; here: boolean; remove: ReturnType<typeof useRemove>; phase?: RowPhase };
 
 /** One paired computer: its name, renamed in place, a badge when this browser paired it, when its helper was last seen, and an inline Revoke. */
-export function DeviceRow({ device, here, remove }: DeviceRowProps) {
+export function DeviceRow({ device, here, remove, phase }: DeviceRowProps) {
   const t = useT();
   const locale = useLocale();
   const [step, setStep] = useState<"idle" | "renaming" | "renamed">("idle");
   const asking = remove.asking(device.id);
   const date = (iso: string) => new Date(iso).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
   return (
-    <li className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${remove.busy && asking ? "opacity-60" : ""}`}>
+    <li {...rowMotion(phase)} className={`border-b border-line px-4 py-3 transition-opacity duration-250 last:border-b-0 sm:px-5 ${remove.busy && asking ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
         {step === "renaming" ? (
           <Rename device={device} onDone={() => setStep("renamed")} />

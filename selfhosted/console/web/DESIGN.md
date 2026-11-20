@@ -76,7 +76,7 @@ When a panel shows one of several views, its `Tabs` are the panel's first row, o
 
 ## Motion
 
-Two curves, `--ease-glide` for things that travel and `--ease-settle` for things that arrive, about 250ms on transform and opacity. Things that open slide or rise; nothing snaps. A marker that moves between choices glides to the new one: the `Segmented` mark and the `Tabs` underline, which is placed once without motion and then only travels. Loops run only while loading. Under reduced motion every animation and transition is off.
+Two curves, `--ease-glide` for things that travel and `--ease-settle` for things that arrive, about 250ms on transform and opacity. Things that open slide or rise; nothing snaps. A marker that moves between choices glides to the new one: the `Segmented` mark and the `Tabs` underline, which is placed once without motion and then only travels. A row that comes into a list (a filter, Show all, a new call, a new key) grows from no height and fades in, and one that goes shrinks and fades out in its place before it is removed (`useKept` and `rowMotion` from `src/ui/`; `LongList` does it for its rows); the first draw of a list does not move. Rows grow by height, so a list must key them by a stable id, never by position. A view that changes in place updates its cards without mounting them again; only what is new slides in. Loops run only while loading. Under reduced motion every animation and transition is off.
 
 ## Focus
 

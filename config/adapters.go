@@ -66,8 +66,7 @@ func (c Config) filterDefault() []string {
 	return nil
 }
 
-// AdaptersSpec declares the ports of the engine: their defaults follow the keys of connector-engine.yaml that name an adapter, and their adapters are those of With.
-// The auth port is the core's own. Plugin selections are refused: no port of this build speaks a plugin protocol yet.
+// AdaptersSpec declares the ports of the engine, their defaults and the adapters of With; auth is the core's own port and plugin selections are refused.
 func (c Config) AdaptersSpec() adapters.Spec {
 	ports := map[string]adapters.PortSpec{
 		PortStore:   {Default: use(adapters.TierBuiltin, "postgres"), Stateful: true},

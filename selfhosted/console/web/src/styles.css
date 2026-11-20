@@ -327,10 +327,6 @@ svg {
   animation: row-in 0.25s var(--ease-settle) backwards;
 }
 
-[data-row="leave"] {
-  animation: row-out 0.25s var(--ease-glide) both;
-}
-
 @keyframes row-in {
   from {
     opacity: 0;
@@ -338,14 +334,22 @@ svg {
   }
 }
 
-@keyframes row-out {
-  to {
-    opacity: 0;
+@supports not (interpolate-size: allow-keywords) {
+  [data-row="leave"] {
+    display: none;
   }
 }
 
 @supports (interpolate-size: allow-keywords) {
-  @keyframes row-in {
+  [data-row="enter"] {
+    animation-name: row-grow;
+  }
+
+  [data-row="leave"] {
+    animation: row-shrink 0.25s var(--ease-glide) both;
+  }
+
+  @keyframes row-grow {
     from {
       opacity: 0;
       block-size: 0;
@@ -357,7 +361,7 @@ svg {
     }
   }
 
-  @keyframes row-out {
+  @keyframes row-shrink {
     from {
       overflow: clip;
     }

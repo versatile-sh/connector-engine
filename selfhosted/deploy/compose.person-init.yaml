@@ -1,0 +1,6 @@
+services:
+  init:
+    image: ${CN_IMAGE:-connector-engine:local}
+    build: !override
+      context: ..
+      dockerfile: Dockerfile

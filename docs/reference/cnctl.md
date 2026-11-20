@@ -22,7 +22,7 @@ cnctl notify [--console URL] [--key-file FILE]
 
 ## admin
 
-Reads `CNCTL_URL` and `CNCTL_TOKEN`, or `--url` and `--token`. Use the operator listener and token, or the public listener and a person token.
+Reads `CNCTL_URL` and `CNCTL_TOKEN`, or `--url` and `--token`. The operator listener and token run installation-wide operations (tenants, adapters, event types); tenant data (connectors, grants, approvals, calls, roles) needs the public listener and a person token whose role allows it, or the answer is `403 permission_denied: <who> may not <permission> on <scope>`.
 
 ```sh
 export CNCTL_URL=http://127.0.0.1:8081 CNCTL_TOKEN=dev

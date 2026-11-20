@@ -30,6 +30,11 @@ export CN_AGENT_TOKEN=<the access key>
 make cli ARGS="tools list"
 ```
 
+```text
+<n> tools: <alias>__<function>, ...
+full definitions in /tmp/cnctl-tools-<random>.json
+```
+
 `make cli` runs `cnctl` from the image against `http://127.0.0.1:7465/mcp` and prints a summary of the functions this key may call. With `cnctl` on your PATH, set `CN_ENDPOINT` and run `cnctl tools list`. See [cnctl](../reference/cnctl.md).
 
 ## Endpoints the app uses

@@ -106,7 +106,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ## Docker without a clone
 
-From the next release, and Linux only: it runs the no-Docker runtime inside the published image. That runtime listens on `127.0.0.1` only, so the container shares the host's network instead of publishing a port.
+From the next release, and Linux only; this line has not been run yet. It runs the no-Docker runtime inside the published image. That runtime listens on `127.0.0.1` only, so the container shares the host's network instead of publishing a port.
 
 ```sh
 docker run -d --name connector-engine --network host --restart unless-stopped \

@@ -30,6 +30,14 @@ Need more throughput today? Give the instance and Postgres more CPU and memory, 
 | `GET /livez` | 204 while the process serves |
 | `GET /readyz` | 204 when the store answers, 503 otherwise |
 
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/readyz
+```
+
+```text
+204
+```
+
 Use `/readyz` for load balancers and platform health checks.
 
 ## Rolling updates

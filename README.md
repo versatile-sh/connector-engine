@@ -95,6 +95,8 @@ The headless engine with Postgres and your OIDC issuer. Fork first and set your 
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/versatile-sh/connector-engine)
 
+The button works from the first release on: it builds from the published, public `connector-engine-headless` image.
+
 Fly.io: `fly launch` with [`fly.toml`](fly.toml). Railway: [`railway.json`](railway.json); the template comes with the first release.
 
 > Never expose the person console to the internet: it is a single-owner app for `127.0.0.1`. Teams use the headless engine, which needs an OIDC issuer.

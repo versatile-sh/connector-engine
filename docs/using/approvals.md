@@ -47,11 +47,20 @@ Design and threat model: [approval surfaces](../self-hosted/approval-surfaces.md
 
 ## Headless
 
-Your product decides approvals through the operator API and the `connector.approval.*` events:
+Your product decides approvals through the API and the `connector.approval.*` events, with a person token that holds an approving role (`approver` or `tenant_admin`):
 
 ```sh
+export CNCTL_URL=http://127.0.0.1:8080 CNCTL_TOKEN=<person token>
 cnctl admin approvals list
 cnctl admin approvals decide <id> --decision approve      # or approve_for_session, deny
+```
+
+With nothing waiting, the list prints:
+
+```text
+{
+  "items": null
+}
 ```
 
 See [events](../reference/events.md) and [cnctl](../reference/cnctl.md).

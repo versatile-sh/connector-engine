@@ -2,12 +2,12 @@
 
 # The headless engine
 
-The `headless` profile is the engine alone: no console, no keychain, no person. Your product embeds it, sends it tokens from your own identity provider, and drives it through the operator API and its events. Use it for teams, companies and SaaS products.
+The `headless` profile is the engine alone: no console, no keychain, no person. Your product embeds it, sends it tokens from your own identity provider, and drives it through its API and its events. Use it for teams, companies and SaaS products.
 
 | | `person` | `headless` |
 |---|---|---|
 | Identity | the console is the OAuth server | tokens from your OIDC/JWKS issuer |
-| Who decides approvals | one person, in the console or a chat app | your product, through the operator API and events |
+| Who decides approvals | one person, in the console or a chat app | your product, through the API and events |
 | Binaries | `selfhosted/cmd/*` | `cmd/connector-engine`, `cmd/cnctl` |
 | Profile files | `selfhosted/deploy/profiles/person/` | `deploy/profiles/headless/` |
 

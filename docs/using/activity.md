@@ -18,8 +18,16 @@ The **Activity** page lists every call an AI app made through the console's `/mc
 
 ## Headless
 
-The engine publishes every call as a [CloudEvent](../reference/events.md): `connector.call.started`, `finished`, `failed`, `denied` and `outcome_unknown`. Send them to your own store with the `webhook` sink. The operator API lists recent calls:
+The engine publishes every call as a [CloudEvent](../reference/events.md): `connector.call.started`, `finished`, `failed`, `denied` and `outcome_unknown`. Send them to your own store with the `webhook` sink. A person token with audit rights (`tenant_admin`) lists recent calls:
 
 ```sh
-cnctl admin calls list
+CNCTL_URL=http://127.0.0.1:8080 CNCTL_TOKEN=<person token> cnctl admin calls list
 ```
+
+```text
+{
+  "items": null
+}
+```
+
+Without the right role the answer names what is missing, for example `403 permission_denied: ana may not audit.read on t/t1`.

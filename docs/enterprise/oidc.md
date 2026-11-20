@@ -47,7 +47,7 @@ A token without `tenant`, `iat` or `exp`, with an unknown `iss`, or an agent tok
 
 ## Roles
 
-A person token says who; roles say what they may do. Give roles through the operator API, or at boot:
+A person token says who; roles say what they may do. Give roles at boot, or through the API with a `tenant_admin` token:
 
 ```yaml
 bootstrap:
@@ -59,6 +59,15 @@ bootstrap:
 cnctl admin roles put --tenant acme --person bob --role approver --scope t/acme
 ```
 
+```text
+{
+  "tenant": "acme",
+  "person": "bob",
+  "role": "approver",
+  "scope": "t/acme"
+}
+```
+
 ## Try it without an IdP
 
 In dev mode, the local issuer mints tokens at `POST /local/token`, authorised by the operator token:
@@ -68,4 +77,8 @@ curl -s -X POST -H "Authorization: Bearer $CN_OPERATOR_TOKEN" http://127.0.0.1:8
   -d '{"sub":"x","tenant":"t1","workspace":"w1","agent":"x","session":"s1"}'
 ```
 
-The answer holds `"token":"<jwt>"`. Production refuses the local issuer unless `adapters.yaml` acknowledges `local_token_issuer`; the `person` profile does, because its console is the issuer.
+```text
+{"token":"eyJhbGciOiJFZERTQSIs..."}
+```
+
+Production refuses the local issuer unless `adapters.yaml` acknowledges `local_token_issuer`; the `person` profile does, because its console is the issuer.

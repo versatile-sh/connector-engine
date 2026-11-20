@@ -62,4 +62,4 @@ Each answers the result per name or per key, so a partial change says what was n
 
 ## Headless
 
-In the `headless` profile there is no console: your product writes the same rows (bindings and grants) through the operator API. See [cnctl](../reference/cnctl.md) (`bindings`, `grants`) and [the headless engine](../enterprise/headless.md).
+In the `headless` profile there is no console: your product writes the same rows (bindings and grants) through the API, with a person token that holds `tenant_admin`. See [cnctl](../reference/cnctl.md) (`bindings`, `grants`) and [the headless engine](../enterprise/headless.md).

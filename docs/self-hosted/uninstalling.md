@@ -18,10 +18,11 @@ The containers go; the volumes stay. `make up` brings everything back as it was.
 
 ```sh
 make export
-docker compose -f selfhosted/deploy/compose.yaml -p connector-engine --profile person down -v --rmi local
+docker compose -f selfhosted/deploy/compose.yaml -p connector-engine --profile person down -v
+docker image rm connector-engine:local
 ```
 
-`-v` removes the four volumes (`pgdata`, `engine-data`, `console-data`, `secrets`); `--rmi local` removes the locally built image.
+`-v` removes the four volumes (`pgdata`, `engine-data`, `console-data`, `secrets`); `docker image rm` removes the image `make up` built.
 
 Then remove the unlock key from your OS keychain. `make cnctl` builds `bin/cnctl` if Go is installed:
 

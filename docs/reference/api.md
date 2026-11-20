@@ -26,9 +26,20 @@ The agent endpoint `/mcp` is separate: it serves the functions granted to one ag
 
 ## Example
 
+The operator token runs installation-wide operations, such as creating a tenant. Tenant data needs a person token whose roles allow it (for example `tenant_admin` or `approver`):
+
 ```sh
-curl -s -H "Authorization: Bearer $CN_OPERATOR_TOKEN" http://127.0.0.1:8081/v1/approvals?state=pending
-curl -s http://127.0.0.1:8080/v1/event-types | head -c 200
+curl -s -H "Authorization: Bearer $PERSON_TOKEN" "http://127.0.0.1:8080/v1/approvals?state=pending"
+```
+
+```text
+{"items":null}
+```
+
+The operator token on tenant data is refused:
+
+```text
+{"code":"permission_denied","detail":"system may not connector.read on t/","status":403,"title":"Forbidden","type":"urn:connectorengine:problem:permission_denied"}
 ```
 
 `/v1/event-types` is public: it lists the [event](events.md) types with their JSON Schemas.

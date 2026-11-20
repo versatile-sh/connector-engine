@@ -41,4 +41,4 @@ body:
       render: text
   - type: markdown
     attributes:
-      value: Found a security issue? Do not open an issue. Follow [SECURITY.md](../blob/main/SECURITY.md).
+      value: Found a security issue? Do not open an issue. Follow [SECURITY.md](https://github.com/versatile-sh/connector-engine/blob/main/SECURITY.md).

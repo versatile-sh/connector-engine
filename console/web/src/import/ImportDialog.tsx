@@ -11,12 +11,12 @@ import { Switch } from "../ui/Switch";
 import { Review } from "./Review";
 import { readSource, type SourceKind } from "./source";
 
-/** The import window: the hub one click away, a pasted MCP or listing address, then the review of what it brings. A pasted address given on opening goes straight to the review. */
-export function ImportDialog({ initial, onClose }: { initial?: string | undefined; onClose(): void }) {
+/** The import window: the hub one click away, a pasted MCP, listing or skill address, then the review of what it brings. A pasted address given on opening goes straight to the review. */
+export function ImportDialog({ initial, initialKind = "mcp", onClose }: { initial?: string | undefined; initialKind?: SourceKind; onClose(): void }) {
   const t = useT();
   const first = initial ? readSource(initial, "mcp", { local: false, headerSecret: false }) : undefined;
   const [text, setText] = useState(initial ?? "");
-  const [kind, setKind] = useState<SourceKind>(first?.ok ? first.kind : "mcp");
+  const [kind, setKind] = useState<SourceKind>(first?.ok ? first.kind : initialKind);
   const [local, setLocal] = useState(false);
   const [secret, setSecret] = useState(false);
   const [invalid, setInvalid] = useState(false);
@@ -80,7 +80,7 @@ export function ImportDialog({ initial, onClose }: { initial?: string | undefine
               </div>
             </div>
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button type="button" className={button({ variant: "quiet" })} onClick={onClose}>
               {t("common.cancel")}
             </button>

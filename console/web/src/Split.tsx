@@ -21,7 +21,7 @@ export function Said({ mine = false, live = false, children }: { mine?: boolean;
   return (
     <li className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <span
-        className={`inline-flex max-w-[24rem] items-center gap-2 px-4 py-2.5 text-[0.9375rem] leading-snug ${mine ? "bubble-sent bg-paper font-mono text-sm text-ink" : "bubble bg-ink text-paper"}`}
+        className={`inline-flex min-w-0 max-w-[24rem] items-center gap-2 [overflow-wrap:anywhere] px-4 py-2.5 text-[0.9375rem] leading-snug ${mine ? "bubble-sent bg-paper font-mono text-sm text-ink" : "bubble bg-ink text-paper"}`}
       >
         {live ? <span aria-hidden="true" className="pulse size-2 shrink-0 rounded-full bg-ink" /> : null}
         {children}

@@ -79,7 +79,7 @@ function Functions({ connector }: { connector: Connector }) {
       ) : shown.length === 0 ? (
         <p className="py-6 text-sm text-muted">{t("detail.noMatch")}</p>
       ) : (
-        <ul className="mt-2">
+        <ul className="@container mt-2">
           {shown.map((fn) => (
             <FunctionRow
               key={fn.name}
@@ -128,7 +128,7 @@ function Remove({ connector, onClose }: { connector: Connector; onClose(): void 
       <p role="alert" className="mt-3 min-h-5 text-sm text-amber">
         {remove.isError ? errorText(remove.error) : ""}
       </p>
-      <div className="mt-4 flex justify-end gap-2">
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
         <button type="button" autoFocus className={button({ variant: "secondary" })} onClick={onClose}>
           {t("common.cancel")}
         </button>
@@ -184,7 +184,7 @@ export function ConnectorDetail({ id }: { id: string }) {
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
         <div className="min-w-48 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lit font-serif text-5xl leading-none font-normal tracking-[-0.02em] break-words">{connector.title}</h1>
+            <h1 className="text-lit serif-room min-w-0 font-serif text-5xl leading-none font-normal tracking-[-0.02em] [overflow-wrap:anywhere]">{connector.title}</h1>
             {connector.blocked ? <Bubble tone="amber">{connector.blocked}</Bubble> : null}
           </div>
           {connector.publisher ? <p className="mt-1 text-sm text-muted">{t("import.by", { publisher: connector.publisher })}</p> : null}

@@ -24,7 +24,10 @@ import (
 	"github.com/agents-control/connector-engine/console"
 )
 
-const callback = "http://127.0.0.1:33418/callback"
+const (
+	callback      = "http://127.0.0.1:33418/callback"
+	ownerPassword = "correct horse battery"
+)
 
 type oauthRig struct {
 	t      *testing.T
@@ -64,7 +67,7 @@ func newOAuthRig(t *testing.T) *oauthRig {
 	jar, _ := cookiejar.New(nil)
 	b := &browser{t: t, base: base, client: &http.Client{Jar: jar}}
 	var setup struct{ CSRF string }
-	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
+	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": ownerPassword}, &setup)
 	b.csrf = setup.CSRF
 	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"search": "on"}}, nil)
 	var list struct{ Connectors []console.ConnectorSummary }
@@ -113,16 +116,19 @@ func (o *oauthRig) approve(authURL string) *url.URL {
 		o.t.Fatalf("authorize: %d %s", resp.StatusCode, loc)
 	}
 	id := loc.Query().Get("request")
-	var info struct{ Client, Redirect string }
+	var info struct {
+		Client, Redirect string
+		Destination      console.Destination
+	}
 	o.b.ok("GET", "/api/oauth/requests/"+id, nil, &info)
-	if info.Client != "Claude Code" || info.Redirect != "http://127.0.0.1:33418" {
+	if info.Client != "Claude Code" || info.Redirect != "http://127.0.0.1:33418" || info.Destination != (console.Destination{Kind: "loopback", Port: "33418"}) {
 		o.t.Fatalf("consent info: %+v", info)
 	}
 	if status, _ := o.b.send("POST", "/api/oauth/requests/"+id, map[string]bool{"approve": true}, map[string]string{"X-CSRF-Token": ""}); status != http.StatusForbidden {
 		o.t.Fatalf("a consent without the CSRF token: %d", status)
 	}
 	var out struct{ Redirect string }
-	o.b.ok("POST", "/api/oauth/requests/"+id, map[string]bool{"approve": true}, &out)
+	o.b.ok("POST", "/api/oauth/requests/"+id, map[string]any{"approve": true, "password": ownerPassword}, &out)
 	if status, _ := o.b.send("POST", "/api/oauth/requests/"+id, map[string]bool{"approve": true}, nil); status != http.StatusNotFound {
 		o.t.Fatalf("a consent answered twice: %d", status)
 	}
@@ -308,6 +314,97 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	if status, out := o.token(renew, ""); status != http.StatusBadRequest || out["error"] != "invalid_grant" {
 		t.Fatalf("a refresh after a revoke: %d %v", status, out)
 	}
+}
+
+func (o *oauthRig) requestConsent(clientID, redirect string) string {
+	o.t.Helper()
+	resp := o.startAuthorize(url.Values{"response_type": {"code"}, "client_id": {clientID}, "redirect_uri": {redirect}, "state": {"s1"},
+		"code_challenge": {challengeOf(strings.Repeat("v", 50))}, "code_challenge_method": {"S256"}})
+	loc, _ := url.Parse(resp.Header.Get("Location"))
+	if resp.StatusCode != http.StatusSeeOther || loc.Path != "/connect" {
+		o.t.Fatalf("authorize %s: %d %s", redirect, resp.StatusCode, loc)
+	}
+	return "/api/oauth/requests/" + loc.Query().Get("request")
+}
+
+func TestTheConsentPage(t *testing.T) {
+	o := newOAuthRig(t)
+	redirects := []string{callback, "cursor://anysphere.cursor-mcp/oauth/callback", "vscode://vscode.github-authentication/did-authenticate", "myapp:/oauth"}
+	_, reg := o.register(redirects...)
+	clientID, _ := reg["client_id"].(string)
+
+	t.Run("says where the access goes in plain words", func(t *testing.T) {
+		want := []console.Destination{{Kind: "loopback", Port: "33418"}, {Kind: "app", App: "Cursor"}, {Kind: "app", App: "VS Code"}, {Kind: "scheme", Scheme: "myapp"}}
+		for i, redirect := range redirects {
+			var info struct{ Destination console.Destination }
+			o.b.ok("GET", o.requestConsent(clientID, redirect), nil, &info)
+			if info.Destination != want[i] {
+				t.Errorf("%s: %+v, want %+v", redirect, info.Destination, want[i])
+			}
+		}
+	})
+
+	t.Run("allows only with the owner password", func(t *testing.T) {
+		path := o.requestConsent(clientID, callback)
+		if status, body := o.b.send("POST", path, map[string]any{"approve": true}, nil); status != http.StatusBadRequest || !strings.Contains(string(body), "password_required") {
+			t.Fatalf("an allow without the password: %d %s", status, body)
+		}
+		if status, body := o.b.send("POST", path, map[string]any{"approve": true, "password": "wrong horse battery"}, nil); status != http.StatusForbidden || !strings.Contains(string(body), "wrong_password") {
+			t.Fatalf("an allow with a wrong password: %d %s", status, body)
+		}
+		o.b.ok("GET", path, nil, nil)
+		var out struct{ Redirect string }
+		o.b.ok("POST", path, map[string]any{"approve": true, "password": ownerPassword}, &out)
+		if back, err := url.Parse(out.Redirect); err != nil || back.Query().Get("code") == "" || back.Query().Get("state") != "s1" {
+			t.Fatalf("an allow with the password: %s %v", out.Redirect, err)
+		}
+	})
+
+	t.Run("marks the key new until the owner opens the key list", func(t *testing.T) {
+		o.b.ok("POST", "/api/agents", map[string]any{"name": "by-hand", "ttl_hours": 24}, nil)
+		var list struct{ Agents []console.AgentView }
+		o.b.ok("GET", "/api/agents", nil, &list)
+		byName := map[string]console.AgentView{}
+		for _, a := range list.Agents {
+			byName[a.Name] = a
+		}
+		if a := byName["claude-code"]; !a.ViaBrowser || !a.New || a.ConnectedAt.IsZero() {
+			t.Fatalf("the app connected through the browser: %+v", a)
+		}
+		if a := byName["by-hand"]; a.ViaBrowser || a.New {
+			t.Fatalf("a key made by hand: %+v", a)
+		}
+		o.b.ok("POST", "/api/agents/seen", nil, nil)
+		o.b.ok("GET", "/api/agents", nil, &list)
+		for _, a := range list.Agents {
+			if a.New || (a.Name == "claude-code") != a.ViaBrowser {
+				t.Fatalf("after the owner saw the list: %+v", a)
+			}
+		}
+	})
+
+	t.Run("caps wrong passwords at five a minute", func(t *testing.T) {
+		path := o.requestConsent(clientID, callback)
+		wrong := 0
+		for ; wrong <= 5; wrong++ {
+			status, _ := o.b.send("POST", path, map[string]any{"approve": true, "password": "wrong horse battery"}, nil)
+			if status == http.StatusTooManyRequests {
+				break
+			}
+			if status != http.StatusForbidden {
+				t.Fatalf("a wrong password: %d", status)
+			}
+		}
+		if wrong > 5 {
+			t.Fatal("six wrong passwords in a row were all checked")
+		}
+		if status, _ := o.b.send("POST", path, map[string]any{"approve": true, "password": ownerPassword}, nil); status != http.StatusTooManyRequests {
+			t.Fatalf("the right password after five wrong ones: %d", status)
+		}
+		if status, _ := o.b.send("POST", path, map[string]any{"approve": false}, nil); status != http.StatusOK {
+			t.Fatalf("a deny while capped: %d", status)
+		}
+	})
 }
 
 func TestTheAuthorizationServerRefusesWhatTheSpecForbids(t *testing.T) {

@@ -9,6 +9,7 @@ import { Notice } from "../ui/Notice";
 import { button } from "../ui/styles";
 import { Choices, ChoicesSkeleton } from "./Choices";
 import { Identity } from "./Identity";
+import { SkillChoice } from "./SkillChoice";
 import { useImport } from "./useImport";
 
 const hostOf = (raw: string) => {
@@ -22,7 +23,7 @@ const hostOf = (raw: string) => {
 /** An install link opened from outside, as the live doorway: who the connector is on lime, what it may do on ink, and nothing installed before Install. */
 export function ImportLanding({ source }: { source: ImportSource }) {
   const t = useT();
-  const { preview, install, accessOf, choose } = useImport(source);
+  const { preview, install, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
   const host = hostOf(source.listing ?? source.mcp ?? "");
   const home = (
     <a
@@ -43,7 +44,7 @@ export function ImportLanding({ source }: { source: ImportSource }) {
         <>
           {home}
           <div className="flex flex-1 flex-col justify-center pt-8 pb-2 lg:py-0">
-            <p className="bubble-word mb-6 inline-flex self-start bg-ink px-3 py-1 font-mono text-xs text-lime" translate="no">
+            <p className="bubble-word mb-6 inline-flex max-w-full self-start bg-ink px-3 py-1 font-mono text-xs text-lime [overflow-wrap:anywhere]" translate="no">
               {t("import.linkEyebrow", { host })}
             </p>
             {preview.isSuccess ? (
@@ -70,8 +71,8 @@ export function ImportLanding({ source }: { source: ImportSource }) {
         <>
           <LanguageSwitch className="self-end" />
           <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col pt-6">
-            <h1 className="text-lit font-serif text-4xl leading-none font-normal tracking-[-0.02em]">{t("import.choose")}</h1>
-            <p className="mt-2 text-muted">{t("import.chooseIntro")}</p>
+            <h1 className="text-lit serif-room font-serif text-4xl leading-none font-normal tracking-[-0.02em]">{t(preview.data?.skill ? "import.skillChoose" : "import.choose")}</h1>
+            <p className="mt-2 text-muted">{t(preview.data?.skill ? "import.skillChooseIntro" : "import.chooseIntro")}</p>
             <div className="mt-4 flex-1">
               {preview.isPending ? (
                 <div role="status" aria-live="polite">
@@ -92,12 +93,16 @@ export function ImportLanding({ source }: { source: ImportSource }) {
                       <Notice>{preview.data.warning}</Notice>
                     </div>
                   ) : null}
-                  <Choices tools={preview.data.tools} accessOf={accessOf} choose={choose} />
+                  {preview.data.skill ? (
+                    <SkillChoice skill={preview.data.skill} access={skillAccess} onChange={setSkillAccess} />
+                  ) : (
+                    <Choices tools={preview.data.tools} accessOf={accessOf} choose={choose} />
+                  )}
                 </div>
               )}
             </div>
             {preview.isSuccess ? (
-              <div className="sticky bottom-0 mt-4 border-t border-line bg-ink/90 py-4 backdrop-blur-md">
+              <div className="sticky bottom-0 z-20 mt-4 border-t border-line bg-ink/90 py-4 backdrop-blur-md">
                 <p role="alert" className="min-h-5 text-sm text-amber">
                   {install.isError ? errorText(install.error) : ""}
                 </p>
@@ -109,9 +114,9 @@ export function ImportLanding({ source }: { source: ImportSource }) {
                     type="button"
                     disabled={install.isPending}
                     className={button({ variant: "accent", size: "lg" })}
-                    onClick={() => install.mutate(undefined, { onSuccess: ({ connector }) => navigate(`/connectors/${encodeURIComponent(connector)}`) })}
+                    onClick={() => install.mutate(undefined, { onSuccess: ({ connector }) => navigate(connector ? `/connectors/${encodeURIComponent(connector)}` : "/skills") })}
                   >
-                    {install.isPending ? t("import.installing") : t("import.install", { count: preview.data.tools.length })}
+                    {install.isPending ? t("import.installing") : preview.data.skill ? t("import.addSkill") : t("import.install", { count: preview.data.tools.length })}
                     <Arrow />
                   </button>
                 </div>

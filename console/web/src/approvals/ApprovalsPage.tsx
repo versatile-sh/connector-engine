@@ -8,7 +8,7 @@ import { Bubble } from "../ui/Bubble";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
-import { SURFACE, button } from "../ui/styles";
+import { ACCENT_BAR, SURFACE, button } from "../ui/styles";
 
 const fromNow = (iso: string, locale: Locale) => {
   const seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
@@ -20,7 +20,8 @@ function Held({ approval, connector, deciding, onDecide }: { approval: Approval;
   const t = useT();
   const locale = useLocale();
   return (
-    <li className={`arrive bubble flex flex-col gap-4 border border-line-strong border-l-4 border-l-lime bg-ink-raised p-5 sm:flex-row sm:items-center ${deciding ? "opacity-60" : ""} transition-opacity duration-300`}>
+    <li className={`arrive bubble relative flex flex-col gap-4 border border-line-strong bg-ink-raised py-5 pr-5 pl-6 sm:flex-row sm:items-center ${deciding ? "opacity-60" : ""} transition-opacity duration-300`}>
+      <span aria-hidden="true" className={`${ACCENT_BAR} bg-lime`} />
       <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-lime text-ink">
         <Icon name="hand" className="size-5" />
       </span>
@@ -32,7 +33,7 @@ function Held({ approval, connector, deciding, onDecide }: { approval: Approval;
           {approval.class ? <Bubble>{approval.class}</Bubble> : null}
         </div>
         <p className="mt-0.5 text-sm text-muted">{t("approvals.on", { connector })}</p>
-        <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs text-muted">
+        <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs text-muted [overflow-wrap:anywhere]">
           <span>{t("approvals.from", { agent: approval.agent })}</span>
           <span title={approval.session}>{t("approvals.session", { id: approval.session.slice(0, 8) })}</span>
           <span title={new Date(approval.expires_at).toLocaleString(locale)}>{t("approvals.expires", { when: fromNow(approval.expires_at, locale) })}</span>

@@ -20,7 +20,7 @@ var update = flag.Bool("update", false, "rewrite connector-engine.yaml from the 
 var keysOfSection14 = strings.Fields(`mode auth.issuers auth.audience auth.localIssuer.enabled gateway.protocolVersions gateway.relayInstructions
 gateway.scanArgumentsForToken apps.appOnlyFunctions auth.agentTokenMaxLifetime auth.senderConstraint auth.manageAudience auth.trustedProxy.listen
 auth.trustedProxy.cidrs manage.mcp.operations catalog.tenantDefault catalog.offerDefault catalog.defaultCeiling catalog.privateListings
-gateway.listTtl gateway.toolNameMax gateway.separator gateway.denyAs permission.defaultMode permission.levelWrite.write permission.levelWrite.destructive
+gateway.skills sources.skillCatalog.enabled sources.skillCatalog.urls gateway.listTtl gateway.toolNameMax gateway.separator gateway.denyAs permission.defaultMode permission.levelWrite.write permission.levelWrite.destructive
 permission.destructiveMax permission.sessionGrantMax permission.unclassified permission.install.levelReviewed permission.install.levelOther
 permission.alwaysMaxDuration permission.external.endpoint approval.holdWindow approval.timeout approval.pollAfter approval.resultRetention
 approval.denialBrake.consecutive approval.denialBrake.perSession approval.maxPendingPerSession approval.executeWithin approval.sweepInterval
@@ -147,6 +147,11 @@ func TestAdaptersFileFollowsTheDefaultsAndTheAcknowledgements(t *testing.T) {
 	}
 	if got := f.Ports[config.PortRuntime].Use; !reflect.DeepEqual([]string(got), []string{"builtin:remote", "builtin:declarative"}) {
 		t.Fatalf("runtime follows runtime.adapters: %v", got)
+	}
+	skills := c
+	skills.Gateway.Skills = "tools"
+	if f, err := skills.LoadAdapters(nil, nil); err != nil || !reflect.DeepEqual([]string(f.Ports[config.PortRuntime].Use), []string{"builtin:remote", "builtin:declarative", "builtin:skill"}) {
+		t.Fatalf("gateway.skills = tools adds the skill runtime: %v", err)
 	}
 	local := []byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: memory}\n  secrets: {use: memory}\n  auth: {use: builtin:local}\n")
 	c.Auth.LocalIssuer.Enabled = true

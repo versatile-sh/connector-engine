@@ -51,8 +51,44 @@ export type ProbedTool = {
   proposed: Access;
 };
 
+/** Where a skill folder was read, pinned to a full commit. */
+export type SkillSource = { repository: string; path: string; commit: string; url?: string };
+
+/** The licence a catalog states for a skill. */
+export type SkillLicence = { spdx?: string; from?: string; redistributable: boolean };
+
+/** What a skill is before or after it is imported: provenance, licence, scripts and files. */
+export type SkillFacts = {
+  name: string;
+  category?: string;
+  source: SkillSource;
+  licence: SkillLicence;
+  redistribution: "bundled" | "metadata_only";
+  has_scripts: boolean;
+  digest?: string;
+  files: { path: string; bytes: number }[];
+  keys: string[];
+};
+
+/** One access key's choice on one skill. */
+export type KeyAccess = { agent: string; access: Access };
+
+/** One installed skill with every access key's choice. */
+export type Skill = SkillFacts & {
+  id: string;
+  alias: string;
+  title: string;
+  description?: string;
+  publisher?: string;
+  version: string;
+  state: string;
+  unbound?: string[];
+  access: KeyAccess[];
+};
+
 export type Preview = {
-  kind: "mcp" | "listing";
+  kind: "mcp" | "listing" | "skill";
+  skill?: SkillFacts;
   url: string;
   host: string;
   name: string;
@@ -71,7 +107,7 @@ export type Preview = {
 
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
 
-export type Agent = { name: string; expires_at: string };
+export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean };
 
 export type AgentToken = { agent: string; token: string; expires_at: string; mcp_url: string };
 
@@ -87,7 +123,7 @@ export type Approval = {
   expires_at: string;
 };
 
-export type ApiError = { status: number; message: string };
+export type ApiError = { status: number; message: string; code?: string | undefined };
 
 let csrfToken = "";
 
@@ -99,6 +135,9 @@ const isApiError = (value: unknown): value is ApiError =>
   typeof value === "object" && value !== null && "status" in value && "message" in value;
 
 export const errorText = (error: unknown) => (isApiError(error) ? error.message : String(error));
+
+/** The machine code the console put on a refusal, such as `wrong_password`, when it gave one. */
+export const errorCode = (error: unknown) => (isApiError(error) ? error.code : undefined);
 
 export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
@@ -117,7 +156,8 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
       typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
         ? data.error
         : `${response.status} ${response.statusText}`;
-    const failure: ApiError = { status: response.status, message };
+    const code = typeof data === "object" && data !== null && "code" in data && typeof data.code === "string" ? data.code : undefined;
+    const failure: ApiError = { status: response.status, message, code };
     throw failure;
   }
   return data as T;

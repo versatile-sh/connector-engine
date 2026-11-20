@@ -186,12 +186,13 @@ const (
 // Kind selects the runtime adapter of a listing (§5.2).
 type Kind string
 
-// Listing kinds of §5.2; Piece and WasmComponent are reserved.
+// Listing kinds of §5.2 and the skill kind; Piece and WasmComponent are reserved.
 const (
 	KindMCPRemote       Kind = "mcp_remote"
 	KindMCPPackage      Kind = "mcp_package"
 	KindRESTDeclarative Kind = "rest_declarative"
 	KindGRPCDeclarative Kind = "grpc_declarative"
+	KindSkill           Kind = "skill"
 	KindPiece           Kind = "piece"
 	KindWasmComponent   Kind = "wasm_component"
 )

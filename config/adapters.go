@@ -32,12 +32,18 @@ func use(tier string, names ...string) []string {
 	return out
 }
 
-func (c Config) runtimeDefault() []string { return use(adapters.TierBuiltin, c.Runtime.Adapters...) }
+func (c Config) runtimeDefault() []string {
+	out := use(adapters.TierBuiltin, c.Runtime.Adapters...)
+	if c.Gateway.Skills != "off" && !slices.Contains(c.Runtime.Adapters, "skill") {
+		out = append(out, adapters.TierBuiltin+":skill")
+	}
+	return out
+}
 
 func (c Config) sourceDefault() []string {
 	var out []string
 	for name, on := range map[string]bool{"files": c.Sources.Files.Enabled, "official": c.Sources.Official.Enabled, "docker": c.Sources.Docker.Enabled,
-		"openapi": c.Sources.OpenAPI.Enabled, "reflection": c.Sources.Reflection.Enabled, "bsr": c.Sources.BSR.Enabled} {
+		"openapi": c.Sources.OpenAPI.Enabled, "reflection": c.Sources.Reflection.Enabled, "bsr": c.Sources.BSR.Enabled, "skillcatalog": c.Sources.SkillCatalog.Enabled} {
 		if on {
 			out = append(out, adapters.TierBuiltin+":"+name)
 		}
@@ -70,8 +76,8 @@ func (c Config) AdaptersSpec() adapters.Spec {
 		PortSecrets: {Default: c.secretsDefault(), Builtins: []string{"localfile"}, Memory: true, Stateful: true, Sensitive: true,
 			Capabilities: map[string][]string{"builtin:localfile": {"secrets.envelope", "secrets.crypto_shredding"}, "memory": {"secrets.volatile"}}},
 		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Builtins: []string{"jwks", "local"}, Sensitive: true, Weak: []string{"builtin:local"}},
-		PortRuntime: {Default: c.runtimeDefault(), Builtins: []string{"remote", "declarative", "grpc"}, Memory: true, Multi: true},
-		PortSource:  {Default: c.sourceDefault(), Builtins: []string{"files", "official", "docker", "openapi", "reflection", "bsr"}, Memory: true, Multi: true},
+		PortRuntime: {Default: c.runtimeDefault(), Builtins: []string{"remote", "declarative", "grpc", "skill"}, Memory: true, Multi: true},
+		PortSource:  {Default: c.sourceDefault(), Builtins: []string{"files", "official", "docker", "openapi", "reflection", "bsr", "skillcatalog"}, Memory: true, Multi: true},
 		PortSink: {Default: use(adapters.TierBuiltin, "log"), Builtins: []string{"log", "webhook"}, Memory: true,
 			BuiltinConfig: map[string]map[string]adapters.ConfigKind{"builtin:webhook": {"url": adapters.ConfigString, "secretRef": adapters.ConfigRef, "timeout": adapters.ConfigString}}},
 		PortFilter: {Default: c.filterDefault(), Builtins: []string{"builtin"}},

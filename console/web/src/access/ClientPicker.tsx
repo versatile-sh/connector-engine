@@ -16,13 +16,15 @@ function Blocks({ guide }: { guide: Guide }) {
     const block = guide.blocks[at] ?? guide.blocks[0];
     return (
       <>
-        <Segmented<string>
-          label={t("clients.language")}
-          value={String(at)}
-          onChange={(value) => setAt(Number(value))}
-          className="self-start"
-          options={guide.blocks.map((option, index) => ({ value: String(index), text: option.label ?? "" }))}
-        />
+        <div className="-m-1.5 max-w-[calc(100%+0.75rem)] self-start overflow-x-auto p-1.5">
+          <Segmented<string>
+            label={t("clients.language")}
+            value={String(at)}
+            onChange={(value) => setAt(Number(value))}
+            className="w-max"
+            options={guide.blocks.map((option, index) => ({ value: String(index), text: option.label ?? "" }))}
+          />
+        </div>
         {block ? <CopyBox key={at} label={label(block)} text={block.text} className="swap-in" /> : null}
       </>
     );
@@ -37,9 +39,9 @@ export function ClientPicker({ url, accessKey }: { url: string; accessKey?: stri
   const [chosen, setChosen] = useState<ClientId | undefined>();
   const guide = all.find((g) => g.id === chosen);
   return (
-    <div>
+    <div className="@container">
       <h3 className="text-base font-medium">{t("clients.title")}</h3>
-      <div role="group" aria-label={t("clients.title")} className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div role="group" aria-label={t("clients.title")} className="mt-3 grid grid-cols-2 gap-2 @md:grid-cols-3 @3xl:grid-cols-5">
         {all.map((g) => (
           <button key={g.id} type="button" aria-pressed={g.id === chosen} className={CARD} onClick={() => setChosen(g.id)}>
             <span className="text-sm font-semibold">{g.name}</span>

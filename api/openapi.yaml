@@ -1617,6 +1617,8 @@ components:
           $ref: '#/components/schemas/RuntimeNeeds'
         signature:
           $ref: '#/components/schemas/Signature'
+        skill:
+          $ref: '#/components/schemas/Skill'
         source:
           $ref: '#/components/schemas/SourceInfo'
         title:
@@ -2171,6 +2173,79 @@ components:
           type: string
       required:
         - type
+      type: object
+    Skill:
+      properties:
+        category:
+          type: string
+        files:
+          items:
+            $ref: '#/components/schemas/SkillFile'
+          type: array
+        has_scripts:
+          type: boolean
+        licence:
+          $ref: '#/components/schemas/SkillLicence'
+        name:
+          type: string
+        redistribution:
+          type: string
+        requires:
+          items:
+            type: string
+          type: array
+        source:
+          $ref: '#/components/schemas/SkillSource'
+      required:
+        - name
+        - source
+        - licence
+        - redistribution
+        - files
+      type: object
+    SkillFile:
+      properties:
+        bytes:
+          type: integer
+        content:
+          contentEncoding: base64
+          type: string
+        path:
+          type: string
+        sha256:
+          type: string
+        url:
+          type: string
+      required:
+        - path
+        - bytes
+        - sha256
+      type: object
+    SkillLicence:
+      properties:
+        from:
+          type: string
+        redistributable:
+          type: boolean
+        spdx:
+          type: string
+      required:
+        - redistributable
+      type: object
+    SkillSource:
+      properties:
+        commit:
+          type: string
+        path:
+          type: string
+        repository:
+          type: string
+        url:
+          type: string
+      required:
+        - repository
+        - path
+        - commit
       type: object
     SourceInfo:
       properties:

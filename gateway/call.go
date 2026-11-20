@@ -27,6 +27,10 @@ func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Resul
 		return g.forward(ctx, p, d, service.CallRequest{Name: a.Name, Arguments: a.Arguments, Fields: fieldsOf(a.Fields, params.Meta)})
 	case toolApprovalStatus, toolApprovalCancel:
 		return g.approval(ctx, p, d, params.Name, params.Arguments)
+	case toolSkillList, toolSkillLoad:
+		if g.cfg.Skills {
+			return g.skill(ctx, p, d, params.Name, params.Arguments)
+		}
 	}
 	return g.forward(ctx, p, d, service.CallRequest{Name: params.Name, Arguments: params.Arguments, Fields: fieldsOf(nil, params.Meta)})
 }

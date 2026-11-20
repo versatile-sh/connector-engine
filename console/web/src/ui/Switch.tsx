@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 /** An on/off choice as a labelled switch: the whole row is the target, and the thumb slides. */
 export function Switch({ checked, onChange, children, hint }: { checked: boolean; onChange(checked: boolean): void; children: ReactNode; hint?: ReactNode }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4">
+    <label className="flex cursor-pointer items-center justify-between gap-4 pointer-coarse:min-h-11">
       <span className="flex min-w-0 flex-col">
         <span className="text-sm font-semibold">{children}</span>
         {hint ? <span className="text-[0.8125rem] leading-snug text-muted">{hint}</span> : null}

@@ -34,6 +34,7 @@ gateway:
   toolNameMax: 64
   separator: __
   denyAs: unknown_tool
+  skills: "off"
 apps:
   appOnlyFunctions: refuse
 manage:
@@ -126,6 +127,9 @@ sources:
     enabled: false
     targets: []
     insecure: false
+  skillCatalog:
+    enabled: false
+    urls: []
   syncInterval: 6h0m0s
 listing:
   requireDigest: true

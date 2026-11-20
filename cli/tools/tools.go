@@ -123,7 +123,12 @@ func (b bearer) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func (c *Command) connect(ctx context.Context) (*mcp.ClientSession, error) {
-	endpoint, token := c.getenv(envEndpoint), c.getenv(envToken)
+	return Dial(ctx, c.getenv)
+}
+
+// Dial opens an MCP session on the agent endpoint named by CN_ENDPOINT with the CN_AGENT_TOKEN bearer.
+func Dial(ctx context.Context, getenv func(string) string) (*mcp.ClientSession, error) {
+	endpoint, token := getenv(envEndpoint), getenv(envToken)
 	if endpoint == "" || token == "" {
 		return nil, fmt.Errorf("set %s and %s", envEndpoint, envToken)
 	}

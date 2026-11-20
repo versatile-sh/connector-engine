@@ -14,7 +14,7 @@ export function PageTitle({ section, title, children }: PageTitleProps) {
         {t("brand.label")} · {section}
       </p>
       <div className="mt-4 flex items-center gap-3">
-        <h1 id="page-title" className="text-lit font-serif text-5xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl">
+        <h1 id="page-title" className="text-lit serif-room font-serif text-5xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl">
           <Marked text={title} />
         </h1>
         {children}

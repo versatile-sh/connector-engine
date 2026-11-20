@@ -809,6 +809,7 @@ message Manifest {
   string licence = 22;
   Review review = 23;
   string trust_level = 24;
+  Skill skill = 25;
 }
 
 message MetaUI {
@@ -1049,6 +1050,38 @@ message Signature {
   string type = 1;
   string identity = 2;
   string issuer = 3;
+}
+
+message Skill {
+  string name = 1;
+  string category = 2;
+  SkillSource source = 3;
+  SkillLicence licence = 4;
+  string redistribution = 5;
+  bool has_scripts = 6;
+  repeated string requires = 7;
+  repeated SkillFile files = 8;
+}
+
+message SkillFile {
+  string path = 1;
+  int64 bytes = 2;
+  string sha256 = 3;
+  string url = 4;
+  bytes content = 5;
+}
+
+message SkillLicence {
+  string spdx = 1;
+  string from = 2;
+  bool redistributable = 3;
+}
+
+message SkillSource {
+  string repository = 1;
+  string path = 2;
+  string commit = 3;
+  string url = 4;
 }
 
 message SourceInfo {

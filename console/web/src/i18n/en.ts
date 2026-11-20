@@ -180,6 +180,8 @@ export const en = {
   "keys.revokeLabel": "Revoke the key {name}",
   "keys.revokeAsk": "Revoke {name}? Every app using this key stops at once, and it cannot be undone.",
   "keys.revokeConfirm": "Revoke key",
+  "keys.newBadge": "new",
+  "keys.viaBrowser": "connected via browser sign-in",
   "keys.revoking": "Revoking…",
   "keys.empty": "No key yet. Any MCP client (Claude Desktop, Claude Code, Cursor, ChatGPT, VS Code, your own scripts) connects to {endpoint} with a key and sees every connector with the permissions you set.",
   "keys.created": "Key for {name}",

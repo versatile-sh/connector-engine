@@ -182,6 +182,8 @@ export const ptBR: Record<MessageKey, string> = {
   "keys.revokeLabel": "Revogar a chave {name}",
   "keys.revokeAsk": "Revogar {name}? Todo app que usa esta chave para na hora, e não dá para desfazer.",
   "keys.revokeConfirm": "Revogar chave",
+  "keys.newBadge": "nova",
+  "keys.viaBrowser": "conectada pelo login no navegador",
   "keys.revoking": "Revogando…",
   "keys.empty": "Nenhuma chave ainda. Qualquer cliente MCP (Claude Desktop, Claude Code, Cursor, ChatGPT, VS Code, seus próprios scripts) se conecta a {endpoint} com uma chave e vê todos os conectores com as permissões que você definiu.",
   "keys.created": "Chave de {name}",

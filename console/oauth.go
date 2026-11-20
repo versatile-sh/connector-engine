@@ -397,6 +397,10 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
+	if err := c.State.MarkBrowserConnected(a.Name, time.Now()); err != nil {
+		c.fail(w, err)
+		return
+	}
 	req.client.LastUsed = time.Now().UTC()
 	_ = c.State.PutOAuthClient(req.client)
 	code := randomID()

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useReducer, useState, type FormEvent } from "react";
+import { useEffect, useReducer, useState, type FormEvent } from "react";
 import { api, errorText, type AgentToken } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { keysQuery } from "../queries";
@@ -57,6 +57,14 @@ export function AccessPage() {
       void queryClient.invalidateQueries({ queryKey: ["session"] });
     },
   });
+  const markSeen = useMutation({ mutationFn: () => api("POST", "/api/agents/seen") }).mutate;
+  const anyNew = keys.data?.agents.some((key) => key.new) ?? false;
+  useEffect(
+    function tellServerNewKeysWereSeen() {
+      if (anyNew) markSeen();
+    },
+    [anyNew, markSeen],
+  );
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
   const revoke = useMutation({
     mutationFn: (agent: string) => api("DELETE", `/api/agents/${encodeURIComponent(agent)}`),

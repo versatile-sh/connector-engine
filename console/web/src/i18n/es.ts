@@ -182,6 +182,8 @@ export const es: Record<MessageKey, string> = {
   "keys.revokeLabel": "Revocar la clave {name}",
   "keys.revokeAsk": "¿Revocar {name}? Toda app que usa esta clave se detiene al instante, y no se puede deshacer.",
   "keys.revokeConfirm": "Revocar clave",
+  "keys.newBadge": "nueva",
+  "keys.viaBrowser": "conectada con el inicio de sesión del navegador",
   "keys.revoking": "Revocando…",
   "keys.empty": "Aún no hay claves. Cualquier cliente MCP (Claude Desktop, Claude Code, Cursor, ChatGPT, VS Code, tus propios scripts) se conecta a {endpoint} con una clave y ve todos los conectores con los permisos que definiste.",
   "keys.created": "Clave de {name}",

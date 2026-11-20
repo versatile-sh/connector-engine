@@ -33,7 +33,7 @@ func TestAConnectorLockGivesWayToTheCallersContext(t *testing.T) {
 }
 
 func TestRemovingAConnectorWaitsForItsWriters(t *testing.T) {
-	state, err := OpenState(filepath.Join(t.TempDir(), "state.json"))
+	state, err := OpenState(filepath.Join(t.TempDir(), "state.json"), "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

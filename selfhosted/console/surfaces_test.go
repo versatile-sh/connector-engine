@@ -100,7 +100,7 @@ func newRig(t *testing.T) *rig {
 	public, operator := bootEngine(t, base, func(c *config.Config) { c.Approval.HoldWindow, c.Gateway.Skills = 10*time.Second, "tools" })
 	up := newUpstream(t)
 	statePath := t.TempDir() + "/state.json"
-	state, err := console.OpenState(statePath)
+	state, err := console.OpenState(statePath, "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -415,7 +415,7 @@ func TestChannelsComeUpWhenTheConsoleSecretsUnlock(t *testing.T) {
 	r.b.ok("POST", "/api/notifications/channels", map[string]any{"kind": "telegram", "settings": map[string]string{"token": token, "owner_user_id": "42"}}, nil)
 	within(t, r.fake.listened, 5*time.Second)
 
-	state, err := console.OpenState(r.path)
+	state, err := console.OpenState(r.path, "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

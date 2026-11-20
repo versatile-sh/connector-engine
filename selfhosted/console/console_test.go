@@ -186,7 +186,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	base := "http://" + lis.Addr().String()
 	public, operator := bootEngine(t, base)
 	up := newUpstream(t)
-	state, err := console.OpenState(t.TempDir() + "/state.json")
+	state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,21 +479,21 @@ func TestOnlyReadOnlyHintProposesOn(t *testing.T) {
 }
 
 func TestTheOwnerSignsInWithThePasswordOnly(t *testing.T) {
-	s, err := console.OpenState(t.TempDir() + "/s.json")
+	s, err := console.OpenState(t.TempDir()+"/s.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.CheckLogin("a", "b"); err != console.ErrNoOwner {
+	if _, _, err := s.CheckLogin("a", "b"); err != console.ErrNoOwner {
 		t.Fatalf("before setup: %v", err)
 	}
-	if err := s.CreateOwner("me", "correct horse battery"); err != nil {
+	if _, err := s.CreateFirstOwner("me", "correct horse battery"); err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range []struct {
 		user, pass string
 		want       bool
 	}{{"me", "correct horse battery", true}, {"me", "wrong password!", false}, {"you", "correct horse battery", false}} {
-		if ok, err := s.CheckLogin(c.user, c.pass); err != nil || ok != c.want {
+		if _, ok, err := s.CheckLogin(c.user, c.pass); err != nil || ok != c.want {
 			t.Errorf("%s/%s: %v %v", c.user, c.pass, ok, err)
 		}
 	}
@@ -501,12 +501,16 @@ func TestTheOwnerSignsInWithThePasswordOnly(t *testing.T) {
 
 func TestASessionOutlivesAConsoleRestartAndNotItsSignOut(t *testing.T) {
 	path := t.TempDir() + "/s.json"
-	state, err := console.OpenState(path)
+	state, err := console.OpenState(path, "owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, err := state.CreateFirstOwner("me", "correct horse battery")
 	if err != nil {
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
-	csrf, err := console.NewSessions(state).Start(rec)
+	csrf, err := console.NewSessions(state).Start(rec, owner.Person)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -515,7 +519,7 @@ func TestASessionOutlivesAConsoleRestartAndNotItsSignOut(t *testing.T) {
 	if strings.Contains(string(raw), cookie.Value) {
 		t.Fatal("the state file holds the raw session cookie")
 	}
-	reopened, err := console.OpenState(path)
+	reopened, err := console.OpenState(path, "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -526,7 +530,7 @@ func TestASessionOutlivesAConsoleRestartAndNotItsSignOut(t *testing.T) {
 		t.Fatalf("after restart: %q %v", got, ok)
 	}
 	after.End(httptest.NewRecorder(), req)
-	again, _ := console.OpenState(path)
+	again, _ := console.OpenState(path, "owner")
 	if _, ok := console.NewSessions(again).Get(req); ok {
 		t.Fatal("a signed-out session came back after a restart")
 	}
@@ -580,7 +584,7 @@ func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) 
 	public, operator := bootEngine(t, base)
 	up := newUpstream(t)
 	path := t.TempDir() + "/state.json"
-	state, err := console.OpenState(path)
+	state, err := console.OpenState(path, "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -634,7 +638,7 @@ func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) 
 		t.Fatalf("grants of a revoked agent: %+v %v", grants.Items, err)
 	}
 
-	reopened, err := console.OpenState(path)
+	reopened, err := console.OpenState(path, "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -654,7 +658,7 @@ func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
 		public, operator := bootEngine(t, base)
 		up := newUpstream(t)
 		path := t.TempDir() + "/state.json"
-		state, err := console.OpenState(path)
+		state, err := console.OpenState(path, "owner")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -700,7 +704,7 @@ func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
 			if err := os.WriteFile(path, bytes.Replace(raw, []byte(`"onboarding_dismissed": true`), []byte(`"onboarding_dismissed": false`), 1), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			before, err := console.OpenState(path)
+			before, err := console.OpenState(path, "owner")
 			if err != nil || before.OnboardingDismissed() {
 				t.Fatalf("a state from before the guide was latched: %v", err)
 			}
@@ -711,7 +715,7 @@ func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
 			}
 		}
 		srv.Close()
-		reopened, err := console.OpenState(path)
+		reopened, err := console.OpenState(path, "owner")
 		if err != nil || !reopened.OnboardingDismissed() {
 			t.Fatalf("finish %v: the guide came back after a restart: %v", finish, err)
 		}
@@ -720,7 +724,7 @@ func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
 
 func TestAFailedStateWriteChangesNothing(t *testing.T) {
 	dir := t.TempDir()
-	state, err := console.OpenState(dir + "/s.json")
+	state, err := console.OpenState(dir+"/s.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

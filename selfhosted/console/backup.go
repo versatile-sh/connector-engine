@@ -138,7 +138,7 @@ func (c *Console) InspectBackup(ctx context.Context, raw, passphrase []byte, pro
 
 func isBackup(raw []byte) bool { return bytes.HasPrefix(raw, []byte("CEBAK\n")) }
 
-// RestoreBackup replaces the engine and the console with a full backup, one restore at a time, then asks the process to restart so both start on the restored keys; firstRun refuses once an owner exists.
+// RestoreBackup replaces the engine and the console with a full backup, one restore at a time, then asks the process to restart so both start on the restored keys; firstRun refuses once a user exists.
 func (c *Console) RestoreBackup(ctx context.Context, raw, passphrase []byte, firstRun bool) (BackupSummary, error) {
 	c.restoring.Lock()
 	defer c.restoring.Unlock()
@@ -149,7 +149,7 @@ func (c *Console) RestoreBackup(ctx context.Context, raw, passphrase []byte, fir
 	if err != nil {
 		return BackupSummary{}, err
 	}
-	state, err := decodeState(files[stateBackup])
+	state, err := decodeState(files[stateBackup], c.State.person)
 	if err != nil {
 		return BackupSummary{}, invalid("the backup's console state does not decode: %v", err)
 	}
@@ -191,14 +191,17 @@ func (c *Console) RestoreBackup(ctx context.Context, raw, passphrase []byte, fir
 	return summary, nil
 }
 
-func decodeState(raw []byte) (stateFile, error) {
+func decodeState(raw []byte, person string) (stateFile, error) {
 	var d stateFile
-	err := json.Unmarshal(raw, &d)
-	if err == nil && d.Owner == nil {
-		err = errors.New("it has no owner account")
+	if err := json.Unmarshal(raw, &d); err != nil {
+		return d, err
 	}
 	migrateSlots(&d)
-	return d, err
+	migrateUsers(&d, person)
+	if owners(&d) == 0 {
+		return d, errors.New("it has no owner account")
+	}
+	return d, nil
 }
 
 func (s *State) backup() ([]byte, error) {
@@ -211,7 +214,7 @@ func (s *State) backup() ([]byte, error) {
 
 func (s *State) replace(d stateFile, firstRun bool) error {
 	return s.update(func(next *stateFile) error {
-		if firstRun && next.Owner != nil {
+		if firstRun && len(next.Users) > 0 {
 			return ErrOwnerExists
 		}
 		d.Sessions = nil

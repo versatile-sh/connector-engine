@@ -52,7 +52,7 @@ func newOAuthRig(t *testing.T) *oauthRig {
 		c.Auth.Audience, c.Auth.ManageAudience = "urn:connector-engine:local:mcp", "urn:connector-engine:local"
 	})
 	up := newUpstream(t)
-	state, err := console.OpenState(t.TempDir() + "/state.json")
+	state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

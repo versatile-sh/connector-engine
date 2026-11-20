@@ -34,7 +34,7 @@ func signedIn(t *testing.T, tweaks ...func(*config.Config)) (*browser, string) {
 	}
 	base := "http://" + lis.Addr().String()
 	public, operator := bootEngine(t, base, tweaks...)
-	state, err := console.OpenState(t.TempDir() + "/state.json")
+	state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

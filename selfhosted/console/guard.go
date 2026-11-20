@@ -31,7 +31,7 @@ func sessionKey(id string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Sessions is the owner's sessions as the state file keeps them, keyed by the SHA-256 of their cookie, so a restart does not sign the owner out.
+// Sessions is the users' sessions as the state file keeps them, keyed by the SHA-256 of their cookie, so a restart does not sign anyone out.
 type Sessions struct {
 	state *State
 }
@@ -39,24 +39,33 @@ type Sessions struct {
 // NewSessions returns the sessions kept in state.
 func NewSessions(state *State) *Sessions { return &Sessions{state: state} }
 
-// Start opens a session, sets its HttpOnly SameSite=Strict cookie and returns its CSRF token.
-func (s *Sessions) Start(w http.ResponseWriter) (string, error) {
+// Start opens a new session of person, sets its HttpOnly SameSite=Strict cookie and returns its CSRF token.
+func (s *Sessions) Start(w http.ResponseWriter, person string) (string, error) {
 	id, csrf := randomID(), randomID()
-	if err := s.state.putSession(sessionKey(id), StoredSession{CSRF: csrf, Expires: time.Now().Add(sessionTTL)}); err != nil {
+	if err := s.state.putSession(sessionKey(id), StoredSession{Person: person, CSRF: csrf, Expires: time.Now().Add(sessionTTL)}); err != nil {
 		return "", err
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: int(sessionTTL.Seconds())})
 	return csrf, nil
 }
 
-// Get returns the CSRF token of the request's live session.
+// Get returns the CSRF token of the request's live session of an existing user.
 func (s *Sessions) Get(r *http.Request) (string, bool) {
+	_, csrf, ok := s.Current(r)
+	return csrf, ok
+}
+
+// Current returns the user and the CSRF token of the request's live session, refusing a session whose user no longer exists.
+func (s *Sessions) Current(r *http.Request) (User, string, bool) {
 	c, err := r.Cookie(sessionCookie)
 	if err != nil {
-		return "", false
+		return User{}, "", false
 	}
-	v, ok := s.state.session(sessionKey(c.Value))
-	return v.CSRF, ok
+	v, u, ok := s.state.session(sessionKey(c.Value))
+	if !ok {
+		return User{}, "", false
+	}
+	return u, v.CSRF, true
 }
 
 // Key returns the state key of the request's session cookie, or "" without one.

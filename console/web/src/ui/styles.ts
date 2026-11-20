@@ -17,6 +17,9 @@ export const LIT_EDGE =
 /** The lime hairline that lights the top edge of the panel holding the next step; its parent is `relative`. */
 export const HAIRLINE = "pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-lime/70 to-transparent";
 
+/** The coloured bar on the left of a rounded card, inset clear of its corners; the card is `relative`. */
+export const ACCENT_BAR = "pointer-events-none absolute inset-y-2.5 left-1.5 w-1 rounded-full";
+
 /** Press feedback for anything clickable that is drawn as a button. */
 export const PRESS = "transition-[background-color,border-color,color,opacity,transform,filter] duration-150 active:scale-[0.97]";
 

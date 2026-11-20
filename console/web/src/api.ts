@@ -255,6 +255,7 @@ export type ApprovalView = {
   function: string;
   function_title?: string;
   kind: Kind;
+  skill?: boolean;
   app: string;
   session: string;
   created_at: string;

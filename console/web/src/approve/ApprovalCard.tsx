@@ -52,7 +52,7 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
           </p>
         </div>
         <span className="ml-auto">
-          <Bubble tone={approval.kind === "destructive" ? "amber" : "neutral"}>{t(`kind.${approval.kind}`)}</Bubble>
+          <Bubble tone={approval.kind === "destructive" ? "amber" : "neutral"}>{approval.skill ? t("approvals.skill") : t(`kind.${approval.kind}`)}</Bubble>
         </span>
       </div>
       <h1 id="approve-title" className="text-lit mt-6 font-serif text-4xl leading-[1.02] font-normal tracking-[-0.02em] break-words sm:text-5xl">

@@ -265,6 +265,7 @@ export const en = {
   "clients.note.ai": "Paste it in the chat of the AI app you want to connect and it adds the server itself. The key stays in that chat, so do this only in apps you trust.",
   "clients.prompt": "Add an MCP server to your own configuration.\n\nName: {name}\nTransport: Streamable HTTP\nURL: {url}\nHeader on every request: {header}\n\nUse your own way to add it (your MCP command, such as claude mcp add or codex mcp add, or your MCP config file). Then list its tools to confirm it works, and tell me what you changed.",
   "approvals.on": "on {connector}",
+  "approvals.skill": "Skill",
   "nav.skills": "Skills",
   "access.skillHint.off": "This key never sees it",
   "access.skillHint.on": "Loads at once",

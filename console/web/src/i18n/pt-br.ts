@@ -267,6 +267,7 @@ export const ptBR: Record<MessageKey, string> = {
   "clients.note.ai": "Cole no chat do app de IA que você quer conectar e ele adiciona o servidor sozinho. A chave fica nesse chat, então faça isso só em apps em que você confia.",
   "clients.prompt": "Adicione um servidor MCP à sua própria configuração.\n\nNome: {name}\nTransporte: Streamable HTTP\nURL: {url}\nHeader em toda requisição: {header}\n\nUse o seu jeito de adicionar (seu comando de MCP, como claude mcp add ou codex mcp add, ou seu arquivo de configuração de MCP). Depois liste as ferramentas dele para confirmar que funciona e me diga o que você mudou.",
   "approvals.on": "em {connector}",
+  "approvals.skill": "Skill",
   "nav.skills": "Skills",
   "access.skillHint.off": "Esta chave nunca a vê",
   "access.skillHint.on": "Carrega na hora",

@@ -81,7 +81,7 @@ Everything new lives in three places:
 |---|---|
 | `once` | `:decide` `approve` |
 | `session` | `:decide` `approve_for_session`. Offered only when the record's `mode` is `ask_once` |
-| `always` | `:decide` `approve`, then `SetAccess(connector, function, on)`. The function's access flips to On in the console. The order matters: deleting the "ask" row first would cancel the pending record (`DeleteGrant` cancels the approvals it covers) |
+| `always` | `:decide` `approve`, then, once the approved call has run, `SetAccess(connector, function, on)`, or `SetSkillAccess(connector, key, on)` for a skill. The function or skill turns On in the console. It waits because execution re-checks access, and replacing the "ask" row earlier would cancel the run. If the console restarts in that window, the flip is lost and the call ran once. "Always" is offered only when the console could read the function's nature |
 | `deny` | `:decide` `deny` |
 
 `DecideApproval` answers a lost race with the current record and no error. The use case compares the returned state and decider with the requested ones and reports `already_decided` with the actual outcome. A surface never claims a decision it did not make.
@@ -168,7 +168,7 @@ For a `tools/call` from an app that is turned on and that declared the `elicitat
 
 - `GET /api/approvals/{id}` returns the approval view (§5). It takes the console session, or `?t=<link token>`.
 - `POST /api/approvals/{id}/decide` takes `{choice, token?}`. With a session it needs CSRF. With a token it needs no session. The Guard's Origin and Host checks apply either way.
-- A link token is `base64url(approval|device|expiry|nonce).HMAC-SHA256`, keyed by a random key in the state file. It decides that one approval only. It is spent on first use, and it expires with the approval.
+- A link token is `base64url(approval|device|expiry|nonce).HMAC-SHA256`, keyed by a random key in the state file. That key is not sealed, unlike channel secrets: anyone who can read the state file can already act as the console. It decides that one approval only. It is spent on first use, and it expires with the approval.
 - A GET never decides.
 - Links in ntfy and webhook messages never carry a token: they open the page, which asks for sign-in.
 

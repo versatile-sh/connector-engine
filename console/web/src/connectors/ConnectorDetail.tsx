@@ -14,6 +14,7 @@ import { AccessPicker } from "./AccessPicker";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { Credentials } from "./Credentials";
 import { FunctionRow } from "./FunctionRow";
+import { KindLabel } from "./KindLabel";
 import { accessCounts, serverHost } from "./summary";
 
 const FILTER_FROM = 8;
@@ -52,13 +53,13 @@ function Functions({ connector }: { connector: Connector }) {
     <section aria-labelledby="functions-title" className={`${SURFACE} min-w-0 p-5 sm:p-6`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <h2 id="functions-title" className="font-display text-xl font-bold tracking-[-0.03em]">
+          <h2 id="functions-title" className="text-lg leading-snug font-medium">
             {t("detail.functions")}
           </h2>
           <Bubble>{functions.length}</Bubble>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {(["read", "write", "ask", "off"] as const).map((access) =>
+          {(["on", "ask", "off"] as const).map((access) =>
             counts[access] > 0 ? (
               <Bubble key={access} tone={access === "ask" ? "outline" : "neutral"}>
                 {t(`access.count.${access}`, { count: counts[access] })}
@@ -87,7 +88,7 @@ function Functions({ connector }: { connector: Connector }) {
               description={fn.description}
               flags={
                 <>
-                  <Bubble>{fn.class || t("detail.unclassified")}</Bubble>
+                  <KindLabel kind={fn.kind} />
                   {fn.state !== "active" ? (
                     <Bubble tone="amber" title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
                       {fn.state}
@@ -116,6 +117,7 @@ function Remove({ connector, onClose }: { connector: Connector; onClose(): void 
   const remove = useMutation({
     mutationFn: () => api("DELETE", `/api/connectors/${encodeURIComponent(connector.id)}`),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
       await queryClient.invalidateQueries({ queryKey: ["connectors"] });
       navigate("/", { replace: true });
     },
@@ -182,7 +184,7 @@ export function ConnectorDetail({ id }: { id: string }) {
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
         <div className="min-w-48 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-4xl leading-[1.05] font-bold tracking-[-0.04em] break-words">{connector.title}</h1>
+            <h1 className="text-lit font-serif text-5xl leading-none font-normal tracking-[-0.02em] break-words">{connector.title}</h1>
             {connector.blocked ? <Bubble tone="amber">{connector.blocked}</Bubble> : null}
           </div>
           {connector.publisher ? <p className="mt-1 text-sm text-muted">{t("import.by", { publisher: connector.publisher })}</p> : null}

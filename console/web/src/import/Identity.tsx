@@ -17,7 +17,7 @@ export function Identity({ preview, onLime = false }: { preview: Preview; onLime
       <div className="flex items-center gap-4">
         <ConnectorIcon src={preview.icon} title={preview.title} size={onLime ? "lg" : "md"} onLime={onLime} />
         <div className="min-w-0">
-          <h2 className={`font-display font-bold tracking-[-0.04em] break-words ${onLime ? "text-4xl leading-[1.04] sm:text-5xl" : "text-2xl leading-tight"}`}>{preview.title}</h2>
+          <h2 className={`font-serif font-normal tracking-[-0.02em] break-words ${onLime ? "text-5xl leading-[0.98] sm:text-6xl" : "text-3xl leading-none"}`}>{preview.title}</h2>
           <p className={`mt-1 truncate font-mono text-xs ${soft}`} translate="no">
             {preview.name}@{preview.version}
             {preview.publisher ? ` · ${t("import.by", { publisher: preview.publisher })}` : ""}
@@ -29,7 +29,7 @@ export function Identity({ preview, onLime = false }: { preview: Preview; onLime
         {facts.map((fact) => (
           <div key={fact.label} className="contents">
             <dt>{fact.label}</dt>
-            <dd className={`min-w-0 truncate font-mono text-xs leading-5 ${onLime ? "text-ink" : "text-fg"}`} title={fact.value} translate="no">
+            <dd className={`min-w-0 truncate font-mono text-xs leading-5 ${onLime ? "text-ink" : "text-paper"}`} title={fact.value} translate="no">
               {fact.value}
             </dd>
           </div>

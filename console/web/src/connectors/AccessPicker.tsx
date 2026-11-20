@@ -4,7 +4,7 @@ import { Segmented } from "../ui/Segmented";
 
 type AccessPickerProps = { name: string; value: Access; disabled?: boolean; onChange(next: Access): void };
 
-/** The four-way choice of one function, off, read, write or ask, with each choice explained on hover. */
+/** The three-way choice of one function, off, on or ask, with each choice explained on hover. */
 export function AccessPicker({ name, value, disabled = false, onChange }: AccessPickerProps) {
   const t = useT();
   return (

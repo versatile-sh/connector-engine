@@ -38,7 +38,7 @@ export function Credentials({ connector, onSaved }: { connector: Connector; onSa
   };
   return (
     <section aria-labelledby="creds-title" className={`${SURFACE} p-5`}>
-      <h2 id="creds-title" className="font-display text-lg font-bold tracking-[-0.03em]">
+      <h2 id="creds-title" className="text-base font-medium">
         {t("creds.title")}
       </h2>
       {stored.length > 0 ? (

@@ -2,40 +2,43 @@ package console
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/agents-control/connector-engine/port"
 )
 
 const probeTimeout = 20 * time.Second
 
-// Access is what the owner chose for one function: off, read (allowed, classed read), write (allowed, classed write) or ask (each call waits for the owner).
+// Access is what the owner chose for one function: off, on (allowed at the class of its own nature) or ask (each call waits for the owner).
 type Access string
 
-// The four choices of a function.
+// The three choices of a function.
 const (
-	AccessOff   Access = "off"
-	AccessRead  Access = "read"
-	AccessWrite Access = "write"
-	AccessAsk   Access = "ask"
+	AccessOff Access = "off"
+	AccessOn  Access = "on"
+	AccessAsk Access = "ask"
 )
 
-// Valid reports whether a is one of the four choices.
+// Valid reports whether a is one of the three choices.
 func (a Access) Valid() bool {
-	return a == AccessOff || a == AccessRead || a == AccessWrite || a == AccessAsk
+	return a == AccessOff || a == AccessOn || a == AccessAsk
 }
 
 // ProbedTool is one tool an MCP server listed, with its hints and the choice the console proposes.
 type ProbedTool struct {
-	Name        string `json:"name"`
-	Title       string `json:"title,omitempty"`
-	Description string `json:"description,omitempty"`
-	ReadOnly    bool   `json:"read_only"`
-	Destructive bool   `json:"destructive"`
-	Proposed    Access `json:"proposed"`
+	Name        string     `json:"name"`
+	Title       string     `json:"title,omitempty"`
+	Description string     `json:"description,omitempty"`
+	ReadOnly    bool       `json:"read_only"`
+	Destructive bool       `json:"destructive"`
+	Kind        port.Class `json:"kind"`
+	Proposed    Access     `json:"proposed"`
 }
 
 // Probed is what an MCP server said about itself and its tools.
@@ -52,13 +55,37 @@ type Probed struct {
 	Tools        []ProbedTool `json:"tools"`
 }
 
-// Propose pre-classifies a tool from its hints, which come from an untrusted server: only readOnlyHint true is read; anything else waits for the owner.
+// Propose pre-classifies a tool from its hints, which come from an untrusted server: only readOnlyHint true is on; anything else waits for the owner.
 func Propose(a *mcp.ToolAnnotations) (readOnly, destructive bool, proposed Access) {
 	if a != nil && a.ReadOnlyHint {
-		return true, false, AccessRead
+		return true, false, AccessOn
 	}
 	destructive = a == nil || a.DestructiveHint == nil || *a.DestructiveHint
 	return false, destructive, AccessAsk
+}
+
+// KindOf names what a tool does by its hints: read, destructive (the MCP default when not read-only) or write.
+func KindOf(readOnly, destructive bool) port.Class {
+	switch {
+	case readOnly:
+		return port.ClassRead
+	case destructive:
+		return port.ClassDestructive
+	}
+	return port.ClassWrite
+}
+
+// Nature is what an installed function does: its reviewed class when it has one, else what its MCP hints say.
+func Nature(f port.Function) port.Class {
+	if f.ClassSource == port.ClassSourceReviewed && f.Class != port.ClassNone {
+		return f.Class
+	}
+	var d struct {
+		Annotations *mcp.ToolAnnotations `json:"annotations"`
+	}
+	_ = json.Unmarshal(f.Definition, &d)
+	readOnly, destructive, _ := Propose(d.Annotations)
+	return KindOf(readOnly, destructive)
 }
 
 // Probe connects to an MCP server (server/discover for 2026-07-28, initialize before), reads its server info and lists its tools.
@@ -94,7 +121,7 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 		if title == "" && tool.Annotations != nil {
 			title = tool.Annotations.Title
 		}
-		out.Tools = append(out.Tools, ProbedTool{Name: tool.Name, Title: title, Description: tool.Description, ReadOnly: ro, Destructive: de, Proposed: prop})
+		out.Tools = append(out.Tools, ProbedTool{Name: tool.Name, Title: title, Description: tool.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
 	}
 	if out.Icon == "" {
 		out.Icon = faviconOf(out.WebsiteURL, u.String())

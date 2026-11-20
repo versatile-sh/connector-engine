@@ -93,17 +93,17 @@ step "import the test MCP server (local tick) and choose per function"
 r="$(api POST /api/preview '{"mcp":"http://testmcp:7999/mcp","local":true}')"
 [ "$(code "$r")" = 200 ] || fail "preview: $r"
 body "$r" | jq -c '{title, name, protocol, tools: [.tools[] | {name, proposed}]}'
-r="$(api POST /api/import '{"mcp":"http://testmcp:7999/mcp","local":true,"choices":{"create":"write","mystery":"off"}}')"
+r="$(api POST /api/import '{"mcp":"http://testmcp:7999/mcp","local":true,"choices":{"create":"on","mystery":"off"}}')"
 [ "$(code "$r")" = 201 ] || fail "import: $r"
 conn="$(body "$r" | jq -r .connector)"
 
-step "set a grant: purge stays ask, search goes ask then back to read"
+step "set a grant: purge stays ask, search goes ask then back on"
 r="$(api PUT "/api/connectors/$conn/functions/search" '{"access":"ask"}')"; [ "$(code "$r")" = 204 ] || fail "set ask: $r"
-r="$(api PUT "/api/connectors/$conn/functions/search" '{"access":"read"}')"; [ "$(code "$r")" = 204 ] || fail "set read: $r"
+r="$(api PUT "/api/connectors/$conn/functions/search" '{"access":"on"}')"; [ "$(code "$r")" = 204 ] || fail "set on: $r"
 r="$(api GET /api/connectors)"
-body "$r" | jq -c '.connectors[] | {alias, title, functions: [.functions[] | {name, class, access}]}'
+body "$r" | jq -c '.connectors[] | {alias, title, functions: [.functions[] | {name, kind, class, access}]}'
 alias="$(body "$r" | jq -r '.connectors[0].alias')"
-want='{"create":"write","mystery":"off","purge":"ask","search":"read"}'
+want='{"create":"on","mystery":"off","purge":"ask","search":"on"}'
 got="$(body "$r" | jq -c '[.connectors[0].functions[] | {(.name): .access}] | add')"
 [ "$(jq -S -c . <<<"$got")" = "$(jq -S -c . <<<"$want")" ] || fail "access read back $got, want $want"
 

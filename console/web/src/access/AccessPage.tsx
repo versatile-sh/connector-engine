@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useReducer, useState, type FormEvent } from "react";
 import { api, errorText, type AgentToken } from "../api";
-import { useLocale, useT } from "../i18n/I18nProvider";
+import { useT } from "../i18n/I18nProvider";
 import { keysQuery } from "../queries";
 import { Bubble } from "../ui/Bubble";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
-import { SURFACE, button } from "../ui/styles";
+import { PageTitle } from "../ui/PageTitle";
+import { HAIRLINE, SURFACE, button } from "../ui/styles";
 import { ClientPicker } from "./ClientPicker";
+import { KeyRow } from "./KeyRow";
+import { revokeStep, type RevokeEvent } from "./revoke";
 
 const intoView = (element: HTMLElement | null) => {
   element?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -18,13 +21,14 @@ const intoView = (element: HTMLElement | null) => {
 function Created({ token }: { token: AgentToken }) {
   const t = useT();
   return (
-    <section ref={intoView} aria-labelledby="created-title" className="arrive bubble-sent mb-8 scroll-mt-24 border border-bubble/50 bg-card p-5 sm:p-6">
+    <section ref={intoView} aria-labelledby="created-title" className="arrive vignette-top bubble-sent relative mb-8 scroll-mt-24 overflow-hidden border border-lime/50 bg-ink-raised p-5 sm:p-6">
+      <span aria-hidden="true" className={HAIRLINE} />
       <div className="flex items-start gap-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-bubble text-on-bubble">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-lime text-ink">
           <Icon name="key" className="size-[1.1rem]" />
         </span>
         <div className="min-w-0">
-          <h2 id="created-title" className="font-display text-xl font-bold tracking-[-0.03em]">
+          <h2 id="created-title" className="text-lg leading-snug font-medium">
             {t("keys.created", { name: token.agent })}
           </h2>
           <p className="text-sm text-muted">{t("keys.once")}</p>
@@ -38,10 +42,9 @@ function Created({ token }: { token: AgentToken }) {
   );
 }
 
-/** Connect an AI app: one endpoint for every MCP client, access keys made here, and for a new key the exact way into each app. */
+/** Connect an AI app: one endpoint for every MCP client, access keys made and revoked here, and for a new key the exact way into each app. */
 export function AccessPage() {
   const t = useT();
-  const locale = useLocale();
   const queryClient = useQueryClient();
   const keys = useQuery(keysQuery);
   const [name, setName] = useState("");
@@ -51,11 +54,32 @@ export function AccessPage() {
     onSuccess: () => {
       setName("");
       void queryClient.invalidateQueries({ queryKey: ["agents"] });
+      void queryClient.invalidateQueries({ queryKey: ["session"] });
     },
+  });
+  const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
+  const revoke = useMutation({
+    mutationFn: (agent: string) => api("DELETE", `/api/agents/${encodeURIComponent(agent)}`),
+    onSuccess: async (_, agent) => {
+      dispatch({ type: "revoked" });
+      if (mint.data?.agent === agent) mint.reset();
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      await queryClient.invalidateQueries({ queryKey: ["agents"] });
+    },
+    onError: () => dispatch({ type: "failed" }),
   });
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     mint.mutate();
+  };
+  const onRevokeEvent = (event: RevokeEvent) => {
+    if (event.type === "ask") revoke.reset();
+    dispatch(event);
+  };
+  const onConfirm = () => {
+    if (flow.kind !== "confirming") return;
+    dispatch({ type: "confirm" });
+    revoke.mutate(flow.name);
   };
   const maxDays = Math.max(1, Math.floor((keys.data?.max_ttl_hours ?? 720) / 24));
   const endpoint = keys.data?.mcp_url ?? "";
@@ -63,16 +87,14 @@ export function AccessPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-8">
-        <h1 id="page-title" className="font-display text-4xl leading-none font-bold tracking-[-0.04em] sm:text-5xl">
-          {t("keys.title")}
-        </h1>
+        <PageTitle section={t("nav.access")} title={t("keys.title")} />
         <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
         {endpoint ? <CopyBox label={t("keys.endpoint")} text={endpoint} tone="card" className="mt-5 max-w-xl" /> : null}
       </header>
       {mint.data ? <Created key={mint.data.token} token={mint.data} /> : null}
       <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>
-          <h2 id="new-key" className="mb-3 font-display text-lg font-bold tracking-[-0.03em]">
+          <h2 id="new-key" className="mb-3 text-base font-medium">
             {t("keys.new")}
           </h2>
           <Field label={t("keys.name")} hint={t("keys.nameHint")} mono placeholder={t("keys.namePlaceholder")} value={name} onChange={(event) => setName(event.target.value)} required autoComplete="off" spellCheck={false} />
@@ -94,7 +116,7 @@ export function AccessPage() {
         </form>
         <section aria-labelledby="keys-title" className={`${SURFACE} p-5`}>
           <div className="mb-2 flex items-center gap-2.5">
-            <h2 id="keys-title" className="font-display text-lg font-bold tracking-[-0.03em]">
+            <h2 id="keys-title" className="text-base font-medium">
               {t("keys.list")}
             </h2>
             {keys.isSuccess ? <Bubble>{list.length}</Bubble> : null}
@@ -114,19 +136,9 @@ export function AccessPage() {
             <p className="py-2 text-sm text-muted">{t("keys.empty", { endpoint })}</p>
           ) : (
             <ul>
-              {list.map((key) => {
-                const expired = new Date(key.expires_at) < new Date();
-                return (
-                  <li key={key.name} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line py-3 last:border-b-0">
-                    <span className={`size-2 shrink-0 rounded-full ${expired ? "bg-amber" : "bg-bubble"}`} aria-hidden="true" />
-                    <code className="min-w-0 flex-1 truncate font-mono text-sm font-semibold" translate="no">
-                      {key.name}
-                    </code>
-                    <span className="font-mono text-xs text-muted">{t("keys.until", { date: new Date(key.expires_at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) })}</span>
-                    {expired ? <Bubble tone="amber">{t("keys.expired")}</Bubble> : null}
-                  </li>
-                );
-              })}
+              {list.map((key) => (
+                <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
+              ))}
             </ul>
           )}
         </section>

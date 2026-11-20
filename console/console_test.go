@@ -22,6 +22,7 @@ import (
 	"github.com/agents-control/connector-engine/app"
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/console"
+	"github.com/agents-control/connector-engine/port"
 )
 
 const operatorToken = "console-test-operator"
@@ -242,14 +243,21 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	var pv console.Preview
 	b.ok("POST", "/api/preview", map[string]any{"mcp": up.URL + "/mcp", "local": true}, &pv)
 	proposed := map[string]console.Access{}
+	kinds := map[string]port.Class{}
 	for _, tool := range pv.Tools {
-		proposed[tool.Name] = tool.Proposed
+		proposed[tool.Name], kinds[tool.Name] = tool.Proposed, tool.Kind
 	}
-	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessRead || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessAsk {
+	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessOn || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessAsk {
 		t.Fatalf("preview: %+v", pv)
 	}
+	if kinds["search"] != port.ClassRead || kinds["create"] != port.ClassWrite || kinds["purge"] != port.ClassDestructive || kinds["mystery"] != port.ClassDestructive {
+		t.Fatalf("preview kinds: %v", kinds)
+	}
+	if status, _ := b.send("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "write"}}, nil); status != http.StatusBadRequest {
+		t.Fatalf("the old write choice: %d", status)
+	}
 	var imported struct{ Connector string }
-	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "write", "mystery": "off"}}, &imported)
+	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "on", "mystery": "off"}}, &imported)
 
 	var list struct{ Connectors []console.ConnectorSummary }
 	b.ok("GET", "/api/connectors", nil, &list)
@@ -258,14 +266,18 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 	conn := list.Connectors[0]
 	got := map[string]console.Access{}
+	classes := map[string]port.Class{}
 	for _, f := range conn.Functions {
-		got[f.Name] = f.Access
+		got[f.Name], classes[f.Name] = f.Access, f.Class
 	}
-	want := map[string]console.Access{"search": "read", "create": "write", "purge": "ask", "mystery": "off"}
+	want := map[string]console.Access{"search": "on", "create": "on", "purge": "ask", "mystery": "off"}
 	for k, v := range want {
 		if got[k] != v {
 			t.Fatalf("access read back: %v, want %v", got, want)
 		}
+	}
+	if classes["search"] != port.ClassRead || classes["create"] != port.ClassWrite || classes["purge"] != port.ClassWrite {
+		t.Fatalf("classes by nature: %v", classes)
 	}
 
 	var tok console.AgentToken
@@ -325,12 +337,12 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 		t.Fatalf("the approved call did not run")
 	}
 
-	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/search", map[string]string{"access": "write"}, nil)
-	for _, n := range []string{"search", "create"} {
+	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/purge", map[string]string{"access": "on"}, nil)
+	for _, n := range []string{"search", "create", "purge"} {
 		before := up.count(n)
-		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{}})
+		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{"round": 2}})
 		if err != nil || res.IsError || up.count(n) != before+1 {
-			t.Fatalf("%s after a class raise with a bound agent: %v %v", n, res, err)
+			t.Fatalf("%s on, with a bound agent: %v %v", n, res, err)
 		}
 	}
 
@@ -344,7 +356,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 	m = console.Untrusted(m)
 	m.Remote.URL = up.URL + "/mcp"
-	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessRead})
+	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessOn})
 	if err != nil {
 		t.Fatalf("install from a listing manifest: %v", err)
 	}
@@ -354,7 +366,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 			continue
 		}
 		for _, f := range cv.Functions {
-			if want := map[string]console.Access{"search": "read"}[f.Name]; want != "" && f.Access != want || want == "" && f.Access != console.AccessAsk {
+			if want := map[string]console.Access{"search": "on"}[f.Name]; want != "" && f.Access != want || want == "" && f.Access != console.AccessAsk {
 				t.Errorf("listing install %s: %s", f.Name, f.Access)
 			}
 		}
@@ -428,12 +440,12 @@ func TestIconsAreImagesNeverSVG(t *testing.T) {
 	}
 }
 
-func TestOnlyReadOnlyHintProposesRead(t *testing.T) {
+func TestOnlyReadOnlyHintProposesOn(t *testing.T) {
 	no := false
 	cases := []struct {
 		ann  *mcp.ToolAnnotations
 		want console.Access
-	}{{nil, console.AccessAsk}, {&mcp.ToolAnnotations{ReadOnlyHint: true}, console.AccessRead}, {&mcp.ToolAnnotations{DestructiveHint: &no}, console.AccessAsk}}
+	}{{nil, console.AccessAsk}, {&mcp.ToolAnnotations{ReadOnlyHint: true}, console.AccessOn}, {&mcp.ToolAnnotations{DestructiveHint: &no}, console.AccessAsk}}
 	for _, c := range cases {
 		if _, _, got := console.Propose(c.ann); got != c.want {
 			t.Errorf("%+v: %s", c.ann, got)
@@ -517,5 +529,166 @@ func TestTheHostAllowlistFollowsTheConsolePort(t *testing.T) {
 	h.ServeHTTP(rec, post)
 	if rec.Code != http.StatusNoContent {
 		t.Errorf("a same-console Origin at the custom port: %d", rec.Code)
+	}
+}
+
+func initialize(t *testing.T, h http.Handler, host, token string) int {
+	t.Helper()
+	body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}`
+	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req.Host = host
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("Authorization", "bearer "+token)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec.Code
+}
+
+func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := lis.Addr().String()
+	base := "http://" + host
+	public, operator := bootEngine(t, base)
+	up := newUpstream(t)
+	path := t.TempDir() + "/state.json"
+	state, err := console.OpenState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	if err := eng.EnsureTenant(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	newConsole := func(s *console.State) *console.Console {
+		return &console.Console{Engine: eng, State: s, Sessions: console.NewSessions(s), Guard: console.Guard{Hosts: []string{host}},
+			MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour}
+	}
+	c := newConsole(state)
+	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
+	srv.Start()
+	t.Cleanup(srv.Close)
+	jar, _ := cookiejar.New(nil)
+	b := &browser{t: t, base: base, client: &http.Client{Jar: jar}}
+	var setup struct{ CSRF string }
+	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
+	b.csrf = setup.CSRF
+	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true}, nil)
+
+	var tok, kept console.AgentToken
+	b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
+	b.ok("POST", "/api/agents", map[string]any{"name": "Codex"}, &kept)
+	h := c.Handler()
+	if got := initialize(t, h, host, tok.Token); got != http.StatusOK {
+		t.Fatalf("a fresh key: %d", got)
+	}
+	if status, _ := b.send("DELETE", "/api/agents/claude-code", nil, map[string]string{"X-CSRF-Token": ""}); status != http.StatusForbidden {
+		t.Fatalf("a revoke without the CSRF token: %d", status)
+	}
+	if status, _ := b.send("DELETE", "/api/agents/nobody", nil, nil); status != http.StatusNotFound {
+		t.Fatalf("revoking an unknown key: %d", status)
+	}
+	b.ok("DELETE", "/api/agents/claude-code", nil, nil)
+
+	if got := initialize(t, h, host, tok.Token); got != http.StatusUnauthorized {
+		t.Fatalf("a revoked key on /mcp: %d", got)
+	}
+	if got := initialize(t, h, host, kept.Token); got != http.StatusOK {
+		t.Fatalf("another key after a revoke: %d", got)
+	}
+	var agents struct{ Agents []console.Agent }
+	b.ok("GET", "/api/agents", nil, &agents)
+	if len(agents.Agents) != 1 || agents.Agents[0].Name != "codex" {
+		t.Fatalf("keys after a revoke: %+v", agents.Agents)
+	}
+	var grants struct{ Items []port.Grant }
+	if err := eng.Call(context.Background(), http.MethodGet, "/v1/grants?scope_kind=agent&scope_id=claude-code", nil, &grants); err != nil || len(grants.Items) != 0 {
+		t.Fatalf("grants of a revoked agent: %+v %v", grants.Items, err)
+	}
+
+	reopened, err := console.OpenState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := initialize(t, newConsole(reopened).Handler(), host, tok.Token); got != http.StatusUnauthorized {
+		t.Fatalf("a revoked key after a console restart: %d", got)
+	}
+}
+
+func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
+	for _, finish := range []bool{false, true} {
+		lis, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		host := lis.Addr().String()
+		base := "http://" + host
+		public, operator := bootEngine(t, base)
+		up := newUpstream(t)
+		path := t.TempDir() + "/state.json"
+		state, err := console.OpenState(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+		if err := eng.EnsureTenant(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{host}}, MCPURL: base + "/mcp", MaxAgentTTL: time.Hour}
+		srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
+		srv.Start()
+		jar, _ := cookiejar.New(nil)
+		b := &browser{t: t, base: base, client: &http.Client{Jar: jar}}
+		var setup struct{ CSRF string }
+		b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
+		b.csrf = setup.CSRF
+		dismissed := func() bool {
+			var s struct {
+				Dismissed bool `json:"onboarding_dismissed"`
+			}
+			b.ok("GET", "/api/session", nil, &s)
+			return s.Dismissed
+		}
+		if dismissed() {
+			t.Fatal("a new console starts with the guide closed")
+		}
+		if finish {
+			b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true}, nil)
+			if dismissed() {
+				t.Fatal("the guide closed with a step left")
+			}
+			b.ok("POST", "/api/agents", map[string]any{"name": "cursor"}, nil)
+		} else {
+			if status, _ := b.send("POST", "/api/onboarding/dismiss", nil, map[string]string{"X-CSRF-Token": ""}); status != http.StatusForbidden {
+				t.Fatalf("a dismiss without the CSRF token: %d", status)
+			}
+			b.ok("POST", "/api/onboarding/dismiss", nil, nil)
+		}
+		if !dismissed() {
+			t.Fatalf("finish %v: the guide is still open", finish)
+		}
+		if finish {
+			raw, _ := os.ReadFile(path)
+			if err := os.WriteFile(path, bytes.Replace(raw, []byte(`"onboarding_dismissed": true`), []byte(`"onboarding_dismissed": false`), 1), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			before, err := console.OpenState(path)
+			if err != nil || before.OnboardingDismissed() {
+				t.Fatalf("a state from before the guide was latched: %v", err)
+			}
+			c.State = before
+			b.ok("DELETE", "/api/agents/cursor", nil, nil)
+			if !before.OnboardingDismissed() {
+				t.Fatal("revoking the only key of a finished guide opened it again")
+			}
+		}
+		srv.Close()
+		reopened, err := console.OpenState(path)
+		if err != nil || !reopened.OnboardingDismissed() {
+			t.Fatalf("finish %v: the guide came back after a restart: %v", finish, err)
+		}
 	}
 }

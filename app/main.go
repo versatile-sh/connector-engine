@@ -25,7 +25,7 @@ type Build struct {
 	Commands map[string]Command
 }
 
-// Main runs the engine binary: it serves, checks or plans an adapters file with "adapters", or runs a subcommand of b.
+// Main runs the engine binary: it serves, checks or plans an adapters file with "adapters", writes first-boot secrets with "init", or runs a subcommand of b.
 func Main(b Build, args, environ []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if b.Adapters == nil {
 		b.Adapters = Core()
@@ -46,6 +46,9 @@ func Main(b Build, args, environ []string, stdin io.Reader, stdout, stderr io.Wr
 	if rest := fs.Args(); len(rest) > 0 {
 		if rest[0] == "adapters" {
 			return cfg.AdaptersMain(append(rest[1:], "--file", *adaptersPath), environ, stdout, stderr)
+		}
+		if rest[0] == "init" {
+			return initSecrets(cfg, rest[1:], stdin, stdout, stderr)
 		}
 		if c, ok := b.Commands[rest[0]]; ok {
 			return c(cfg, rest[1:], stdin, stdout, stderr)

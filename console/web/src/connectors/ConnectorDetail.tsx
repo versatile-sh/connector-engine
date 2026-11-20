@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, type UseMutationResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { errorText, type Connector } from "../api";
 import { hrefOf } from "../activity/activity";
@@ -109,9 +109,8 @@ function Functions({ connector }: { connector: Connector }) {
   );
 }
 
-function Remove({ connector, onClose }: { connector: Connector; onClose(): void }) {
+function Remove({ connector, remove, onClose }: { connector: Connector; remove: UseMutationResult<unknown, Error, string>; onClose(): void }) {
   const t = useT();
-  const remove = useMutation(removeConnector);
   return (
     <Sheet title={t("detail.removeTitle", { title: connector.title })} closeLabel={t("common.close")} onClose={onClose}>
       <p className="text-muted">{t("detail.removeBody")}</p>
@@ -136,6 +135,7 @@ export function ConnectorDetail({ id }: { id: string }) {
   const t = useT();
   const connectors = useQuery(connectorsQuery);
   const [removing, setRemoving] = useState(false);
+  const remove = useMutation(removeConnector);
   if (connectors.isPending) {
     return (
       <div aria-hidden="true" className="flex flex-col gap-6">
@@ -216,7 +216,7 @@ export function ConnectorDetail({ id }: { id: string }) {
           </dl>
         </aside>
       </div>
-      {removing ? <Remove connector={connector} onClose={() => setRemoving(false)} /> : null}
+      {removing ? <Remove connector={connector} remove={remove} onClose={() => setRemoving(false)} /> : null}
     </div>
   );
 }

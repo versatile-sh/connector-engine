@@ -63,7 +63,7 @@ func (s *Service) LintListing(ctx context.Context, p port.Principal, m port.Mani
 	return res, nil
 }
 
-// SyncSource imports every listing of a source as unreviewed; an existing version is left as it is (§5.4 Import).
+// SyncSource imports every listing of a source as unreviewed; an existing version is left as it is.
 func (s *Service) SyncSource(ctx context.Context, p port.Principal, source string) (port.Operation, error) {
 	if err := s.authorize(ctx, p, authz.SourceSync, authz.Installation); err != nil {
 		return port.Operation{}, err
@@ -147,7 +147,7 @@ type CreateListingInput struct {
 	FirstParty bool          `json:"first_party"`
 }
 
-// CreateListing creates a listing version: an installation listing for the operator, a private one for a tenant admin (§13.1).
+// CreateListing creates a listing version: an installation listing for the operator, a private one for a tenant admin.
 func (s *Service) CreateListing(ctx context.Context, p port.Principal, in CreateListingInput) (port.ListingVersion, error) {
 	tenant := p.Claims.Tenant
 	private := tenant != port.Installation
@@ -232,7 +232,7 @@ type ListingFilter struct {
 	Query  string          `json:"query"`
 }
 
-// ListListings returns the newest version of every listing visible to the caller in the workspace (§5.5).
+// ListListings returns the newest version of every listing visible to the caller in the workspace.
 func (s *Service) ListListings(ctx context.Context, p port.Principal, workspace port.WorkspaceID, f ListingFilter) ([]port.ListingVersion, error) {
 	if err := s.authorize(ctx, p, authz.ConnectorRead, authz.Tenant(string(p.Claims.Tenant))); err != nil {
 		return nil, err
@@ -272,7 +272,7 @@ func matches(lv port.ListingVersion, l port.Listing, f ListingFilter) bool {
 		(f.Query == "" || strings.Contains(text, strings.ToLower(f.Query)))
 }
 
-// GetListing returns one visible listing version; a listing the caller may not see is not found (§5.5).
+// GetListing returns one visible listing version; a listing the caller may not see is not found.
 func (s *Service) GetListing(ctx context.Context, p port.Principal, workspace port.WorkspaceID, ref port.VersionRef) (port.ListingVersion, error) {
 	var out port.ListingVersion
 	if err := s.authorize(ctx, p, authz.ConnectorRead, authz.Tenant(string(p.Claims.Tenant))); err != nil {
@@ -296,7 +296,7 @@ func (s *Service) GetListing(ctx context.Context, p port.Principal, workspace po
 	return out, err
 }
 
-// ListOfferedListings is the curation view of a tenant admin: every listing offered to the tenant, visible or not (§5.5).
+// ListOfferedListings is the curation view of a tenant admin: every listing offered to the tenant, visible or not.
 func (s *Service) ListOfferedListings(ctx context.Context, p port.Principal) ([]port.Listing, error) {
 	if err := s.authorize(ctx, p, authz.CatalogRead, s.tenantResource(p)); err != nil {
 		return nil, err
@@ -331,7 +331,7 @@ type ReviewInput struct {
 	Note      string           `json:"note"`
 }
 
-// ReviewListing makes the class map of a version trusted at the reviewed hashes and recomputes its trust level (§5.2).
+// ReviewListing makes the class map of a version trusted at the reviewed hashes and recomputes its trust level.
 func (s *Service) ReviewListing(ctx context.Context, p port.Principal, ref port.VersionRef, in ReviewInput) (port.ListingVersion, error) {
 	var out port.ListingVersion
 	scope, resource := port.Scope{Installation: true}, authz.Installation
@@ -380,7 +380,7 @@ func (s *Service) ReviewListing(ctx context.Context, p port.Principal, ref port.
 	return out, err
 }
 
-// SetListingStarter marks an installation listing for tenants created afterwards (§5.5 V2).
+// SetListingStarter marks an installation listing for tenants created afterwards.
 func (s *Service) SetListingStarter(ctx context.Context, p port.Principal, ref port.ListingRef, starter bool) (port.Listing, error) {
 	var out port.Listing
 	if err := s.authorize(ctx, p, authz.ListingStarter, authz.Installation); err != nil {
@@ -414,7 +414,7 @@ type StatusChange struct {
 }
 
 // ChangeListingStatus is quarantineListing, deprecateListing, withdrawListing and restoreListing: the status maps to
-// quarantined, deprecated, deleted and active; version names one version, empty the listing (§5.5).
+// quarantined, deprecated, deleted and active; version names one version, empty the listing.
 func (s *Service) ChangeListingStatus(ctx context.Context, p port.Principal, ref port.ListingRef, version string, status port.ListingStatus, reason string) (StatusChange, error) {
 	var out StatusChange
 	scope, action, resource := port.Scope{Installation: true}, authz.ListingStatusInst, authz.Installation

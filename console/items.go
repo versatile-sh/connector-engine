@@ -32,7 +32,7 @@ type Item struct {
 	Access      Access   `json:"access"`
 }
 
-// Proposed is the console's pre-filled choice for an item (SK-1): resources and instructions on, prompts off, since prompt text reaches the chat as the person's own.
+// Proposed is the console's pre-filled choice for an item: resources and instructions on, prompts off, since prompt text reaches the chat as the person's own.
 func Proposed(kind ItemKind) Access {
 	if kind == ItemPrompt {
 		return AccessOff

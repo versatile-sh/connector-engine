@@ -1,9 +1,9 @@
-// Package authz names the permissions and resources the engine asks an Authorizer about (§4.2).
+// Package authz names the permissions and resources the engine asks an Authorizer about.
 package authz
 
 import "strings"
 
-// Actions: one per kind of act of §13.1; the engine names the permission and the authorization service decides.
+// Actions: one per kind of act; the engine names the permission and the authorization service decides.
 const (
 	SourceSync          = "source.sync"
 	ListingImport       = "listing.import"

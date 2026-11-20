@@ -1,4 +1,4 @@
-// Package projection validates RFC 6901 paths against a pinned outputSchema and trims structuredContent to them (§10.5).
+// Package projection validates RFC 6901 paths against a pinned outputSchema and trims structuredContent to them.
 package projection
 
 import (
@@ -77,7 +77,7 @@ func (s *schema) resolves(tokens []string) bool {
 	return sub(s.AdditionalProperties).resolves(rest)
 }
 
-// Validate checks that each path resolves in the pinned outputSchema; a function without one is not projectable (§10.5).
+// Validate checks that each path resolves in the pinned outputSchema; a function without one is not projectable.
 func Validate(outputSchema json.RawMessage, paths []string, max int) error {
 	if len(outputSchema) == 0 {
 		return port.Errorf(port.CodeInvalidPath, "the function has no outputSchema and is not projectable")

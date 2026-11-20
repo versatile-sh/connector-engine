@@ -1,4 +1,4 @@
-// Package catalog is the event catalog the engine serves (§12): every published and consumed type, its payload and its JSON Schema.
+// Package catalog is the event catalog the engine serves: every published and consumed type, its payload and its JSON Schema.
 package catalog
 
 import (
@@ -9,7 +9,7 @@ import (
 	"github.com/invopop/jsonschema"
 )
 
-// Type is one event type of the catalog; Number is its row in §12.1, zero for a consumed type.
+// Type is one event type of the catalog; Number is its row, zero for a consumed type.
 type Type struct {
 	Number   int             `json:"number,omitempty"`
 	Name     string          `json:"name"`
@@ -19,7 +19,7 @@ type Type struct {
 	Schema   json.RawMessage `json:"schema"`
 }
 
-// Published types of §12.1, in their order; a type is never renamed and the catalog only grows.
+// Published types, in their order; a type is never renamed and the catalog only grows.
 var Published = []Type{
 	{Number: 1, Name: "connector.listing.imported", Payload: ListingImported{}},
 	{Number: 2, Name: "connector.listing.reviewed", Payload: ListingReviewed{}},
@@ -63,14 +63,14 @@ var Published = []Type{
 	{Number: 40, Name: "connector.overlay.suggested", Payload: OverlaySuggested{}},
 }
 
-// Consumed are the three outside facts of §12.2; a recipe maps a producer's own event to one of them through the inbox.
+// Consumed are the three outside facts; a recipe maps a producer's own event to one of them through the inbox.
 var Consumed = []Type{
 	{Name: "session.ended", Consumed: true, Payload: SessionEnded{}},
 	{Name: "agent.removed", Consumed: true, Payload: AgentRemoved{}},
 	{Name: "person.removed", Consumed: true, Payload: PersonRemoved{}},
 }
 
-// InstallationTypes are the published types on the installation stream; 34 and 35 also, for an installation listing (§12).
+// InstallationTypes are the published types on the installation stream; 34 and 35 also, for an installation listing.
 var InstallationTypes = []string{"connector.listing.imported", "connector.listing.reviewed", "connector.catalog.offer_changed", "connector.tenant.created", "connector.tenant.removed"}
 
 // SchemaID prefixes the $id of every event schema.

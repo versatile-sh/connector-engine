@@ -1,4 +1,4 @@
-// Package pinning hashes definitions with RFC 8785 canonical JSON and holds the function states of §5.3 and §9.
+// Package pinning hashes definitions with RFC 8785 canonical JSON and holds the function states.
 package pinning
 
 import (
@@ -161,7 +161,7 @@ func keysOf(name string) ([]string, bool) {
 	return definitionKeys, false
 }
 
-// Hashed is the pinned part of a raw definition: for a tool the six keys and _meta ui.resourceUri and ui.visibility, for an item the keys of its kind (§9).
+// Hashed is the pinned part of a raw definition: for a tool the six keys and _meta ui.resourceUri and ui.visibility, for an item the keys of its kind.
 func Hashed(name string, raw []byte) (map[string]json.RawMessage, error) {
 	var all map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &all); err != nil {
@@ -194,7 +194,7 @@ func Hashed(name string, raw []byte) (map[string]json.RawMessage, error) {
 	return out, nil
 }
 
-// DefinitionHash is the RFC 8785 hash of the pinned part of the raw definition of the function or item name; icons and order are excluded (§9).
+// DefinitionHash is the RFC 8785 hash of the pinned part of the raw definition of the function or item name; icons and order are excluded.
 func DefinitionHash(name string, raw []byte) (port.Hash, error) {
 	h, err := Hashed(name, raw)
 	if err != nil {
@@ -236,18 +236,18 @@ func canonicalOrNil(raw json.RawMessage) ([]byte, error) {
 	return Canonical(raw)
 }
 
-// InstructionsHash is the hash of the server instructions, pinned apart from the definitions (§9).
+// InstructionsHash is the hash of the server instructions, pinned apart from the definitions.
 func InstructionsHash(text string) port.Hash { return hashValue(text) }
 
-// UIResourceHash is the hash of the content of one ui:// resource (§9).
+// UIResourceHash is the hash of the content of one ui:// resource.
 func UIResourceHash(content []byte) port.Hash { return Sum(content) }
 
-// OverlayHash is the RFC 8785 hash of an overlay's title and description (§9.1).
+// OverlayHash is the RFC 8785 hash of an overlay's title and description.
 func OverlayHash(title, description string) port.Hash {
 	return hashValue(map[string]string{"title": title, "description": description})
 }
 
-// CallHash is the RFC 8785 hash of {tenant, agent, connector, function, definition_hash, arguments} (§8.1).
+// CallHash is the RFC 8785 hash of {tenant, agent, connector, function, definition_hash, arguments}.
 func CallHash(a port.Approval, arguments []byte) (port.Hash, error) {
 	args := json.RawMessage("null")
 	if len(arguments) > 0 {

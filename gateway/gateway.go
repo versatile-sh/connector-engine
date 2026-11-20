@@ -1,4 +1,4 @@
-// Package gateway is the agent endpoint of §10: an MCP server over Streamable HTTP that lists and calls the functions the engine grants to one agent.
+// Package gateway is the agent endpoint: an MCP server over Streamable HTTP that lists and calls the functions the engine grants to one agent.
 package gateway
 
 import (
@@ -40,7 +40,7 @@ type Core interface {
 	TenantActive(ctx context.Context, tenant port.TenantID) error
 }
 
-// Config holds the keys of §14 the gateway reads; DefaultConfig is the defaults of that table.
+// Config holds the keys the gateway reads; DefaultConfig is the defaults of that table.
 type Config struct {
 	Audience            string
 	ResourceMetadataURL string
@@ -58,7 +58,7 @@ type Config struct {
 	Logger              *slog.Logger
 }
 
-// DefaultConfig returns the defaults of §14 for an endpoint with the given audience.
+// DefaultConfig returns the defaults for an endpoint with the given audience.
 func DefaultConfig(audience string) Config {
 	return Config{Audience: audience, HoldWindow: 20 * time.Second, HoldPoll: defaultHoldPoll, ThresholdTokens: 10000, ThresholdFunctions: 30,
 		SearchResultMax: 5, SessionTimeout: defaultSession}
@@ -117,7 +117,7 @@ func (c Config) capabilities() *mcp.ServerCapabilities {
 	return caps
 }
 
-// ToolsChanged sends the list_changed notifications of tools, and of the prompts and resources it serves, to the sessions and listen streams that can receive them (§10.2 L7).
+// ToolsChanged sends the list_changed notifications of tools, and of the prompts and resources it serves, to the sessions and listen streams that can receive them.
 func (g *Gateway) ToolsChanged() {
 	g.server.AddTool(&mcp.Tool{Name: changedSentinel, InputSchema: map[string]any{"type": "object"}}, nil)
 	g.server.RemoveTools(changedSentinel)

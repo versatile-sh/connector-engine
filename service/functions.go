@@ -12,13 +12,13 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// AcceptResult is an accepted function and the fn: rows its new hash left stale (§9 "Clearing").
+// AcceptResult is an accepted function and the fn: rows its new hash left stale ("Clearing").
 type AcceptResult struct {
 	Function   port.Function `json:"function"`
 	StaleGrant []port.Grant  `json:"stale_grant,omitempty"`
 }
 
-// ListFunctionsOf returns the stored functions of a connector (§13.1 listFunctions).
+// ListFunctionsOf returns the stored functions of a connector.
 func (s *Service) ListFunctionsOf(ctx context.Context, p port.Principal, id port.ConnectorID) ([]port.Function, error) {
 	v, err := s.GetConnector(ctx, p, id)
 	return v.Functions, err
@@ -78,8 +78,8 @@ func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port
 		Hash: string(f.DefinitionHash), Class: string(f.Class), ClassSource: string(f.ClassSource), By: by})
 }
 
-// AcceptFunction clears a quarantine at the hash the admin saw and sets the class again (§5.2, §9); keepOverlay carries the
-// active overlay to that hash, else it is superseded (§9.1).
+// AcceptFunction clears a quarantine at the hash the admin saw and sets the class again; keepOverlay carries the
+// active overlay to that hash, else it is superseded.
 func (s *Service) AcceptFunction(ctx context.Context, p port.Principal, id port.ConnectorID, name string, seen port.Hash, keepOverlay bool) (AcceptResult, error) {
 	var out AcceptResult
 	err := s.functionTx(ctx, p, id, authz.FunctionManage, "AcceptFunction", func(tx port.Tx, c port.Connector) (err error) {
@@ -122,7 +122,7 @@ func (s *Service) AcceptInstructions(ctx context.Context, p port.Principal, id p
 	return out, err
 }
 
-// ClassifyFunction sets the class by an admin at the current hash; a raise drops session rows and cancels pending approvals (§6.4 G7).
+// ClassifyFunction sets the class by an admin at the current hash; a raise drops session rows and cancels pending approvals.
 func (s *Service) ClassifyFunction(ctx context.Context, p port.Principal, id port.ConnectorID, name string, class port.Class) (port.Function, error) {
 	var out port.Function
 	err := s.functionTx(ctx, p, id, authz.FunctionManage, "ClassifyFunction", func(tx port.Tx, c port.Connector) error {
@@ -181,7 +181,7 @@ func (s *Service) SetFunctionDisabled(ctx context.Context, p port.Principal, id 
 	return out, err
 }
 
-// SetProjection turns response projection on or off for a function; a function without an outputSchema is refused (§10.5).
+// SetProjection turns response projection on or off for a function; a function without an outputSchema is refused.
 func (s *Service) SetProjection(ctx context.Context, p port.Principal, id port.ConnectorID, name string, on bool) (port.Function, error) {
 	var out port.Function
 	err := s.functionTx(ctx, p, id, authz.FunctionManage, "SetProjection", func(tx port.Tx, c port.Connector) error {

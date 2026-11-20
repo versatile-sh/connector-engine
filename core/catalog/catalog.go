@@ -1,4 +1,4 @@
-// Package catalog is the visibility predicate of §5.5: which listings a tenant, a workspace and a person see, and at which ceiling.
+// Package catalog is the visibility predicate: which listings a tenant, a workspace and a person see, and at which ceiling.
 package catalog
 
 import (
@@ -19,7 +19,7 @@ type View struct {
 	Groups   map[port.PersonID][]port.GroupID
 }
 
-// CeilingMode is the mode a ceiling gives a class, applied at §7.1 step 11 (§5.5 V7).
+// CeilingMode is the mode a ceiling gives a class, applied at step 11.
 func CeilingMode(c port.Ceiling, class port.Class) port.Mode {
 	switch {
 	case c == port.CeilingFull:
@@ -34,7 +34,7 @@ func CeilingMode(c port.Ceiling, class port.Class) port.Mode {
 	return port.ModeAsk
 }
 
-// Offered returns the listing when it exists for the tenant before statuses: its own, or an installation listing not withheld (§5.5 V1).
+// Offered returns the listing when it exists for the tenant before statuses: its own, or an installation listing not withheld.
 func (v View) Offered(ref port.ListingRef) (port.Listing, bool) {
 	l, ok := v.Listings[ref]
 	if !ok || (ref.Owner != port.Installation && ref.Owner != v.Tenant) {
@@ -50,7 +50,7 @@ func (v View) Offered(ref port.ListingRef) (port.Listing, bool) {
 	return l, true
 }
 
-// Status is the effective status of one version for the tenant; a listing not offered is deleted (§5.2, §5.5 V1).
+// Status is the effective status of one version for the tenant; a listing not offered is deleted.
 func (v View) Status(ref port.ListingRef, version string) port.ListingStatus {
 	l, ok := v.Offered(ref)
 	if !ok {
@@ -63,7 +63,7 @@ func (v View) Status(ref port.ListingRef, version string) port.ListingStatus {
 	return port.EffectiveStatus(l.Status, own)
 }
 
-// Newest is the newest version that exists for the tenant; a listing with no imported version stands for one implicit version "" (§5.5 V1).
+// Newest is the newest version that exists for the tenant; a listing with no imported version stands for one implicit version "".
 func (v View) Newest(ref port.ListingRef) (string, bool) {
 	l, ok := v.Offered(ref)
 	if !ok {
@@ -80,7 +80,7 @@ func (v View) Newest(ref port.ListingRef) (string, bool) {
 	return "", false
 }
 
-// Level is the answer of one level of §5.5, with the rules that gave it.
+// Level is the answer of one level, with the rules that gave it.
 type Level struct {
 	Answered bool          `json:"answered"`
 	Show     bool          `json:"show"`
@@ -140,7 +140,7 @@ func (v View) level(subjects map[port.SubjectKind][]string, ref port.ListingRef,
 	return a
 }
 
-// Answer is the resolution of one listing for a workspace and the people considered (§5.5 V6).
+// Answer is the resolution of one listing for a workspace and the people considered.
 type Answer struct {
 	Visible     bool         `json:"visible"`
 	Installable bool         `json:"installable"`
@@ -190,7 +190,7 @@ func (v View) Resolve(workspace port.WorkspaceID, people []port.PersonID, ref po
 	return out
 }
 
-// Visible lists the listings visible to a workspace and the people considered, sorted by ref (§5.5: the store and search).
+// Visible lists the listings visible to a workspace and the people considered, sorted by ref.
 func (v View) Visible(workspace port.WorkspaceID, people []port.PersonID) []port.ListingRef {
 	var out []port.ListingRef
 	for ref := range v.Listings {
@@ -202,7 +202,7 @@ func (v View) Visible(workspace port.WorkspaceID, people []port.PersonID) []port
 	return out
 }
 
-// ValidatePolicy refuses a policy whose subject is not a workspace: there is no tenant policy (§5.5).
+// ValidatePolicy refuses a policy whose subject is not a workspace: there is no tenant policy.
 func ValidatePolicy(kind port.SubjectKind) error {
 	if kind != port.SubjectWorkspace {
 		return port.Errorf(port.CodePolicyRefused, "a catalog policy names a workspace, never the tenant")
@@ -210,7 +210,7 @@ func ValidatePolicy(kind port.SubjectKind) error {
 	return nil
 }
 
-// ValidateRule refuses a rule with an unknown ceiling or a named audience below the workspace level (§5.5 V8).
+// ValidateRule refuses a rule with an unknown ceiling or a named audience below the workspace level.
 func ValidateRule(r port.CatalogRule) error {
 	switch {
 	case !r.Ceiling.Valid():
@@ -223,7 +223,7 @@ func ValidateRule(r port.CatalogRule) error {
 	return nil
 }
 
-// StarterRules are the rules createTenant writes under catalog.tenantDefault = starter: show, install, ceiling read (§5.5 V2).
+// StarterRules are the rules createTenant writes under catalog.tenantDefault = starter: show, install, ceiling read.
 func StarterRules(tenant port.TenantID, listings []port.Listing) []port.CatalogRule {
 	var out []port.CatalogRule
 	for _, l := range listings {
@@ -238,7 +238,7 @@ func StarterRules(tenant port.TenantID, listings []port.Listing) []port.CatalogR
 	return out
 }
 
-// PrivateRule is the tenant rule createListing writes for a private listing, at catalog.defaultCeiling (§5.5).
+// PrivateRule is the tenant rule createListing writes for a private listing, at catalog.defaultCeiling.
 func PrivateRule(ref port.ListingRef, ceiling port.Ceiling) port.CatalogRule {
 	return port.CatalogRule{
 		Tenant: ref.Owner, SubjectKind: port.SubjectTenant, SubjectID: string(ref.Owner), TargetKind: port.TargetListing,

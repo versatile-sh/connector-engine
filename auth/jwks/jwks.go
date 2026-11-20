@@ -1,4 +1,4 @@
-// Package jwks is a PrincipalVerifier over the key sets of configured issuers (§4.3).
+// Package jwks is a PrincipalVerifier over the key sets of configured issuers.
 package jwks
 
 import (

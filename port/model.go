@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Tenant is one row of the installation's tenant registry (§4.4).
+// Tenant is one row of the installation's tenant registry.
 type Tenant struct {
 	ID        TenantID       `json:"id"`
 	State     TenantState    `json:"state"`
@@ -17,7 +17,7 @@ type Tenant struct {
 	Counts    map[string]int `json:"counts,omitempty"`
 }
 
-// Connector is an installed listing version in one workspace (§5.1).
+// Connector is an installed listing version in one workspace.
 type Connector struct {
 	ID               ConnectorID       `json:"id"`
 	Tenant           TenantID          `json:"tenant"`
@@ -35,7 +35,7 @@ type Connector struct {
 	Revision         int64             `json:"revision"`
 }
 
-// Function is one pinned function of a connector (§5.1, §5.3).
+// Function is one pinned function of a connector.
 type Function struct {
 	Tenant            TenantID        `json:"tenant"`
 	Connector         ConnectorID     `json:"connector"`
@@ -56,7 +56,7 @@ type Function struct {
 	AcceptedBy        string          `json:"accepted_by,omitempty"`
 }
 
-// Binding gives an agent a connector; grants hang off it (§6.3).
+// Binding gives an agent a connector; grants hang off it.
 type Binding struct {
 	Tenant           TenantID         `json:"tenant"`
 	Workspace        WorkspaceID      `json:"workspace"`
@@ -70,7 +70,7 @@ type Binding struct {
 	ApprovalTimeout  time.Duration    `json:"approval_timeout,omitempty"`
 }
 
-// Grant is one row of the grant table (§6.1).
+// Grant is one row of the grant table.
 type Grant struct {
 	ID             GrantID     `json:"id"`
 	Tenant         TenantID    `json:"tenant"`
@@ -91,7 +91,7 @@ type Grant struct {
 	Origin         Origin      `json:"origin"`
 }
 
-// Key is the uniqueness key of a row: writing a row with an existing key replaces it (§6.4 G1).
+// Key is the uniqueness key of a row: writing a row with an existing key replaces it.
 func (g Grant) Key() string {
 	target := string(g.Connector)
 	if g.Listing != nil {
@@ -100,7 +100,7 @@ func (g Grant) Key() string {
 	return strings.Join([]string{string(g.Tenant), string(g.ScopeKind), g.ScopeID, string(g.Agent), target, g.Selector}, "\x00")
 }
 
-// Selectors of §6.1; a function selector is SelectorFunction followed by the name.
+// Selectors; a function selector is SelectorFunction followed by the name.
 const (
 	SelectorAll      = "*"
 	SelectorClass    = "class:"
@@ -137,7 +137,7 @@ func SelectorOf(name string) string {
 	return SelectorFunction + name
 }
 
-// Approval is one held call (§8.1).
+// Approval is one held call.
 type Approval struct {
 	ID                 ApprovalID    `json:"id"`
 	Tenant             TenantID      `json:"tenant"`
@@ -178,7 +178,7 @@ type Sealed struct {
 	KeyRef     string `json:"key_ref"`
 }
 
-// Pause is the denial-brake row of (session, agent, connector) (§8.3).
+// Pause is the denial-brake row of (session, agent, connector).
 type Pause struct {
 	ID          PauseID     `json:"id"`
 	Tenant      TenantID    `json:"tenant"`
@@ -192,16 +192,16 @@ type Pause struct {
 	ExpiresAt   time.Time   `json:"expires_at,omitzero"`
 }
 
-// TombstoneKind says what a tombstone ends (§7.4).
+// TombstoneKind says what a tombstone ends.
 type TombstoneKind string
 
-// Tombstone kinds of §7.4.
+// Tombstone kinds.
 const (
 	TombstoneSession TombstoneKind = "session"
 	TombstonePerson  TombstoneKind = "person"
 )
 
-// Tombstone records an ended session or a removed person for auth.agentTokenMaxLifetime (§7.4).
+// Tombstone records an ended session or a removed person for auth.agentTokenMaxLifetime.
 type Tombstone struct {
 	Tenant    TenantID      `json:"tenant"`
 	Kind      TombstoneKind `json:"kind"`
@@ -214,7 +214,7 @@ type Tombstone struct {
 // Live reports whether the tombstone still refuses at now.
 func (t Tombstone) Live(now time.Time) bool { return t.ExpiresAt.IsZero() || now.Before(t.ExpiresAt) }
 
-// Credential is one sealed upstream credential (§11.1).
+// Credential is one sealed upstream credential.
 type Credential struct {
 	ID                 CredentialID     `json:"id"`
 	Tenant             TenantID         `json:"tenant"`
@@ -237,7 +237,7 @@ type Credential struct {
 	Revision           int64            `json:"revision"`
 }
 
-// Overlay is one version of a title and description overlay of a function (§9.1).
+// Overlay is one version of a title and description overlay of a function.
 type Overlay struct {
 	Tenant       TenantID      `json:"tenant"`
 	Connector    ConnectorID   `json:"connector,omitempty"`
@@ -254,7 +254,7 @@ type Overlay struct {
 	At           time.Time     `json:"at"`
 }
 
-// Call is the audit row of a forwarded call, written before it runs (§10.3 C8).
+// Call is the audit row of a forwarded call, written before it runs.
 type Call struct {
 	ID          CallID         `json:"id"`
 	Tenant      TenantID       `json:"tenant"`
@@ -299,7 +299,7 @@ type SourceSync struct {
 	Error    string    `json:"error,omitempty"`
 }
 
-// Exposure is the trifecta check result of one agent (§15.2).
+// Exposure is the trifecta check result of one agent.
 type Exposure struct {
 	Tenant  TenantID `json:"tenant"`
 	Agent   AgentID  `json:"agent"`
@@ -309,7 +309,7 @@ type Exposure struct {
 	LegC    []string `json:"leg_c,omitempty"`
 }
 
-// Operation is the progress of a 202 operation; operator operations report counts only (§4.4).
+// Operation is the progress of a 202 operation; operator operations report counts only.
 type Operation struct {
 	ID        OperationID    `json:"id"`
 	Tenant    TenantID       `json:"tenant,omitempty"`
@@ -321,7 +321,7 @@ type Operation struct {
 	UpdatedAt time.Time      `json:"updated_at"`
 }
 
-// FanOut is the installation work row of an operator's change that must reach tenant rows (§5.5).
+// FanOut is the installation work row of an operator's change that must reach tenant rows.
 type FanOut struct {
 	ID        OperationID `json:"id"`
 	Kind      string      `json:"kind"`
@@ -332,10 +332,10 @@ type FanOut struct {
 	CreatedAt time.Time   `json:"created_at"`
 }
 
-// WorkKind names a kind of due work the worker finds through the one cross-tenant view (§4.4).
+// WorkKind names a kind of due work the worker finds through the one cross-tenant view.
 type WorkKind string
 
-// Kinds of due work of §8.3 and §10.3 C12.
+// Kinds of due work and C12.
 const (
 	WorkApprovalExpiry  WorkKind = "approval_expiry"
 	WorkApprovedRecord  WorkKind = "approved_record"
@@ -381,7 +381,7 @@ type Event struct {
 // SourcePrefix starts the CloudEvents source of every event; the tenant or "installation" follows.
 const SourcePrefix = "connector-engine/"
 
-// SourceOf returns the stream of a tenant, or of the installation for the empty tenant (§12).
+// SourceOf returns the stream of a tenant, or of the installation for the empty tenant.
 func SourceOf(t TenantID) string {
 	if t == Installation {
 		return SourcePrefix + "installation"
@@ -389,7 +389,7 @@ func SourceOf(t TenantID) string {
 	return SourcePrefix + string(t)
 }
 
-// RoleAssignment gives the person of an issuer a role over a resource scope (§4.2); an empty Tenant is an installation role.
+// RoleAssignment gives the person of an issuer a role over a resource scope; an empty Tenant is an installation role.
 // An installation role names its issuer; a tenant role without one matches the person of any issuer.
 type RoleAssignment struct {
 	Tenant TenantID `json:"tenant,omitempty"`

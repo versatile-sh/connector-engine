@@ -443,7 +443,7 @@ func conditionalCall(e *env) {
 	e.must(e.read(scopeA, func(tx port.Tx) error {
 		got, ok, err := tx.LatestCall("s1", "h")
 		if !ok || got.ID != "k2" {
-			e.t.Fatalf("§8.6 R3 reads the newest call of (session, call_hash): %+v", got)
+			e.t.Fatalf("R3 reads the newest call of (session, call_hash): %+v", got)
 		}
 		_, ok, _ = tx.LatestCall("s2", "h")
 		e.same(false, ok)

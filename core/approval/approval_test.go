@@ -17,9 +17,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+var exhaustive = os.Getenv("CN_EXHAUSTIVE") == "1"
+
 func heavy(t *testing.T) {
-	if raceDetector || testing.Short() {
-		t.Skip("bounded exploration of millions of states: run without -race and -short, under a memory cap")
+	if raceDetector || !exhaustive {
+		t.Skip("bounded exploration of millions of states: set CN_EXHAUSTIVE=1 and run without -race, under a memory cap")
 	}
 }
 
@@ -37,7 +39,7 @@ func describe(t *testing.T, rep report) {
 
 func TestCorrectedTableIsClean(t *testing.T) {
 	for _, askOnce := range []bool{false, true} {
-		t.Run(fmt.Sprintf("03-engine §8.2 on core/approval, ask_once=%v", askOnce), func(t *testing.T) {
+		t.Run(fmt.Sprintf("on core/approval, ask_once=%v", askOnce), func(t *testing.T) {
 			if askOnce {
 				heavy(t)
 			}
@@ -58,7 +60,7 @@ func TestCorrectedTableIsClean(t *testing.T) {
 func TestWiderBoundsReachTheBrakeAndTheRecheck(t *testing.T) {
 	heavy(t)
 	for _, askOnce := range []bool{false, true} {
-		t.Run(fmt.Sprintf("03-engine §8.2 and §8.3, 3 records, 2 pending, ask_once=%v", askOnce), func(t *testing.T) {
+		t.Run(fmt.Sprintf("3 records, 2 pending, ask_once=%v", askOnce), func(t *testing.T) {
 			rep := explore(widened(askOnce))
 			describe(t, rep)
 			if len(rep.violations) != 0 {
@@ -103,7 +105,7 @@ func TestBrakeScenario(t *testing.T) {
 		"A5: approver 0 decides deny on record 1",
 	)
 	if !w.Paused || w.Records[2].State != cancelled || w.Records[2].ArgsKept {
-		t.Fatalf("03-engine §8.3: the second consecutive denial writes the pause and cancels the other pending record: paused %v, record 2 %+v", w.Paused, w.Records[2])
+		t.Fatalf("the second consecutive denial writes the pause and cancels the other pending record: paused %v, record 2 %+v", w.Paused, w.Records[2])
 	}
 	w, _ = walk(
 		"A1: record 0 opened for arguments 1",
@@ -125,7 +127,7 @@ func TestBrakeScenario(t *testing.T) {
 		}
 	}
 	if got := strings.Join(labels, "; "); strings.Contains(got, "A8:") || !strings.Contains(got, "A9: the re-check of record 1 fails, reason paused") {
-		t.Fatalf("03-engine §8.2 A8 and A9 under a pause: %q", got)
+		t.Fatalf("A8 and A9 under a pause: %q", got)
 	}
 }
 
@@ -135,29 +137,29 @@ func TestRepeatScenario(t *testing.T) {
 	approvedSteps := []string{"A1: record 0 opened for arguments 1", "A4: approver 0 decides approve_for_session on record 0"}
 	w, last := walk(seq(approvedSteps, "agent repeats arguments 1")...)
 	if !w.SessionGrant || w.DirectRuns != 0 || w.Records[0].Delivered || !strings.Contains(last, "attaches to record 0") {
-		t.Fatalf("03-engine §8.6 R1 while approved: %q, direct runs %d, delivered %v", last, w.DirectRuns, w.Records[0].Delivered)
+		t.Fatalf("R1 while approved: %q, direct runs %d, delivered %v", last, w.DirectRuns, w.Records[0].Delivered)
 	}
 	executingSteps := seq(approvedSteps, "A8: record 0 moves to executing", "the engine forwards record 0 with arguments 1")
 	w, last = walk(seq(executingSteps, "agent repeats arguments 1")...)
 	if w.DirectRuns != 0 || w.Records[0].Executions != 1 || !strings.Contains(last, "attaches to record 0") {
-		t.Fatalf("03-engine §8.6 R1 while executing: %q, direct runs %d", last, w.DirectRuns)
+		t.Fatalf("R1 while executing: %q, direct runs %d", last, w.DirectRuns)
 	}
 	w, last = walk(seq(executingSteps, "A10/A11: the connector answers record 0 (ok=true)", "agent repeats arguments 1")...)
 	if w.DirectRuns != 0 || !w.Records[0].Delivered || !strings.Contains(last, "never delivered, is returned") {
-		t.Fatalf("03-engine §8.6 R2: %q, direct runs %d", last, w.DirectRuns)
+		t.Fatalf("R2: %q, direct runs %d", last, w.DirectRuns)
 	}
 	w, last = walk(seq(executingSteps, "A10/A11: the connector answers record 0 (ok=true)", "agent repeats arguments 1", "agent calls with arguments 1")...)
 	if w.DirectRuns != 1 || !strings.Contains(last, "forwarded on the session grant") {
-		t.Fatalf("03-engine §8.6 R4: %q, direct runs %d", last, w.DirectRuns)
+		t.Fatalf("R4: %q, direct runs %d", last, w.DirectRuns)
 	}
 	unknown := seq(executingSteps, "the call deadline of record 0 passes", "A14: the agent is given the answer of record 0")
 	w, last = walk(seq(unknown, "A1: record 1 opened for arguments 1")...)
 	if w.Records[0].State != outcomeUnknown || !w.SessionGrant || w.DirectRuns != 0 || w.Records[1].State != pending || !strings.HasPrefix(last, "A1: record 1 opened") {
-		t.Fatalf("03-engine §8.6 R3: %q, direct runs %d", last, w.DirectRuns)
+		t.Fatalf("R3: %q, direct runs %d", last, w.DirectRuns)
 	}
 	w, last = walk(seq(unknown, "agent calls with arguments 2")...)
 	if w.DirectRuns != 1 || !strings.Contains(last, "forwarded on the session grant") {
-		t.Fatalf("03-engine §8.6 R3 reads the call hash: %q", last)
+		t.Fatalf("R3 reads the call hash: %q", last)
 	}
 }
 
@@ -205,7 +207,7 @@ func TestPendingRecordsPerSession(t *testing.T) {
 		}
 	}
 	if n != 1 || !strings.Contains(last, "too_many_pending") {
-		t.Fatalf("03-engine §8.2 A2: %d pending records, last answer %q", n, last)
+		t.Fatalf("A2: %d pending records, last answer %q", n, last)
 	}
 }
 
@@ -219,7 +221,7 @@ func TestApprovedRecordAfterACrash(t *testing.T) {
 		}
 	}
 	if all := strings.Join(got, "; "); !strings.Contains(all, "A8:") || !strings.Contains(all, "execute-within") {
-		t.Fatalf("03-engine §8.2 A8 and A9: worker transitions out of approved after a crash: %q", all)
+		t.Fatalf("A8 and A9: worker transitions out of approved after a crash: %q", all)
 	}
 }
 
@@ -228,66 +230,66 @@ func TestTransitions(t *testing.T) {
 	now := time.Date(2026, 11, 18, 0, 0, 0, 0, time.UTC)
 	b := port.Binding{AskRequester: true, Approvers: []string{"p2", "u1"}}
 	if got := approval.Approvers(b, "u1"); len(got) != 2 || got[0] != "u1" || got[1] != "p2" {
-		t.Fatalf("§8.1 approvers: %v", got)
+		t.Fatalf("approvers: %v", got)
 	}
 	if got := approval.Approvers(port.Binding{AskRequester: true}, ""); len(got) != 0 {
-		t.Fatalf("§8.1: a run for nobody adds no requester: %v", got)
+		t.Fatalf("a run for nobody adds no requester: %v", got)
 	}
 	a := port.Approval{ID: "a", Mode: port.ModeAsk, Approvers: []string{"u1"}, Arguments: &port.Sealed{}}
 	if _, err := approval.Open(port.Approval{Mode: port.ModeAsk}, 0, l, now); !port.IsCode(err, port.CodeNoApprover) {
-		t.Fatalf("§8.2 A2 no_approver: %v", err)
+		t.Fatalf("A2 no_approver: %v", err)
 	}
 	if _, err := approval.Open(a, l.MaxPending, l, now); !port.IsCode(err, port.CodeTooManyPending) {
-		t.Fatalf("§8.2 A2 too_many_pending: %v", err)
+		t.Fatalf("A2 too_many_pending: %v", err)
 	}
 	a, err := approval.Open(a, 0, l, now)
 	if err != nil || a.State != port.ApprovalPending || !a.ExpiresAt.Equal(now.Add(l.Timeout)) {
-		t.Fatalf("§8.2 A1: %+v %v", a, err)
+		t.Fatalf("A1: %+v %v", a, err)
 	}
 	if _, _, err := approval.Decide(a, "u2", true, port.DecisionApprove, "", "", l, now); !port.IsCode(err, port.CodeNotAnApprover) {
-		t.Fatalf("§8.2 A3 guard: %v", err)
+		t.Fatalf("A3 guard: %v", err)
 	}
 	if _, _, err := approval.Decide(a, "u1", false, port.DecisionApprove, "", "", l, now); !port.IsCode(err, port.CodeNotAnApprover) {
-		t.Fatalf("§8.2 A3: the Authorizer allows the approver now: %v", err)
+		t.Fatalf("A3: the Authorizer allows the approver now: %v", err)
 	}
 	if _, _, err := approval.Decide(a, "u1", true, port.DecisionApproveForSession, "", "", l, now); err == nil {
-		t.Fatal("§8.2 A4: approve for this session needs ask_once")
+		t.Fatal("A4: approve for this session needs ask_once")
 	}
 	if _, err := approval.Expire(a, now); err == nil {
-		t.Fatal("§8.2 A6 before expires_at")
+		t.Fatal("A6 before expires_at")
 	}
 	denied, _, err := approval.Decide(a, "u1", true, port.DecisionDeny, strings.Repeat("n", 600), "", l, now)
 	if err != nil || denied.State != port.ApprovalDenied || denied.Arguments != nil || len(denied.DecisionNote) != l.NoteMax {
-		t.Fatalf("§8.2 A5: %+v %v", denied, err)
+		t.Fatalf("A5: %+v %v", denied, err)
 	}
 	if _, _, err := approval.Decide(denied, "u1", true, port.DecisionApprove, "", "", l, now); !port.IsCode(err, port.CodeInvalidTransition) {
-		t.Fatalf("§8.2: a second decision finds the state changed: %v", err)
+		t.Fatalf("a second decision finds the state changed: %v", err)
 	}
 	ok, _, _ := approval.Decide(a, "u1", true, port.DecisionApprove, "", "", l, now)
 	if s, _ := approval.Start(ok, "", time.Minute, l, now.Add(2*l.ExecuteWithin)); s.State != port.ApprovalCancelled || s.Reason != string(port.CodeStaleApproval) {
-		t.Fatalf("§8.3 execute-within: %+v", s)
+		t.Fatalf("execute-within: %+v", s)
 	}
 	run, _ := approval.Start(ok, "", time.Minute, l, now)
 	if _, err := approval.Unknown(run, l, now.Add(time.Minute)); err == nil {
-		t.Fatal("§8.2 A12 inside the deadline plus grace")
+		t.Fatal("A12 inside the deadline plus grace")
 	}
 	if k, due := approval.Due(run, l, now.Add(time.Minute+l.ExecuteGrace)); !due || k != port.WorkExecuteDeadline {
-		t.Fatalf("§8.3 due work: %s %v", k, due)
+		t.Fatalf("due work: %s %v", k, due)
 	}
 	unknown, _ := approval.Unknown(run, l, now.Add(2*time.Minute))
 	if v := approval.Lookup([]port.Approval{unknown}, nil); v.Rule != approval.Answer {
-		t.Fatalf("§8.6 R2: %v", v.Rule)
+		t.Fatalf("R2: %v", v.Rule)
 	}
 	unknown, _ = approval.Deliver(unknown, now)
 	if v := approval.Lookup([]port.Approval{unknown}, nil); v.Rule != approval.HoldAfterUnknown {
-		t.Fatalf("§8.6 R3 after A12: %v", v.Rule)
+		t.Fatalf("R3 after A12: %v", v.Rule)
 	}
 	never := &port.Call{State: port.CallOutcomeUnknown, StartedAt: now}
 	if v := approval.Lookup(nil, never); v.Rule != approval.HoldAfterUnknown {
-		t.Fatalf("§8.6 R3 after C12, a call that was never held: %v", v.Rule)
+		t.Fatalf("R3 after C12, a call that was never held: %v", v.Rule)
 	}
 	if v := approval.Lookup(nil, &port.Call{State: port.CallFinished, StartedAt: now}); v.Rule != approval.NewCall {
-		t.Fatalf("§8.6 R4: %v", v.Rule)
+		t.Fatalf("R4: %v", v.Rule)
 	}
 	p, fired := approval.Brake(port.Pause{}, port.DecisionDeny, l, now, now)
 	p, _ = approval.Brake(p, port.DecisionApprove, l, now, now)
@@ -295,10 +297,10 @@ func TestTransitions(t *testing.T) {
 		p, fired = approval.Brake(p, port.DecisionDeny, l, now, now)
 	}
 	if fired || p.Consecutive != 2 {
-		t.Fatalf("§8.3: an approval resets the consecutive count: %+v", p)
+		t.Fatalf("an approval resets the consecutive count: %+v", p)
 	}
 	if p, fired = approval.Brake(p, port.DecisionDeny, l, now, now); !fired || !p.Paused {
-		t.Fatalf("§8.3: the third consecutive denial fires the brake: %+v", p)
+		t.Fatalf("the third consecutive denial fires the brake: %+v", p)
 	}
 }
 

@@ -65,18 +65,21 @@ func (c *Console) signIn(w http.ResponseWriter, status int) {
 
 func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 	var in credentials
-	if !readJSON(w, r, &in) {
-		return
+	if readJSON(w, r, &in) && c.verify(w, strings.TrimSpace(in.Username), in.Password) {
+		c.signIn(w, http.StatusOK)
 	}
+}
+
+func (c *Console) verify(w http.ResponseWriter, username, password string) bool {
 	c.loginMu.Lock()
 	now := time.Now()
 	if c.passwordFails.full(now, passwordFailsPerMin) {
 		c.loginMu.Unlock()
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
-		return
+		return false
 	}
-	ok, err := c.State.CheckLogin(strings.TrimSpace(in.Username), in.Password)
+	ok, err := c.State.CheckLogin(username, password)
 	if !ok && err == nil {
 		c.passwordFails.hit(now)
 		time.Sleep(500 * time.Millisecond)
@@ -89,9 +92,41 @@ func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "cannot read the account")
 	case !ok:
 		writeError(w, http.StatusUnauthorized, "wrong username or password")
-	default:
-		c.signIn(w, http.StatusOK)
 	}
+	return ok && err == nil
+}
+
+func (c *Console) account(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"username": c.State.OwnerName(), "last_export": c.State.LastExport()})
+}
+
+func (c *Console) changePassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Current  string `json:"current"`
+		Password string `json:"password"`
+	}
+	if !readJSON(w, r, &in) || !c.verify(w, c.State.OwnerName(), in.Current) {
+		return
+	}
+	if err := c.State.SetPassword(in.Password, c.Sessions.Key(r)); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) rename(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Username string `json:"username"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.State.Rename(strings.TrimSpace(in.Username)); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (c *Console) logout(w http.ResponseWriter, r *http.Request) {

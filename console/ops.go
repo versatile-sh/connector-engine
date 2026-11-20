@@ -174,7 +174,7 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature (write for destructive, so on is never capped to ask), replaces its workspace row (none for off), and gives every key the item rows of the connector.
+// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature (write for destructive, so on is never capped to ask), replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every key the item rows of the connector.
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
 	if err := c.writeAccess(ctx, conn, name, a); err != nil || port.ItemKind(name) == "" || a == AccessOff {
 		return err
@@ -226,7 +226,7 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 			}
 		}
 	}
-	mode := map[Access]port.Mode{AccessOn: port.ModeAllow, AccessAsk: port.ModeAsk}[a]
+	mode := map[Access]port.Mode{AccessOn: port.ModeAllow, AccessAsk: port.ModeAskOnce}[a]
 	if mode == "" {
 		return nil
 	}

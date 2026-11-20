@@ -414,7 +414,7 @@ func Default() Config {
 		Runtime:     Runtime{Adapters: []string{"remote", "declarative"}, CallTimeout: 60 * time.Second, Container: Container{CPU: 1, Memory: "2GB", IdleStop: 60 * time.Second, Network: "none"}},
 		Audit:       Audit{Arguments: "reference"},
 		Outbox:      Outbox{Signing: "standard-webhooks"},
-		Retention:   Retention{Every: time.Hour, DeliveredEvents: 7 * 24 * time.Hour, IdempotencyKeys: 7 * 24 * time.Hour},
+		Retention:   Retention{Every: time.Hour},
 	}
 }
 

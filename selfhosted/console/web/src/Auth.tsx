@@ -85,7 +85,7 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
     <Frame width="wide">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_26rem] lg:grid-rows-[auto_1fr] lg:gap-x-20 lg:gap-y-12">
         <Headline waitingHost={waitingHost} />
-        <form className={`${SURFACE} p-6 sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center`} onSubmit={onSubmit} aria-labelledby="auth-title">
+        <form className={`${SURFACE} w-full max-w-lg p-6 sm:p-8 lg:col-start-2 lg:max-w-none lg:row-span-2 lg:row-start-1 lg:self-center`} onSubmit={onSubmit} aria-labelledby="auth-title">
           <h2 id="auth-title" className="text-2xl leading-tight font-medium">
             {t(mode === "setup" ? "auth.setup.title" : "auth.login.title")}
           </h2>

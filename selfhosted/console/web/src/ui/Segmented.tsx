@@ -10,7 +10,7 @@ type SegmentedProps<T extends string> = {
   className?: string;
 };
 
-const SIZE = { sm: { frame: "h-8", button: "px-2.5 text-xs" }, md: { frame: "h-9", button: "px-4 text-sm" } } as const;
+const SIZE = { sm: { frame: "h-8", button: "px-2 text-xs" }, md: { frame: "h-9", button: "px-4 text-sm" } } as const;
 
 /** A choice between a few things, in the chip language: one hairline pill whose chosen part is paper at 10%, the mark gliding to it; with no value, as when the things it sets differ, nothing is marked. */
 export function Segmented<T extends string>({ label, options, value, onChange, disabled = false, size = "md", className = "" }: SegmentedProps<T>) {

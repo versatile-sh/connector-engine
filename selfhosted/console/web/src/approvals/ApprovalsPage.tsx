@@ -25,7 +25,7 @@ function Held({ approval, connector, skill, deciding, onDecide }: { approval: Ap
   const locale = useLocale();
   return (
     <li className={`${SURFACE} arrive @container transition-opacity duration-250 ${deciding ? "opacity-60" : ""}`}>
-      <div className="flex flex-col gap-4 p-5 @2xl:flex-row @2xl:items-center">
+      <div className="flex flex-col gap-4 p-5 @3xl:flex-row @3xl:items-center">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <Tag tone="lime" dot>
@@ -43,7 +43,7 @@ function Held({ approval, connector, skill, deciding, onDecide }: { approval: Ap
             <span title={new Date(approval.expires_at).toLocaleString(locale)}>{t("approvals.expires", { when: fromNow(approval.expires_at, locale) })}</span>
           </p>
         </div>
-        <div className="min-w-0 @2xl:max-w-md">
+        <div className="min-w-0 @3xl:max-w-md">
           <DecisionButtons choices={listChoices(approval.mode)} deciding={deciding} onChoose={onDecide} />
         </div>
       </div>

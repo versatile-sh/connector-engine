@@ -35,7 +35,7 @@ const OAUTH: Record<string, MessageKey> = {
   failed: "oauth.failed",
 };
 
-const NAV_LINK = `relative isolate inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-sm text-muted transition-colors duration-250 hover:text-paper aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
+const NAV_LINK = `relative isolate inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm xl:px-3.5 text-muted transition-colors duration-250 hover:text-paper aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
 
 type Iris = { section: Section; at: number; x: number; y: number; r: number };
 
@@ -69,10 +69,10 @@ function SetupProgress() {
   const setup = useSetup();
   if (!setup.visible) return null;
   return (
-    <button type="button" onClick={() => navigate("/")} className={`${button({ variant: "secondary", size: "sm" })} arrive hidden font-mono text-xs font-normal sm:inline-flex`}>
+    <button type="button" onClick={() => navigate("/")} className={`${button({ variant: "secondary", size: "sm" })} arrive hidden font-mono text-xs font-normal sm:inline-flex lg:hidden xl:inline-flex`}>
       <span aria-hidden="true" className="flex gap-1">
         {setup.steps.map((step) => (
-          <span key={step.id} className={`size-1.5 rounded-full transition-colors duration-500 ${step.done ? "bg-lime" : "bg-line-strong"}`} />
+          <span key={step.id} className={`size-1.5 rounded-full transition-colors duration-250 ${step.done ? "bg-lime" : "bg-line-strong"}`} />
         ))}
       </span>
       {t("shell.setup", { done: setup.done, total: setup.total })}
@@ -97,7 +97,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
       </a>
       <header className="sticky top-0 z-30 border-b border-line bg-ink/85 backdrop-blur-md">
         <div aria-hidden="true" className="light-lamp pointer-events-none absolute inset-x-0 -bottom-px mx-auto h-px w-1/3" />
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-5 sm:px-8">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-5 sm:gap-4 sm:px-8">
           <a
             href="/"
             aria-label={t("app.home")}

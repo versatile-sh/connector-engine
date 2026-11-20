@@ -53,13 +53,10 @@ func (c Config) sourceDefault() []string {
 }
 
 func (c Config) secretsDefault() []string {
-	switch {
-	case c.Secrets.Adapter == "memory":
-		return []string{adapters.TierMemory}
-	case c.has(PortSecrets, c.Secrets.Adapter):
-		return use(adapters.TierBuiltin, c.Secrets.Adapter)
+	if c.Secrets.Adapter == "" {
+		return use(adapters.TierBuiltin, "localfile")
 	}
-	return use(adapters.TierBuiltin, "localfile")
+	return []string{Builtin{Name: c.Secrets.Adapter}.Selection()}
 }
 
 func (c Config) filterDefault() []string {
@@ -87,7 +84,14 @@ func (c Config) AdaptersSpec() adapters.Spec {
 }
 
 func (c Config) validateAdapters(f adapters.File) adapters.Findings {
-	fs := c.Check(f.Acknowledged)
+	fs := append(c.Check(f.Acknowledged), c.builtinFindings(f)...)
+	if u, ok := f.First(PortSecrets); ok && c.Secrets.Adapter != "" {
+		finding := adapters.Finding{Level: adapters.LevelWarning, Where: "secrets.adapter", Message: "deprecated: ports.secrets in the adapters file selects the secrets adapter; drop the key"}
+		if alias := (Builtin{Name: c.Secrets.Adapter}).Selection(); alias != selection(u) {
+			finding.Level, finding.Message = adapters.LevelError, fmt.Sprintf("says %s but ports.secrets selects %s; ports.secrets is the one selector: drop the key", alias, selection(u))
+		}
+		fs = append(fs, finding)
+	}
 	if f.Mode != c.Mode {
 		fs = append(fs, adapters.Finding{Level: adapters.LevelError, Where: "mode", Message: fmt.Sprintf("the adapters file says %q and connector-engine.yaml %q", f.Mode, c.Mode)})
 	}

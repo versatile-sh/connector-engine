@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 type BubbleProps = { tone?: "accent" | "neutral" | "amber" | "outline"; title?: string; children: ReactNode };
 
 const TONE = {
-  accent: "bg-bubble text-on-bubble",
+  accent: "bg-lime text-ink",
   neutral: "border border-line-strong text-muted",
-  outline: "border border-bubble/60 text-accent",
+  outline: "border border-lime/60 text-lime",
   amber: "border border-amber/70 text-amber",
 } as const;
 

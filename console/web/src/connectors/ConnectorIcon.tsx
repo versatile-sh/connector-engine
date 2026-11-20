@@ -9,7 +9,7 @@ export function ConnectorIcon({ src, title, size = "md", onLime = false }: { src
   const url = iconURL(src);
   if (!url || broken) {
     return (
-      <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full font-display font-bold ${onLime ? "bg-ink text-bubble" : "bg-ink-lift text-fg"} ${SIZE[size]}`}>
+      <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full font-mono uppercase ${onLime ? "bg-ink text-lime" : "bg-paper/10 text-muted"} ${SIZE[size]}`}>
         {title.slice(0, 1).toUpperCase()}
       </span>
     );

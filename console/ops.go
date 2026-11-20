@@ -23,12 +23,13 @@ type connectorView struct {
 	Blocked   string          `json:"blocked"`
 }
 
-// FunctionView is one function of a connector as the console shows it: its class and the owner's choice read back from the engine's grants.
+// FunctionView is one function of a connector as the console shows it: its class, what it does by nature, and the owner's choice read back from the engine's grants.
 type FunctionView struct {
 	Name        string     `json:"name"`
 	Title       string     `json:"title,omitempty"`
 	Description string     `json:"description,omitempty"`
 	Class       port.Class `json:"class"`
+	Kind        port.Class `json:"kind"`
 	State       string     `json:"state"`
 	Access      Access     `json:"access"`
 }
@@ -82,10 +83,7 @@ func accessOf(f port.Function, rows []port.Grant) Access {
 		}
 		switch g.Mode {
 		case port.ModeAllow:
-			if f.Class == port.ClassRead {
-				return AccessRead
-			}
-			return AccessWrite
+			return AccessOn
 		case port.ModeAsk, port.ModeAskOnce:
 			return AccessAsk
 		}
@@ -139,7 +137,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 				continue
 			}
 			title, desc := describe(f.Definition)
-			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, State: string(f.State), Access: accessOf(f, rows)})
+			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f), State: string(f.State), Access: accessOf(f, rows)})
 		}
 		var creds items[port.Credential]
 		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/credentials"+q("connector", string(conn.ID)), nil, &creds); err == nil {
@@ -165,10 +163,10 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function: it accepts a quarantined definition the owner now sees, classes the function, then replaces its workspace row (none for off).
+// SetAccess writes the owner's choice for one function: it accepts a quarantined definition the owner now sees, classes the function read or write by its nature (write for destructive, so on is never capped to ask), then replaces its workspace row (none for off).
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
 	if !a.Valid() {
-		return fmt.Errorf("access %q is not off, read, write or ask", a)
+		return fmt.Errorf("access %q is not off, on or ask", a)
 	}
 	f, err := c.function(ctx, conn, name)
 	if err != nil {
@@ -182,14 +180,9 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 			return err
 		}
 	}
-	class := f.Class
-	switch {
-	case a == AccessRead:
+	class := port.ClassWrite
+	if Nature(f) == port.ClassRead {
 		class = port.ClassRead
-	case a == AccessWrite:
-		class = port.ClassWrite
-	case class == port.ClassNone:
-		class = port.ClassWrite
 	}
 	if class != f.Class {
 		if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/functions/"+esc(name)+"/class", map[string]any{"class": class}, &f); err != nil {
@@ -207,7 +200,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 			}
 		}
 	}
-	mode := map[Access]port.Mode{AccessRead: port.ModeAllow, AccessWrite: port.ModeAllow, AccessAsk: port.ModeAsk}[a]
+	mode := map[Access]port.Mode{AccessOn: port.ModeAllow, AccessAsk: port.ModeAsk}[a]
 	if mode == "" {
 		return nil
 	}
@@ -249,7 +242,7 @@ func (c *Console) freeAlias(ctx context.Context, base string) (string, error) {
 	return alias, nil
 }
 
-// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent.
+// Install creates the private listing, opens it to the workspace, installs it, accepts its captured functions, applies the owner's choices and binds every connected agent; with a key already made it also finishes the first-run guide.
 func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[string]Access) (string, error) {
 	lv, err := c.createListing(ctx, m)
 	if err != nil {
@@ -296,11 +289,17 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 			return conn, fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
-	for _, a := range c.State.Agents() {
+	agents := c.State.Agents()
+	for _, a := range agents {
 		if a.ExpiresAt.After(time.Now()) {
 			if err := c.bind(ctx, conn, a); err != nil {
 				return conn, err
 			}
+		}
+	}
+	if len(agents) > 0 {
+		if err := c.State.DismissOnboarding(); err != nil {
+			return conn, err
 		}
 	}
 	return conn, nil
@@ -327,8 +326,13 @@ func (c *Console) openToWorkspace(ctx context.Context, target string) error {
 	return nil
 }
 
-// Remove uninstalls a connector.
+// Remove uninstalls a connector; with a key made, the first-run guide was finished and stays so.
 func (c *Console) Remove(ctx context.Context, conn string) error {
+	if len(c.State.Agents()) > 0 {
+		if err := c.State.DismissOnboarding(); err != nil {
+			return err
+		}
+	}
 	return c.Engine.Call(ctx, http.MethodDelete, "/v1/connectors/"+esc(conn), nil, nil)
 }
 
@@ -351,6 +355,42 @@ func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil)
 }
 
+// RevokeAgent refuses every token minted so far for the agent, then unbinds it from every connector and deletes the grants scoped to it; a key and a connector existed, so the first-run guide stays finished.
+func (c *Console) RevokeAgent(ctx context.Context, name string) error {
+	ok, err := c.State.RevokeAgent(name, time.Now())
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}
+	}
+	var list items[connectorView]
+	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
+		return err
+	}
+	for _, v := range list.Items {
+		if !v.Connector.RemovedAt.IsZero() {
+			continue
+		}
+		if err := c.State.DismissOnboarding(); err != nil {
+			return err
+		}
+		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/connectors/"+esc(string(v.Connector.ID))+"/bindings/"+esc(name), nil, nil); err != nil && !IsCode(err, "not_found") {
+			return err
+		}
+	}
+	var rows items[port.Grant]
+	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/grants"+q("scope_kind", string(port.ScopeAgent), "scope_id", name), nil, &rows); err != nil {
+		return err
+	}
+	for _, g := range rows.Items {
+		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/grants/"+esc(string(g.ID)), nil, nil); err != nil && !IsCode(err, "not_found") {
+			return err
+		}
+	}
+	return nil
+}
+
 // AgentToken is a minted agent token with where to use it.
 type AgentToken struct {
 	Agent     string    `json:"agent"`
@@ -359,11 +399,11 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// MintAgent binds the agent to every connector, lets the workspace rows decide for it until the token expires, and mints its token.
-func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration) (AgentToken, error) {
+// BindAgent binds the agent to every connector and records it until ttl from now, at most the console's longest; with a connector installed it also finishes the first-run guide.
+func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
-		return AgentToken{}, fmt.Errorf("the agent name has letters or digits")
+		return Agent{}, fmt.Errorf("the agent name has letters or digits")
 	}
 	if ttl <= 0 || ttl > c.MaxAgentTTL {
 		ttl = c.MaxAgentTTL
@@ -371,23 +411,43 @@ func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration)
 	a := Agent{Name: name, ExpiresAt: time.Now().Add(ttl).UTC().Truncate(time.Second)}
 	var list items[connectorView]
 	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &list); err != nil {
-		return AgentToken{}, err
+		return Agent{}, err
 	}
+	installed := false
 	for _, v := range list.Items {
 		if v.Connector.RemovedAt.IsZero() {
+			installed = true
 			if err := c.bind(ctx, string(v.Connector.ID), a); err != nil {
-				return AgentToken{}, err
+				return Agent{}, err
 			}
 		}
 	}
-	tok, err := c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": c.Engine.Person}, ttl)
+	if err := c.State.PutAgent(a); err != nil {
+		return Agent{}, err
+	}
+	if installed {
+		if err := c.State.DismissOnboarding(); err != nil {
+			return Agent{}, err
+		}
+	}
+	return a, nil
+}
+
+func (c *Console) agentToken(ctx context.Context, name string, ttl time.Duration) (string, error) {
+	return c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": c.Engine.Person}, ttl)
+}
+
+// MintAgent binds the agent to every connector, lets the workspace rows decide for it until the token expires, and mints its token.
+func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration) (AgentToken, error) {
+	a, err := c.BindAgent(ctx, name, ttl)
 	if err != nil {
 		return AgentToken{}, err
 	}
-	if err := c.State.PutAgent(a); err != nil {
+	tok, err := c.agentToken(ctx, a.Name, time.Until(a.ExpiresAt))
+	if err != nil {
 		return AgentToken{}, err
 	}
-	return AgentToken{Agent: name, Token: tok, ExpiresAt: a.ExpiresAt, MCPURL: c.MCPURL}, nil
+	return AgentToken{Agent: a.Name, Token: tok, ExpiresAt: a.ExpiresAt, MCPURL: c.MCPURL}, nil
 }
 
 // Approvals lists the calls waiting for the owner.

@@ -1,5 +1,15 @@
 import { queryOptions } from "@tanstack/react-query";
-import { api, type Agent, type Approval, type Connector } from "./api";
+import { api, setCsrf, type Agent, type Approval, type Connector, type Session } from "./api";
+
+/** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
+export const sessionQuery = queryOptions({
+  queryKey: ["session"],
+  queryFn: async () => {
+    const s = await api<Session>("GET", "/api/session");
+    setCsrf(s.csrf);
+    return s;
+  },
+});
 
 /** What GET /api/agents answers: the access keys, the endpoint and the longest life a key may have. */
 export type KeysData = { agents: Agent[]; mcp_url: string; max_ttl_hours: number };

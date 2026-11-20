@@ -7,6 +7,7 @@ import { navigate } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
+import { PageTitle } from "../ui/PageTitle";
 import { SURFACE, button } from "../ui/styles";
 
 const fromNow = (iso: string, locale: Locale) => {
@@ -19,8 +20,8 @@ function Held({ approval, connector, deciding, onDecide }: { approval: Approval;
   const t = useT();
   const locale = useLocale();
   return (
-    <li className={`arrive bubble flex flex-col gap-4 border border-line-strong border-l-4 border-l-bubble bg-card p-5 sm:flex-row sm:items-center ${deciding ? "opacity-60" : ""} transition-opacity duration-300`}>
-      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-bubble text-on-bubble">
+    <li className={`arrive bubble flex flex-col gap-4 border border-line-strong border-l-4 border-l-lime bg-ink-raised p-5 sm:flex-row sm:items-center ${deciding ? "opacity-60" : ""} transition-opacity duration-300`}>
+      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-lime text-ink">
         <Icon name="hand" className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
@@ -65,12 +66,9 @@ export function ApprovalsPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-8">
-        <div className="flex items-center gap-3">
-          <h1 id="page-title" className="font-display text-4xl leading-none font-bold tracking-[-0.04em] sm:text-5xl">
-            {t("approvals.title")}
-          </h1>
+        <PageTitle section={t("nav.approvals")} title={t("approvals.title")}>
           {approvals.isSuccess ? <Bubble tone={list.length > 0 ? "accent" : "neutral"}>{list.length}</Bubble> : null}
-        </div>
+        </PageTitle>
         <p className="mt-3 max-w-2xl text-muted">{t("approvals.intro")}</p>
       </header>
       {approvals.isError ? <Notice>{errorText(approvals.error)}</Notice> : null}
@@ -90,7 +88,7 @@ export function ApprovalsPage() {
           <span aria-hidden="true" className="grid size-14 place-items-center rounded-full border border-line-strong text-muted">
             <Icon name="hand" className="size-6" />
           </span>
-          <h2 className="mt-4 font-display text-2xl font-bold tracking-[-0.03em]">{t("approvals.empty.title")}</h2>
+          <h2 className="mt-4 font-serif text-3xl leading-none font-normal tracking-[-0.02em]">{t("approvals.empty.title")}</h2>
           <p className="mt-2 max-w-md text-muted">{t("approvals.empty.body")}</p>
           <button type="button" className={`${button({ variant: "secondary", size: "sm" })} mt-6`} onClick={() => navigate("/")}>
             {t("approvals.empty.action")}

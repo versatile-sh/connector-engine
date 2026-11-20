@@ -1,8 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState, type RefObject } from "react";
-import { api, errorText, type Access, type Skill } from "../api";
+import { errorText, type Access, type Skill } from "../api";
 import { AccessPicker } from "../connectors/AccessPicker";
 import { useT } from "../i18n/I18nProvider";
+import { removeSkill, setSkillAccess } from "../mutations";
 import { Sheet } from "../ui/Sheet";
 import { button } from "../ui/styles";
 import { SkillFactsView } from "./SkillFactsView";
@@ -10,11 +11,7 @@ import { SkillOverview } from "./SkillOverview";
 
 function KeyChoice({ skill, agent, access }: { skill: Skill; agent: string; access: Access }) {
   const t = useT();
-  const queryClient = useQueryClient();
-  const set = useMutation({
-    mutationFn: (next: Access) => api("PUT", `/api/skills/${encodeURIComponent(skill.id)}/keys/${encodeURIComponent(agent)}`, { access: next }),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["skills"] }),
-  });
+  const set = useMutation(setSkillAccess);
   return (
     <li className="flex flex-col gap-2 border-b border-line py-3 last:border-b-0 @lg:flex-row @lg:items-center @lg:gap-6">
       <div className="min-w-0 flex-1">
@@ -27,19 +24,15 @@ function KeyChoice({ skill, agent, access }: { skill: Skill; agent: string; acce
           </p>
         ) : null}
       </div>
-      <AccessPicker name={t("skills.keyName", { skill: skill.alias, key: agent })} of="skill" value={set.isPending && set.variables ? set.variables : access} disabled={set.isPending} onChange={(next) => set.mutate(next)} />
+      <AccessPicker name={t("skills.keyName", { skill: skill.alias, key: agent })} of="skill" value={set.isPending ? set.variables.access : access} disabled={set.isPending} onChange={(next) => set.mutate({ skill: skill.id, agent, access: next })} />
     </li>
   );
 }
 
 function RemoveSkill({ skill }: { skill: Skill }) {
   const t = useT();
-  const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
-  const remove = useMutation({
-    mutationFn: () => api("DELETE", `/api/skills/${encodeURIComponent(skill.id)}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["skills"] }),
-  });
+  const remove = useMutation(removeSkill);
   return (
     <>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
@@ -49,7 +42,7 @@ function RemoveSkill({ skill }: { skill: Skill }) {
             <button type="button" autoFocus disabled={remove.isPending} className={button({ variant: "quiet", size: "xs" })} onClick={() => setConfirming(false)}>
               {t("common.cancel")}
             </button>
-            <button type="button" disabled={remove.isPending} className={button({ variant: "danger", size: "xs" })} onClick={() => remove.mutate()}>
+            <button type="button" disabled={remove.isPending} className={button({ variant: "danger", size: "xs" })} onClick={() => remove.mutate(skill.id)}>
               {t("skills.removeConfirm")}
             </button>
           </div>

@@ -31,6 +31,7 @@ type Manifest struct {
 	Licence          string        `json:"licence,omitempty"`
 	Review           *Review       `json:"review,omitempty"`
 	TrustLevel       TrustLevel    `json:"trust_level,omitempty"`
+	Skill            *Skill        `json:"skill,omitempty"`
 }
 
 // SourceInfo is the provenance of an imported listing.
@@ -102,6 +103,54 @@ type GRPCFunction struct {
 	FullMethod   string          `json:"full_method"`
 	InputSchema  json.RawMessage `json:"input_schema,omitempty"`
 	OutputSchema json.RawMessage `json:"output_schema,omitempty"`
+}
+
+// Redistribution says whether a skill listing carries its files or only describes them.
+type Redistribution string
+
+// Redistribution values: bundled keeps the files, metadata_only keeps their paths, sizes and digests alone.
+const (
+	RedistributionBundled      Redistribution = "bundled"
+	RedistributionMetadataOnly Redistribution = "metadata_only"
+)
+
+// SkillMetaKey is the _meta key of a skill function definition and of a skill load's structured result.
+const SkillMetaKey = "connector-engine/skill"
+
+// Skill is the pinned Agent Skills folder of a skill listing: its provenance, licence and files.
+type Skill struct {
+	Name           string         `json:"name"`
+	Category       string         `json:"category,omitempty"`
+	Source         SkillSource    `json:"source"`
+	Licence        SkillLicence   `json:"licence"`
+	Redistribution Redistribution `json:"redistribution"`
+	HasScripts     bool           `json:"has_scripts,omitempty"`
+	Requires       []string       `json:"requires,omitempty"`
+	Files          []SkillFile    `json:"files"`
+}
+
+// SkillSource is where a skill folder was read: repository, folder path, full commit and a page about it.
+type SkillSource struct {
+	Repository string `json:"repository"`
+	Path       string `json:"path"`
+	Commit     string `json:"commit"`
+	URL        string `json:"url,omitempty"`
+}
+
+// SkillLicence is the licence a catalog states for a skill and whether it may be redistributed.
+type SkillLicence struct {
+	SPDX            string `json:"spdx,omitempty"`
+	From            string `json:"from,omitempty"`
+	Redistributable bool   `json:"redistributable"`
+}
+
+// SkillFile is one file of a skill folder; Content is empty when the listing is metadata_only.
+type SkillFile struct {
+	Path    string `json:"path"`
+	Bytes   int64  `json:"bytes"`
+	SHA256  string `json:"sha256"`
+	URL     string `json:"url,omitempty"`
+	Content []byte `json:"content,omitempty"`
 }
 
 // Signature is the declared signature of a listing.

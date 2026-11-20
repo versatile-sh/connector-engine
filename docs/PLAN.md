@@ -45,6 +45,7 @@ The owner delegated engineering choices on 2026-11-18 ("pode planejar o connecto
 | `gateway/` | the agent endpoint: L1 to L7, C1 to C12, `find`, `call`, `approval_status`, `approval_cancel`, both MCP eras on `modelcontextprotocol/go-sdk` v1.8.0 |
 | `runtime/remote`, `runtime/declarative`, `runtime/grpc`, `runtime/memory` | `ConnectorRuntime` adapters (§3.3) |
 | `source/files`, `source/registry`, `source/docker`, `source/bsr`, `source/reflection`, `source/openapi`, `source/memory` | `ListingSource` adapters (§3.1, OD-45) |
+| `runtime/skill`, `source/skillcatalog`, `cli/skills` | skills, added after the build waves: the skill kind served as pinned text, https catalog entries, and the host-side export (`docs/STATUS.md`, "Skills") |
 | `store/memory`, `store/postgres` | `Store` with audit and outbox rows in one transaction; Postgres with forced row-level security per tenant; one conformance suite |
 | `secrets/local`, `secrets/memory` | `SecretStore`: envelope encryption, a key-encryption key per tenant, `Destroy` for crypto-shredding (§4.4) |
 | `auth/jwks`, `auth/local` | `PrincipalVerifier`: JWKS of configured issuers; local issuer for the quickstart (acknowledged opt-in) |

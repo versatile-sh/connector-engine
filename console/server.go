@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/source/skillcatalog"
 )
 
 const (
@@ -48,6 +49,7 @@ type Console struct {
 	OAuthRedirect string
 	MaxAgentTTL   time.Duration
 	Log           *slog.Logger
+	Fetch         skillcatalog.Get
 
 	loginMu sync.Mutex
 	iconMu  sync.Mutex
@@ -75,6 +77,9 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("POST /api/import", c.authed(c.doImport))
 	mux.HandleFunc("PUT /api/connectors/{id}/functions/{name}", c.authed(c.setAccess))
 	mux.HandleFunc("DELETE /api/connectors/{id}", c.authed(c.removeConnector))
+	mux.HandleFunc("GET /api/skills", c.authed(c.listSkills))
+	mux.HandleFunc("PUT /api/skills/{id}/keys/{agent}", c.authed(c.setSkillAccess))
+	mux.HandleFunc("DELETE /api/skills/{id}", c.authed(c.removeConnector))
 	mux.HandleFunc("POST /api/connectors/{id}/headers", c.authed(c.setHeaders))
 	mux.HandleFunc("POST /api/connectors/{id}/oauth", c.authed(c.beginOAuth))
 	mux.HandleFunc("GET /oauth/callback", c.oauthCallback)
@@ -227,26 +232,30 @@ type importRequest struct {
 	Local        bool              `json:"local,omitempty"`
 	HeaderSecret bool              `json:"header_secret,omitempty"`
 	Choices      map[string]Access `json:"choices,omitempty"`
+	Access       Access            `json:"access,omitempty"`
+	Digest       string            `json:"digest,omitempty"`
 }
 
 // Preview is what the confirm screen shows before an import: where it comes from, the listing and each function's proposed choice.
 type Preview struct {
-	Kind        string       `json:"kind"`
-	URL         string       `json:"url"`
-	Host        string       `json:"host"`
-	Name        string       `json:"name"`
-	Title       string       `json:"title"`
-	Description string       `json:"description,omitempty"`
-	Icon        string       `json:"icon,omitempty"`
-	Publisher   string       `json:"publisher,omitempty"`
-	Version     string       `json:"version"`
-	RemoteURL   string       `json:"remote_url,omitempty"`
-	WebsiteURL  string       `json:"website_url,omitempty"`
-	Protocol    string       `json:"protocol,omitempty"`
-	Auth        []string     `json:"auth,omitempty"`
-	Tools       []ProbedTool `json:"tools"`
-	Warning     string       `json:"warning,omitempty"`
+	Kind        string        `json:"kind"`
+	URL         string        `json:"url"`
+	Host        string        `json:"host"`
+	Name        string        `json:"name"`
+	Title       string        `json:"title"`
+	Description string        `json:"description,omitempty"`
+	Icon        string        `json:"icon,omitempty"`
+	Publisher   string        `json:"publisher,omitempty"`
+	Version     string        `json:"version"`
+	RemoteURL   string        `json:"remote_url,omitempty"`
+	WebsiteURL  string        `json:"website_url,omitempty"`
+	Protocol    string        `json:"protocol,omitempty"`
+	Auth        []string      `json:"auth,omitempty"`
+	Tools       []ProbedTool  `json:"tools"`
+	Warning     string        `json:"warning,omitempty"`
+	Skill       *SkillPreview `json:"skill,omitempty"`
 	manifest    port.Manifest
+	entry       skillcatalog.Entry
 }
 
 func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, error) {
@@ -265,11 +274,24 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 			Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), manifest: m}, nil
 	case in.Listing != "" && in.MCP == "":
 		src := strings.TrimSpace(in.Listing)
-		m, err := FetchManifest(ctx, src)
+		body, err := c.get()(ctx, src, maxListingBytes)
 		if err != nil {
 			return Preview{}, err
 		}
 		u, _ := url.Parse(src)
+		if skillcatalog.Kind(body) == string(port.KindSkill) {
+			e, err := skillcatalog.Parse(body)
+			if err != nil {
+				return Preview{}, err
+			}
+			sp := c.skillPreview(e)
+			return Preview{Kind: "skill", URL: src, Host: u.Host, Name: e.ID, Title: firstOf(e.Title, e.Name), Description: e.Description, Publisher: skillcatalog.Publisher(e.Source.Repository, u.Host),
+				Version: e.Source.Commit, Tools: []ProbedTool{}, Skill: &sp, entry: e}, nil
+		}
+		m, err := manifestFrom(src, body)
+		if err != nil {
+			return Preview{}, err
+		}
 		pv := Preview{Kind: "listing", URL: src, Host: u.Host, Name: m.Name, Title: firstOf(m.Title, m.Name), Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name, Version: m.Version}
 		for _, a := range m.Auth {
 			pv.Auth = append(pv.Auth, string(a.Kind))
@@ -301,6 +323,65 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		return pv, nil
 	}
 	return Preview{}, errors.New("give exactly one of mcp or listing")
+}
+
+func (c *Console) get() skillcatalog.Get {
+	if c.Fetch != nil {
+		return c.Fetch
+	}
+	return func(ctx context.Context, raw string, limit int64) ([]byte, error) {
+		body, _, err := Reach{}.Get(ctx, raw, limit, "application/yaml, application/json, text/plain, */*")
+		return body, err
+	}
+}
+
+func (c *Console) importSkill(w http.ResponseWriter, r *http.Request, in importRequest, p Preview) {
+	access := in.Access
+	if access == "" {
+		access = AccessOn
+	}
+	if !access.Valid() {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "access is off, on or ask"})
+		return
+	}
+	if in.Digest != p.Skill.Digest {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "the skill changed since the preview; review it again"})
+		return
+	}
+	m, err := skillcatalog.Manifest(r.Context(), c.get(), p.URL, p.entry)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	id, err := c.InstallSkill(r.Context(), m, access)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{"skill": id})
+}
+
+func (c *Console) listSkills(w http.ResponseWriter, r *http.Request) {
+	list, err := c.Skills(r.Context())
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"skills": nonNil(list)})
+}
+
+func (c *Console) setSkillAccess(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Access Access `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.SetSkillAccess(r.Context(), r.PathValue("id"), r.PathValue("agent"), in.Access); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func nonNil[T any](s []T) []T {
@@ -337,6 +418,10 @@ func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
 	p, err := c.buildPreview(r.Context(), in)
 	if err != nil {
 		c.fail(w, err)
+		return
+	}
+	if p.Kind == "skill" {
+		c.importSkill(w, r, in, p)
 		return
 	}
 	choices := map[string]Access{}

@@ -153,10 +153,15 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 	if err != nil {
 		return err
 	}
-	return results[0].Err
+	for _, r := range results {
+		if r.Err != nil {
+			return r.Err
+		}
+	}
+	return nil
 }
 
-// SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, and answers each name's result in order.
+// SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, and answers each name's result in order, then one entry per bound key it failed to give the item rows.
 func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string, a Access) ([]Result, error) {
 	switch {
 	case len(names) == 0:
@@ -184,14 +189,17 @@ func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string,
 	}
 	bound, err := c.boundKeys(ctx, conn)
 	if err != nil {
-		return nil, err
+		return append(results, Result{Name: "keys", Err: err}), nil
 	}
-	return results, c.bindAll(ctx, conn, func(ctx context.Context, conn string, a Agent) error {
-		if !bound[a.Name] {
-			return nil
+	for _, k := range c.liveAgents() {
+		if !bound[k.Name] {
+			continue
 		}
-		return c.bind(ctx, conn, a)
-	})
+		if err := c.bind(ctx, conn, k); err != nil {
+			results = append(results, Result{Name: k.Name, Err: fmt.Errorf("key %s keeps its old item rows: %w", k.Name, err)})
+		}
+	}
+	return results, nil
 }
 
 func (c *Console) bindAll(ctx context.Context, conn string, bind func(context.Context, string, Agent) error) error {

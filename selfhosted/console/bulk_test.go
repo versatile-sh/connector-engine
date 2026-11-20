@@ -1,8 +1,12 @@
 package console_test
 
 import (
+	"io"
+	"net/http"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
 )
@@ -79,5 +83,24 @@ func TestABatchHasABoundedSize(t *testing.T) {
 		if status, raw := p.b.send("PUT", path, map[string]any{"names": names, "keys": names, "access": "ask", "mode": "off"}, nil); status != 400 {
 			t.Errorf("%s: %d %s", path, status, raw)
 		}
+	}
+}
+
+type refuseBindings struct{ next http.RoundTripper }
+
+func (r refuseBindings) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodPut && strings.Contains(req.URL.Path, "/bindings/") {
+		return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{"code":"internal","detail":"refused"}`)), Header: http.Header{}, Request: req}, nil
+	}
+	return r.next.RoundTrip(req)
+}
+
+func TestABatchThatFailsToRebindKeysStillAnswersEachItem(t *testing.T) {
+	p := profiledStack(t)
+	p.mint("alpha")
+	p.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: refuseBindings{next: http.DefaultTransport}}
+	codes := p.batch("PUT", "/api/connectors/"+p.conn+"/functions", map[string]any{"names": []string{"prompt:summarise", "lookup"}, "access": "ask"})
+	if codes["prompt:summarise"] != "" || codes["lookup"] != "" || codes["alpha"] == "" || len(codes) != 3 {
+		t.Fatalf("results %v", codes)
 	}
 }

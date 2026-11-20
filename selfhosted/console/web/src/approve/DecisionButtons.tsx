@@ -9,7 +9,7 @@ type DecisionButtonsProps = { choices: readonly string[] | undefined; deciding?:
 
 const LABEL: Record<ApprovalChoice, MessageKey> = { once: "decide.once", session: "decide.session", always: "decide.always", deny: "common.deny" };
 
-const VARIANT = { once: "accent", session: "secondary", always: "secondary", deny: "danger" } as const;
+const VARIANT = { once: "primary", session: "secondary", always: "secondary", deny: "danger" } as const;
 
 /** The answers to one held call: Allow once, Allow for this session when the record offers it, Always allow and Deny. */
 export function DecisionButtons({ choices, deciding, size = "sm", stacked = false, onChoose }: DecisionButtonsProps) {

@@ -27,15 +27,15 @@ export function Logotype({ className = "" }: { className?: string }) {
   );
 }
 
-/** The console's logotype: the terminal icon beside the wordmark, the product named under it in mono, which the header drops on a phone where the page eyebrow names it. On lime it sits on its own ink plate so the lime `.sh` survives. */
-export function Wordmark({ onAccent = false, className = "" }: { onAccent?: boolean; className?: string }) {
+/** The console's logotype: the terminal icon beside the wordmark, the product named under it in mono, which a phone drops where the page eyebrow names it. */
+export function Wordmark({ className = "" }: { className?: string }) {
   const t = useT();
   return (
-    <span className={`inline-flex items-center gap-2.5 ${onAccent ? "bubble-word bg-ink py-2 pr-4 pl-2 text-paper" : ""} ${className}`}>
-      <Mark className={onAccent ? "size-8" : "size-7"} />
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
+      <Mark className="size-7" />
       <span className="flex flex-col">
         <Logotype className="text-[0.9375rem]" />
-        <span className={`mt-0.5 font-mono text-[0.6875rem] leading-none ${onAccent ? "text-paper/60" : "text-muted max-sm:hidden"}`}>{t("brand.label")}</span>
+        <span className="mt-0.5 font-mono text-[0.6875rem] leading-none text-muted max-sm:hidden">{t("brand.label")}</span>
       </span>
     </span>
   );

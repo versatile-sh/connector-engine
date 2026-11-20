@@ -2,7 +2,8 @@ import type { Skill } from "../api";
 import { AccessBar } from "../connectors/AccessBar";
 import { accessCounts } from "../connectors/summary";
 import { useT } from "../i18n/I18nProvider";
-import { Bubble } from "../ui/Bubble";
+import { CAPTION } from "../ui/styles";
+import { Tag } from "../ui/Tag";
 import { shortCommit } from "./summary";
 
 type SkillOverviewProps = { skill: Skill; compact?: boolean };
@@ -13,18 +14,18 @@ export function SkillOverview({ skill, compact = false }: SkillOverviewProps) {
   const counts = accessCounts(skill.access);
   return (
     <>
-      <p className="truncate font-mono text-xs text-muted" translate="no">
+      <p className={`${CAPTION} truncate`} translate="no">
         {skill.alias}@{shortCommit(skill.version)}
         {skill.publisher ? ` · ${t("import.by", { publisher: skill.publisher })}` : ""}
       </p>
-      <p className={`mt-3 text-sm text-muted [overflow-wrap:anywhere] ${compact ? "line-clamp-2 min-h-10" : "max-w-2xl"}`}>{skill.description}</p>
+      <p className={`mt-3 text-sm text-pretty text-muted ${compact ? "line-clamp-2 min-h-10" : "max-w-2xl"}`}>{skill.description}</p>
       <AccessBar counts={counts} className="mt-4" />
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {skill.category ? <Bubble>{skill.category}</Bubble> : null}
-        <Bubble tone={counts.on + counts.ask > 0 ? "accent" : "neutral"}>{t("skills.keysOn", { count: counts.on + counts.ask, total: skill.access.length })}</Bubble>
-        {counts.on > 0 ? <Bubble>{t("access.count.on", { count: counts.on })}</Bubble> : null}
-        {counts.ask > 0 ? <Bubble tone="outline">{t("access.count.ask", { count: counts.ask })}</Bubble> : null}
-        {skill.state === "quarantined" ? <Bubble tone="amber">{t("connectors.changed", { count: 1 })}</Bubble> : null}
+      <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-0.5">
+        {skill.category ? <Tag>{skill.category}</Tag> : null}
+        <Tag>{t("skills.keysOn", { count: counts.on + counts.ask, total: skill.access.length })}</Tag>
+        {counts.on > 0 ? <Tag tone="paper">{t("access.count.on", { count: counts.on })}</Tag> : null}
+        {counts.ask > 0 ? <Tag tone="lime">{t("access.count.ask", { count: counts.ask })}</Tag> : null}
+        {skill.state === "quarantined" ? <Tag tone="amber" dot>{t("connectors.changed", { count: 1 })}</Tag> : null}
       </div>
     </>
   );

@@ -3,10 +3,8 @@ import { useT } from "../i18n/I18nProvider";
 import { CopyBox } from "../ui/CopyBox";
 import { Icon } from "../ui/Icon";
 import { Segmented } from "../ui/Segmented";
-import { PRESS, button } from "../ui/styles";
+import { OPTION_CARD, TITLE, button } from "../ui/styles";
 import { guides, oauthGuides, type Block, type ClientId, type Guide } from "./clients";
-
-const CARD = `bubble flex min-h-16 flex-col items-start justify-center gap-0.5 border border-line-strong bg-ink-raised px-4 py-2.5 text-left hover:border-paper/40 aria-pressed:border-paper/60 aria-pressed:bg-paper/10 ${PRESS}`;
 
 function Blocks({ guide }: { guide: Guide }) {
   const t = useT();
@@ -33,19 +31,19 @@ function Blocks({ guide }: { guide: Guide }) {
 }
 
 /** The apps that connect to the endpoint, as cards; the chosen one shows its one-click link or the exact block to paste: URL only (the app signs in through the browser), or with the access key inside when one is given. */
-export function ClientPicker({ url, accessKey }: { url: string; accessKey?: string }) {
+export function ClientPicker({ url, accessKey, heading: Heading = "h2" }: { url: string; accessKey?: string; heading?: "h2" | "h3" }) {
   const t = useT();
   const all = accessKey ? guides(url, accessKey, t) : oauthGuides(url, t);
   const [chosen, setChosen] = useState<ClientId | undefined>();
   const guide = all.find((g) => g.id === chosen);
   return (
     <div className="@container">
-      <h3 className="text-base font-medium">{t("clients.title")}</h3>
-      <div role="group" aria-label={t("clients.title")} className="mt-3 grid grid-cols-2 gap-2 @md:grid-cols-3 @3xl:grid-cols-5">
+      <Heading className={TITLE}>{t("clients.title")}</Heading>
+      <div role="group" aria-label={t("clients.title")} className="mt-4 grid grid-cols-2 gap-2 @md:grid-cols-3 @3xl:grid-cols-5">
         {all.map((g) => (
-          <button key={g.id} type="button" aria-pressed={g.id === chosen} className={CARD} onClick={() => setChosen(g.id)}>
-            <span className="text-sm font-semibold">{g.name}</span>
-            <span className="font-mono text-[0.6875rem] opacity-70">{t(g.kind)}</span>
+          <button key={g.id} type="button" aria-pressed={g.id === chosen} className={OPTION_CARD} onClick={() => setChosen(g.id)}>
+            <span className="text-sm font-medium">{g.name}</span>
+            <span className="font-mono text-[0.6875rem] text-muted">{t(g.kind)}</span>
           </button>
         ))}
       </div>
@@ -53,7 +51,7 @@ export function ClientPicker({ url, accessKey }: { url: string; accessKey?: stri
         <div key={guide.id} className="swap-in mt-5 flex flex-col gap-3">
           {guide.link ? (
             <div className="flex flex-wrap items-center gap-3">
-              <a href={guide.link.href} className={button({ variant: "accent" })}>
+              <a href={guide.link.href} className={button({ variant: "primary" })}>
                 <Icon name="external" className="size-4" />
                 {t("clients.open", { app: guide.link.app })}
               </a>
@@ -61,10 +59,10 @@ export function ClientPicker({ url, accessKey }: { url: string; accessKey?: stri
             </div>
           ) : null}
           <Blocks guide={guide} />
-          <p className="text-sm text-muted">{t(guide.note)}</p>
+          <p className="text-sm text-pretty text-muted">{t(guide.note)}</p>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-muted">{t(accessKey ? "clients.pick" : "clients.pickOAuth")}</p>
+        <p className="mt-4 text-sm text-pretty text-muted">{t(accessKey ? "clients.pick" : "clients.pickOAuth")}</p>
       )}
     </div>
   );

@@ -1,12 +1,16 @@
 import type { ReactNode } from "react";
-import { ACCENT_BAR } from "./styles";
+import { Icon } from "./Icon";
 
-/** A short message in a bubble with a coloured bar on its left: amber when something went wrong, lime when it went well. */
-export function Notice({ tone = "amber", children, action }: { tone?: "amber" | "accent"; children: ReactNode; action?: ReactNode }) {
+type NoticeProps = { tone?: "amber" | "lime"; live?: boolean; action?: ReactNode; className?: string; children: ReactNode };
+
+const TONE = { amber: "border-amber-400/40 bg-amber-400/5", lime: "border-line-strong bg-ink-raised" } as const;
+
+/** The one note box: amber when something went wrong or needs care, a calm box with the lime success check when it went well; `live` announces it, else it is read in place. */
+export function Notice({ tone = "amber", live = true, action, className = "", children }: NoticeProps) {
   return (
-    <div role={tone === "amber" ? "alert" : "status"} className="arrive bubble relative flex items-center gap-3 border border-line-strong bg-ink-raised py-3 pr-3 pl-5 text-sm">
-      <span aria-hidden="true" className={`${ACCENT_BAR} ${tone === "amber" ? "bg-amber" : "bg-lime"}`} />
-      <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{children}</p>
+    <div role={live ? (tone === "amber" ? "alert" : "status") : undefined} className={`arrive flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-sm ${TONE[tone]} ${className}`}>
+      {tone === "lime" ? <Icon name="check" className="size-4 text-lime" /> : null}
+      <div className="min-w-0 flex-1 basis-56">{children}</div>
       {action}
     </div>
   );

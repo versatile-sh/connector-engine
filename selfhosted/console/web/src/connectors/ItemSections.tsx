@@ -1,9 +1,10 @@
 import { useId, useState, type ReactNode } from "react";
 import type { Access, Item, ItemKind } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { Bubble } from "../ui/Bubble";
 import { Collapse } from "../ui/Collapse";
-import { ACCENT_BAR, QUIET_LINK, SURFACE, TOUCH, button } from "../ui/styles";
+import { Notice } from "../ui/Notice";
+import { QUIET_LINK, SUBTITLE, TITLE, TOUCH, WELL, button } from "../ui/styles";
+import { Tag } from "../ui/Tag";
 import { AccessPicker } from "./AccessPicker";
 import { ChoiceRow } from "./ChoiceRow";
 import { ITEM_KINDS, accessChoices, groupItems } from "./items";
@@ -22,9 +23,9 @@ function StateFlag({ item }: { item: Item }) {
   const t = useT();
   if (!item.state || item.state === "active") return null;
   return (
-    <Bubble tone="amber" title={item.state === "quarantined" ? t("detail.quarantined") : undefined}>
+    <Tag tone="amber" dot title={item.state === "quarantined" ? t("detail.quarantined") : undefined}>
       {item.state}
-    </Bubble>
+    </Tag>
   );
 }
 
@@ -43,14 +44,14 @@ function Section({ kind, count, variant, children }: { kind: ItemKind; count: nu
   const id = useId();
   const Heading = variant === "page" ? "h2" : "h3";
   return (
-    <section aria-labelledby={id} className={variant === "page" ? `${SURFACE} swap-in min-w-0 p-5 sm:p-6` : "swap-in mt-7 min-w-0"}>
-      <div className="flex items-center gap-2.5">
-        <Heading id={id} className={variant === "page" ? "text-lg leading-snug font-medium" : "text-base font-medium"}>
+    <section aria-labelledby={id} className={variant === "page" ? "swap-in min-w-0" : "swap-in mt-8 min-w-0"}>
+      <div className="flex flex-wrap items-baseline gap-x-4">
+        <Heading id={id} className={variant === "page" ? TITLE : SUBTITLE}>
           {t(`items.${kind}.title`)}
         </Heading>
-        {kind === "instructions" ? null : <Bubble>{count}</Bubble>}
+        {kind === "instructions" ? null : <Tag>{count}</Tag>}
       </div>
-      <p className="mt-1 text-sm text-muted">{t(`items.${kind}.intro`)}</p>
+      <p className="mt-1 text-sm text-pretty text-muted">{t(`items.${kind}.intro`)}</p>
       {children}
     </section>
   );
@@ -63,12 +64,7 @@ function Instructions({ item, picker, accept }: { item: Item; picker: ReactNode;
       <pre tabIndex={0} aria-label={t("items.instructions.text")} className={`${TEXT_BOX} max-h-80 overflow-auto p-4`}>
         {item.preview || t("items.noText")}
       </pre>
-      {item.state === "quarantined" ? (
-        <div className="arrive bubble relative border border-line-strong bg-ink-raised py-3 pr-3 pl-5 text-sm">
-          <span aria-hidden="true" className={`${ACCENT_BAR} bg-amber`} />
-          <p className="[overflow-wrap:anywhere]">{t("items.instructions.quarantined")}</p>
-        </div>
-      ) : null}
+      {item.state === "quarantined" ? <Notice live={false}>{t("items.instructions.quarantined")}</Notice> : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <StateFlag item={item} />
@@ -108,15 +104,13 @@ function ItemRow({ item, picker, accept }: { item: Item; picker: ReactNode; acce
       flags={
         <>
           {item.template ? (
-            <Bubble tone="outline" title={t("items.templateHint")}>
-              {t("items.template")}
-            </Bubble>
+            <Tag title={t("items.templateHint")}>{t("items.template")}</Tag>
           ) : null}
           <StateFlag item={item} />
           {accept}
         </>
       }
-      description={item.kind === "prompt" ? <PromptPreview text={item.preview} /> : item.preview ? <p className="mt-1 text-sm whitespace-pre-line text-muted [overflow-wrap:anywhere]">{item.preview}</p> : null}
+      description={item.kind === "prompt" ? <PromptPreview text={item.preview} /> : item.preview ? <p className="mt-1 text-sm whitespace-pre-line text-muted">{item.preview}</p> : null}
     >
       {picker}
     </ChoiceRow>
@@ -146,7 +140,7 @@ export function ItemSections({ items, variant, accessOf, pendingOf, choose }: It
             {kind === "instructions" ? (
               groups[kind].map((item) => <Instructions key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} />)
             ) : (
-              <ul className="mt-2">
+              <ul className={`${WELL} mt-3`}>
                 {groups[kind].map((item) => (
                   <ItemRow key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} />
                 ))}

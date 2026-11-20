@@ -9,6 +9,7 @@ import { approvalsQuery, connectorsQuery, skillsQuery } from "../queries";
 import { navigate } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Icon } from "../ui/Icon";
+import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { ACCENT_BAR, SURFACE, button } from "../ui/styles";
@@ -91,18 +92,22 @@ export function ApprovalsPage() {
           </button>
         </div>
       ) : (
-        <ul aria-live="polite" className="flex flex-col gap-3">
-          {list.map((approval) => (
-            <Held
-              key={approval.id}
-              approval={approval}
-              connector={titleOf(approval.connector)}
-              skill={skillOf(approval.connector)}
-              deciding={decide.isPending && decide.variables.id === approval.id ? decide.variables.choice : undefined}
-              onDecide={(choice) => decide.mutate({ id: approval.id, choice })}
-            />
-          ))}
-        </ul>
+        <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} label={t("approvals.filter")}>
+          {(shown) => (
+            <ul aria-live="polite" className="flex flex-col gap-3">
+              {shown.map((approval) => (
+                <Held
+                  key={approval.id}
+                  approval={approval}
+                  connector={titleOf(approval.connector)}
+                  skill={skillOf(approval.connector)}
+                  deciding={decide.isPending && decide.variables.id === approval.id ? decide.variables.choice : undefined}
+                  onDecide={(choice) => decide.mutate({ id: approval.id, choice })}
+                />
+              ))}
+            </ul>
+          )}
+        </LongList>
       )}
     </section>
   );

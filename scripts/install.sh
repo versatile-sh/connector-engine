@@ -90,8 +90,8 @@ esac
 
 say ""
 if [ "$profile" = person ]; then
-  say "Next step: start it, then open http://127.0.0.1:7465 in your browser."
-  say "  connector-engine-selfhosted up"
+  say "Next step: start it; it opens the console in your browser."
+  say "  connector-engine-selfhosted up --open"
   say "The 'up' command ships with the no-Docker runtime, from the next release."
   say "Until then, use the Docker quick start: https://github.com/$repo/blob/main/docs/getting-started/install.md"
 else

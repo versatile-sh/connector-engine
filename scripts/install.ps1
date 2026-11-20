@@ -65,8 +65,8 @@ if (-not (($userPath -split ';') -contains $installDir)) {
 
 Write-Host ""
 if ($profileName -eq 'person') {
-  Write-Host "Next step: start it, then open http://127.0.0.1:7465 in your browser."
-  Write-Host "  connector-engine-selfhosted up"
+  Write-Host "Next step: start it; it opens the console in your browser."
+  Write-Host "  connector-engine-selfhosted up --open"
   Write-Host "The 'up' command ships with the no-Docker runtime, from the next release."
   Write-Host "Until then, use the Docker quick start: https://github.com/$repo/blob/main/docs/getting-started/install.md"
 } else {

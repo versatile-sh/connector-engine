@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -126,10 +127,10 @@ func hashPassword(password string, salt []byte, iterations int) ([]byte, error) 
 // CreateOwner writes the owner account once; the password has at least ten characters.
 func (s *State) CreateOwner(username, password string) error {
 	if username == "" || len(username) > 64 {
-		return fmt.Errorf("the username has 1 to 64 characters")
+		return invalid("the username has 1 to 64 characters")
 	}
 	if len(password) < minPassword {
-		return fmt.Errorf("the password has at least %d characters", minPassword)
+		return invalid("the password has at least %d characters", minPassword)
 	}
 	salt := make([]byte, 16)
 	rand.Read(salt)
@@ -186,11 +187,7 @@ func (s *State) OwnerName() string {
 func (s *State) Sessions() map[string]StoredSession {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := make(map[string]StoredSession, len(s.data.Sessions))
-	for k, v := range s.data.Sessions {
-		out[k] = v
-	}
-	return out
+	return maps.Collect(maps.All(s.data.Sessions))
 }
 
 // PutSessions replaces the stored sessions.
@@ -232,7 +229,7 @@ func (s *State) MarkBrowserConnected(name string, at time.Time) error {
 	defer s.mu.Unlock()
 	a, ok := s.data.Agents[name]
 	if !ok {
-		return fmt.Errorf("no agent is named %s", name)
+		return notFound("no agent is named %s", name)
 	}
 	old := a
 	a.ViaBrowser, a.ConnectedAt, a.Seen = true, at.UTC().Truncate(time.Second), false

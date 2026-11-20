@@ -438,3 +438,24 @@ func TestChannelsComeUpWhenTheConsoleSecretsUnlock(t *testing.T) {
 		t.Fatalf("the channel came up without its secret: %v", s)
 	}
 }
+
+func TestAComputerPairsWithoutANameAndIsRenamedLater(t *testing.T) {
+	r := newRig(t)
+	var paired struct{ Device console.DeviceView }
+	r.b.ok("POST", "/api/notifications/devices", map[string]any{}, &paired)
+	if paired.Device.Name != "This computer" {
+		t.Fatalf("default name %q", paired.Device.Name)
+	}
+	r.b.ok("PATCH", "/api/notifications/devices/"+paired.Device.ID, map[string]any{"name": "  Linux · Firefox "}, nil)
+	var list struct{ Devices []console.DeviceView }
+	r.b.ok("GET", "/api/notifications", nil, &list)
+	if len(list.Devices) != 1 || list.Devices[0].Name != "Linux · Firefox" {
+		t.Fatalf("renamed %+v", list.Devices)
+	}
+	if status, _ := r.b.send("PATCH", "/api/notifications/devices/nope", map[string]any{"name": "x"}, nil); status != http.StatusNotFound {
+		t.Fatalf("an unknown device: %d", status)
+	}
+	if status, _ := r.b.send("PATCH", "/api/notifications/devices/"+paired.Device.ID, map[string]any{"name": strings.Repeat("x", 61)}, nil); status != http.StatusBadRequest {
+		t.Fatalf("a long name: %d", status)
+	}
+}

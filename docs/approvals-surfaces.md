@@ -140,7 +140,7 @@ Messages name the connector, the function, the app and the expiry. They never in
 
 The console cannot reach the host's notification service. The host helper connects out to the console instead:
 
-1. In Notifications, "Pair this computer" creates a device key. It is shown once, and the state keeps only its SHA-256.
+1. In Notifications, "Pair this computer" creates a device key. It is shown once, and the state keeps only its SHA-256. The name is optional (`This computer` when empty, at most 60 characters) and can be changed later with `PATCH /api/notifications/devices/{id}`.
 2. `cnctl notify --console http://127.0.0.1:7465 --key-file ~/.config/versatile/notify.key` opens `GET /api/notify/stream` with the key as a bearer and reconnects on loss.
 3. For each prompt the console mints a link token for that device and sends it in the stream. The helper shows a native notification:
    - Linux: `notify-send --action` through D-Bus;

@@ -55,7 +55,7 @@ export function Review({ source, onBack, onInstalled }: { source: ImportSource; 
           <Notice>{p.warning}</Notice>
         </div>
       ) : null}
-      <h3 className="mt-7 font-display text-lg font-bold tracking-[-0.03em]">{t("import.choose")}</h3>
+      <h3 className="mt-7 text-base font-medium">{t("import.choose")}</h3>
       <p className="text-sm text-muted">{t("import.chooseIntro")}</p>
       <div className="mt-2">
         <Choices tools={p.tools} accessOf={accessOf} choose={choose} />
@@ -63,7 +63,7 @@ export function Review({ source, onBack, onInstalled }: { source: ImportSource; 
       <p role="alert" className="min-h-6 text-sm text-amber">
         {install.isError ? errorText(install.error) : ""}
       </p>
-      <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-line bg-card/95 px-6 py-4 backdrop-blur-md">
+      <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap items-center justify-between gap-3 border-t border-line bg-ink-raised/95 px-6 py-4 backdrop-blur-md">
         {back}
         <button
           type="button"

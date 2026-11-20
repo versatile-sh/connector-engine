@@ -6,7 +6,7 @@ export function FunctionRow({ name, title, description, flags, children }: { nam
     <li className="flex flex-col gap-3 border-b border-line py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:gap-6">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <code className="font-mono text-sm font-semibold break-all text-fg" translate="no">
+          <code className="font-mono text-sm font-semibold break-all text-paper" translate="no">
             {name}
           </code>
           {title && title !== name ? <span className="text-sm text-muted">{title}</span> : null}

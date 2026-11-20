@@ -19,12 +19,12 @@ function Empty({ onPaste }: { onPaste(text: string): void }) {
   const t = useT();
   return (
     <section className="arrive bubble grid overflow-hidden border border-line-strong lg:grid-cols-2">
-      <div className="relative isolate bg-bubble p-6 text-ink sm:p-8">
+      <div className="relative isolate bg-lime p-6 text-ink sm:p-8">
         <div aria-hidden="true" className="backdrop-grid-ink absolute inset-0 -z-10" />
-        <h2 className="font-display text-3xl leading-[1.05] font-bold tracking-[-0.04em] sm:text-4xl">{t("connectors.empty.title")}</h2>
+        <h2 className="font-serif text-4xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-5xl">{t("connectors.empty.title")}</h2>
         <p className="mt-3 max-w-md text-ink/80">{t("connectors.empty.body")}</p>
       </div>
-      <div className="flex flex-col justify-center gap-5 bg-card p-6 sm:p-8">
+      <div className="flex flex-col justify-center gap-5 bg-ink-raised p-6 sm:p-8">
         <HubCard />
         <PasteBox onPaste={onPaste} />
       </div>
@@ -50,7 +50,7 @@ export function ConnectorsPage() {
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 id="page-title" className="font-display text-4xl leading-none font-bold tracking-[-0.04em] sm:text-5xl">
+            <h1 id="page-title" className="font-serif text-5xl leading-[0.98] font-normal tracking-[-0.02em] sm:text-6xl">
               {t("connectors.title")}
             </h1>
             {connectors.isSuccess ? <Bubble tone={list.length > 0 ? "accent" : "neutral"}>{list.length}</Bubble> : null}

@@ -1,6 +1,6 @@
 # plugkit, in-module copy
 
-Upstream: `github.com/agents-control/plugkit` (MIT, see LICENSE in this directory).
+Upstream: `github.com/agents-control/plugkit` (MIT, see LICENSE in this directory), a private repository. This copy is the public source of record.
 
 Commit: `329d53ecfe458fa413c27b028aaa3dca2fef4494`
 

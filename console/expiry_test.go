@@ -38,3 +38,11 @@ func TestWriteAtomicLeavesOnlyTheOwnerReadableFile(t *testing.T) {
 		t.Fatalf("entries %v, mode %v, body %s, %v", entries, info.Mode(), raw, err)
 	}
 }
+
+func TestASkillSourceLinkIsHTTPSOnly(t *testing.T) {
+	for raw, want := range map[string]string{"https://github.com/a/b": "https://github.com/a/b", "javascript:alert(1)": "", "http://x.example": "", "https:relative": "", "": ""} {
+		if got := httpsOnly(raw); got != want {
+			t.Errorf("%q: got %q", raw, got)
+		}
+	}
+}

@@ -205,17 +205,23 @@ func (s *Service) CreateListing(ctx context.Context, p port.Principal, in Create
 	return out, err
 }
 
-func (s *Service) visibleView(ctx context.Context, p port.Principal, tx port.Tx, workspace port.WorkspaceID) (corecatalog.View, []port.PersonID, error) {
+type viewer struct {
+	tenant port.TenantID
+	people []port.PersonID
+	groups map[port.PersonID][]port.GroupID
+}
+
+func (s *Service) viewerOf(ctx context.Context, p port.Principal) (viewer, error) {
 	var people []port.PersonID
 	if p.Person != "" {
 		people = append(people, p.Person)
 	}
 	g, err := s.groups(ctx, p.Claims.Tenant, people...)
-	if err != nil {
-		return corecatalog.View{}, nil, err
-	}
-	v, err := table.View(tx, p.Claims.Tenant, []port.WorkspaceID{workspace}, g)
-	return v, people, err
+	return viewer{tenant: p.Claims.Tenant, people: people, groups: g}, err
+}
+
+func (v viewer) view(tx port.Tx, workspace port.WorkspaceID) (corecatalog.View, error) {
+	return table.View(tx, v.tenant, []port.WorkspaceID{workspace}, v.groups)
 }
 
 // ListingFilter narrows ListListings; zero fields match all.
@@ -231,13 +237,17 @@ func (s *Service) ListListings(ctx context.Context, p port.Principal, workspace 
 	if err := s.authorize(ctx, p, authz.ConnectorRead, authz.Tenant(string(p.Claims.Tenant))); err != nil {
 		return nil, err
 	}
+	who, err := s.viewerOf(ctx, p)
+	if err != nil {
+		return nil, err
+	}
 	var out []port.ListingVersion
-	err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
-		v, people, err := s.visibleView(ctx, p, tx, workspace)
+	err = s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
+		v, err := who.view(tx, workspace)
 		if err != nil {
 			return err
 		}
-		for _, ref := range v.Visible(workspace, people) {
+		for _, ref := range v.Visible(workspace, who.people) {
 			ver, ok := v.Newest(ref)
 			if !ok || ver == "" {
 				continue
@@ -268,12 +278,16 @@ func (s *Service) GetListing(ctx context.Context, p port.Principal, workspace po
 	if err := s.authorize(ctx, p, authz.ConnectorRead, authz.Tenant(string(p.Claims.Tenant))); err != nil {
 		return out, err
 	}
-	err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
-		v, people, err := s.visibleView(ctx, p, tx, workspace)
+	who, err := s.viewerOf(ctx, p)
+	if err != nil {
+		return out, err
+	}
+	err = s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
+		v, err := who.view(tx, workspace)
 		if err != nil {
 			return err
 		}
-		if !v.Resolve(workspace, people, ref.Listing).Visible || !v.Status(ref.Listing, ref.Version).Exists() {
+		if !v.Resolve(workspace, who.people, ref.Listing).Visible || !v.Status(ref.Listing, ref.Version).Exists() {
 			return port.Errorf(port.CodeNotFound, "%s not found", ref.Listing)
 		}
 		out, err = tx.GetVersion(ref)

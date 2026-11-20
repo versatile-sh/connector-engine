@@ -71,13 +71,17 @@ func (s *Service) InstallConnector(ctx context.Context, p port.Principal, in Ins
 	if err := names.ValidAlias(in.Alias); err != nil {
 		return out, err
 	}
+	who, err := s.viewerOf(ctx, p)
+	if err != nil {
+		return out, err
+	}
 	var lv port.ListingVersion
-	err := s.d.Store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
-		v, people, err := s.visibleView(ctx, p, tx, in.Workspace)
+	err = s.d.Store.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+		v, err := who.view(tx, in.Workspace)
 		if err != nil {
 			return err
 		}
-		a := v.Resolve(in.Workspace, people, in.Listing)
+		a := v.Resolve(in.Workspace, who.people, in.Listing)
 		version := in.Version
 		if version == "" {
 			version = a.Version
@@ -162,14 +166,18 @@ func (s *Service) UpdateConnector(ctx context.Context, p port.Principal, id port
 		return UpdateResult{}, err
 	}
 	if version != "" && version != c.Listing.Version {
+		who, err := s.viewerOf(ctx, p)
+		if err != nil {
+			return UpdateResult{}, err
+		}
 		var status port.ListingStatus
 		var ok bool
-		err := s.d.Store.Read(ctx, port.Scope{Tenant: c.Tenant}, func(tx port.Tx) error {
-			v, people, err := s.visibleView(ctx, p, tx, c.Workspace)
+		err = s.d.Store.Read(ctx, port.Scope{Tenant: c.Tenant}, func(tx port.Tx) error {
+			v, err := who.view(tx, c.Workspace)
 			if err != nil {
 				return err
 			}
-			a := v.Resolve(c.Workspace, people, c.Listing.Listing)
+			a := v.Resolve(c.Workspace, who.people, c.Listing.Listing)
 			status, ok = v.Status(c.Listing.Listing, version), a.Visible && canInstall(a)
 			return nil
 		})
@@ -556,8 +564,13 @@ func (s *Service) ListConnectors(ctx context.Context, p port.Principal, workspac
 	if err := s.authorize(ctx, p, authz.ConnectorRead, s.tenantResource(p)); err != nil {
 		return nil, err
 	}
-	var out []ConnectorView
-	err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
+	who, err := s.viewerOf(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	var all []ConnectorView
+	visible := map[port.ConnectorID]bool{}
+	err = s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
 		conns, err := tx.ListConnectors(port.ConnectorFilter{Workspace: workspace})
 		if err != nil {
 			return err
@@ -567,23 +580,32 @@ func (s *Service) ListConnectors(ctx context.Context, p port.Principal, workspac
 			return err
 		}
 		for _, c := range conns {
-			admin := s.authorize(ctx, p, authz.ConnectorManage, wsResource(p, c.Workspace)) == nil
-			if !admin {
-				v, people, err := s.visibleView(ctx, p, tx, c.Workspace)
-				if err != nil {
-					return err
-				}
-				if !v.Resolve(c.Workspace, people, c.Listing.Listing).Visible {
-					continue
-				}
+			v, err := who.view(tx, c.Workspace)
+			if err != nil {
+				return err
 			}
+			visible[c.ID] = v.Resolve(c.Workspace, who.people, c.Listing.Listing).Visible
 			fns, err := tx.ListFunctions(c.ID)
 			if err != nil {
 				return err
 			}
-			out = append(out, ConnectorView{Connector: c, Functions: fns, Blocked: blocked[c.ID]})
+			all = append(all, ConnectorView{Connector: c, Functions: fns, Blocked: blocked[c.ID]})
 		}
 		return nil
 	})
-	return out, err
+	if err != nil {
+		return nil, err
+	}
+	admin := map[port.WorkspaceID]bool{}
+	var out []ConnectorView
+	for _, v := range all {
+		ws := v.Connector.Workspace
+		if _, known := admin[ws]; !known {
+			admin[ws] = s.authorize(ctx, p, authz.ConnectorManage, wsResource(p, ws)) == nil
+		}
+		if admin[ws] || visible[v.Connector.ID] {
+			out = append(out, v)
+		}
+	}
+	return out, nil
 }

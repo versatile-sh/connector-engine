@@ -1,6 +1,7 @@
 package console
 
 import (
+	"maps"
 	"slices"
 	"time"
 )
@@ -34,25 +35,14 @@ func (s *State) OAuthClient(id string) (OAuthClient, bool) {
 
 // PutOAuthClient stores a client, dropping the least recently used ones beyond the cap so registrations cannot grow the file without bound.
 func (s *State) PutOAuthClient(c OAuthClient) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Clients == nil {
-		s.data.Clients = map[string]OAuthClient{}
-	}
-	s.data.Clients[c.ID] = c
-	for len(s.data.Clients) > maxOAuthClients {
-		oldest := slices.MinFunc(mapValues(s.data.Clients), func(a, b OAuthClient) int { return a.LastUsed.Compare(b.LastUsed) })
-		delete(s.data.Clients, oldest.ID)
-	}
-	return s.save()
-}
-
-func mapValues[K comparable, V any](m map[K]V) []V {
-	out := make([]V, 0, len(m))
-	for _, v := range m {
-		out = append(out, v)
-	}
-	return out
+	return s.update(func(d *stateFile) error {
+		put(&d.Clients, c.ID, c)
+		for len(d.Clients) > maxOAuthClients {
+			oldest := slices.MinFunc(slices.Collect(maps.Values(d.Clients)), func(a, b OAuthClient) int { return a.LastUsed.Compare(b.LastUsed) })
+			delete(d.Clients, oldest.ID)
+		}
+		return nil
+	})
 }
 
 // Agent returns a connected agent by name.
@@ -76,14 +66,10 @@ func (s *State) RefreshGrant(hash string) (RefreshGrant, bool) {
 
 // RotateRefresh drops the grant under old, when given, and stores g under next, pruning expired grants on the way.
 func (s *State) RotateRefresh(old, next string, g RefreshGrant) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Refresh == nil {
-		s.data.Refresh = map[string]RefreshGrant{}
-	}
-	now := time.Now()
-	expire(s.data.Refresh, now, func(v RefreshGrant) time.Time { return v.Expires })
-	delete(s.data.Refresh, old)
-	s.data.Refresh[next] = g
-	return s.save()
+	return s.update(func(d *stateFile) error {
+		expire(d.Refresh, time.Now(), func(v RefreshGrant) time.Time { return v.Expires })
+		delete(d.Refresh, old)
+		put(&d.Refresh, next, g)
+		return nil
+	})
 }

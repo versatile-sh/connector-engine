@@ -81,7 +81,7 @@ Everything new lives in three places:
 |---|---|
 | `once` | `:decide` `approve` |
 | `session` | `:decide` `approve_for_session`. Offered only when the record's `mode` is `ask_once` |
-| `always` | `SetAccess(connector, function, on)`, then `:decide` `approve`. The function's access flips to On in the console |
+| `always` | `:decide` `approve`, then `SetAccess(connector, function, on)`. The function's access flips to On in the console. The order matters: deleting the "ask" row first would cancel the pending record (`DeleteGrant` cancels the approvals it covers) |
 | `deny` | `:decide` `deny` |
 
 `DecideApproval` answers a lost race with the current record and no error. The use case compares the returned state and decider with the requested ones and reports `already_decided` with the actual outcome. A surface never claims a decision it did not make.
@@ -148,7 +148,7 @@ The console cannot reach the host's notification service. The host helper connec
 
 ### 4.5 MCP elicitation in the `/mcp` proxy (`console/elicit.go`)
 
-It is off by default. The owner turns it on per app (access key or OAuth app) in Notifications. When it is off for the calling app, `/mcp` is today's `ReverseProxy`, unchanged behind `gateMCP` and `refuseRevoked`.
+It is off by default. The owner turns it on per app (access key or OAuth app) in Notifications. When it is off for the calling app, `/mcp` is today's `ReverseProxy`, unchanged behind `gateMCP` and `refuseRevoked`. The one exception is `initialize`: its body is read, without being changed, so the proxy remembers whether the session can elicit. That way the owner can turn an app on after it has connected.
 
 For a `tools/call` from an app that is turned on and that declared the `elicitation` form capability:
 

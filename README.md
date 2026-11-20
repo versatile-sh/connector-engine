@@ -20,7 +20,9 @@ This builds one image (engine, `cnctl`, console) and starts the `person` profile
 | `make admin ARGS="tenants create t2"` | `cnctl admin` against the operator listener with the generated operator token |
 | `make test` | Go tests, the console typecheck and `adapters check` of both profiles |
 | `make check` | the scripted end-to-end check in `scripts/console-check.sh` (builds, runs, cleans up) |
+| `make notify` | `cnctl notify` on the host: desktop popups for held calls, with the device key paired in the console's Notifications page |
 
+- Approvals can reach you outside the console: in the AI app itself (MCP elicitation, per app), as a desktop popup (`make notify`), or in Discord, Slack or Telegram with buttons. Set them up under Notifications; nothing is sent until you add one. Design and threat model: [docs/approvals-surfaces.md](docs/approvals-surfaces.md).
 - `CONSOLE_PORT` is the only port setting. It sets the published port, the Host allowlist (`127.0.0.1`, `localhost` and `[::1]` at that port) and the OAuth redirect `http://127.0.0.1:<port>/oauth/callback`. Put it in `deploy/.env` to keep it.
 - Outside Docker: `connector-console --listen 127.0.0.1:<port> --engine http://127.0.0.1:8080 --engine-operator http://127.0.0.1:8081 --operator-token-file <file> --state <file>`; the allowlist follows the port of `--listen`.
 - Install links: `http://127.0.0.1:<port>/import?listing=<https URL of a listing in the Manifest format>` or `?mcp=<https MCP URL>` open a confirm screen (after sign-in) with the origin, title, icon, publisher and each function's proposed choice. Nothing is installed before the click.

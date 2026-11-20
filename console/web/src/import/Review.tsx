@@ -8,12 +8,13 @@ import { Notice } from "../ui/Notice";
 import { button } from "../ui/styles";
 import { Choices, ChoicesSkeleton } from "./Choices";
 import { Identity } from "./Identity";
+import { SkillChoice } from "./SkillChoice";
 import { useImport } from "./useImport";
 
 /** The second step of the import window: what the server is, the proposed access of each function, and Install. */
 export function Review({ source, onBack, onInstalled }: { source: ImportSource; onBack(): void; onInstalled(): void }) {
   const t = useT();
-  const { preview, install, accessOf, choose } = useImport(source);
+  const { preview, install, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
   const back = (
     <button type="button" className={button({ variant: "quiet", size: "sm" })} onClick={onBack}>
       <Arrow back />
@@ -55,10 +56,10 @@ export function Review({ source, onBack, onInstalled }: { source: ImportSource; 
           <Notice>{p.warning}</Notice>
         </div>
       ) : null}
-      <h3 className="mt-7 text-base font-medium">{t("import.choose")}</h3>
-      <p className="text-sm text-muted">{t("import.chooseIntro")}</p>
+      <h3 className="mt-7 text-base font-medium">{t(p.skill ? "import.skillChoose" : "import.choose")}</h3>
+      <p className="text-sm text-muted">{t(p.skill ? "import.skillChooseIntro" : "import.chooseIntro")}</p>
       <div className="mt-2">
-        <Choices tools={p.tools} accessOf={accessOf} choose={choose} />
+        {p.skill ? <SkillChoice skill={p.skill} access={skillAccess} onChange={setSkillAccess} /> : <Choices tools={p.tools} accessOf={accessOf} choose={choose} />}
       </div>
       <p role="alert" className="min-h-6 text-sm text-amber">
         {install.isError ? errorText(install.error) : ""}
@@ -73,12 +74,12 @@ export function Review({ source, onBack, onInstalled }: { source: ImportSource; 
             install.mutate(undefined, {
               onSuccess: ({ connector }) => {
                 onInstalled();
-                navigate(`/connectors/${encodeURIComponent(connector)}`);
+                navigate(connector ? `/connectors/${encodeURIComponent(connector)}` : "/skills");
               },
             })
           }
         >
-          {install.isPending ? t("import.installing") : t("import.install", { count: p.tools.length })}
+          {install.isPending ? t("import.installing") : p.skill ? t("import.addSkill") : t("import.install", { count: p.tools.length })}
           <Arrow />
         </button>
       </div>

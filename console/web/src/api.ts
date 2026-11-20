@@ -51,8 +51,44 @@ export type ProbedTool = {
   proposed: Access;
 };
 
+/** Where a skill folder was read, pinned to a full commit. */
+export type SkillSource = { repository: string; path: string; commit: string; url?: string };
+
+/** The licence a catalog states for a skill. */
+export type SkillLicence = { spdx?: string; from?: string; redistributable: boolean };
+
+/** What a skill is before or after it is imported: provenance, licence, scripts and files. */
+export type SkillFacts = {
+  name: string;
+  category?: string;
+  source: SkillSource;
+  licence: SkillLicence;
+  redistribution: "bundled" | "metadata_only";
+  has_scripts: boolean;
+  digest?: string;
+  files: { path: string; bytes: number }[];
+  keys: string[];
+};
+
+/** One access key's choice on one skill. */
+export type KeyAccess = { agent: string; access: Access };
+
+/** One installed skill with every access key's choice. */
+export type Skill = SkillFacts & {
+  id: string;
+  alias: string;
+  title: string;
+  description?: string;
+  publisher?: string;
+  version: string;
+  state: string;
+  unbound?: string[];
+  access: KeyAccess[];
+};
+
 export type Preview = {
-  kind: "mcp" | "listing";
+  kind: "mcp" | "listing" | "skill";
+  skill?: SkillFacts;
   url: string;
   host: string;
   name: string;

@@ -411,7 +411,7 @@ export const ptBR: Record<MessageKey, string> = {
   "decide.sessionHours": "Permitir por até {count} horas",
   "decide.sessionMinutes": "Permitir por até {count} minutos",
   "decide.always": "Permitir sempre",
-  "approve.sessionNote": "Uma sessão é o token atual do app, não uma conversa: termina quando o token é renovado, em até uma hora para apps conectados pelo navegador e em até 8 horas para uma chave criada aqui, mesmo em conversas novas.",
+  "approve.sessionNote": "Uma sessão é o token atual do app, não uma conversa: termina quando o token é renovado, em até uma hora para apps conectados pelo navegador e mais tarde para uma chave criada aqui, mesmo em conversas novas. O botão diz quanto tempo.",
   "approve.expires": "Expira",
   "approve.left": "em {time}",
   "approve.closed": "não está mais aguardando",

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { errorText, type Approval, type ApprovalChoice } from "../api";
-import { listChoices } from "../approve/choices";
+import { DEFAULT_CHOICES } from "../approve/choices";
 import { DecisionButtons } from "../approve/DecisionButtons";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import type { Locale } from "../i18n";
@@ -44,7 +44,7 @@ function Held({ approval, connector, skill, deciding, onDecide }: { approval: Ap
           </p>
         </div>
         <div className="min-w-0 @3xl:max-w-md">
-          <DecisionButtons choices={listChoices(approval.mode)} deciding={deciding} onChoose={onDecide} />
+          <DecisionButtons choices={DEFAULT_CHOICES} deciding={deciding} onChoose={onDecide} />
         </div>
       </div>
     </li>

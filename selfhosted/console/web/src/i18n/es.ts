@@ -411,7 +411,7 @@ export const es: Record<MessageKey, string> = {
   "decide.sessionHours": "Permitir hasta {count} horas",
   "decide.sessionMinutes": "Permitir hasta {count} minutos",
   "decide.always": "Permitir siempre",
-  "approve.sessionNote": "Una sesión es el token actual de la app, no una conversación: termina cuando el token se renueva, en menos de una hora para apps conectadas desde el navegador y en menos de 8 horas para una clave creada aquí, incluso en conversaciones nuevas.",
+  "approve.sessionNote": "Una sesión es el token actual de la app, no una conversación: termina cuando el token se renueva, en menos de una hora para apps conectadas desde el navegador y más tarde para una clave creada aquí, incluso en conversaciones nuevas. El botón dice cuánto tiempo.",
   "approve.expires": "Caduca",
   "approve.left": "en {time}",
   "approve.closed": "ya no está esperando",

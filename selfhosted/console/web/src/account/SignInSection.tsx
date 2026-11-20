@@ -75,12 +75,12 @@ function PasswordForm() {
         checked={checked}
         onChange={(value, again) => setNext({ value, again })}
       />
-      <p role="alert" className="mb-2 text-sm text-amber empty:hidden">
+      <p role="alert" className="mb-2 text-sm text-amber-400 empty:hidden">
         {change.isError && !refusal ? errorText(change.error) : ""}
       </p>
       {change.isSuccess ? (
         <div className="mb-3">
-          <Notice tone="accent">{t("account.changed")}</Notice>
+          <Notice tone="lime">{t("account.changed")}</Notice>
         </div>
       ) : null}
       <button type="submit" disabled={change.isPending} className={button({ variant: "secondary", size: "sm" })}>

@@ -1,11 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { Warning } from "../approve/Warning";
 import { errorText, type BackupSummary, type SetupResult } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { importBackup, inspectBackup } from "../mutations";
 import { navigate } from "../router";
 import { Field } from "../ui/Field";
+import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { button } from "../ui/styles";
 import { backupKindOf } from "./backup";
@@ -22,11 +22,11 @@ function SetupDone({ result, onClose }: { result: SetupResult; onClose(): void }
   const signIns = new Set(result.sign_ins ?? []);
   return (
     <div className="swap-in">
-      {added.length > 0 ? <Warning>{t("backup.result.signIn")}</Warning> : <p className="text-sm text-muted">{t("backup.result.nothing")}</p>}
+      {added.length > 0 ? <Notice live={false}>{t("backup.result.signIn")}</Notice> : <p className="text-sm text-muted">{t("backup.result.nothing")}</p>}
       <NameList title={t("backup.result.added")} rows={added.map((name) => ({ name, note: signIns.has(name) ? t("backup.result.needsSignIn") : undefined }))} />
       <NameList title={t("backup.result.kept")} rows={(result.kept ?? []).map((name) => ({ name }))} />
       <NameList title={t("backup.result.failed")} rows={Object.entries(result.failed ?? {}).map(([name, note]) => ({ name, note }))} />
-      <button type="button" autoFocus className={`${button({ variant: "accent", size: "sm" })} mt-6`} onClick={onClose}>
+      <button type="button" autoFocus className={`${button({ variant: "primary", size: "sm" })} mt-6`} onClick={onClose}>
         {t("backup.done")}
       </button>
     </div>
@@ -69,18 +69,18 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
           {needsPassphrase ? (
             <Field label={t("backup.passphrase")} hint={t("backup.import.passphraseHint")} type="password" autoComplete="off" required value={passphrase} onChange={(event) => setPassphrase(event.target.value)} />
           ) : null}
-          <p role="alert" className="mb-2 text-sm text-amber empty:hidden">
+          <p role="alert" className="mb-2 text-sm text-amber-400 empty:hidden">
             {inspect.isError ? errorText(inspect.error) : ""}
           </p>
-          <button type="submit" disabled={!file || inspect.isPending} className={`${button({ variant: "accent" })} w-full`}>
+          <button type="submit" disabled={!file || inspect.isPending} className={`${button({ variant: "primary" })} w-full`}>
             {inspect.isPending ? t("backup.inspecting") : t("backup.inspect")}
           </button>
         </form>
       ) : step.kind === "review" ? (
         <div className="swap-in">
           <BackupSummaryView summary={step.summary} />
-          {replaces ? <Warning className="mt-5">{t("backup.replaces")}</Warning> : null}
-          <p role="alert" className="mt-3 text-sm text-amber empty:hidden">
+          {replaces ? <Notice live={false} className="mt-5">{t("backup.replaces")}</Notice> : null}
+          <p role="alert" className="mt-3 text-sm text-amber-400 empty:hidden">
             {run.isError ? errorText(run.error) : ""}
           </p>
           <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -90,7 +90,7 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
               }}>
               {t("backup.back")}
             </button>
-            <button type="button" disabled={run.isPending} className={button({ variant: replaces ? "danger" : "accent", size: "sm" })} onClick={onImport}>
+            <button type="button" disabled={run.isPending} className={button({ variant: replaces ? "danger" : "primary", size: "sm" })} onClick={onImport}>
               {run.isPending ? t("backup.importing") : t(step.summary.kind === "setup" ? "backup.importSetup" : replaces ? "backup.replace" : "backup.restore")}
             </button>
           </div>

@@ -52,7 +52,7 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
   };
   const replaces = step.kind === "review" && step.summary.kind === "full" && step.summary.replaces;
   return (
-    <Sheet title={t(restoreOnly ? "auth.restore" : "backup.import.title")} closeLabel={t("common.close")} onClose={onClose}>
+    <Sheet title={t(restoreOnly ? "auth.restore" : "backup.import.title")} closeLabel={t("common.close")} onClose={run.isPending ? () => undefined : onClose}>
       {step.kind === "pick" ? (
         <form onSubmit={onInspect} className="swap-in">
           <Field

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { backupKindOf, daysSince, needsExport, passwordRefusal, restarted, secretProblem, NUDGE_DAYS, RESTART_GRACE_MS } from "./backup.ts";
+import { backupKindOf, daysSince, needsExport, passwordRefusal, restarted, secretProblem, NUDGE_DAYS, RESTART_FALLBACK_MS } from "./backup.ts";
 
 const now = new Date("2026-11-20T12:00:00Z");
 
@@ -111,21 +111,25 @@ describe("passwordRefusal", () => {
 });
 
 describe("restarted", () => {
-  describe("when ready within the grace", () => {
-    test("waits", () => {
-      assert.equal(restarted(true, 0, RESTART_GRACE_MS - 1), false);
+  describe("when ready after going down", () => {
+    test("is done", () => {
+      assert.equal(restarted(true, true, 0), true);
     });
   });
 
-  describe("when ready after the grace", () => {
-    test("is done", () => {
-      assert.equal(restarted(true, 0, RESTART_GRACE_MS), true);
+  describe("when ready without going down", () => {
+    test("waits for the fallback", () => {
+      assert.equal(restarted(true, false, RESTART_FALLBACK_MS - 1), false);
+    });
+
+    test("is done after the fallback", () => {
+      assert.equal(restarted(true, false, RESTART_FALLBACK_MS), true);
     });
   });
 
   describe("when not ready", () => {
     test("waits", () => {
-      assert.equal(restarted(false, 0, RESTART_GRACE_MS * 10), false);
+      assert.equal(restarted(false, true, RESTART_FALLBACK_MS * 10), false);
     });
   });
 });

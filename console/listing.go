@@ -1,7 +1,6 @@
 package console
 
 import (
-	"context"
 	"encoding/json"
 	"net/url"
 	"regexp"
@@ -47,15 +46,6 @@ func Untrusted(m port.Manifest) port.Manifest {
 	}
 	m.Functions = fns
 	return m
-}
-
-// FetchManifest downloads a listing over public https only; a deep link never reaches a local address.
-func FetchManifest(ctx context.Context, rawURL string) (port.Manifest, error) {
-	body, _, err := Reach{}.Get(ctx, rawURL, maxListingBytes, "application/yaml, application/json, text/plain")
-	if err != nil {
-		return port.Manifest{}, err
-	}
-	return manifestFrom(rawURL, body)
 }
 
 func manifestFrom(rawURL string, body []byte) (port.Manifest, error) {

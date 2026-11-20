@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"maps"
 	"net/http"
 	"net/url"
 	"slices"
@@ -52,11 +53,7 @@ func (s *Sessions) persist() {
 	if s.state == nil {
 		return
 	}
-	snapshot := make(map[string]StoredSession, len(s.byKey))
-	for k, v := range s.byKey {
-		snapshot[k] = v
-	}
-	_ = s.state.PutSessions(snapshot)
+	_ = s.state.PutSessions(maps.Clone(s.byKey))
 }
 
 // Start opens a session, sets its HttpOnly SameSite=Strict cookie and returns its CSRF token.

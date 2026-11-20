@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -186,11 +187,7 @@ func (s *State) OwnerName() string {
 func (s *State) Sessions() map[string]StoredSession {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := make(map[string]StoredSession, len(s.data.Sessions))
-	for k, v := range s.data.Sessions {
-		out[k] = v
-	}
-	return out
+	return maps.Collect(maps.All(s.data.Sessions))
 }
 
 // PutSessions replaces the stored sessions.

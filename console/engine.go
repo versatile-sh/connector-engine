@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
@@ -102,9 +103,7 @@ func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, 
 // Mint asks the local issuer for a token with these claims, living ttl.
 func (e *Engine) Mint(ctx context.Context, claims map[string]any, ttl time.Duration) (string, error) {
 	body := map[string]any{"ttl": ttl.String()}
-	for k, v := range claims {
-		body[k] = v
-	}
+	maps.Copy(body, claims)
 	var out struct {
 		Token string `json:"token"`
 	}

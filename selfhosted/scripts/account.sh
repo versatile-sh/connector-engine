@@ -18,7 +18,7 @@ host() { "${compose[@]}" exec -T console /usr/local/bin/connector-console host "
 
 ask() {
   local answer
-  read -r -s -p "$1: " answer </dev/tty
+  IFS= read -r -s -p "$1: " answer </dev/tty
   echo >&2
   printf '%s' "$answer"
 }
@@ -63,7 +63,10 @@ export_backup() {
   mkdir -p "$backups"
   if [ "${MODE:-full}" = setup ]; then
     out="$backups/connector-engine-setup-$stamp.setup.yaml"
-    host POST "/export?mode=setup" </dev/null >"$out.part"
+    if ! host POST "/export?mode=setup" </dev/null >"$out.part"; then
+      rm -f "$out.part"
+      exit 1
+    fi
     mv "$out.part" "$out"
     echo "wrote $out (no credentials: share it with anyone)"
     return
@@ -113,6 +116,7 @@ case "$op" in
     password="$(ask_twice "New console password (at least 10 characters)")"
     printf '%s' "$password" | host POST /password
     echo "password changed; every console session is signed out"
+    echo "access keys and apps signed in through the browser still work: revoke them on the Access page if you suspect a compromise"
     ;;
   export) export_backup ;;
   import) import_file ;;

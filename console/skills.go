@@ -2,7 +2,6 @@ package console
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -104,7 +103,7 @@ func (c *Console) skillFunction(ctx context.Context, conn string) (port.Function
 // InstallSkill installs a skill listing, accepts its pinned folder, opens it to the workspace and gives every current access key the owner's choice; later keys start off.
 func (c *Console) InstallSkill(ctx context.Context, m port.Manifest, a Access) (string, error) {
 	if m.Kind != port.KindSkill || m.Skill == nil {
-		return "", fmt.Errorf("the listing is not a skill")
+		return "", invalid("the listing is not a skill")
 	}
 	lv, err := c.createListing(ctx, m)
 	if err != nil {
@@ -183,7 +182,7 @@ func (c *Console) setKeyRow(ctx context.Context, conn string, a Agent, access Ac
 // SetSkillAccess writes the owner's choice for one access key on one skill: off removes its row, on allows, ask asks once per session.
 func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access Access) error {
 	if !access.Valid() {
-		return fmt.Errorf("access %q is not off, on or ask", access)
+		return invalid("access %q is not off, on or ask", access)
 	}
 	agents := c.liveAgents()
 	i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == agent })

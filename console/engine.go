@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -74,7 +75,7 @@ func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, 
 	}
 	resp, err := e.client().Do(req)
 	if err != nil {
-		return fmt.Errorf("engine unreachable: %w", err)
+		return unreachable(fmt.Errorf("engine unreachable: %w", err))
 	}
 	defer resp.Body.Close()
 	if br, ok := out.(bodyReader); ok && resp.StatusCode < 300 {
@@ -111,7 +112,7 @@ func (e *Engine) Mint(ctx context.Context, claims map[string]any, ttl time.Durat
 		return "", err
 	}
 	if out.Token == "" {
-		return "", fmt.Errorf("the local issuer returned no token")
+		return "", unreachable(errors.New("the local issuer returned no token"))
 	}
 	return out.Token, nil
 }

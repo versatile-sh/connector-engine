@@ -128,7 +128,7 @@ func (c *Console) resourceOK(r *http.Request, resource string) bool {
 
 func (c *Console) challenge(w http.ResponseWriter, r *http.Request, extra string) {
 	w.Header().Set("WWW-Authenticate", c.challengeValue(c.origin(r), extra))
-	writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "connect this app from the console: open " + c.origin(r) + "/access"})
+	writeError(w, http.StatusUnauthorized, "connect this app from the console: open "+c.origin(r)+"/access")
 }
 
 func (c *Console) challengeValue(origin, extra string) string {
@@ -339,7 +339,7 @@ func DestinationOf(redirect string) Destination {
 func (c *Console) consentInfo(w http.ResponseWriter, r *http.Request) {
 	req, ok := c.pendingRequest(r.PathValue("id"), false)
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
+		writeError(w, http.StatusNotFound, "this request expired or was already answered")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"client": req.client.Name, "redirect": redirectTarget(req.redirect), "destination": DestinationOf(req.redirect)})
@@ -347,7 +347,7 @@ func (c *Console) consentInfo(w http.ResponseWriter, r *http.Request) {
 
 func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 	if password == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "type your password to allow the app", "code": "password_required"})
+		writeJSON(w, http.StatusBadRequest, apiError{Error: "type your password to allow the app", Code: "password_required"})
 		return false
 	}
 	c.loginMu.Lock()
@@ -356,18 +356,18 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 	c.consentFails = slices.DeleteFunc(c.consentFails, func(t time.Time) bool { return now.Sub(t) > time.Minute })
 	if len(c.consentFails) >= consentFailsPerMin {
 		w.Header().Set("Retry-After", "60")
-		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many wrong passwords, try again in a minute", "code": "slow_down"})
+		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
 		return false
 	}
 	ok, err := c.State.CheckLogin(c.State.OwnerName(), password)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot read the account"})
+		writeError(w, http.StatusInternalServerError, "cannot read the account")
 		return false
 	}
 	if !ok {
 		c.consentFails = append(c.consentFails, now)
 		time.Sleep(500 * time.Millisecond)
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "wrong password", "code": "wrong_password"})
+		writeJSON(w, http.StatusForbidden, apiError{Error: "wrong password", Code: "wrong_password"})
 		return false
 	}
 	return true
@@ -383,7 +383,7 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	}
 	id := r.PathValue("id")
 	if _, ok := c.pendingRequest(id, false); !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
+		writeError(w, http.StatusNotFound, "this request expired or was already answered")
 		return
 	}
 	if in.Approve && !c.ownerConfirms(w, in.Password) {
@@ -391,7 +391,7 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	}
 	req, ok := c.pendingRequest(id, true)
 	if !ok {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
+		writeError(w, http.StatusNotFound, "this request expired or was already answered")
 		return
 	}
 	params := map[string]string{"state": req.state, "iss": c.origin(r)}

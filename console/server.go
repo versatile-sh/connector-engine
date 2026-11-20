@@ -127,47 +127,15 @@ func (c *Console) Handler() http.Handler {
 	return c.Guard.Wrap(mux)
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-func (c *Console) fail(w http.ResponseWriter, err error) {
-	var ee *EngineError
-	if errors.As(err, &ee) {
-		status := ee.Status
-		if status >= 500 {
-			status = http.StatusBadGateway
-		}
-		writeJSON(w, status, map[string]string{"error": ee.Detail, "code": ee.Code})
-		return
-	}
-	writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-}
-
-func readJSON(w http.ResponseWriter, r *http.Request, into any) bool {
-	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
-		writeJSON(w, http.StatusUnsupportedMediaType, map[string]string{"error": "the body is JSON"})
-		return false
-	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxAPIBody)).Decode(into); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the body is not valid JSON"})
-		return false
-	}
-	return true
-}
-
 func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		csrf, ok := c.Sessions.Get(r)
 		if !ok {
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in first"})
+			writeError(w, http.StatusUnauthorized, "sign in first")
 			return
 		}
 		if !safeMethod(r.Method) && !csrfOK(csrf, r.Header.Get(csrfHeader)) {
-			writeJSON(w, http.StatusForbidden, map[string]string{"error": "missing or wrong CSRF token"})
+			writeError(w, http.StatusForbidden, "missing or wrong CSRF token")
 			return
 		}
 		next(w, r)
@@ -200,7 +168,7 @@ func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, ErrOwnerExists) {
 			status = http.StatusConflict
 		}
-		writeJSON(w, status, map[string]string{"error": err.Error()})
+		writeError(w, status, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]string{"csrf": c.Sessions.Start(w)})
@@ -219,11 +187,11 @@ func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 	c.loginMu.Unlock()
 	switch {
 	case errors.Is(err, ErrNoOwner):
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "create the owner account first"})
+		writeError(w, http.StatusConflict, "create the owner account first")
 	case err != nil:
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot read the account"})
+		writeError(w, http.StatusInternalServerError, "cannot read the account")
 	case !ok:
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "wrong username or password"})
+		writeError(w, http.StatusUnauthorized, "wrong username or password")
 	default:
 		writeJSON(w, http.StatusOK, map[string]string{"csrf": c.Sessions.Start(w)})
 	}
@@ -340,7 +308,7 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		pv.manifest = m
 		return pv, nil
 	}
-	return Preview{}, errors.New("give exactly one of mcp or listing")
+	return Preview{}, invalid("give exactly one of mcp or listing")
 }
 
 func (c *Console) get() skillcatalog.Get {
@@ -359,11 +327,11 @@ func (c *Console) importSkill(w http.ResponseWriter, r *http.Request, in importR
 		access = AccessOn
 	}
 	if !access.Valid() {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "access is off, on or ask"})
+		writeError(w, http.StatusBadRequest, "access is off, on or ask")
 		return
 	}
 	if in.Digest != p.Skill.Digest {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "the skill changed since the preview; review it again"})
+		writeError(w, http.StatusConflict, "the skill changed since the preview; review it again")
 		return
 	}
 	m, err := skillcatalog.Manifest(r.Context(), c.get(), p.URL, p.entry)
@@ -429,7 +397,7 @@ func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
 	}
 	for name, a := range in.Choices {
 		if !a.Valid() {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "function " + name + ": access is off, on or ask"})
+			writeError(w, http.StatusBadRequest, "function "+name+": access is off, on or ask")
 			return
 		}
 	}
@@ -486,7 +454,7 @@ func (c *Console) setItemAccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if port.ItemKind(in.Name) == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": in.Name + " is not a prompt, a resource or the server instructions"})
+		writeError(w, http.StatusBadRequest, in.Name+" is not a prompt, a resource or the server instructions")
 		return
 	}
 	if err := c.SetAccess(r.Context(), r.PathValue("id"), in.Name, in.Access); err != nil {
@@ -513,12 +481,12 @@ func (c *Console) setHeaders(w http.ResponseWriter, r *http.Request) {
 	}
 	for k, v := range in.Headers {
 		if k == "" || strings.ContainsAny(k, " :\r\n") || strings.ContainsAny(v, "\r\n") {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "a header name has no spaces or colons and a value has no line breaks"})
+			writeError(w, http.StatusBadRequest, "a header name has no spaces or colons and a value has no line breaks")
 			return
 		}
 	}
 	if len(in.Headers) == 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "give at least one header"})
+		writeError(w, http.StatusBadRequest, "give at least one header")
 		return
 	}
 	if err := c.SetHeaderSecret(r.Context(), r.PathValue("id"), in.Headers); err != nil {
@@ -675,7 +643,7 @@ func FetchIcon(ctx context.Context, raw string) ([]byte, string, error) {
 	if rest, ok := strings.CutPrefix(raw, "data:"); ok {
 		meta, data, found := strings.Cut(rest, ",")
 		if !found || !strings.HasSuffix(meta, ";base64") {
-			return nil, "", errors.New("only base64 data URIs are read")
+			return nil, "", invalid("only base64 data URIs are read")
 		}
 		var err error
 		if body, err = base64.StdEncoding.DecodeString(data); err != nil {
@@ -692,7 +660,7 @@ func FetchIcon(ctx context.Context, raw string) ([]byte, string, error) {
 	}
 	kind := http.DetectContentType(body)
 	if !slices.Contains(iconTypes, kind) {
-		return nil, "", errors.New("the icon is not a PNG, JPEG, GIF, WebP or ICO image")
+		return nil, "", invalid("the icon is not a PNG, JPEG, GIF, WebP or ICO image")
 	}
 	return body, kind, nil
 }
@@ -752,7 +720,7 @@ func (c *Console) refuseRevoked(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if claims, ok := bearerClaims(r.Header.Get("Authorization")); ok && c.State.Revoked(claims.Agent, int64(claims.IssuedAt)) {
 			w.Header().Set("WWW-Authenticate", c.challengeValue(c.origin(r), `error="invalid_token", error_description="the access key was revoked"`))
-			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "the access key was revoked"})
+			writeError(w, http.StatusUnauthorized, "the access key was revoked")
 			return
 		}
 		next.ServeHTTP(w, r)

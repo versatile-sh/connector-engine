@@ -103,7 +103,7 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 	httpClient.Timeout = 0
 	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: u.String(), HTTPClient: httpClient, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
 	if err != nil {
-		return Probed{}, fmt.Errorf("could not connect to %s: %w", u.Host, err)
+		return Probed{}, unreachable(fmt.Errorf("could not connect to %s: %w", u.Host, err))
 	}
 	defer session.Close()
 	out := Probed{URL: u.String()}
@@ -116,7 +116,7 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 	}
 	for tool, err := range session.Tools(ctx, nil) {
 		if err != nil {
-			return out, fmt.Errorf("tools/list on %s: %w", u.Host, err)
+			return out, unreachable(fmt.Errorf("tools/list on %s: %w", u.Host, err))
 		}
 		ro, de, prop := Propose(tool.Annotations)
 		title := tool.Title
@@ -126,7 +126,7 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 		out.Tools = append(out.Tools, ProbedTool{Name: tool.Name, Title: title, Description: tool.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
 	}
 	if out.Items, err = probeItems(ctx, session, out.Instructions); err != nil {
-		return out, fmt.Errorf("%w on %s", err, u.Host)
+		return out, unreachable(fmt.Errorf("%w on %s", err, u.Host))
 	}
 	if out.Icon == "" {
 		out.Icon = faviconOf(out.WebsiteURL, u.String())

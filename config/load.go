@@ -102,7 +102,7 @@ func (c Config) values() map[string]string {
 		"permission.destructiveMax": c.Permission.DestructiveMax, "permission.defaultMode": c.Permission.DefaultMode,
 		"resultFilter.adapter": c.ResultFilter.Adapter, "projection.default": c.Projection.Default, "audit.arguments": c.Audit.Arguments,
 		"gateway.relayInstructions": c.Gateway.RelayInstructions, "gateway.upstreamContent": c.Gateway.UpstreamContent, "gateway.skills": c.Gateway.Skills, "approval.proofOfReading": c.Approval.ProofOfReading,
-		"overlay.suggester": c.Overlay.Suggester, "outbox.signing": c.Outbox.Signing, "secrets.adapter": c.Secrets.Adapter,
+		"overlay.suggester": c.Overlay.Suggester, "outbox.signing": c.Outbox.Signing,
 		"credentials.fallback": c.Credentials.Fallback, "exposure.onTrifecta": c.Exposure.OnTrifecta, "apps.appOnlyFunctions": c.Apps.AppOnlyFunctions,
 		"permission.unclassified": c.Permission.Unclassified, "catalog.defaultCeiling": c.Catalog.DefaultCeiling,
 		"catalog.offerDefault": c.Catalog.OfferDefault, "runtime.container.network": c.Runtime.Container.Network,
@@ -140,12 +140,6 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 			add(adapters.LevelError, "resultFilter.locales", "%q is not one of %s", l, strings.Join(builtin.Locales(), ", "))
 		}
 	}
-	if secrets := append([]string{"memory"}, c.names(PortSecrets)...); !slices.Contains(secrets, c.Secrets.Adapter) {
-		add(adapters.LevelError, "secrets.adapter", "%q is not one of %s, the secrets adapters of this build", c.Secrets.Adapter, strings.Join(secrets, ", "))
-	}
-	if op := c.Secrets.OnePassword; c.Secrets.Adapter == "onepassword" && (op.ConnectURL == "" || op.TokenRef == "" || op.Vault == "" || op.Item == "" || op.Field == "") {
-		add(adapters.LevelError, "secrets.onePassword", "the onepassword adapter needs connectUrl, tokenRef, vault, item and field")
-	}
 	if len(c.Auth.Issuers) == 0 && !c.Auth.LocalIssuer.Enabled {
 		add(level, "auth.issuers", "the list is empty: no token can be verified")
 	}
@@ -164,11 +158,6 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if len(c.Mutations()) > 0 && !acknowledged(AckManageMutations) {
 		add(level, "manage.mcp.operations", "mutations on the management MCP surface; acknowledge %s to offer them", AckManageMutations)
 	}
-	switch {
-	case acknowledged(AckPlaintextRootKey):
-	case c.Secrets.Adapter == "localfile", c.Secrets.Adapter == "memory":
-		add(level, "secrets.adapter", "%s keeps the root key in plaintext; acknowledge %s to run with it", c.Secrets.Adapter, AckPlaintextRootKey)
-	}
 	if c.Runtime.AllowPrivateHosts && !acknowledged(AckPrivateEgress) {
 		add(level, "runtime.allowPrivateHosts", "runtimes and sources may dial loopback, private and metadata addresses; acknowledge %s to allow it", AckPrivateEgress)
 	}
@@ -178,7 +167,6 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if c.Approval.SweepInterval <= 0 || c.Server.ShutdownGrace < 0 {
 		add(adapters.LevelError, "approval.sweepInterval", "durations are positive")
 	}
-	fs = append(fs, c.builtinFindings(acknowledged)...)
 	return append(fs, c.inert()...)
 }
 

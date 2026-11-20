@@ -327,9 +327,9 @@ type Credentials struct {
 	Clients           []OAuthClient `yaml:"clients"`
 }
 
-// Secrets is secrets.*; Dir is where the file-backed adapters keep their root key, UnlockSocket where an adapter of the build receives its unlock key.
+// Secrets is secrets.*; Adapter is a deprecated alias of ports.secrets, Dir is where the file-backed adapters keep their root key, UnlockSocket where an adapter of the build receives its unlock key.
 type Secrets struct {
-	Adapter      string        `yaml:"adapter"`
+	Adapter      string        `yaml:"adapter,omitempty"`
 	DataKeyCache time.Duration `yaml:"dataKeyCache"`
 	Dir          string        `yaml:"dir"`
 	UnlockSocket string        `yaml:"unlockSocket"`
@@ -412,7 +412,7 @@ func Default() Config {
 			Reflection: ReflectionSource{Targets: []string{}}, BSR: BSRSource{Owners: []string{}, Targets: map[string]string{}}, SyncInterval: 6 * time.Hour},
 		Listing:     Listing{RequireDigest: true},
 		Credentials: Credentials{RefreshMargin: 300 * time.Second, RegistrationOrder: []string{"pre_registered", "cimd", "dcr", "manual"}, Fallback: "none", Clients: []OAuthClient{}},
-		Secrets:     Secrets{Adapter: "localfile", DataKeyCache: 300 * time.Second, Dir: "/var/lib/connector-engine/secrets"},
+		Secrets:     Secrets{DataKeyCache: 300 * time.Second, Dir: "/var/lib/connector-engine/secrets"},
 		Runtime:     Runtime{Adapters: []string{"remote", "declarative"}, CallTimeout: 60 * time.Second, Container: Container{CPU: 1, Memory: "2GB", IdleStop: 60 * time.Second, Network: "none"}},
 		Audit:       Audit{Arguments: "reference"},
 		Outbox:      Outbox{Signing: "standard-webhooks"},

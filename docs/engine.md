@@ -20,6 +20,8 @@ CN_OPERATOR_TOKEN=dev connector-engine --config config/connector-engine.yaml --a
 | `connector-engine.yaml` | every setting, with its default in `config/connector-engine.yaml` |
 | `adapters.yaml` | the adapter chosen for each port: store, secrets, auth, runtime, source, sink, filter, index |
 
+`ports.secrets` is the only selector of the secrets adapter. The older key `secrets.adapter` in `connector-engine.yaml` still loads with a deprecation warning, and boot refuses it when it names another adapter than `ports.secrets`.
+
 `connector-engine adapters check` validates both files the way boot does. Run it before you deploy a change.
 
 | Setting | Behaviour |

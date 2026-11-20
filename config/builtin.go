@@ -26,7 +26,7 @@ const (
 	SettingNumber = adapters.ConfigNumber
 )
 
-// Builtin declares an adapter of a port: its name (selected as builtin:<Name>, or the memory tier when Name is memory), its capabilities, the settings it accepts and the checks it adds to connector-engine.yaml.
+// Builtin declares an adapter of a port: its name (selected as builtin:<Name>, or the memory tier when Name is memory), its capabilities, the settings it accepts and the checks it adds to connector-engine.yaml once selected.
 type Builtin struct {
 	Port         string
 	Name         string
@@ -47,20 +47,6 @@ func (b Builtin) Selection() string {
 func (c Config) With(builtins ...Builtin) Config {
 	c.builtins = slices.Clone(builtins)
 	return c
-}
-
-func (c Config) has(port, name string) bool {
-	return slices.ContainsFunc(c.builtins, func(b Builtin) bool { return b.Port == port && b.Name == name })
-}
-
-func (c Config) names(port string) []string {
-	var out []string
-	for _, b := range c.builtins {
-		if b.Port == port && b.Name != adapters.TierMemory {
-			out = append(out, b.Name)
-		}
-	}
-	return out
 }
 
 func (c Config) declare(ports map[string]adapters.PortSpec) {
@@ -91,12 +77,22 @@ func (c Config) declare(ports map[string]adapters.PortSpec) {
 	}
 }
 
-func (c Config) builtinFindings(acknowledged func(string) bool) Findings {
+func (c Config) builtinFindings(f adapters.File) Findings {
 	var fs Findings
 	for _, b := range c.builtins {
-		if b.Check != nil {
-			fs = append(fs, b.Check(c, acknowledged)...)
+		if b.Check != nil && slices.ContainsFunc(f.Ports[b.Port].Use, func(s string) bool {
+			u, err := adapters.ParseUse(s)
+			return err == nil && selection(u) == b.Selection()
+		}) {
+			fs = append(fs, b.Check(c, f.Acknowledged)...)
 		}
 	}
 	return fs
+}
+
+func selection(u adapters.Use) string {
+	if u.Tier == adapters.TierMemory {
+		return adapters.TierMemory
+	}
+	return u.Tier + ":" + u.Name
 }

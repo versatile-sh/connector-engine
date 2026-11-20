@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { errorText } from "../api";
-import { Wordmark } from "../Brand";
+import { Frame } from "../Frame";
 import { useT } from "../i18n/I18nProvider";
-import { LanguageSwitch } from "../LanguageSwitch";
 import { decideApproval } from "../mutations";
 import { approvalQuery, sessionQuery } from "../queries";
 import { navigate } from "../router";
+import { Display } from "../ui/Display";
 import { Notice } from "../ui/Notice";
 import { SKELETON, SURFACE, button } from "../ui/styles";
 import { ApprovalCard } from "./ApprovalCard";
@@ -15,26 +15,13 @@ type ApprovePageProps = { id: string; token: string | null; signedIn: boolean };
 
 const statusOf = (error: unknown): number => (typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 0);
 
-function Frame({ children }: { children: ReactNode }) {
-  return (
-    <div className="relative isolate flex min-h-dvh flex-col overflow-x-clip">
-      <div aria-hidden="true" className="backdrop-beam pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem]" />
-      <header className="mx-auto flex w-full max-w-xl flex-wrap items-center justify-between gap-3 px-5 pt-6">
-        <Wordmark />
-        <LanguageSwitch />
-      </header>
-      <main id="main" className="mx-auto flex w-full min-w-0 max-w-xl flex-1 flex-col justify-center px-5 py-10">
-        {children}
-      </main>
-    </div>
-  );
-}
-
 function Message({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
-    <section className={`${SURFACE} arrive flex flex-col items-center px-6 py-12 text-center`}>
-      <h1 className="serif-room font-serif text-3xl leading-none font-normal tracking-[-0.02em] [overflow-wrap:anywhere]">{title}</h1>
-      <p className="mt-3 max-w-sm text-muted">{body}</p>
+    <section className={`${SURFACE} arrive px-6 py-10 sm:px-8`}>
+      <Display size="title" className="[overflow-wrap:anywhere]">
+        {title}
+      </Display>
+      <p className="mt-4 max-w-sm text-pretty text-muted">{body}</p>
       {action ? <div className="mt-6">{action}</div> : null}
     </section>
   );
@@ -53,7 +40,7 @@ export function ApprovePage({ id, token, signedIn }: ApprovePageProps) {
   };
   if (approval.data) {
     return (
-      <Frame>
+      <Frame width="narrow">
         <ApprovalCard
           approval={approval.data}
           signedIn={signedIn}
@@ -72,7 +59,7 @@ export function ApprovePage({ id, token, signedIn }: ApprovePageProps) {
   }
   if (approval.isPending) {
     return (
-      <Frame>
+      <Frame width="narrow">
         <div aria-hidden="true" className={`${SKELETON} h-96`} />
         <p role="status" className="sr-only">
           {t("app.loading")}
@@ -82,13 +69,13 @@ export function ApprovePage({ id, token, signedIn }: ApprovePageProps) {
   }
   const status = statusOf(approval.error);
   return (
-    <Frame>
+    <Frame width="narrow">
       {status === 401 ? (
         <Message
           title={t("approve.signInTitle")}
           body={t(link ? "approve.linkInvalid" : "approve.signInBody")}
           action={
-            <button type="button" className={button({ variant: "accent" })} onClick={signIn}>
+            <button type="button" className={button({ variant: "primary" })} onClick={signIn}>
               {t("approve.signIn")}
             </button>
           }

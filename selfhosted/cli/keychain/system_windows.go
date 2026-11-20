@@ -11,13 +11,16 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// System returns DPAPI: the key is encrypted for the signed-in Windows user in %LOCALAPPDATA%\connector-engine.
-func System() Keychain {
+// System returns the keychain of the unlock keys, under Service.
+func System() Keychain { return SystemFor(Service) }
+
+// SystemFor returns DPAPI: each secret is encrypted for the signed-in Windows user in %LOCALAPPDATA%\<service>.
+func SystemFor(service string) Keychain {
 	dir, err := os.UserCacheDir()
 	if err != nil {
 		return nil
 	}
-	return dpapi{dir: filepath.Join(dir, Service)}
+	return dpapi{dir: filepath.Join(dir, service)}
 }
 
 type dpapi struct{ dir string }

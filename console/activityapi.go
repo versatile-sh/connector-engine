@@ -2,14 +2,12 @@ package console
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/agents-control/connector-engine/core/names"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -89,50 +87,6 @@ func (f activityFilter) found(r ActivityCall) bool {
 	return f.search == "" || strings.Contains(strings.ToLower(r.Function), f.search) || strings.Contains(strings.ToLower(r.Skill), f.search)
 }
 
-type itemStream[T any] struct {
-	keep  func(T) bool
-	items []T
-}
-
-func (s *itemStream[T]) readBody(r io.Reader) error {
-	d := json.NewDecoder(r)
-	if tok, err := d.Token(); err != nil || tok != json.Delim('{') {
-		return unreachable(errors.Join(errors.New("the engine answered no object"), err))
-	}
-	for d.More() {
-		tok, err := d.Token()
-		if err != nil {
-			return err
-		}
-		if tok != "items" {
-			var skip json.RawMessage
-			if err := d.Decode(&skip); err != nil {
-				return err
-			}
-			continue
-		}
-		if tok, err = d.Token(); err != nil || tok == nil {
-			return err
-		}
-		if tok != json.Delim('[') {
-			return unreachable(errors.New("the engine answered items that are not a list"))
-		}
-		for d.More() {
-			var v T
-			if err := d.Decode(&v); err != nil {
-				return err
-			}
-			if s.keep(v) {
-				s.items = append(s.items, v)
-			}
-		}
-		if _, err := d.Token(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 type engineFacts struct {
 	calls     []port.Call
 	approvals map[port.ApprovalID]port.Approval
@@ -153,19 +107,19 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 			f.byAlias[v.Connector.Alias] = string(v.Connector.ID)
 		}
 	}
-	calls := &itemStream[port.Call]{keep: func(x port.Call) bool { return !x.StartedAt.Before(since) }}
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/calls"+q("agent", agent), nil, calls); err != nil {
+	calls, err := list[port.Call](ctx, c.Engine, "/v1/calls"+q("agent", agent, "since", since.UTC().Format(time.RFC3339Nano)))
+	if err != nil {
 		return engineFacts{}, err
 	}
-	approvals := &itemStream[port.Approval]{keep: func(x port.Approval) bool { return !x.CreatedAt.Before(since.Add(-activityWindow)) }}
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals"+q("agent", agent), nil, approvals); err != nil {
+	approvals, err := list[port.Approval](ctx, c.Engine, "/v1/approvals"+q("agent", agent, "since", since.Add(-activityWindow).UTC().Format(time.RFC3339Nano)))
+	if err != nil {
 		return engineFacts{}, err
 	}
-	for _, a := range approvals.items {
+	for _, a := range approvals {
 		a.Arguments = nil
 		f.approvals[a.ID] = a
 	}
-	f.calls = calls.items
+	f.calls = calls
 	for _, call := range f.calls {
 		if call.Function == port.SkillFunction {
 			f.skills[string(call.Connector)] = false
@@ -178,6 +132,13 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 		}
 	}
 	return f, nil
+}
+
+func firstAgent(agent string, captures []Capture) string {
+	if agent == "" && len(captures) > 0 {
+		return captures[0].Agent
+	}
+	return agent
 }
 
 type joined struct {
@@ -201,7 +162,7 @@ func earliest(list []*port.Call, cp *Capture, used map[port.CallID]bool) *port.C
 	return best
 }
 
-func join(captures []Capture, f engineFacts) []joined {
+func join(captures []Capture, f engineFacts, sep string) []joined {
 	open := map[callKey][]*port.Call{}
 	byApproval := map[port.ApprovalID]*port.Call{}
 	for i := range f.calls {
@@ -216,12 +177,21 @@ func join(captures []Capture, f engineFacts) []joined {
 	out := make([]joined, 0, len(captures)+len(f.calls))
 	for i := range captures {
 		cp := &captures[i]
-		alias, fn, found := strings.Cut(cp.Tool, toolSeparator)
+		alias, fn, found := strings.Cut(cp.Tool, sep)
 		switch {
 		case cp.Skill != "":
 			alias, fn = cp.Skill, port.SkillFunction
+		case cp.Item == port.ItemResource:
+			var uri string
+			if alias, uri, found = names.SplitResourceURI(cp.Tool); found {
+				fn = port.ItemResource + uri
+			} else {
+				alias, fn = "", cp.Tool
+			}
 		case !found:
 			alias, fn = "", cp.Tool
+		case cp.Item == port.ItemPrompt:
+			fn = port.ItemPrompt + fn
 		}
 		conn := f.byAlias[alias]
 		var call *port.Call
@@ -373,8 +343,15 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 	return p
 }
 
+var activityParams = []string{"from", "to", "connector", "agent", "search", "outcome"}
+
 func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, error) {
 	qv := r.URL.Query()
+	for name := range qv {
+		if !slices.Contains(activityParams, name) {
+			return activityFilter{}, invalid("unknown parameter %q: the activity takes %s", name, strings.Join(activityParams, ", "))
+		}
+	}
 	now := time.Now().UTC()
 	f := activityFilter{from: now.Add(-activityWindow), to: now, connector: qv.Get("connector"), agent: qv.Get("agent"), search: strings.ToLower(strings.TrimSpace(qv.Get("search"))), outcome: CallOutcome(qv.Get("outcome"))}
 	for name, into := range map[string]*time.Time{"from": &f.from, "to": &f.to} {
@@ -436,7 +413,7 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, pageOf(join(captures, facts), f))
+	writeJSON(w, http.StatusOK, pageOf(join(captures, facts, c.separator(r.Context(), firstAgent(f.agent, captures))), f))
 }
 
 func detailOf(j joined) ActivityDetail {
@@ -491,7 +468,7 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	for _, j := range join(captures, facts) {
+	for _, j := range join(captures, facts, c.separator(r.Context(), agent)) {
 		if j.row.ID == id {
 			writeJSON(w, http.StatusOK, detailOf(j))
 			return

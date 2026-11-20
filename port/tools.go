@@ -18,6 +18,12 @@ const ToolSkillList = "skill_list"
 // ToolSkillLoad is the gateway meta-tool that returns a skill's SKILL.md or one of its files.
 const ToolSkillLoad = "skill_load"
 
+// SkillLoad is the arguments of skill_load: the skill skill_list names and a file of its folder, SKILL.md when empty.
+type SkillLoad struct {
+	Skill string `json:"skill"`
+	Path  string `json:"path"`
+}
+
 // SkillFunction is the one function of a skill listing, short so that any alias fits the exposed-name limit.
 const SkillFunction = "skill"
 

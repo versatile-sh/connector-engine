@@ -63,6 +63,9 @@ func TestThePersonProfileReachesLocalServersAndKeepsItsRetention(t *testing.T) {
 	if !cfg.Server.Snapshot {
 		t.Fatal("the person profile does not serve the snapshot its console backs up")
 	}
+	if cfg.Runtime.LoopbackHost != "host.docker.internal" {
+		t.Fatalf("the person engine dials a loopback server as %q, not the host", cfg.Runtime.LoopbackHost)
+	}
 	week, quarter := 7*24*time.Hour, 90*24*time.Hour
 	if want := (config.Retention{Every: time.Hour, DeliveredEvents: week, IdempotencyKeys: week, Audit: quarter, Calls: quarter}); cfg.Retention != want {
 		t.Fatalf("person retention %+v, want %+v", cfg.Retention, want)

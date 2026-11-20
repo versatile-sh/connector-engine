@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { clock, listChoices, offeredChoices, secondsLeft, summarizeArguments } from "./choices.ts";
+import { clock, offeredChoices, secondsLeft, sessionSpan, summarizeArguments } from "./choices.ts";
 
 describe("offeredChoices", () => {
   describe("when the record offers the session answer", () => {
@@ -24,20 +24,6 @@ describe("offeredChoices", () => {
   describe("with an unknown choice", () => {
     test("drops it", () => {
       assert.deepEqual(offeredChoices(["once", "maybe"]), ["once"]);
-    });
-  });
-});
-
-describe("listChoices", () => {
-  describe("when the mode is ask_once", () => {
-    test("offers the session answer", () => {
-      assert.deepEqual(listChoices("ask_once"), ["once", "session", "always", "deny"]);
-    });
-  });
-
-  describe("when the mode is ask", () => {
-    test("leaves the session answer out", () => {
-      assert.deepEqual(listChoices("ask"), ["once", "always", "deny"]);
     });
   });
 });
@@ -80,5 +66,24 @@ describe("secondsLeft", () => {
 describe("clock", () => {
   test("pads the seconds", () => {
     assert.equal(clock(65), "1:05");
+  });
+});
+
+describe("sessionSpan", () => {
+  const now = Date.parse("2026-11-20T10:00:00Z");
+  describe("when the record says when the session ends", () => {
+    test("names hours, rounded up, from 90 minutes up", () => {
+      assert.deepEqual(sessionSpan("2026-11-20T17:59:59Z", now), { unit: "hours", count: 8 });
+      assert.deepEqual(sessionSpan("2026-11-20T13:20:00Z", now), { unit: "hours", count: 4 });
+    });
+    test("names minutes below", () => {
+      assert.deepEqual(sessionSpan("2026-11-20T10:42:10Z", now), { unit: "minutes", count: 43 });
+    });
+  });
+  describe("without an end, or one already past", () => {
+    test("says nothing", () => {
+      assert.equal(sessionSpan(undefined, now), undefined);
+      assert.equal(sessionSpan("2026-11-20T09:00:00Z", now), undefined);
+    });
   });
 });

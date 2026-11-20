@@ -125,11 +125,12 @@ export type Preview = {
   tools: ProbedTool[];
   items?: Item[] | null;
   warning?: string;
+  host_loopback?: boolean;
 };
 
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
 
-export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean };
+export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string };
 
 export type AgentToken = { agent: string; token: string; expires_at: string };
 
@@ -284,6 +285,7 @@ export type ApprovalView = {
   may_have_run: boolean;
   reaches_outside: boolean;
   choices: ApprovalChoice[];
+  session_until?: string;
   decided_by?: string;
   decided_at?: string;
   channel?: string;

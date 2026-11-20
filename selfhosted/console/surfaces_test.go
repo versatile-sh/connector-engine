@@ -239,6 +239,9 @@ func TestAChatButtonDecidesAHeldCallAndTheCallResumes(t *testing.T) {
 		if p.Connector != "Notes" || p.Function != "create" || p.App != "claude-code" || !slices.Contains(p.Choices, surface.ChoiceSession) || !strings.HasSuffix(p.ConsoleURL, "/approve/"+p.Approval) {
 			t.Fatalf("prompt %+v", p)
 		}
+		if left := time.Until(p.SessionUntil); left <= 0 || left > 8*time.Hour || !strings.HasPrefix(surface.Label(surface.ChoiceSession, p.SessionUntil), "Allow for up to ") {
+			t.Fatalf("the session choice does not say how long it lasts: until %v, %q", p.SessionUntil, surface.Label(surface.ChoiceSession, p.SessionUntil))
+		}
 		if raw, _ := json.Marshal(p); strings.Contains(string(raw), "secret plan") {
 			t.Fatalf("the prompt carries the arguments: %s", raw)
 		}

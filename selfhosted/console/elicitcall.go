@@ -78,7 +78,7 @@ func (c *Console) toEngine(ctx context.Context, r *http.Request, body []byte, id
 
 func (c *Console) passAnswer(w http.ResponseWriter, r *http.Request, a engineAnswer) {
 	if a.err != nil {
-		http.Error(w, "the engine is unreachable", http.StatusBadGateway)
+		c.engineDown(w)
 		return
 	}
 	for _, h := range []string{"Content-Type", sessionHeader, "Cache-Control"} {
@@ -219,11 +219,11 @@ func (c *Console) elicitable(ctx context.Context, id, agent, session string) (Ap
 }
 
 func elicitRequest(v ApprovalView) map[string]any {
-	enum, names := []string{string(surface.ChoiceOnce)}, []string{surface.Label(surface.ChoiceOnce)}
+	enum, names := []string{string(surface.ChoiceOnce)}, []string{surface.Label(surface.ChoiceOnce, v.SessionUntil)}
 	if slices.Contains(v.Choices, surface.ChoiceSession) {
-		enum, names = append(enum, string(surface.ChoiceSession)), append(names, surface.Label(surface.ChoiceSession))
+		enum, names = append(enum, string(surface.ChoiceSession)), append(names, surface.Label(surface.ChoiceSession, v.SessionUntil))
 	}
-	enum, names = append(enum, string(surface.ChoiceDeny)), append(names, surface.Label(surface.ChoiceDeny))
+	enum, names = append(enum, string(surface.ChoiceDeny)), append(names, surface.Label(surface.ChoiceDeny, v.SessionUntil))
 	name := firstOf(v.FunctionTitle, v.Function)
 	msg := fmt.Sprintf("Allow %s: %s?\n%s wants to run %s. The request expires at %s.", v.Connector.Title, name, v.App, v.Function, v.ExpiresAt.Local().Format("15:04"))
 	schema := map[string]any{"type": "object", "required": []string{"decision"}, "properties": map[string]any{

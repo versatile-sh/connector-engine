@@ -355,6 +355,9 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	if up.count("purge") != 1 {
 		t.Fatalf("the approved call did not run")
 	}
+	if res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + "purge", Arguments: map[string]any{"again": true}}); err != nil || up.count("purge") != 1 {
+		t.Fatalf("approving a call in the console allowed the next one of its session: %v %v", res, err)
+	}
 
 	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/purge", map[string]string{"access": "on"}, nil)
 	for _, n := range []string{"search", "create", "purge"} {

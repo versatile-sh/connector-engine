@@ -359,6 +359,7 @@ type Runtime struct {
 	Adapters          []string      `yaml:"adapters"`
 	CallTimeout       time.Duration `yaml:"callTimeout"`
 	AllowPrivateHosts bool          `yaml:"allowPrivateHosts"`
+	LoopbackHost      string        `yaml:"loopbackHost"`
 	Container         Container     `yaml:"container"`
 }
 

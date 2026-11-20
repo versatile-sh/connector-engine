@@ -3,6 +3,7 @@ package console_test
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"log/slog"
 	"net"
@@ -46,16 +47,39 @@ func seedServer(t *testing.T, title string) string {
 	return up.URL
 }
 
+func seedSkillMD(name string) ([]byte, error) {
+	body, err := os.ReadFile(filepath.Join(fixtureDir, "raw", "skills", "pdf", "SKILL.md"))
+	return []byte(strings.Replace(string(body), "name: pdf\n", "name: "+name+"\n", 1)), err
+}
+
 func seedListing(catalog *fixtureCatalog) func(context.Context, string, int64) ([]byte, error) {
 	return func(ctx context.Context, u string, limit int64) ([]byte, error) {
+		if rest, ok := strings.CutPrefix(u, rawBase+"skills/"); ok {
+			name, file, _ := strings.Cut(rest, "/")
+			if file == "SKILL.md" {
+				return seedSkillMD(name)
+			}
+			return catalog.get(ctx, rawBase+"skills/pdf/"+file, limit)
+		}
 		name, ok := strings.CutPrefix(u, catalogBase+"seed/")
 		if !ok {
 			return catalog.get(ctx, u, limit)
 		}
-		body, err := os.ReadFile(filepath.Join(fixtureDir, "pdf.yaml"))
 		name = strings.TrimSuffix(name, ".yaml")
-		title := strings.ToUpper(name[:1]) + strings.ReplaceAll(name[1:], "-", " ")
-		return []byte(strings.Replace(string(body), "id: pdf\nname: pdf\ntitle: PDF forms\n", "id: "+name+"\nname: "+name+"\ntitle: "+title+"\n", 1)), err
+		body, err := os.ReadFile(filepath.Join(fixtureDir, "pdf.yaml"))
+		if err != nil {
+			return nil, err
+		}
+		md, err := seedSkillMD(name)
+		if err != nil {
+			return nil, err
+		}
+		listing := string(body)
+		listing = strings.Replace(listing, "id: pdf\nname: pdf\ntitle: PDF forms\n", "id: "+name+"\nname: "+name+"\ntitle: "+strings.ToUpper(name[:1])+strings.ReplaceAll(name[1:], "-", " ")+"\n", 1)
+		listing = strings.ReplaceAll(listing, "skills/pdf", "skills/"+name)
+		listing = strings.Replace(listing, "bytes: 226\n    sha256: d004d247392a431ca6fd4635a27308bd7539a718f3a3775cc402737a155e9bd8", fmt.Sprintf("bytes: %d\n    sha256: %x", len(md), sha256.Sum256(md)), 1)
+		listing = strings.Replace(listing, "\nbytes: 320\n", fmt.Sprintf("\nbytes: %d\n", 320-226+len(md)), 1)
+		return []byte(listing), nil
 	}
 }
 
@@ -92,20 +116,30 @@ func TestSeedPlayground(t *testing.T) {
 	password := rand.Text()
 	b.ok("POST", "/api/setup", map[string]string{"username": "owner", "password": password}, &setup)
 	b.csrf = setup.CSRF
-	fmt.Printf("Seeding %d keys, %d connectors and %d skills; each import binds every key, so this takes a few minutes.\n", len(seedKeys), len(seedConnectors), len(seedSkills))
-	for _, name := range seedKeys {
-		b.ok("POST", "/api/agents", map[string]any{"name": name, "ttl_hours": 720}, nil)
+	fmt.Printf("Seeding %d skills, %d connectors and %d keys; each key is bound to every one, so this takes a few minutes.\n", len(seedSkills), len(seedConnectors), len(seedKeys))
+	skills := make([]string, len(seedSkills))
+	for i, name := range seedSkills {
+		link := catalogBase + "seed/" + name + ".yaml"
+		var pv console.Preview
+		b.ok("POST", "/api/preview", map[string]any{"listing": link}, &pv)
+		var imported struct{ Skill string }
+		b.ok("POST", "/api/import", map[string]any{"listing": link, "digest": pv.Skill.Digest}, &imported)
+		skills[i] = imported.Skill
+		fmt.Printf("skill %d/%d: %s\n", i+1, len(seedSkills), name)
 	}
 	for i, title := range seedConnectors {
 		b.ok("POST", "/api/import", map[string]any{"mcp": seedServer(t, title) + "/mcp", "local": true}, nil)
 		fmt.Printf("connector %d/%d: %s\n", i+1, len(seedConnectors), title)
 	}
-	for i, name := range seedSkills {
-		link := catalogBase + "seed/" + name + ".yaml"
-		var pv console.Preview
-		b.ok("POST", "/api/preview", map[string]any{"listing": link}, &pv)
-		b.ok("POST", "/api/import", map[string]any{"listing": link, "digest": pv.Skill.Digest, "access": []string{"off", "on", "ask"}[i%3]}, nil)
-		fmt.Printf("skill %d/%d: %s\n", i+1, len(seedSkills), name)
+	for i, name := range seedKeys {
+		b.ok("POST", "/api/agents", map[string]any{"name": name, "ttl_hours": 720}, nil)
+		fmt.Printf("key %d/%d: %s\n", i+1, len(seedKeys), name)
+	}
+	for i, id := range skills {
+		choice := []map[string]any{{"access": "on"}, {"access": "ask"}, {"access": "on", "keys": []string{"cursor", "codex"}}}[i%3]
+		start := time.Now()
+		b.ok("PUT", "/api/skills/"+id+"/keys", choice, nil)
+		fmt.Printf("skill %d/%d keys set in %s\n", i+1, len(skills), time.Since(start).Round(time.Millisecond))
 	}
 	fmt.Printf("\nThe seeded console is at %s\nSign in as owner with the password %s (shown only here)\nCtrl-C stops it and forgets everything.\n\n", base, password)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)

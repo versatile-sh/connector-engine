@@ -13,9 +13,9 @@ if [ -n "$core_imports" ]; then
   status=1
 fi
 
-headless="$(go list -deps ./cmd/connector-engine ./cmd/cnctl | grep -E "^$module/selfhosted(/|$)|^github.com/agents-control/plugkit" || true)"
+headless="$(go list -deps ./cmd/connector-engine ./cmd/cnctl | grep -E "^$module/selfhosted(/|$)|^$module/store/sqlite$|^modernc.org/|^github.com/agents-control/plugkit" || true)"
 if [ -n "$headless" ]; then
-  echo "layering: the headless binaries link self-hosted or upstream plugkit packages:" >&2
+  echo "layering: the headless binaries link self-hosted, SQLite or upstream plugkit packages:" >&2
   echo "$headless" >&2
   status=1
 fi

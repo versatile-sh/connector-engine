@@ -145,8 +145,11 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	if len(c.Auth.Issuers) == 0 && !c.Auth.LocalIssuer.Enabled {
 		add(level, "auth.issuers", "the list is empty: no token can be verified")
 	}
+	if c.Auth.LocalIssuer.Enabled && c.Auth.Operator.TokenRef == "" {
+		add(adapters.LevelError, "auth.localIssuer.enabled", "the local issuer mints tokens only for the operator token; set auth.operator.tokenRef")
+	}
 	if c.Auth.LocalIssuer.Enabled && !acknowledged(AckLocalIssuer) {
-		add(level, "auth.localIssuer.enabled", "the local issuer signs tokens for anyone who reaches it; acknowledge %s in the adapters file to run it", AckLocalIssuer)
+		add(level, "auth.localIssuer.enabled", "the local issuer signs the claims the operator token asks for; acknowledge %s in the adapters file to run it", AckLocalIssuer)
 	}
 	if c.Auth.AgentTokenMaxLifetime > maxAgentTokenDefault && !acknowledged(AckLongLivedTokens) {
 		add(level, "auth.agentTokenMaxLifetime", "%s is above one hour; acknowledge %s to accept agent tokens that live longer", c.Auth.AgentTokenMaxLifetime, AckLongLivedTokens)

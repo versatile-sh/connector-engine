@@ -67,7 +67,7 @@ status() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 [ "$(status "$http/v1/event-types")" = 200 ] || fail "event types are public"
 [ "$(status "$http/v1/roles")" = 401 ] || fail "no token is refused"
 
-token() { curl -s -X POST "$http/local/token" -d "$1" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p'; }
+token() { curl -s -X POST -H "Authorization: Bearer $CN_OPERATOR_TOKEN" "$http/local/token" -d "$1" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p'; }
 admin="$(token '{"sub":"ana","tenant":"t1"}')"
 [ -n "$admin" ] || fail "no token from the local issuer"
 agent="$(token '{"sub":"x","tenant":"t1","workspace":"w1","agent":"x","session":"s1","aud":["http://engine.smoke"]}')"

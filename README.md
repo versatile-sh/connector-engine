@@ -66,7 +66,7 @@ go build -o /tmp/ce/cnctl ./cmd/cnctl
 CN_OPERATOR_TOKEN=dev /tmp/ce/connector-engine --config config/connector-engine.yaml --adapters /path/to/adapters.yaml
 ```
 
-`scripts/smoke.sh` writes a working pair of files (dev mode, memory store, the local token issuer) and drives the binary with `curl` and `cnctl`; copy its heredocs as a starting point. The engine prints `http=... grpc=... operator=...` once it listens. The operator listener takes the `CN_OPERATOR_TOKEN` bearer; the public listener takes person and agent tokens, which the local issuer mints at `POST /local/token`.
+`scripts/smoke.sh` writes a working pair of files (dev mode, memory store, the local token issuer) and drives the binary with `curl` and `cnctl`; copy its heredocs as a starting point. The engine prints `http=... grpc=... operator=...` once it listens. The operator listener takes the `CN_OPERATOR_TOKEN` bearer; the public listener takes person and agent tokens, which the local issuer mints at `POST /local/token` for a caller holding that same operator bearer. The body names only `sub`, `aud` (one of the engine's two audiences), `tenant`, `workspace`, `agent`, `agent_owner`, `session`, `on_behalf_of`, `caller` and `ttl` (up to `auth.agentTokenMaxLifetime`, one hour at least); the engine sets `iss`, `iat` and `exp`.
 
 Upstream connections (MCP servers, OAuth issuers, sources) dial through the egress guard, which refuses non-public addresses unless `runtime.allowPrivateHosts` is set. They ignore `HTTP_PROXY` and `HTTPS_PROXY`: through a proxy the guard would check the proxy's address, not the upstream's.
 

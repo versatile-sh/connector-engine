@@ -126,7 +126,7 @@ func Label(c Choice, sessionUntil time.Time) string {
 	case ChoiceSession:
 		return sessionLabel(time.Until(sessionUntil), sessionUntil.IsZero())
 	case ChoiceAlways:
-		return "Always allow"
+		return "Always allow this app"
 	}
 	return "Deny"
 }
@@ -145,7 +145,7 @@ func sessionLabel(left time.Duration, unknown bool) string {
 
 // Sentence is the English line a settled message shows.
 func Sentence(o Outcome) string {
-	what := map[State]string{StateApproved: "Allowed once", StateSession: "Allowed for the app's session", StateAlways: "Always allowed",
+	what := map[State]string{StateApproved: "Allowed once", StateSession: "Allowed for the app's session", StateAlways: "Always allowed for this app",
 		StateDenied: "Denied", StateExpired: "Expired", StateCancelled: "Cancelled"}[o.State]
 	if what == "" {
 		what = string(o.State)

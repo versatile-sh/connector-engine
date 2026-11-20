@@ -15,7 +15,7 @@ The owner also wants fewer questions. Every surface offers three answers:
 
 - "Allow once".
 - "Allow for this session", labelled with how long it lasts ("Allow for up to 8 hours").
-- "Always allow this function".
+- "Always allow this app": this function, for the access key that called, only.
 
 ## 2. What the engine already gives, and what we use
 
@@ -215,7 +215,7 @@ Assets: the owner's decisions, the gateway, the bot tokens and webhook URLs, and
 - Message references are kept in memory. After a console restart, the old chat messages are not edited when their approvals settle, and a click on them answers "expired, open the console".
 - A held call is marked delivered when the console receives the engine's answer, not when the client does. A client that drops in that window loses the answer. Retrying the identical call returns it again while `resultRetention` lasts.
 - Adding or removing a channel or a device rebuilds the relay. Pending approvals are then announced again, so the channels that already had them get a second message, and the first one is no longer edited.
-- "Always allow" removes the function's "ask" row. `DeleteGrant` then cancels the other pending approvals of that function, which their surfaces show as cancelled.
+- "Always allow this app" raises the function's workspace row to on, after it has pinned every other access key, and every key made later, at the function's former access. Replacing the row cancels the other pending approvals of that function (`DeleteGrant`), which their surfaces show as cancelled. When the write fails, the approval reports it (`always_error`) and its outcome reads "Allowed once".
 - "Allow once" on a skill covers one `skill_load` call. Loading another file of the same skill is a new call and asks again. "Allow for this session" covers them all.
 - The older console route `POST /api/approvals/{id}` (`approve: true`) approves that one call only, like "Allow once". The UI no longer calls it.
 - MCP URL-mode elicitation is not used, and Cursor's form-mode bugs are not worked around.

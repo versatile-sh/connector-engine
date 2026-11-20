@@ -3,6 +3,7 @@ package console
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 )
@@ -85,7 +86,8 @@ func (c *Console) inspectUpload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	s, err := c.InspectBackup(r.Context(), raw, passphrase)
+	_, signedIn := c.Sessions.Get(r)
+	s, err := c.InspectBackup(r.Context(), raw, passphrase, signedIn)
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -106,7 +108,14 @@ func (c *Console) importUpload(w http.ResponseWriter, r *http.Request) {
 	case isBackup(raw) && signedIn && !c.verify(w, c.State.OwnerName(), r.FormValue("password")):
 		return
 	}
-	out, err := c.importFile(r.Context(), raw, passphrase, !signedIn)
+	var opts SetupOptions
+	if raw := r.FormValue("options"); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &opts); err != nil {
+			writeError(w, http.StatusBadRequest, "the import options are not JSON")
+			return
+		}
+	}
+	out, err := c.importFile(r.Context(), raw, passphrase, !signedIn, opts)
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -114,11 +123,11 @@ func (c *Console) importUpload(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-func (c *Console) importFile(ctx context.Context, raw, passphrase []byte, firstRun bool) (any, error) {
+func (c *Console) importFile(ctx context.Context, raw, passphrase []byte, firstRun bool, opts SetupOptions) (any, error) {
 	if isBackup(raw) {
 		return c.RestoreBackup(ctx, raw, passphrase, firstRun)
 	}
-	return c.ImportSetup(ctx, raw)
+	return c.ImportSetup(ctx, raw, opts)
 }
 
 func splitHostBody(r *http.Request) ([]byte, []byte, error) {
@@ -157,7 +166,7 @@ func (c *Console) hostInspect(w http.ResponseWriter, r *http.Request) {
 	passphrase, file, err := splitHostBody(r)
 	var s BackupSummary
 	if err == nil {
-		s, err = c.InspectBackup(r.Context(), file, passphrase)
+		s, err = c.InspectBackup(r.Context(), file, passphrase, true)
 	}
 	if err != nil {
 		c.fail(w, err)
@@ -170,7 +179,7 @@ func (c *Console) hostImport(w http.ResponseWriter, r *http.Request) {
 	passphrase, file, err := splitHostBody(r)
 	var out any
 	if err == nil {
-		out, err = c.importFile(r.Context(), file, passphrase, false)
+		out, err = c.importFile(r.Context(), file, passphrase, false, SetupOptions{})
 	}
 	if err != nil {
 		c.fail(w, err)

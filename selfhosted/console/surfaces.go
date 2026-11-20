@@ -21,7 +21,7 @@ type channelStatus struct {
 
 type surfaces struct {
 	mu      sync.Mutex
-	always  map[string]time.Time
+	always  map[string]alwaysMark
 	shown   map[string]presented
 	status  map[string]channelStatus
 	changed chan struct{}
@@ -31,15 +31,35 @@ type surfaces struct {
 	el      elicitState
 }
 
+type alwaysMark struct {
+	at     time.Time
+	failed string
+}
+
 func (s *surfaces) markAlways(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.always == nil {
-		s.always = map[string]time.Time{}
+		s.always = map[string]alwaysMark{}
 	}
 	now := time.Now()
-	expire(s.always, now, func(v time.Time) time.Time { return v.Add(time.Hour) })
-	s.always[id] = now
+	expire(s.always, now, func(v alwaysMark) time.Time { return v.at.Add(time.Hour) })
+	s.always[id] = alwaysMark{at: now}
+}
+
+func (s *surfaces) failAlways(id string, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if m, ok := s.always[id]; ok {
+		m.failed = err.Error()
+		s.always[id] = m
+	}
+}
+
+func (s *surfaces) alwaysFailed(id string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.always[id].failed
 }
 
 const presentTTL = 5 * time.Minute
@@ -63,8 +83,8 @@ func (s *surfaces) present(key string, pr presented) {
 func (s *surfaces) wasAlways(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	_, ok := s.always[id]
-	return ok
+	m, ok := s.always[id]
+	return ok && m.failed == ""
 }
 
 func (s *surfaces) spent(nonce string) bool { return s.links.has(nonce) }

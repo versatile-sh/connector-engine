@@ -60,19 +60,26 @@ A connector keeps one credential that every key shares; keys differ only in perm
 - **Every key** sets all keys to off or the default in one request, which reports each key's result; either drops every key's overrides.
 - Off or the default asks first, in place, when it would drop overrides; with none to lose it applies at once.
 - **New keys start off** makes keys made from then on start off on this connector; by default they follow it. Renewing a key keeps its profile on every connector.
-- Always allow on a held call also removes the calling key's override of that function.
+- **Always allow this app** on a held call allows that function for the calling key only: every other key, and every key made later, keeps the function's former access as its own override, then the default rises to on and the calling key's override is removed. Setting the function's default again lifts the limit for keys made later. The pins are ordinary overrides: resetting a key to the default, copying a profile onto it, or turning it off and back on removes them, and the key then follows the raised default. A failure shows on the approval page, which keeps reading the call for three minutes after an allow; the chat surfaces have already said "Always allowed" by then, and the failure is kept in memory only, until the console restarts.
 - The **Access** page lists, for each key, every connector with its mode and a link to its profile.
 - Many at once: tick functions (or select all the filter shows), then set them to off, on or ask, or back to the default in a key's profile, in one request that says which were not changed. The **More…** menu holds the class presets (all reads on, all changes ask, all deletes off) for the profile shown, and copies a key's profile: from another key onto the one shown, or from the default onto several keys at once.
 
 | Console endpoint | Does |
 |---|---|
-| `PUT /api/connectors/{id}/functions` | `{"names": [...], "access": ...}` sets many functions for the default in one request; answers each name's result |
+| `PUT /api/connectors/{id}/functions` | `{"names": [...], "access": ...}` sets many functions for the default in one request; answers each name's result, and one entry per key it failed to give the new item rows |
 | `PUT /api/connectors/{id}/profiles` | `{"mode": "off" \| "follow" \| "custom", "keys": [...]}`, every key when `keys` is empty; answers each key's result |
 | `PUT /api/connectors/{id}/profiles/{key}` | `{"names": [...], "access": ...}` narrows functions or items for one key, or `{"names": [...], "reset": true}` returns them to the default; answers each name's result |
 | `POST /api/connectors/{id}/profiles:copy` | `{"from": key, "keys": [...]}` gives other keys one key's mode and overrides; answers each key's result |
 | `GET /api/connectors/{id}/profiles/{key}` | the engine's answer for that key on each function and item |
 | `PUT /api/connectors/{id}/new-keys` | `{"off": true}` makes new keys start off |
-| `DELETE /api/connectors/{id}/waiting/{key}` | forgets a setup's profile waiting for a key not made yet |
+| `GET /api/slots` | the permission sets waiting to be given to a key, each with its mode and overrides on the connectors still installed |
+| `POST /api/slots/{name}/claim` | `{"key": ...}` gives a key made already the set's profile on each of its connectors, then forgets the set |
+| `DELETE /api/slots/{name}` | discards a permission set |
+| `POST /api/agents`, `POST /api/oauth/requests/{id}` | also take `"slot": name`: the key made by hand, or by an app's consent, gets that set's permissions and the set is consumed |
+
+Batches name at most 1000 functions, items or keys; a larger one is refused before anything is written. Writes to one connector run one at a time, including install, removal and revoking a key, and a request that stops waiting gives up its turn.
+
+A key's profile is applied closed: the key is unbound, its overrides are written, and it is bound last, so a failure halfway leaves it off rather than wider, and making the key again applies the whole profile.
 
 ## Approvals
 
@@ -123,7 +130,9 @@ Account → **Export** offers two files.
 | Mode | File | Holds | For |
 |---|---|---|---|
 | Full backup, with credentials | `connector-engine-backup-<UTC time>.cebak` | everything: the engine's rows and keys, the console's state, keys and activity | moving or restoring your own install |
-| Shareable setup, without credentials | `connector-engine-setup-<UTC time>.setup.yaml` | each connector's source and choices, whether its new keys start off and the profile of each key that does not follow it, by key name; the skills with their catalog address, pinned digest and default access, the kinds of notification channel | handing your setup to a friend or a teammate |
+| Shareable setup, without credentials | `connector-engine-setup-<UTC time>.setup.yaml` | each connector's source and choices, whether its new keys start off and each key's profile there, which the importer receives as reusable permission sets named after the keys; the skills with their catalog address, pinned digest and default access, the kinds of notification channel | handing your setup to a friend or a teammate |
+
+A setup carries **permissions as reusable sets**; a backup carries **your exact keys**.
 
 A **full backup** holds every credential of the install: provider sign-ins and API keys, the access keys and the root keys, the account and its activity. The console asks you to confirm that, and asks for your password and for a passphrase, twice. `make export` prints the same warning and asks y/N (`YES=1` skips the question). It writes to `~/connector-engine-backups/` and keeps the 7 newest.
 
@@ -143,10 +152,13 @@ Account → **Import**, or **Restore from a backup** on the first-run screen, or
   - Importing the same backup again gives the same result.
 - Signed in, a full import asks for your password again. The first-run restore works only while no owner account exists.
 - A **setup** shows what it would add, then adds each connector and skill through the normal import: the server is probed, functions are pinned, and a skill whose digest changed is refused. An entry that is already installed keeps its choices, and nothing is deleted. Afterwards, sign in to each added connector.
-  - The review lists each new connector's key profiles by key name, and whether its new keys start off.
-  - A key profile applies at once to a key of that name. A profile for a key not made yet waits in the console's state and applies when a key of that name is made, unless the connector's new keys start off; the connector's page lists the waiting profiles and clears them one by one.
+  - The review shows each new connector's host, whether it is `local` (it reaches a private or loopback address on this machine), whether its new keys start off, and each choice the file sets above what this console proposes, with the value it gets. Every choice is capped at this console's proposal, local connectors included, and the result lists what was lowered.
+  - Keys made already start off on the connectors and skills a setup adds, unless the review's **Give my existing keys the new connectors** is on. The review asks remote connectors for their proposals only for a signed-in owner.
+  - The file names each key without the OAuth client id an app's key may carry. Each key of the file becomes a **permission set** (a key slot): its name, such as `claude-code`, and its mode and overrides on each connector the import added, never a credential. Nothing binds by name: a key here named `claude-code` is a different key. Per set the review chooses **Keep** as a set (the default), **Apply** to an existing key picked from a list, or **Discard**. A set whose name is taken gets the first free `-2`, `-3` suffix. `make import` takes the defaults: every set kept, existing keys off, choices capped.
+  - A kept set is claimed later: on the consent page when an app connects (**Use permissions from**), when making a key by hand on Access, or with **Apply to key…** in Access's **Unclaimed permission sets** and on each connector's page. Claiming gives the key exactly the set's profiles, within the connector's choices and its new-key limits, and consumes the set; **Discard** drops it. Removing a connector drops it from every set.
+  - A full backup restores the keys exactly as they were and the sets as they were; it creates none. Profiles that an earlier console kept waiting for a key name become sets when the state file or an old backup is read.
 
-A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, in profiles), root keys, account data, activity or device pairings.
+A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, as the names of permission sets), root keys, account data, activity or device pairings.
 - Every address loses its user name and password, its query and its fragment.
 - An address whose path holds a token-like segment (20 or more letters, digits, `-` or `_`, with a digit) is left out.
 - The file lists each removal under `stripped`, naming only the site. A skill imported before the console recorded catalog addresses is left out and listed there too.

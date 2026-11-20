@@ -378,7 +378,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 	m = console.Untrusted(m)
 	m.Remote.URL = up.URL + "/mcp"
-	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessOn})
+	second, err := c.Install(context.Background(), m, map[string]console.Access{"search": console.AccessOn}, true)
 	if err != nil {
 		t.Fatalf("install from a listing manifest: %v", err)
 	}

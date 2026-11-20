@@ -2,6 +2,7 @@ package console_test
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -429,4 +430,71 @@ func TestTheConnectorListReadsKeyRowsOnce(t *testing.T) {
 	if len(conns.Connectors) != 2 || n.Load() != 1 {
 		t.Fatalf("%d connectors read the key rows %d times", len(conns.Connectors), n.Load())
 	}
+}
+
+func TestAlwaysAllowWidensOnlyTheKeyThatDecided(t *testing.T) {
+	p := profiledStack(t)
+	p.b.ok("PUT", "/api/connectors/"+p.conn+"/functions/lookup", map[string]string{"access": "ask"}, nil)
+	alpha := p.mint("alpha")
+	p.mint("beta")
+	ran := make(chan bool, 1)
+	go func() { ran <- callsOK(alpha, "lookup") }()
+	held := p.heldFor("alpha")
+	p.b.ok("POST", "/api/approvals/"+held+"/decide", map[string]string{"choice": "always"}, nil)
+	if !<-ran {
+		t.Fatal("alpha's held call did not run once approved")
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for p.effects("alpha")["lookup"] != console.AccessOn {
+		if time.Now().After(deadline) {
+			t.Fatalf("always allow left alpha at %v", p.effects("alpha"))
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	p.mint("gamma")
+	for _, key := range []string{"beta", "gamma"} {
+		if got := p.effects(key)["lookup"]; got != console.AccessAsk {
+			t.Errorf("%s gets %s after alpha's always", key, got)
+		}
+	}
+	var view console.ApprovalView
+	p.b.ok("GET", "/api/approvals/"+held, nil, &view)
+	if view.AlwaysError != "" {
+		t.Fatalf("always allow failed: %s", view.AlwaysError)
+	}
+}
+
+func TestAlwaysAllowThatCannotBeWrittenSaysSo(t *testing.T) {
+	p := profiledStack(t)
+	p.b.ok("PUT", "/api/connectors/"+p.conn+"/functions/lookup", map[string]string{"access": "ask"}, nil)
+	alpha := p.mint("alpha")
+	p.mint("beta")
+	ran := make(chan bool, 1)
+	go func() { ran <- callsOK(alpha, "lookup") }()
+	held := p.heldFor("alpha")
+	p.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: refuseGrants{next: http.DefaultTransport}}
+	p.b.ok("POST", "/api/approvals/"+held+"/decide", map[string]string{"choice": "always"}, nil)
+	<-ran
+	deadline := time.Now().Add(10 * time.Second)
+	var view console.ApprovalView
+	for view.AlwaysError == "" {
+		if time.Now().After(deadline) {
+			t.Fatal("a failed always allow is not reported")
+		}
+		time.Sleep(50 * time.Millisecond)
+		p.b.ok("GET", "/api/approvals/"+held, nil, &view)
+	}
+	p.c.Engine.HTTP = &http.Client{Timeout: time.Minute}
+	if got := p.effects("beta")["lookup"]; got != console.AccessAsk {
+		t.Fatalf("beta gets %s after a failed always", got)
+	}
+}
+
+type refuseGrants struct{ next http.RoundTripper }
+
+func (r refuseGrants) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodPost && req.URL.Path == "/v1/grants" {
+		return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{"code":"internal","detail":"refused"}`)), Header: http.Header{}, Request: req}, nil
+	}
+	return r.next.RoundTrip(req)
 }

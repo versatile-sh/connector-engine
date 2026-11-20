@@ -426,6 +426,7 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Approve  bool   `json:"approve"`
 		Password string `json:"password"`
+		Slot     string `json:"slot"`
 	}
 	if !readJSON(w, r, &in) {
 		return
@@ -436,6 +437,10 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if in.Approve && !c.ownerConfirms(w, in.Password) {
+		return
+	}
+	if _, ok := c.State.Slot(in.Slot); in.Approve && in.Slot != "" && !ok {
+		c.fail(w, noSlot(in.Slot))
 		return
 	}
 	req, ok := c.pendingRequest(id, true)
@@ -449,7 +454,7 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect": withParams(req.redirect, params)})
 		return
 	}
-	a, err := c.BindAgent(r.Context(), c.agentFor(req.client), c.MaxAgentTTL)
+	a, err := c.BindAgent(r.Context(), c.agentFor(req.client), c.MaxAgentTTL, in.Slot)
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -548,7 +553,7 @@ func (c *Console) refresh(w http.ResponseWriter, r *http.Request, f url.Values) 
 		return
 	}
 	if time.Until(a.ExpiresAt) < c.MaxAgentTTL/2 {
-		if _, err := c.BindAgent(r.Context(), a.Name, c.MaxAgentTTL); err != nil {
+		if _, err := c.BindAgent(r.Context(), a.Name, c.MaxAgentTTL, ""); err != nil {
 			oauthError(w, http.StatusServiceUnavailable, "temporarily_unavailable", "the gateway is not reachable")
 			return
 		}

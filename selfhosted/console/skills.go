@@ -176,6 +176,9 @@ func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []st
 	if !access.Valid() {
 		return nil, invalid("access %q is not off, on or ask", access)
 	}
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
 	v, err := c.Engine.connector(ctx, conn)
 	if err != nil {
 		return nil, err

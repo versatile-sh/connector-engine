@@ -14,6 +14,8 @@ import { HAIRLINE, LEAD, PANEL, SKELETON_LINE, SUBTITLE, TITLE, WELL, button } f
 import { Tag } from "../ui/Tag";
 import { ClientPicker } from "./ClientPicker";
 import { KeyRow } from "./KeyRow";
+import { SlotPicker } from "./SlotPicker";
+import { UnclaimedSlots } from "./UnclaimedSlots";
 import { revokeStep, type RevokeEvent } from "./revoke";
 
 const intoView = (element: HTMLElement | null) => {
@@ -50,12 +52,21 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
   const keys = useQuery(keysPageQuery);
   const [name, setName] = useState("");
   const [days, setDays] = useState(30);
+  const [slot, setSlot] = useState("");
   const mint = useMutation(mintKey);
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
   const revoke = useMutation(revokeKey);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    mint.mutate({ name, ttl_hours: days * 24 }, { onSuccess: () => setName("") });
+    mint.mutate(
+      { name, ttl_hours: days * 24, slot: slot || undefined },
+      {
+        onSuccess: () => {
+          setName("");
+          setSlot("");
+        },
+      },
+    );
   };
   const onRevokeEvent = (event: RevokeEvent) => {
     if (event.type === "ask") revoke.reset();
@@ -106,6 +117,7 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
               onChange={(event) => setDays(Number(event.target.value))}
               error={mint.isError ? errorText(mint.error) : undefined}
             />
+            <SlotPicker value={slot} onChange={setSlot} className="mb-5" />
             <button type="submit" disabled={mint.isPending} className={`${button({ variant: "primary" })} w-full`}>
               <Icon name="key" className="size-4" />
               {mint.isPending ? t("keys.creating") : t("keys.create")}
@@ -146,6 +158,7 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
           </section>
         </div>
       </section>
+      <UnclaimedSlots />
     </section>
   );
 }

@@ -2,13 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { errorText, type Connector, type Profile, type ProfileMode } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { dropWaiting, setNewKeysOff, setProfileMode } from "../mutations";
+import { SlotRow } from "../access/SlotRow";
+import { setNewKeysOff, setProfileMode } from "../mutations";
 import { navigate } from "../router";
 import { Choice } from "../ui/Choice";
 import { InlineConfirm } from "../ui/InlineConfirm";
-import { rowMotion } from "../ui/kept";
 import { Switch } from "../ui/Switch";
-import { CAPTION, button } from "../ui/styles";
+import { CAPTION } from "../ui/styles";
 import { Tabs } from "../ui/Tabs";
 import { Tag } from "../ui/Tag";
 import { useKept } from "../ui/useKept";
@@ -26,38 +26,24 @@ export function ProfileTabs({ connector, agent, panel, className }: { connector:
   return <Tabs<string> label={t("profile.pickerLabel", { connector: connector.title })} value={agent ?? ""} options={options} onChange={(next) => navigate(profileHref(connector.id, next || undefined), { replace: true, keepScroll: true })} panel={panel} className={className} />;
 }
 
-function Waiting({ connector }: { connector: Connector }) {
+function SetsHere({ connector }: { connector: Connector }) {
   const t = useT();
-  const drop = useMutation(dropWaiting);
-  const waiting = useKept(connector.waiting ?? [], (p) => p.agent);
-  if (waiting.length === 0) return null;
+  const sets = useKept(connector.slots, (p) => p.slot);
+  if (sets.length === 0) return null;
   return (
-    <div className="px-4 py-3 sm:px-5">
-      <p className="text-sm font-medium">{t("profile.waiting")}</p>
-      <p className="text-[0.8125rem] leading-snug text-pretty text-muted">{t("profile.waitingHint")}</p>
-      <ul className="mt-2">
-        {waiting.map(({ row: p, phase }) => (
-          <li key={p.agent} {...rowMotion(phase)} className="flex items-center justify-between gap-3 py-1">
-            <span className="flex min-w-0 flex-wrap items-center gap-x-2">
-              <code className="min-w-0 font-mono text-sm [overflow-wrap:anywhere]" translate="no">
-                {p.agent}
-              </code>
-              <Tag>{p.mode === "custom" ? t("keys.modeCustom", { count: overrideCount(p) }) : t(`profile.mode.${p.mode}`)}</Tag>
-            </span>
-            <button type="button" disabled={drop.isPending} aria-label={t("profile.waitingClearLabel", { key: p.agent })} className={button({ variant: "quiet", size: "xs" })} onClick={() => drop.mutate({ connector: connector.id, agent: p.agent })}>
-              {t("profile.waitingClear")}
-            </button>
-          </li>
+    <div className="py-3">
+      <p className="px-4 text-sm font-medium sm:px-5">{t("profile.sets")}</p>
+      <p className="px-4 text-[0.8125rem] leading-snug text-pretty text-muted sm:px-5">{t("profile.setsHint")}</p>
+      <ul className="mt-1">
+        {sets.map(({ row: p, phase }) => (
+          <SlotRow key={p.slot} name={p.slot} profiles={[p]} phase={phase} withAlias={false} />
         ))}
       </ul>
-      <p role="alert" className="mt-1 text-sm text-amber-400 empty:hidden">
-        {drop.isError ? errorText(drop.error) : ""}
-      </p>
     </div>
   );
 }
 
-/** The default's own controls: one choice that sets every key to off or the default in one request, whether keys made from now on start off, and the profiles a setup left waiting for keys not made yet. */
+/** The default's own controls: one choice that sets every key to off or the default in one request, whether keys made from now on start off, and the permission sets that hold a profile here, to apply to a key. */
 export function DefaultBar({ connector }: { connector: Connector }) {
   const t = useT();
   const every = useMutation(setProfileMode);
@@ -105,7 +91,7 @@ export function DefaultBar({ connector }: { connector: Connector }) {
           {t("profile.newKeysOff")}
         </Switch>
       </div>
-      <Waiting connector={connector} />
+      <SetsHere connector={connector} />
       <p role="alert" className="px-4 py-2 text-sm text-amber-400 empty:hidden sm:px-5">
         {error}
       </p>

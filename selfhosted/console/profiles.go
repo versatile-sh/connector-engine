@@ -2,10 +2,10 @@ package console
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/versatile-sh/connector-engine/core/grant"
@@ -39,11 +39,29 @@ type Effect struct {
 
 func isOverride(g port.Grant) bool { return grant.Specificity(g.Selector) == 2 }
 
-func (c *Console) lockConnector(conn string) func() {
-	m, _ := c.writing.LoadOrStore(conn, &sync.Mutex{})
-	mu := m.(*sync.Mutex)
-	mu.Lock()
-	return mu.Unlock
+const maxBatch = 1000
+
+func checkBatch(names []string) error {
+	if len(names) > maxBatch {
+		return invalid("a batch names at most %d entries", maxBatch)
+	}
+	return nil
+}
+
+func (c *Console) lockConnector(ctx context.Context, conn string) (func(), error) {
+	for {
+		held, _ := c.writing.LoadOrStore(conn, make(chan struct{}, 1))
+		ch := held.(chan struct{})
+		select {
+		case ch <- struct{}{}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		if now, ok := c.writing.Load(conn); ok && now == held {
+			return func() { <-ch }, nil
+		}
+		<-ch
+	}
 }
 
 func (c *Console) boundKeys(ctx context.Context, conn string) (map[string]bool, error) {
@@ -97,10 +115,17 @@ func (c *Console) SetProfileMode(ctx context.Context, conn string, names []strin
 	if !ok {
 		return nil, invalid("mode %q is not off, follow or custom", mode)
 	}
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	defer c.lockConnector(conn)()
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	return eachKey(c.knownAgents(), names, func(a Agent) error { return set(ctx, conn, a) }), nil
 }
 
@@ -136,6 +161,9 @@ func (c *Console) SetProfileAccessAll(ctx context.Context, conn, agent string, n
 	case !reset && !access.Valid():
 		return nil, invalid("access %q is not off, on or ask", access)
 	}
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
@@ -143,7 +171,11 @@ func (c *Console) SetProfileAccessAll(ctx context.Context, conn, agent string, n
 	if err != nil {
 		return nil, err
 	}
-	defer c.lockConnector(conn)()
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	bound, err := c.boundKeys(ctx, conn)
 	if err != nil {
 		return nil, err
@@ -205,13 +237,20 @@ func (c *Console) CopyProfile(ctx context.Context, conn, from string, names []st
 	if len(names) == 0 {
 		return nil, invalid("name at least one key to copy the profile to")
 	}
+	if err := checkBatch(names); err != nil {
+		return nil, err
+	}
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
 	if _, err := agentNamed(c.knownAgents(), from); err != nil {
 		return nil, err
 	}
-	defer c.lockConnector(conn)()
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
 	rows, err := c.Engine.grants(ctx, port.ScopeAgent, "", conn)
 	if err != nil {
 		return nil, err
@@ -230,10 +269,14 @@ func (c *Console) CopyProfile(ctx context.Context, conn, from string, names []st
 }
 
 func (c *Console) applyProfile(ctx context.Context, conn string, a Agent, p Profile) error {
-	if p.Mode == ProfileOff {
-		return c.unbind(ctx, conn, a)
+	if err := c.unbind(ctx, conn, a); err != nil || p.Mode == ProfileOff {
+		return err
 	}
-	if err := c.follow(ctx, conn, a); err != nil {
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, a.Name, conn)
+	if err != nil {
+		return err
+	}
+	if err := c.Engine.deleteGrants(ctx, slices.DeleteFunc(rows, func(g port.Grant) bool { return !isOverride(g) })); err != nil {
 		return err
 	}
 	fns, err := c.Engine.functions(ctx, conn)
@@ -247,7 +290,7 @@ func (c *Console) applyProfile(ctx context.Context, conn string, a Agent, p Prof
 			}
 		}
 	}
-	return nil
+	return c.bind(ctx, conn, a)
 }
 
 func (c *Console) confirmOverrides(ctx context.Context, conn string, f port.Function) error {
@@ -296,15 +339,7 @@ func (c *Console) ProfileEffects(ctx context.Context, conn, agent string) ([]Eff
 	return out, nil
 }
 
-// DropWaitingProfile forgets a setup's profile waiting on a connector for an access key not made yet.
-func (c *Console) DropWaitingProfile(ctx context.Context, conn, agent string) error {
-	if err := c.plainConnector(ctx, conn); err != nil {
-		return err
-	}
-	return c.State.DropPendingProfile(conn, agent)
-}
-
-// SetNewKeysOff records whether access keys made from now on start off on a connector instead of following its choices; keys already made keep theirs, and starting off drops the profiles waiting there that are not off.
+// SetNewKeysOff records whether access keys made from now on start off on a connector instead of following its choices; keys already made keep theirs.
 func (c *Console) SetNewKeysOff(ctx context.Context, conn string, off bool) error {
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return err
@@ -320,7 +355,11 @@ func (c *Console) join(ctx context.Context, conn port.Connector, a Agent, known 
 		}
 		return c.rebindSkill(ctx, id, a)
 	}
-	defer c.lockConnector(id)()
+	unlock, err := c.lockConnector(ctx, id)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	bound, err := c.boundKeys(ctx, id)
 	switch {
 	case err != nil:
@@ -333,8 +372,21 @@ func (c *Console) join(ctx context.Context, conn port.Connector, a Agent, known 
 	if c.State.NewKeysOff(id) {
 		return nil
 	}
-	if p, ok := c.State.PendingProfile(id, a.Name); ok {
+	if p := limited(Profile{Agent: a.Name, Mode: ProfileFollow}, c.State.NewKeyLimits(id)); p.Mode == ProfileCustom {
 		return c.applyProfile(ctx, id, a, p)
 	}
 	return c.bind(ctx, id, a)
+}
+
+func limited(p Profile, limits map[string]Access) Profile {
+	if p.Mode == ProfileOff || len(limits) == 0 {
+		return p
+	}
+	p.Mode, p.Overrides = ProfileCustom, maps.Clone(p.Overrides)
+	for name, most := range limits {
+		if have, ok := p.Overrides[name]; !ok || have.mode().Rank() > most.mode().Rank() {
+			put(&p.Overrides, name, most)
+		}
+	}
+	return p
 }

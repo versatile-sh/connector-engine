@@ -23,12 +23,13 @@ type connectorView struct {
 	Blocked   string          `json:"blocked"`
 }
 
-// FunctionView is one function of a connector as the console shows it: its class and the owner's choice read back from the engine's grants.
+// FunctionView is one function of a connector as the console shows it: its class, what it does by nature, and the owner's choice read back from the engine's grants.
 type FunctionView struct {
 	Name        string     `json:"name"`
 	Title       string     `json:"title,omitempty"`
 	Description string     `json:"description,omitempty"`
 	Class       port.Class `json:"class"`
+	Kind        port.Class `json:"kind"`
 	State       string     `json:"state"`
 	Access      Access     `json:"access"`
 }
@@ -82,10 +83,7 @@ func accessOf(f port.Function, rows []port.Grant) Access {
 		}
 		switch g.Mode {
 		case port.ModeAllow:
-			if f.Class == port.ClassRead {
-				return AccessRead
-			}
-			return AccessWrite
+			return AccessOn
 		case port.ModeAsk, port.ModeAskOnce:
 			return AccessAsk
 		}
@@ -139,7 +137,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 				continue
 			}
 			title, desc := describe(f.Definition)
-			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, State: string(f.State), Access: accessOf(f, rows)})
+			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f), State: string(f.State), Access: accessOf(f, rows)})
 		}
 		var creds items[port.Credential]
 		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/credentials"+q("connector", string(conn.ID)), nil, &creds); err == nil {
@@ -165,10 +163,10 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function: it accepts a quarantined definition the owner now sees, classes the function, then replaces its workspace row (none for off).
+// SetAccess writes the owner's choice for one function: it accepts a quarantined definition the owner now sees, classes the function read or write by its nature (write for destructive, so on is never capped to ask), then replaces its workspace row (none for off).
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
 	if !a.Valid() {
-		return fmt.Errorf("access %q is not off, read, write or ask", a)
+		return fmt.Errorf("access %q is not off, on or ask", a)
 	}
 	f, err := c.function(ctx, conn, name)
 	if err != nil {
@@ -182,14 +180,9 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 			return err
 		}
 	}
-	class := f.Class
-	switch {
-	case a == AccessRead:
+	class := port.ClassWrite
+	if Nature(f) == port.ClassRead {
 		class = port.ClassRead
-	case a == AccessWrite:
-		class = port.ClassWrite
-	case class == port.ClassNone:
-		class = port.ClassWrite
 	}
 	if class != f.Class {
 		if err := c.Engine.Call(ctx, http.MethodPut, "/v1/connectors/"+esc(conn)+"/functions/"+esc(name)+"/class", map[string]any{"class": class}, &f); err != nil {
@@ -207,7 +200,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 			}
 		}
 	}
-	mode := map[Access]port.Mode{AccessRead: port.ModeAllow, AccessWrite: port.ModeAllow, AccessAsk: port.ModeAsk}[a]
+	mode := map[Access]port.Mode{AccessOn: port.ModeAllow, AccessAsk: port.ModeAsk}[a]
 	if mode == "" {
 		return nil
 	}

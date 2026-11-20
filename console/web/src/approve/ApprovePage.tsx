@@ -18,11 +18,11 @@ function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="relative isolate flex min-h-dvh flex-col overflow-x-clip">
       <div aria-hidden="true" className="backdrop-beam pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem]" />
-      <header className="mx-auto flex w-full max-w-xl items-center justify-between gap-3 px-5 pt-6">
+      <header className="mx-auto flex w-full max-w-xl flex-wrap items-center justify-between gap-3 px-5 pt-6">
         <Wordmark />
         <LanguageSwitch />
       </header>
-      <main id="main" className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-5 py-10">
+      <main id="main" className="mx-auto flex w-full min-w-0 max-w-xl flex-1 flex-col justify-center px-5 py-10">
         {children}
       </main>
     </div>
@@ -32,7 +32,7 @@ function Frame({ children }: { children: ReactNode }) {
 function Message({ title, body, action }: { title: string; body: string; action?: ReactNode }) {
   return (
     <section className={`${SURFACE} arrive flex flex-col items-center px-6 py-12 text-center`}>
-      <h1 className="font-serif text-3xl leading-none font-normal tracking-[-0.02em]">{title}</h1>
+      <h1 className="serif-room font-serif text-3xl leading-none font-normal tracking-[-0.02em] [overflow-wrap:anywhere]">{title}</h1>
       <p className="mt-3 max-w-sm text-muted">{body}</p>
       {action ? <div className="mt-6">{action}</div> : null}
     </section>

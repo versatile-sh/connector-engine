@@ -50,3 +50,20 @@ func TestTheQueriesRowLevelSecurityFilteredInPostgresStayScoped(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestATenantNamedLikeTheInstallationCannotAdvanceItsStream(t *testing.T) {
+	s := open(t, filepath.Join(t.TempDir(), "store.db"))
+	if err := s.Write(ctx, port.Scope{Installation: true}, func(tx port.Tx) error {
+		_, err := tx.Emit(port.Event{Type: "x", Time: time.Now()})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	err := s.Write(ctx, port.Scope{Tenant: "installation"}, func(tx port.Tx) error {
+		_, err := tx.Emit(port.Event{Type: "x", Tenant: "installation", Time: time.Now()})
+		return err
+	})
+	if !port.IsCode(err, port.CodePermissionDenied) {
+		t.Fatalf("a tenant wrote into the installation stream: %v", err)
+	}
+}

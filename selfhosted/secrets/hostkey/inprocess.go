@@ -9,7 +9,7 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/keychain"
 )
 
-// Unlock opens the store in dir in-process with the unlock key of account in kc, wrapping a plaintext root on the way; with no keychain the root stays a plaintext file.
+// Unlock opens the store in dir in-process with the unlock key of account in kc, wrapping a plaintext root on the way and never minting a key for a wrapped one; with no keychain the root stays a plaintext file.
 func Unlock(ctx context.Context, dir string, kc keychain.Keychain, account string, log *slog.Logger) (*Store, error) {
 	st, err := unlock(ctx, dir, kc, account, log)
 	if err != nil {
@@ -19,9 +19,19 @@ func Unlock(ctx context.Context, dir string, kc keychain.Keychain, account strin
 }
 
 func unlock(ctx context.Context, dir string, kc keychain.Keychain, account string, log *slog.Logger) (*local.Store, error) {
-	key, err := keychain.Ensure(ctx, kc, account)
+	wrapped := local.FormOf(dir) == local.Wrapped
+	var key string
+	var err error
+	if wrapped && kc != nil {
+		key, err = kc.Get(ctx, account)
+	} else {
+		key, err = keychain.Ensure(ctx, kc, account)
+	}
+	if wrapped && errors.Is(err, keychain.ErrNotFound) {
+		return nil, errors.New("the root key in " + dir + " is wrapped and the keychain holds no unlock key for " + account + ": import its recovery key, a new one would not open it")
+	}
 	if errors.Is(err, keychain.ErrUnavailable) {
-		if local.FormOf(dir) == local.Wrapped {
+		if wrapped {
 			return nil, errors.New("the root key in " + dir + " is wrapped and this host has no OS keychain to unwrap it")
 		}
 		log.Warn("no OS keychain here: the root key stays a plaintext file", "dir", dir, "reason", err)

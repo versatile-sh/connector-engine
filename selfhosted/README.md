@@ -2,7 +2,7 @@
 
 Everything the `person` profile adds to the core engine: the local console, the approval surfaces, the `hostkey` secrets and `sqlite` store adapters, the `cnctl keychain` and `cnctl notify` commands, their binaries, the compose files and scripts that run them on a person's own machine, and the install without Docker that runs them as one binary.
 
-The dependency direction is one way: `selfhosted/` imports the core, and no core package imports `selfhosted/`. `scripts/check-layering.sh` (part of `make test`) enforces it, test imports included. Layout and rationale: [docs/internal/SELFHOSTED-LAYOUT.md](../docs/internal/SELFHOSTED-LAYOUT.md).
+The dependency direction is one way: `selfhosted/` imports the core, and no core package imports `selfhosted/`. `scripts/check-layering.sh` (part of `make test`) enforces it, test imports included.
 
 ## Composition
 

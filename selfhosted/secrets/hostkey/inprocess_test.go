@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/versatile-sh/connector-engine/secrets/local"
@@ -73,5 +74,17 @@ func TestUnlockRefusesAWrappedRootWithoutAKeychain(t *testing.T) {
 	}
 	if _, err := hostkey.Unlock(ctx, dir, fakeKeychain{"local-test": otherKey}, "local-test", quiet); err == nil {
 		t.Fatal("a wrapped root opened with another unlock key")
+	}
+}
+
+func TestUnlockNeverMintsAKeyForAWrappedRoot(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "secrets")
+	unlockedIn(t, dir, fakeKeychain{})
+	empty := fakeKeychain{}
+	if _, err := hostkey.Unlock(ctx, dir, empty, "local-test", quiet); err == nil || !strings.Contains(err.Error(), "holds no unlock key") {
+		t.Fatalf("a wrapped root without its keychain item: %v", err)
+	}
+	if len(empty) != 0 {
+		t.Fatalf("the keychain was given a new unlock key: %v", empty)
 	}
 }

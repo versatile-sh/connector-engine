@@ -250,6 +250,22 @@ func TestCommandsDriveARunningInstall(t *testing.T) {
 	if code, out := run(t, "uninstall", "", "--data", t.TempDir(), "--purge", "--yes", "--no-keychain"); code != 1 || !strings.Contains(out, "holds no install") {
 		t.Fatalf("uninstall --purge of a directory without an install: %d %s", code, out)
 	}
+	link := filepath.Join(filepath.Dir(data), "link")
+	if err := os.Symlink(data, link); err == nil {
+		if code, out := run(t, "uninstall", "", "--data", link, "--purge", "--yes", "--no-keychain"); code != 1 || !strings.Contains(out, "symlink") {
+			t.Fatalf("uninstall --purge through a symlink: %d %s", code, out)
+		}
+	}
+	stray := filepath.Join(data, "notes.txt")
+	if err := os.WriteFile(stray, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, out := run(t, "uninstall", "", "--data", data, "--purge", "--yes", "--no-keychain"); code != 1 || !strings.Contains(out, "notes.txt") {
+		t.Fatalf("uninstall --purge of a directory holding more than an install: %d %s", code, out)
+	}
+	if err := os.Remove(stray); err != nil {
+		t.Fatal(err)
+	}
 	if code, out := run(t, "uninstall", "", "--data", data+string(filepath.Separator), "--purge", "--yes", "--no-keychain"); code != 0 {
 		t.Fatalf("uninstall --purge: %d %s", code, out)
 	}

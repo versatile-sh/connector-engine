@@ -88,7 +88,11 @@ func (s *State) save() error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(s.path), ".state-*")
+	return writeAtomic(s.path, raw)
+}
+
+func writeAtomic(path string, raw []byte) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".state-*")
 	if err != nil {
 		return err
 	}
@@ -104,7 +108,7 @@ func (s *State) save() error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), s.path)
+	return os.Rename(tmp.Name(), path)
 }
 
 // HasOwner reports whether the owner account exists.

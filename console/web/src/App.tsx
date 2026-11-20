@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AccessPage } from "./access/AccessPage";
+import { ActivityPage } from "./activity/ActivityPage";
 import { errorText } from "./api";
 import { ApprovalsPage } from "./approvals/ApprovalsPage";
 import { Auth, waitingLinkHost } from "./Auth";
@@ -23,8 +24,9 @@ const linkedSource = (path: string, query: URLSearchParams): ImportSource | unde
   return listing ? { listing } : mcp ? { mcp } : undefined;
 };
 
-const sectionOf = (path: string): Section =>
-  path === "/access" || path === "/agents" ? "access" : path === "/approvals" ? "approvals" : path === "/skills" ? "skills" : "connectors";
+const SECTIONS: Record<string, Section> = { "/access": "access", "/agents": "access", "/approvals": "approvals", "/skills": "skills", "/activity": "activity" };
+
+const sectionOf = (path: string): Section => SECTIONS[path] ?? "connectors";
 
 function Splash({ failure, onRetry }: { failure?: string; onRetry?: () => void }) {
   const t = useT();
@@ -61,7 +63,19 @@ export function App() {
   const detail = path.startsWith("/connectors/") ? decodeURIComponent(path.slice("/connectors/".length)) : undefined;
   return (
     <Shell section={section} endpoint={mcp_url}>
-      {section === "access" ? <AccessPage /> : section === "approvals" ? <ApprovalsPage /> : section === "skills" ? <SkillsPage /> : detail ? <ConnectorDetail id={detail} /> : <ConnectorsPage />}
+      {section === "access" ? (
+        <AccessPage />
+      ) : section === "approvals" ? (
+        <ApprovalsPage />
+      ) : section === "skills" ? (
+        <SkillsPage />
+      ) : section === "activity" ? (
+        <ActivityPage />
+      ) : detail ? (
+        <ConnectorDetail id={detail} />
+      ) : (
+        <ConnectorsPage />
+      )}
     </Shell>
   );
 }

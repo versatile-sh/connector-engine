@@ -43,7 +43,7 @@ export function oauthGuides(url: string, t: Translate): Guide[] {
       id: "opencode",
       name: "OpenCode",
       kind: "clients.kind.config",
-      blocks: [{ where: "clients.where.file", path: "opencode.json", text: json({ $schema: "https://opencode.ai/config.json", mcp: { [NAME]: { type: "remote", url, enabled: true } } }) }],
+      blocks: [{ where: "clients.where.file", path: "opencode.json", text: json({ $schema: "https://opencode.ai/config.json", mcp: { servers: { [NAME]: { type: "remote", url } } } }) }],
       note: "clients.note.opencodeOAuth",
     },
     {

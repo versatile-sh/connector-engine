@@ -3,7 +3,6 @@ package console
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"slices"
 	"time"
 
@@ -49,20 +48,13 @@ type ApprovalView struct {
 	known          bool
 }
 
-type approvalDetail struct {
-	Approval       port.Approval `json:"approval"`
-	Arguments      []byte        `json:"arguments,omitempty"`
-	MayHaveRun     bool          `json:"may_have_run"`
-	ReachesOutside bool          `json:"reaches_outside"`
-}
-
 func (c *Console) connectorRef(ctx context.Context, conn port.ConnectorID) (ConnectorRef, port.Manifest, error) {
-	var v connectorView
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(string(conn)), nil, &v); err != nil {
+	v, err := c.Engine.connector(ctx, string(conn))
+	if err != nil {
 		return ConnectorRef{}, port.Manifest{}, err
 	}
-	ref := ConnectorRef{ID: string(conn), Alias: v.Connector.Alias, Title: v.Connector.Alias}
-	m, err := c.manifestOf(ctx, v.Connector)
+	ref := ConnectorRef{ID: string(conn), Alias: v.Alias, Title: v.Alias}
+	m, err := c.Engine.manifest(ctx, v)
 	if err == nil {
 		ref.Title, ref.Icon = firstOf(m.Title, m.Name, ref.Alias), m.Icon
 	}
@@ -70,8 +62,7 @@ func (c *Console) connectorRef(ctx context.Context, conn port.ConnectorID) (Conn
 }
 
 func (c *Console) record(ctx context.Context, id string) (port.Approval, error) {
-	var d approvalDetail
-	err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &d)
+	d, err := c.Engine.approval(ctx, id)
 	return d.Approval, err
 }
 
@@ -108,8 +99,8 @@ func (c *Console) present(ctx context.Context, a port.Approval) (presented, erro
 
 // Approval reads one approval with its connector, its function's nature and the choices still open.
 func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error) {
-	var d approvalDetail
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &d); err != nil {
+	d, err := c.Engine.approval(ctx, id)
+	if err != nil {
 		return ApprovalView{}, err
 	}
 	a := d.Approval
@@ -165,8 +156,8 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	case !slices.Contains(v.Choices, choice):
 		return v, false, invalid("%s is not offered for this call", choice)
 	}
-	var out port.Approval
-	if err := c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":decide", map[string]any{"decision": decision, "channel": channel, "note": note}, &out); err != nil {
+	out, err := c.Engine.decide(ctx, id, map[string]any{"decision": decision, "channel": channel, "note": note})
+	if err != nil {
 		return v, false, err
 	}
 	lost := out.State == port.ApprovalPending || out.Channel != channel || out.DecisionNote != note

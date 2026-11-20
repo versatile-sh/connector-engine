@@ -148,12 +148,12 @@ type engineFacts struct {
 }
 
 func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string) (engineFacts, error) {
-	var conns items[connectorView]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors"+q("workspace", c.Engine.Workspace), nil, &conns); err != nil {
+	conns, err := c.Engine.connectors(ctx)
+	if err != nil {
 		return engineFacts{}, err
 	}
 	f := engineFacts{approvals: map[port.ApprovalID]port.Approval{}, byAlias: map[string]string{}, byID: map[string]string{}, skills: map[string]bool{}}
-	for _, v := range conns.Items {
+	for _, v := range conns {
 		f.byID[string(v.Connector.ID)] = v.Connector.Alias
 		if _, taken := f.byAlias[v.Connector.Alias]; !taken || v.Connector.RemovedAt.IsZero() {
 			f.byAlias[v.Connector.Alias] = string(v.Connector.ID)
@@ -177,7 +177,7 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 			f.skills[string(call.Connector)] = false
 		}
 	}
-	for _, v := range conns.Items {
+	for _, v := range conns {
 		if _, maybe := f.skills[string(v.Connector.ID)]; maybe {
 			skill, err := c.isSkill(ctx, v.Connector)
 			f.skills[string(v.Connector.ID)] = skill && err == nil

@@ -19,7 +19,6 @@ type Manifest struct {
 	Artifact         *Artifact     `json:"artifact,omitempty"`
 	REST             *REST         `json:"rest,omitempty"`
 	GRPC             *GRPC         `json:"grpc,omitempty"`
-	Skill            *Skill        `json:"skill,omitempty"`
 	Signature        *Signature    `json:"signature,omitempty"`
 	Functions        []FunctionDef `json:"functions,omitempty"`
 	InstructionsHash Hash          `json:"instructions_hash,omitempty"`
@@ -32,6 +31,7 @@ type Manifest struct {
 	Licence          string        `json:"licence,omitempty"`
 	Review           *Review       `json:"review,omitempty"`
 	TrustLevel       TrustLevel    `json:"trust_level,omitempty"`
+	Skill            *Skill        `json:"skill,omitempty"`
 }
 
 // SourceInfo is the provenance of an imported listing.

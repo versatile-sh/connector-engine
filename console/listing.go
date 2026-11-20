@@ -56,6 +56,10 @@ func FetchManifest(ctx context.Context, rawURL string) (port.Manifest, error) {
 	if err != nil {
 		return port.Manifest{}, err
 	}
+	return manifestFrom(rawURL, body)
+}
+
+func manifestFrom(rawURL string, body []byte) (port.Manifest, error) {
 	m, err := ParseManifest(body)
 	if err != nil {
 		return port.Manifest{}, err

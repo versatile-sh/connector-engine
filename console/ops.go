@@ -116,6 +116,9 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		var lv port.ListingVersion
 		if err := c.Engine.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", c.Engine.Workspace, "owner", string(conn.Listing.Listing.Owner), "name", conn.Listing.Listing.Name, "version", conn.Listing.Version), nil, &lv); err == nil {
 			m := lv.Manifest
+			if m.Kind == port.KindSkill {
+				continue
+			}
 			s.Title, s.Description, s.Icon, s.Publisher = firstOf(m.Title, m.Name), m.Description, m.Icon, m.Publisher.Name
 			if m.Remote != nil {
 				s.RemoteURL = m.Remote.URL
@@ -399,7 +402,7 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// BindAgent binds the agent to every connector and records it until ttl from now, at most the console's longest; with a connector installed it also finishes the first-run guide.
+// BindAgent binds the agent to every connector, keeping its skill choices (off for a new key), and records it until ttl from now, at most the console's longest; with a connector installed it also finishes the first-run guide.
 func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
@@ -415,11 +418,16 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration)
 	}
 	installed := false
 	for _, v := range list.Items {
-		if v.Connector.RemovedAt.IsZero() {
-			installed = true
-			if err := c.bind(ctx, string(v.Connector.ID), a); err != nil {
-				return Agent{}, err
-			}
+		if !v.Connector.RemovedAt.IsZero() {
+			continue
+		}
+		installed = true
+		bind := c.bind
+		if c.isSkill(ctx, v.Connector) {
+			bind = c.rebindSkill
+		}
+		if err := bind(ctx, string(v.Connector.ID), a); err != nil {
+			return Agent{}, err
 		}
 	}
 	if err := c.State.PutAgent(a); err != nil {

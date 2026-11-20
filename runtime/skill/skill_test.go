@@ -30,14 +30,14 @@ func manifest() port.Manifest {
 				file("assets/logo.bin", []byte{0xff, 0x00, 0xfe})}}}
 }
 
-func load(t *testing.T, r *skill.Runtime, h port.Handle, path string) (port.Result, skill.Loaded) {
+func load(t *testing.T, r *skill.Runtime, h port.Handle, path string) (port.Result, port.SkillLoaded) {
 	t.Helper()
 	args, _ := json.Marshal(map[string]string{"path": path})
 	res, err := r.Call(context.Background(), h, port.SkillFunction, args, time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	var l skill.Loaded
+	var l port.SkillLoaded
 	if err := json.Unmarshal(res.Structured, &l); err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestTheSkillRuntime(t *testing.T) {
 		}
 		var d struct {
 			Annotations struct{ ReadOnlyHint bool }
-			Meta        map[string]skill.Meta `json:"_meta"`
+			Meta        map[string]port.SkillMeta `json:"_meta"`
 		}
 		_ = json.Unmarshal(defs[0].Raw, &d)
 		if !d.Annotations.ReadOnlyHint || !strings.HasPrefix(d.Meta[port.SkillMetaKey].Digest, "sha256:") || len(d.Meta[port.SkillMetaKey].Files) != 3 {

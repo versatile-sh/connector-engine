@@ -22,12 +22,6 @@ type ServedSkill struct {
 	Unbound        []string
 }
 
-type skillMeta struct {
-	Redistribution port.Redistribution `json:"redistribution"`
-	HasScripts     bool                `json:"has_scripts"`
-	Requires       []string            `json:"requires"`
-}
-
 func (s *Service) isSkill(tx port.Tx, c port.Connector) (bool, error) {
 	if v, ok := s.kinds.Load(c.Listing); ok {
 		return v.(bool), nil
@@ -48,7 +42,7 @@ func servedSkill(c port.Connector, f port.Function, mode port.Mode) ServedSkill 
 		Meta        map[string]json.RawMessage `json:"_meta"`
 	}
 	_ = json.Unmarshal(f.Definition, &d)
-	var m skillMeta
+	var m port.SkillMeta
 	_ = json.Unmarshal(d.Meta[port.SkillMetaKey], &m)
 	return ServedSkill{Name: c.Alias, Connector: c.ID, Function: f.Name, Title: d.Title, Description: d.Description, Mode: mode,
 		HasScripts: m.HasScripts, Redistribution: m.Redistribution, Requires: m.Requires}

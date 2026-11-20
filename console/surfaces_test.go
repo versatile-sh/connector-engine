@@ -89,7 +89,7 @@ func newRig(t *testing.T) *rig {
 		t.Fatal(err)
 	}
 	base := "http://" + lis.Addr().String()
-	public, operator := bootEngine(t, base, func(c *config.Config) { c.Approval.HoldWindow = 10 * time.Second })
+	public, operator := bootEngine(t, base, func(c *config.Config) { c.Approval.HoldWindow, c.Gateway.Skills = 10*time.Second, "tools" })
 	up := newUpstream(t)
 	state, err := console.OpenState(t.TempDir() + "/state.json")
 	if err != nil {
@@ -102,7 +102,7 @@ func newRig(t *testing.T) *rig {
 	fake := &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
 		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour,
-		NewChannel: func(string, map[string]string) (surface.Channel, error) { return fake, nil }}
+		NewChannel: func(string, map[string]string) (surface.Channel, error) { return fake, nil }, Fetch: (&fixtureCatalog{t: t}).get}
 	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
 	srv.Start()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -170,7 +170,7 @@ func (r *rig) approveFirstPending() {
 		var held struct{ Approvals []struct{ ID string } }
 		r.b.ok("GET", "/api/approvals", nil, &held)
 		if len(held.Approvals) > 0 {
-			r.b.ok("POST", "/api/approvals/"+held.Approvals[0].ID, map[string]any{"approve": true}, nil)
+			r.b.ok("POST", "/api/approvals/"+held.Approvals[0].ID+"/decide", map[string]any{"choice": "once"}, nil)
 			return
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -318,5 +318,38 @@ func TestADesktopLinkDecidesOnceWithoutASession(t *testing.T) {
 	}
 	if ev := within(t, events, 5*time.Second); ev.Type != "settled" || ev.Outcome.Channel != "desktop" {
 		t.Fatalf("settled %+v", ev)
+	}
+}
+
+func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
+	r := newRig(t)
+	r.b.ok("POST", "/api/notifications/channels", map[string]any{"kind": "telegram", "settings": map[string]string{"token": "123456:ABCDEFGHIJKLMNOPQRST", "owner_user_id": "42"}}, nil)
+	within(t, r.fake.listened, 5*time.Second)
+	link := catalogBase + "pdf.yaml"
+	var pv console.Preview
+	r.b.ok("POST", "/api/preview", map[string]any{"listing": link}, &pv)
+	r.b.ok("POST", "/api/import", map[string]any{"listing": link, "digest": pv.Skill.Digest, "access": "ask"}, nil)
+	cs := r.connect("", nil)
+	out := make(chan callResult, 1)
+	go func() {
+		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "skill_load", Arguments: map[string]any{"skill": "pdf"}})
+		out <- callResult{res, err}
+	}()
+	p := within(t, r.fake.prompts, 5*time.Second)
+	if p.Function != "pdf" || p.Connector != "Skill" || p.Kind != "read" || !slices.Contains(p.Choices, surface.ChoiceSession) {
+		t.Fatalf("a skill prompt: %+v", p)
+	}
+	if o, err := r.fake.press(context.Background(), surface.Click{Key: p.Key, Choice: surface.ChoiceAlways, User: "42"}); err != nil || o.State != surface.StateAlways {
+		t.Fatalf("always: %+v %v", o, err)
+	}
+	if got := within(t, out, 8*time.Second); got.err != nil || got.res.IsError {
+		t.Fatalf("skill_load after always: %+v %v", got.res, got.err)
+	}
+	var skills struct{ Skills []console.SkillSummary }
+	r.b.ok("GET", "/api/skills", nil, &skills)
+	for _, k := range skills.Skills[0].Access {
+		if k.Agent == "claude-code" && k.Access != console.AccessOn {
+			t.Fatalf("the key's access after always: %s", k.Access)
+		}
 	}
 }

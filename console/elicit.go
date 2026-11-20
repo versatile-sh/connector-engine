@@ -371,6 +371,9 @@ func metaString(meta map[string]json.RawMessage, key string) string {
 }
 
 func calledFunction(p callParams) string {
+	if p.Name == "skill_load" {
+		return "skill"
+	}
 	if p.Name != "call" {
 		return p.Name
 	}

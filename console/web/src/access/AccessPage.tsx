@@ -54,15 +54,17 @@ export function AccessPage() {
     onSuccess: () => {
       setName("");
       void queryClient.invalidateQueries({ queryKey: ["agents"] });
+      void queryClient.invalidateQueries({ queryKey: ["session"] });
     },
   });
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
   const revoke = useMutation({
     mutationFn: (agent: string) => api("DELETE", `/api/agents/${encodeURIComponent(agent)}`),
-    onSuccess: (_, agent) => {
+    onSuccess: async (_, agent) => {
       dispatch({ type: "revoked" });
       if (mint.data?.agent === agent) mint.reset();
-      void queryClient.invalidateQueries({ queryKey: ["agents"] });
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
+      await queryClient.invalidateQueries({ queryKey: ["agents"] });
     },
     onError: () => dispatch({ type: "failed" }),
   });

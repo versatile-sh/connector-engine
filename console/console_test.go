@@ -670,6 +670,21 @@ func TestTheFirstRunGuideStaysClosedOnceDismissedOrFinished(t *testing.T) {
 		if !dismissed() {
 			t.Fatalf("finish %v: the guide is still open", finish)
 		}
+		if finish {
+			raw, _ := os.ReadFile(path)
+			if err := os.WriteFile(path, bytes.Replace(raw, []byte(`"onboarding_dismissed": true`), []byte(`"onboarding_dismissed": false`), 1), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			before, err := console.OpenState(path)
+			if err != nil || before.OnboardingDismissed() {
+				t.Fatalf("a state from before the guide was latched: %v", err)
+			}
+			c.State = before
+			b.ok("DELETE", "/api/agents/cursor", nil, nil)
+			if !before.OnboardingDismissed() {
+				t.Fatal("revoking the only key of a finished guide opened it again")
+			}
+		}
 		srv.Close()
 		reopened, err := console.OpenState(path)
 		if err != nil || !reopened.OnboardingDismissed() {

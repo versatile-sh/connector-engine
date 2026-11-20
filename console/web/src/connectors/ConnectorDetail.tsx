@@ -117,6 +117,7 @@ function Remove({ connector, onClose }: { connector: Connector; onClose(): void 
   const remove = useMutation({
     mutationFn: () => api("DELETE", `/api/connectors/${encodeURIComponent(connector.id)}`),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["session"] });
       await queryClient.invalidateQueries({ queryKey: ["connectors"] });
       navigate("/", { replace: true });
     },

@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: connector-engine
+    runtime: docker
+    dockerfilePath: ./deploy/cloud/Dockerfile
+    dockerContext: .
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /readyz
+    disk:
+      name: engine-data
+      mountPath: /var/lib/connector-engine
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: CN_OPERATOR_TOKEN
+        generateValue: true
+      - key: CN_DATABASE_URL
+        fromDatabase:
+          name: connector-engine-db
+          property: connectionString
+
+databases:
+  - name: connector-engine-db
+    databaseName: connector_engine
+    user: cn
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+    ipAllowList: []

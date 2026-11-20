@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	codePending    = -32000
+	codePending    = -32050
 	skillPromptEnd = "\n\nThis is the skill %s. Load its other files with skill_load, skill %q and the file's path."
 )
 

@@ -29,7 +29,6 @@ CONNECTOR_ENGINE_BASE_URL=file://$PWD/dist CONNECTOR_ENGINE_INSTALL_DIR=/tmp/ce-
 
 ## Before the first tag
 
-- Merge `feat/no-docker` first. The installers, the docs and the `docker run` line start the install with `connector-engine-selfhosted up`, which only that branch adds. A tag cut before it ships binaries without `up`.
 - The workflow must be on `main` before it can be run by hand: rehearse after this change merges.
 
 ## Publish

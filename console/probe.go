@@ -31,6 +31,26 @@ func (a Access) Valid() bool {
 	return a == AccessOff || a == AccessOn || a == AccessAsk
 }
 
+func (a Access) mode() port.Mode {
+	switch a {
+	case AccessOn:
+		return port.ModeAllow
+	case AccessAsk:
+		return port.ModeAskOnce
+	}
+	return ""
+}
+
+func accessFor(m port.Mode) (Access, bool) {
+	switch m {
+	case port.ModeAllow:
+		return AccessOn, true
+	case port.ModeAsk, port.ModeAskOnce:
+		return AccessAsk, true
+	}
+	return AccessOff, false
+}
+
 // ProbedTool is one tool an MCP server listed, with its hints and the choice the console proposes.
 type ProbedTool struct {
 	Name        string     `json:"name"`

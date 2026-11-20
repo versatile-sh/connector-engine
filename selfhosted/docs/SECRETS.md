@@ -106,4 +106,6 @@ Limits:
 | A compromised engine or console process | the opened records | the same: the key is in memory while it runs |
 | Logs, `docker inspect`, process lists | no key | no key: pipes only |
 
+A full backup ([console.md](console.md#backups)) holds both root keys in plaintext inside a file encrypted under your passphrase (Argon2id, AES-256-GCM), so it opens on a machine without the old keychain. The import wraps them again with the new machine's key. Whoever holds the file and the passphrase holds every record: the passphrase is that file's only protection.
+
 What it does not do: protect a running, unlocked install; protect against the owner's own account being compromised; replace backups (keep the recovery key).

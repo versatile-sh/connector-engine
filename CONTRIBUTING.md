@@ -1,3 +1,5 @@
+![Contributing a change](docs/assets/section-contributing.svg)
+
 # Contributing
 
 Thanks for helping. This page covers setup, tests, code rules, commits, and the three most common additions: an adapter, an approval surface and a client guide. Read [ARCHITECTURE.md](ARCHITECTURE.md) first.
@@ -84,7 +86,7 @@ A surface carries an approval prompt to a chat app or device and brings the answ
 3. Build it from stored settings in `DefaultChannel` (`selfhosted/console/channels.go`).
 4. Add its setup steps and fields to `SETUP` in `selfhosted/console/web/src/notifications/setup.ts`, and the new text keys to every dictionary in `src/i18n/`.
 5. Test it; the fakes in `selfhosted/surface/relay_test.go` are a model.
-6. Update the threat model in `selfhosted/docs/approvals-surfaces.md`.
+6. Update the threat model in `docs/self-hosted/approval-surfaces.md`.
 
 ## Add a client guide
 
@@ -95,6 +97,38 @@ A client guide tells a person how to connect one AI app on the console's **Acces
 3. Add its note text to every dictionary in `src/i18n/`.
 4. Extend `clients.test.ts` to cover the generated command or config.
 5. If the app uses an `https` OAuth redirect, add it exactly to `hostedCallbacks` in `selfhosted/console/oauth.go` and to the redirect cases in `oauth_test.go`; explain why in the pull request.
+
+## Write docs
+
+The user documentation lives in [`docs/`](docs/README.md), one page per task.
+
+- Start each page with its section banner, then a two-line intro.
+- Show a command and the output it prints. Copy the output from a real run; never invent a flag.
+- Keep one fact in one page and link to it from the others.
+- A new page needs a banner: add a line to `SECTIONS` in `docs/assets/src/build-banners.mjs`, then run `npm ci && npm run build` in `docs/assets/src`. The banners are outlined paths and load no font.
+- `scripts/check-docs.sh` runs in CI: relative links, the `make` targets the docs name, and banner sizes.
+
+## Repository layout
+
+| Path | Holds |
+|---|---|
+| `port/` | neutral types, port interfaces, error codes |
+| `core/` | pure rules: catalog visibility, grants, evaluation, approval transitions, pinning, listing checks, projection, names |
+| `service/` | use cases and the worker (approval timers, sweeps, re-list, event fan-out) |
+| `gateway/` | the agent endpoint `/mcp` |
+| `server/` | the operation table and the HTTP, gRPC and management MCP surfaces built from it |
+| `runtime/` | `ConnectorRuntime` adapters: `remote` (MCP), `declarative` (REST), `grpc`, `skill`, `memory` |
+| `source/` | `ListingSource` adapters: `files`, `openapi`, `reflection`, `bsr`, `registry`, `docker`, `skillcatalog` |
+| `store/` | `memory` and `postgres` (row-level security per tenant) |
+| `secrets/`, `auth/`, `credential/` | envelope encryption, token verification and the local issuer, the credential broker |
+| `filter/`, `index/`, `sink/`, `relay/` | result filter, tool index, event sinks, outbox relay |
+| `app/`, `config/` | the composition root and the configuration files |
+| `cmd/connector-engine`, `cmd/cnctl` | the headless binaries |
+| `internal/plugkit` | in-module copy of the plugin kit (adapters, outbox, discovery) |
+| `selfhosted/` | the `person` profile: console, approval surfaces, host keychain, its binaries and compose file ([selfhosted/README.md](selfhosted/README.md)) |
+| `deploy/` | `compose.yaml`, the `headless` profile and the cloud deploy (`deploy/cloud/`) |
+| `docs/` | the user documentation and its banners |
+| `e2e/`, `scripts/` | end-to-end runs of the built binaries; smoke, e2e, docs checks and the installers |
 
 ## Code of conduct
 

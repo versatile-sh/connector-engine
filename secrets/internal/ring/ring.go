@@ -90,7 +90,9 @@ func NewRootKey() ([]byte, error) {
 func WrapRoot(unlock, root []byte) ([]byte, error) { return encrypt(unlock, root, []byte("root")) }
 
 // UnwrapRoot opens what WrapRoot sealed; a wrong unlock key fails.
-func UnwrapRoot(unlock, wrapped []byte) ([]byte, error) { return decrypt(unlock, wrapped, []byte("root")) }
+func UnwrapRoot(unlock, wrapped []byte) ([]byte, error) {
+	return decrypt(unlock, wrapped, []byte("root"))
+}
 
 func gcm(key []byte) (cipher.AEAD, error) {
 	b, err := aes.NewCipher(key)

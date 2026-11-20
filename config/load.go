@@ -84,7 +84,7 @@ var oneOf = map[string][]string{
 	"approval.proofOfReading":       {"off"},
 	"overlay.suggester":             {"none"},
 	"outbox.signing":                {"standard-webhooks"},
-	"secrets.adapter":               {"localfile", "memory"},
+	"secrets.adapter":               {"localfile", "memory", "hostkey"},
 	"credentials.fallback":          {"none"},
 	"exposure.onTrifecta":           {"warn", "force_ask"},
 	"apps.appOnlyFunctions":         {"refuse", "view_token"},
@@ -129,6 +129,9 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 		if v := c.values()[key]; !slices.Contains(allowed, v) {
 			add(adapters.LevelError, key, "%q is not one of %s", v, strings.Join(allowed, ", "))
 		}
+	}
+	if c.Secrets.Adapter == "hostkey" && c.Secrets.UnlockSocket == "" {
+		add(adapters.LevelError, "secrets.unlockSocket", "the hostkey adapter waits for the unlock key on this socket; it is empty")
 	}
 	if len(c.Auth.Issuers) == 0 && !c.Auth.LocalIssuer.Enabled {
 		add(level, "auth.issuers", "the list is empty: no token can be verified")

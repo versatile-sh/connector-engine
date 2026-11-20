@@ -148,6 +148,11 @@ func TestAdaptersFileFollowsTheDefaultsAndTheAcknowledgements(t *testing.T) {
 	if got := f.Ports[config.PortRuntime].Use; !reflect.DeepEqual([]string(got), []string{"builtin:remote", "builtin:declarative"}) {
 		t.Fatalf("runtime follows runtime.adapters: %v", got)
 	}
+	skills := c
+	skills.Gateway.Skills = "tools"
+	if f, err := skills.LoadAdapters(nil, nil); err != nil || !reflect.DeepEqual([]string(f.Ports[config.PortRuntime].Use), []string{"builtin:remote", "builtin:declarative", "builtin:skill"}) {
+		t.Fatalf("gateway.skills = tools adds the skill runtime: %v", err)
+	}
 	local := []byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: memory}\n  secrets: {use: memory}\n  auth: {use: builtin:local}\n")
 	c.Auth.LocalIssuer.Enabled = true
 	c.Auth.Issuers = nil

@@ -1,8 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api, errorText } from "../api";
+import { useState, type FormEvent } from "react";
+import { api, errorCode, errorText } from "../api";
 import { Mark } from "../Brand";
+import type { MessageKey } from "../i18n";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
+import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { ACCENT_BAR, SURFACE, button } from "../ui/styles";
@@ -10,6 +13,8 @@ import { ACCENT_BAR, SURFACE, button } from "../ui/styles";
 type Destination = { kind: "loopback"; port?: string } | { kind: "app"; app: string } | { kind: "scheme"; scheme: string };
 
 type ConsentRequest = { client: string; redirect: string; destination: Destination };
+
+const PASSWORD_REFUSALS: Partial<Record<string, MessageKey>> = { wrong_password: "consent.wrongPassword", slow_down: "consent.tooMany", password_required: "consent.passwordHint" };
 
 const whereTo = (destination: Destination, t: ReturnType<typeof useT>) => {
   switch (destination.kind) {
@@ -22,15 +27,21 @@ const whereTo = (destination: Destination, t: ReturnType<typeof useT>) => {
   }
 };
 
-/** The owner's answer to an AI app asking to connect by OAuth: a warning that the app named itself, where the access goes, allow or deny, then the browser goes back to the app. */
+/** The owner's answer to an AI app asking to connect by OAuth: a warning that the app named itself, where the access goes, allow with the owner password or deny, then the browser goes back to the app. */
 export function Consent({ id }: { id: string }) {
   const t = useT();
   const path = `/api/oauth/requests/${encodeURIComponent(id)}`;
   const request = useQuery({ queryKey: ["oauth-request", id], queryFn: () => api<ConsentRequest>("GET", path), retry: false, staleTime: Infinity });
+  const [password, setPassword] = useState("");
   const decide = useMutation({
-    mutationFn: (approve: boolean) => api<{ redirect: string }>("POST", path, { approve }),
+    mutationFn: (approve: boolean) => api<{ redirect: string }>("POST", path, approve ? { approve, password } : { approve }),
     onSuccess: (result) => window.location.assign(result.redirect),
   });
+  const refusal = decide.isError ? PASSWORD_REFUSALS[errorCode(decide.error) ?? ""] : undefined;
+  const onAllow = (event: FormEvent) => {
+    event.preventDefault();
+    decide.mutate(true);
+  };
   const client = request.data?.client ?? "";
   const done = decide.isSuccess ? (decide.variables ? t("consent.done", { client }) : t("consent.denied", { client })) : undefined;
   return (
@@ -75,16 +86,28 @@ export function Consent({ id }: { id: string }) {
                 {done}
               </p>
             ) : (
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button type="button" className={button({ variant: "accent" })} disabled={decide.isPending} onClick={() => decide.mutate(true)}>
-                  {t("consent.allow")}
-                </button>
-                <button type="button" className={button({ variant: "secondary" })} disabled={decide.isPending} onClick={() => decide.mutate(false)}>
-                  {t("consent.deny")}
-                </button>
-              </div>
+              <form className="mt-6" onSubmit={onAllow}>
+                <Field
+                  label={t("consent.password")}
+                  hint={t("consent.passwordHint")}
+                  error={refusal ? t(refusal) : undefined}
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+                <div className="mt-1 flex flex-wrap gap-3">
+                  <button type="submit" className={button({ variant: "accent" })} disabled={decide.isPending}>
+                    {t("consent.allow")}
+                  </button>
+                  <button type="button" className={button({ variant: "secondary" })} disabled={decide.isPending} onClick={() => decide.mutate(false)}>
+                    {t("consent.deny")}
+                  </button>
+                </div>
+              </form>
             )}
-            {decide.isError ? (
+            {decide.isError && !refusal ? (
               <div className="mt-4">
                 <Notice>{errorText(decide.error)}</Notice>
               </div>

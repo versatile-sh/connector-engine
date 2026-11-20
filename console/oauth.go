@@ -22,6 +22,7 @@ const (
 	registrationsPerMin = 10
 	maxPendingAuth      = 256
 	maxClientName       = 64
+	consentFailsPerMin  = 5
 )
 
 var appSchemes = map[string]string{"cursor": "Cursor", "vscode": "VS Code"}
@@ -336,14 +337,51 @@ func (c *Console) consentInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"client": req.client.Name, "redirect": redirectTarget(req.redirect), "destination": DestinationOf(req.redirect)})
 }
 
+func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
+	if password == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "type your password to allow the app", "code": "password_required"})
+		return false
+	}
+	c.loginMu.Lock()
+	defer c.loginMu.Unlock()
+	now := time.Now()
+	c.consentFails = slices.DeleteFunc(c.consentFails, func(t time.Time) bool { return now.Sub(t) > time.Minute })
+	if len(c.consentFails) >= consentFailsPerMin {
+		w.Header().Set("Retry-After", "60")
+		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many wrong passwords, try again in a minute", "code": "slow_down"})
+		return false
+	}
+	ok, err := c.State.CheckLogin(c.State.OwnerName(), password)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot read the account"})
+		return false
+	}
+	if !ok {
+		c.consentFails = append(c.consentFails, now)
+		time.Sleep(500 * time.Millisecond)
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "wrong password", "code": "wrong_password"})
+		return false
+	}
+	return true
+}
+
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Approve bool `json:"approve"`
+		Approve  bool   `json:"approve"`
+		Password string `json:"password"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
-	req, ok := c.pendingRequest(r.PathValue("id"), true)
+	id := r.PathValue("id")
+	if _, ok := c.pendingRequest(id, false); !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
+		return
+	}
+	if in.Approve && !c.ownerConfirms(w, in.Password) {
+		return
+	}
+	req, ok := c.pendingRequest(id, true)
 	if !ok {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
 		return

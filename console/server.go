@@ -62,6 +62,8 @@ type Console struct {
 	codes      map[string]authCode
 	registered []time.Time
 	refreshMu  sync.Mutex
+
+	consentFails []time.Time
 }
 
 // Handler returns every route behind the guard.

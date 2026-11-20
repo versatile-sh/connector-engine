@@ -164,6 +164,16 @@ func (s *State) CheckLogin(username, password string) (bool, error) {
 	return userOK && passOK, nil
 }
 
+// OwnerName returns the owner's username, or "" before the account exists.
+func (s *State) OwnerName() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data.Owner == nil {
+		return ""
+	}
+	return s.data.Owner.Username
+}
+
 // Sessions returns the stored sessions.
 func (s *State) Sessions() map[string]StoredSession {
 	s.mu.Lock()

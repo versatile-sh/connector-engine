@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"sync"
 	"time"
 
@@ -40,11 +41,14 @@ var (
 	errRegister  error
 )
 
-// Open opens or creates the database file at path in WAL mode with full fsync and applies the embedded migrations.
+// Open opens or creates the database file at path, mode 0600 with its WAL files, in WAL mode with full fsync and applies the embedded migrations.
 func Open(ctx context.Context, path string) (*Store, error) {
 	registerOnce.Do(func() { errRegister = sqlite.RegisterDeterministicScalarFunction("cn_time", 1, cnTime) })
 	if errRegister != nil {
 		return nil, fail(errRegister)
+	}
+	if err := ownerOnly(path); err != nil {
+		return nil, fail(err)
 	}
 	writer, err := sql.Open("sqlite", path+"?_txlock=immediate&"+pragmas)
 	if err != nil {
@@ -62,6 +66,22 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+func ownerOnly(path string) error {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
+	if err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	for _, p := range []string{path, path + "-wal", path + "-shm"} {
+		if err := os.Chmod(p, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
 }
 
 // Close releases both connection pools.

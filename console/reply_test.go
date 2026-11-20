@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -25,6 +26,7 @@ func TestFailAnswersTheStatusTheErrorCarries(t *testing.T) {
 		{notFound("no agent is named x"), 404, apiError{Error: "no agent is named x"}},
 		{unreachable(errors.New("example.com answered 500")), 502, apiError{Error: "example.com answered 500"}},
 		{port.Errorf(port.CodeInvalidManifest, "skill entry: no id"), 400, apiError{Error: "invalid_manifest: skill entry: no id"}},
+		{fmt.Errorf("channel: %w", sealed.ErrLocked), 503, apiError{Error: "channel: " + sealed.ErrLocked.Error()}},
 		{errors.New("open /state.json: permission denied"), 500, apiError{Error: "the console could not do this; its log has the cause"}},
 	} {
 		rec := httptest.NewRecorder()

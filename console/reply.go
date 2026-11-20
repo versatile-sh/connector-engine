@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/agents-control/connector-engine/console/sealed"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -70,6 +71,8 @@ func (c *Console) fail(w http.ResponseWriter, err error) {
 		writeJSON(w, status, apiError{Error: ee.Detail, Code: ee.Code})
 	case errors.As(err, &se):
 		writeError(w, se.status, err.Error())
+	case errors.Is(err, sealed.ErrLocked):
+		writeError(w, http.StatusServiceUnavailable, err.Error())
 	case codeStatus[port.CodeOf(err)] != 0:
 		writeError(w, codeStatus[port.CodeOf(err)], err.Error())
 	default:

@@ -43,11 +43,6 @@ var skillTools = []*mcp.Tool{
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}, Meta: mcp.Meta{alwaysLoadMeta: true}},
 }
 
-type skillArgs struct {
-	Skill string `json:"skill"`
-	Path  string `json:"path"`
-}
-
 type findArgs struct {
 	Query string `json:"query"`
 	Limit int    `json:"limit"`

@@ -1,4 +1,4 @@
-// Command connector-engine boots the engine from connector-engine.yaml and adapters.yaml, or checks an adapters file.
+// Command connector-engine boots the engine from connector-engine.yaml and adapters.yaml, checks an adapters file, or delivers the unlock key of the hostkey adapter.
 package main
 
 import (
@@ -15,6 +15,7 @@ import (
 
 	"github.com/agents-control/connector-engine/app"
 	"github.com/agents-control/connector-engine/config"
+	"github.com/agents-control/connector-engine/secrets/hostkey"
 )
 
 var version = "dev"
@@ -52,6 +53,9 @@ func run(args, environ []string, stdout, stderr io.Writer) int {
 	}
 	if rest := fs.Args(); len(rest) > 0 && rest[0] == "adapters" {
 		return cfg.AdaptersMain(append(rest[1:], "--file", *adaptersPath), environ, stdout, stderr)
+	}
+	if rest := fs.Args(); len(rest) > 0 && rest[0] == "unlock" {
+		return hostkey.Main(rest[1:], cfg.Secrets.UnlockSocket, os.Stdin, stdout, stderr)
 	}
 	file, err := cfg.ReadAdapters(*adaptersPath, environ)
 	if err != nil {

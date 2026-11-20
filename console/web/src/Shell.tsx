@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { api, setCsrf } from "./api";
 import { Wordmark } from "./Brand";
 import { Footer } from "./Footer";
@@ -7,9 +7,10 @@ import type { MessageKey } from "./i18n";
 import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { useSetup } from "./onboarding/useSetup";
-import { approvalsQuery } from "./queries";
+import { approvalsQuery, sessionQuery } from "./queries";
 import { navigate, useLocation } from "./router";
 import { Icon } from "./ui/Icon";
+import { flip, irisAt } from "./ui/motion";
 import { Notice } from "./ui/Notice";
 import { ICON_BUTTON, PRESS, TOUCH, button } from "./ui/styles";
 import { useCopy } from "./ui/useCopy";
@@ -33,7 +34,9 @@ const OAUTH: Record<string, MessageKey> = {
   failed: "oauth.failed",
 };
 
-const NAV_LINK = `relative inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm max-lg:px-2 text-muted hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
+const NAV_LINK = `relative isolate inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm max-lg:px-2 text-muted hover:text-paper aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
+
+type Iris = { section: Section; at: number; x: number; y: number; r: number };
 
 function Endpoint({ url }: { url: string }) {
   const t = useT();
@@ -44,6 +47,19 @@ function Endpoint({ url }: { url: string }) {
       <span className="min-w-0 truncate" translate="no">{url.replace(/^https?:\/\//, "")}</span>
       <Icon name={result === "copied" ? "check" : "copy"} className="size-3.5" />
     </button>
+  );
+}
+
+const KEY_NOTICE: Partial<Record<string, MessageKey>> = { plaintext: "shell.keysPlaintext", locked: "shell.keysLocked" };
+
+function KeyNotice() {
+  const t = useT();
+  const key = KEY_NOTICE[useQuery(sessionQuery).data?.key_protection ?? ""];
+  if (!key) return null;
+  return (
+    <div className="mb-6">
+      <Notice>{t(key)}</Notice>
+    </div>
   );
 }
 
@@ -99,7 +115,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           >
             <Wordmark />
           </a>
-          <nav aria-label={t("nav.label")} className="ml-2 hidden items-center gap-1 lg:flex">
+          <nav aria-label={t("nav.label")} className="relative ml-2 hidden items-center gap-1 lg:flex">
             <NavLinks section={section} waiting={waiting} />
           </nav>
           <div className="ml-auto flex min-w-0 items-center gap-2">
@@ -111,7 +127,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
             </button>
           </div>
         </div>
-        <nav aria-label={t("nav.label")} className="no-scrollbar mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 py-1 lg:hidden">
+        <nav aria-label={t("nav.label")} className="no-scrollbar relative mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 py-1 lg:hidden">
           <NavLinks section={section} waiting={waiting} />
         </nav>
       </header>
@@ -130,6 +146,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
             </Notice>
           </div>
         ) : null}
+        <KeyNotice />
         <div key={section} className="swap-in flex flex-1 flex-col">
           {children}
         </div>
@@ -139,26 +156,73 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
   );
 }
 
+/** The links of the sections inside a `relative` nav: one pill glides under the current link and follows it when the links resize, and a soft iris opens where a link is pressed, from its centre on a key press. */
 function NavLinks({ section, waiting }: { section: Section; waiting: number }) {
   const t = useT();
-  return NAV.map((item) => (
-    <a
-      key={item.section}
-      href={item.href}
-      aria-current={item.section === section ? "page" : undefined}
-      className={NAV_LINK}
-      onClick={(event) => {
-        event.preventDefault();
-        navigate(item.href);
-      }}
-    >
-      {t(item.label)}
-      {item.section === "approvals" && waiting > 0 ? (
-        <span className="arrive bubble-word bg-lime px-1.5 py-px font-mono text-[0.6875rem] leading-4 text-ink tabular-nums">
-          <span aria-hidden="true">{waiting}</span>
-          <span className="sr-only">{t("nav.waiting", { count: waiting })}</span>
-        </span>
-      ) : null}
-    </a>
-  ));
+  const pill = useRef<HTMLSpanElement>(null);
+  const [iris, setIris] = useState<Iris>();
+  useLayoutEffect(
+    function followTheCurrentLink() {
+      const mark = pill.current;
+      const nav = mark?.parentElement;
+      if (!mark || !nav) return;
+      let placed = "";
+      const place = (glide: boolean) => {
+        const link = nav.querySelector<HTMLElement>('[aria-current="page"]');
+        if (!link) return;
+        const width = `${link.offsetWidth}px`;
+        const to = `translate(${link.offsetLeft}px, ${link.offsetTop}px)`;
+        if (placed === width + to) return;
+        placed = width + to;
+        const was = mark.getBoundingClientRect();
+        const box = nav.getBoundingClientRect();
+        const from = glide && was.width > 0 && link.offsetWidth > 0 ? `translate(${was.left - box.left + nav.scrollLeft}px, ${was.top - box.top + nav.scrollTop}px) scaleX(${was.width / link.offsetWidth})` : to;
+        mark.style.width = width;
+        flip([{ element: mark, from, to }]);
+      };
+      place(true);
+      const observer = new ResizeObserver(() => place(false));
+      for (const link of nav.querySelectorAll("a")) observer.observe(link);
+      return () => observer.disconnect();
+    },
+    [section],
+  );
+  return (
+    <>
+      <span ref={pill} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 h-9 origin-left rounded-md bg-paper/8 transition-transform duration-250 ease-(--ease-glide)" />
+      {NAV.map((item) => (
+        <a
+          key={item.section}
+          href={item.href}
+          aria-current={item.section === section ? "page" : undefined}
+          className={NAV_LINK}
+          onClick={(event) => {
+            event.preventDefault();
+            const link = event.currentTarget;
+            const box = link.getBoundingClientRect();
+            const point = event.detail === 0 ? undefined : { x: event.clientX - box.left, y: event.clientY - box.top };
+            setIris({ section: item.section, at: event.timeStamp, ...irisAt(link.offsetWidth, link.offsetHeight, point) });
+            navigate(item.href);
+          }}
+        >
+          {iris?.section === item.section ? (
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit]">
+              <span
+                key={iris.at}
+                className="iris absolute -translate-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(245_245_242/0.16),transparent)] opacity-0"
+                style={{ left: iris.x, top: iris.y, width: iris.r * 2, height: iris.r * 2 }}
+              />
+            </span>
+          ) : null}
+          {t(item.label)}
+          {item.section === "approvals" && waiting > 0 ? (
+            <span className="arrive bubble-word bg-lime px-1.5 py-px font-mono text-[0.6875rem] leading-4 text-ink tabular-nums">
+              <span aria-hidden="true">{waiting}</span>
+              <span className="sr-only">{t("nav.waiting", { count: waiting })}</span>
+            </span>
+          ) : null}
+        </a>
+      ))}
+    </>
+  );
 }

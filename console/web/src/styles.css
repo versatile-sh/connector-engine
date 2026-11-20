@@ -281,6 +281,20 @@ svg {
   }
 }
 
+.iris {
+  animation: iris 0.3s var(--ease-settle);
+}
+
+@keyframes iris {
+  from {
+    scale: 0;
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .swap-in {
   animation: swap-in 0.45s var(--ease-settle) both;
 }

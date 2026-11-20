@@ -27,6 +27,8 @@ export const es: Record<MessageKey, string> = {
   "shell.signOut": "Salir",
   "shell.copyEndpoint": "Copiar el endpoint {url}",
   "shell.setup": "Configuración {done}/{total}",
+  "shell.keysPlaintext": "Tus secretos guardados están protegidos por una clave de cifrado guardada en un archivo de texto plano en este equipo. Ejecuta make keychain-migrate para llevarla al llavero del sistema.",
+  "shell.keysLocked": "Tus secretos guardados están bloqueados. Ejecuta make unlock en este equipo para abrirlos con la clave del llavero del sistema.",
 
   "oauth.connected": "La cuenta está conectada.",
   "oauth.refused": "El proveedor rechazó la conexión.",
@@ -307,6 +309,8 @@ export const es: Record<MessageKey, string> = {
   "skills.remove": "Quitar",
   "skills.removeAsk": "¿Quitar {name}? Tus apps de IA dejan de verla al momento.",
   "skills.removeConfirm": "Quitar skill",
+  "skills.maximize": "Maximizar {name}",
+  "skills.minimize": "Minimizar {name}",
   "import.skillChoose": "Revisa la skill",
   "import.skillChooseIntro": "Qué trae, de dónde viene y quién puede cargarla.",
   "import.skillKeys": "Para tus {count} claves de acceso",

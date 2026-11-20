@@ -1,9 +1,9 @@
 import type { Access, Connector } from "../api";
 
-/** How many of a connector's functions sit at each access. */
-export const accessCounts = (connector: Connector): Record<Access, number> => {
+/** How many of a connector's functions, or of a skill's keys, sit at each access. */
+export const accessCounts = (choices: readonly { access: Access }[]): Record<Access, number> => {
   const counts: Record<Access, number> = { off: 0, on: 0, ask: 0 };
-  for (const fn of connector.functions ?? []) counts[fn.access] += 1;
+  for (const choice of choices) counts[choice.access] += 1;
   return counts;
 };
 

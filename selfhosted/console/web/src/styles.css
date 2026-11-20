@@ -319,6 +319,26 @@ svg {
     height 250ms var(--ease-settle);
 }
 
+.tab-line {
+  transition:
+    transform 0.25s var(--ease-glide),
+    opacity 0.25s var(--ease-glide);
+}
+
+.tabs-strip {
+  --fade-start: 0px;
+  --fade-end: 0px;
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+}
+
+.tabs-strip[data-fade-start] {
+  --fade-start: 2rem;
+}
+
+.tabs-strip[data-fade-end] {
+  --fade-end: 2rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

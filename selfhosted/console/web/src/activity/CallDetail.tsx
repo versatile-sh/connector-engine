@@ -9,6 +9,7 @@ import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { CAPTION, SKELETON } from "../ui/styles";
 import { approvalStateKey, durationText, kindOf, prettyJSON, skillFile, timeOf, type Named } from "./activity";
+import { AccessKeyName } from "./AccessKeyName";
 import { OutcomeTag } from "./OutcomeTag";
 
 const PRE = "mt-2 max-h-80 overflow-auto rounded-xl border border-line bg-ink-sunken p-4 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-paper";
@@ -43,7 +44,7 @@ function Facts({ call, connector }: { call: ActivityDetail; connector: string })
   const approval = approvalStateKey(call.approval_state);
   const facts: { label: string; value: ReactNode }[] = [
     { label: t("activity.when"), value: <time dateTime={call.at}>{timeOf(call.at, locale)}</time> },
-    { label: t("common.app"), value: call.agent },
+    { label: t("activity.key"), value: <AccessKeyName name={call.agent} detailed /> },
     ...(call.skill
       ? [
           { label: t("activity.detail.skill"), value: connector === call.skill ? call.skill : `${connector} (${call.skill})` },

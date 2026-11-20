@@ -38,8 +38,9 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 
 - **Button** (`button({ variant, size })`): a pill. `primary` paper on ink for the main action of a view, `secondary` outlined, `quiet` text only, `danger` amber outlined for removal. Sizes `xs` (in rows), `sm`, `md`. Every button presses in.
 - **Surfaces**: `SURFACE` is the one card (raised, strong hairline, light on the top edge, 12px). `PANEL` is the one large panel a page holds its content in (16px, soft hairline). `WELL` is the sunken box inside a panel or card: a list of rows, a block of text. `LIT_EDGE` is a grid card inside a panel whose top edge lights lime on hover and focus. `HAIRLINE` lights the top edge of the box that holds the next step.
-- **Field** (`Field`, `FIELD`, `CONTROL`): ink fill, strong hairline, paper on focus, amber when invalid; the note under it keeps its height. `CONTROL` is the field at 36px for filter rows and `SearchBox`.
-- **Choices**: `CHIP` for one pressed choice, `Segmented` for one of a few (the language switch, access off/on/ask, ranges), `OPTION_CARD` for one of a few that each need a line, `Switch` for on/off (on is paper).
+- **Field** (`Field`, `FIELD`, `CONTROL`): ink fill, strong hairline, paper on focus, amber when invalid; the note under it keeps its height. `CONTROL` is the field at 36px for filter rows, `SearchBox` and `Select`.
+- **Choices**: `CHIP` for one pressed choice, `Segmented` for one of a few (the language switch, access off/on/ask, ranges), `Select` for one of many or where a `Segmented` has no room, `Choice` for one of a few that fits its container (a `Segmented` where the container has room, else a `Select` of the options that can be taken), `OPTION_CARD` for one of a few that each need a line, `Switch` for on/off (on is paper), `Checkbox` for picking rows of a list (paper, with a mixed state for a select-all).
+- **Select** (`Select`): the one dropdown. The `CONTROL` field shows the chosen option and a chevron; its list opens in raised ink with a strong hairline, 12px corners and a soft shadow, under the field, or over it when it does not fit under. On a phone it rises from the bottom as a full-width sheet. The row under the keyboard or the pointer is paper at 10% and the chosen one carries a check; an option may lead with an icon; past eight options a filter tops the list. Keyboard: the arrows, Home, End and typing a name move; Enter or Space chooses; Escape closes and gives focus back to the field. With the filter shown, typing, Space, Home and End go to the filter, and the arrows and Enter still move and choose. It is controlled as a native select: `<Select label value options onChange disabled? placeholder? className? />` with `options` of `{ value, text, icon? }`, a `value` of `undefined` showing the `placeholder` (a dash unless given, so one `Select` can also be a page's overflow menu of actions), and `onChange` called only with a different value. An "All" choice is an ordinary option the caller adds (Activity maps `""` to no filter). The console draws no native select or datalist, whose list the system paints in its own colours: `src/ui/vocabulary.test.ts` fails the build on one.
 - **Tag**: a machine fact as mono text in a tone, with an optional dot. It replaces every status pill.
 - **Notice**: the one note box, amber when something needs care, a calm box with the lime check when it went well. `InlineConfirm` is the amber question that replaces a Remove or Revoke button.
 - **Sheet**: the one dialog, centred, 16px, rising in; full screen on a phone.
@@ -50,6 +51,17 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 ## Layout
 
 A section page is a `PageTitle`, then one `PANEL` (or a few `SURFACE`s for pages of settings), the way the site's directory is. Cards in a panel use container queries (`@container` with `@xl:`/`@4xl:` columns), so the same card works in a panel, a dialog or a narrow column.
+
+## Layout principles
+
+- **Containers align with containers.** Card edge meets card edge and top meets top, never a card beside a line of text. Put a section's heading, counts and filter inside its card, so two columns start with two cards.
+- **One grid per page**, with the same gutters everywhere: `gap-6` between cards, `gap-10` between columns.
+- **Proximity and common region** (Gestalt): what belongs together sits in one card; what does not, in another.
+- **Hick**: few choices at once; a view shows at most three primary actions, and the rest go into one overflow menu (`Select` with a placeholder).
+- **Miller**: chunk long sets (a filter past six rows, counts in the heading, a select-all over what the filter shows).
+- **Fitts**: the primary action is large and close to what it acts on.
+- **Doherty**: feedback in under 400 ms; a pending control shows it at once.
+- **Tesler**: the complexity lives in the code, not on the screen; defaults and one-request batches do the work.
 
 ## Responsiveness
 

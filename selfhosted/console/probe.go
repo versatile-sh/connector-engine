@@ -38,7 +38,7 @@ func (a Access) mode() port.Mode {
 	case AccessAsk:
 		return port.ModeAskOnce
 	}
-	return ""
+	return port.ModeDeny
 }
 
 func accessFor(m port.Mode) (Access, bool) {

@@ -14,6 +14,9 @@ type ItemSectionsProps = {
   variant: "page" | "review";
   accessOf(item: Item): Access;
   pendingOf?(item: Item): boolean;
+  mostOf?(item: Item): Access | undefined;
+  flagsOf?(item: Item): ReactNode;
+  accepts?: boolean;
   choose(item: Item, access: Access): void;
 };
 
@@ -44,20 +47,22 @@ function Section({ kind, count, variant, children }: { kind: ItemKind; count: nu
   const id = useId();
   const Heading = variant === "page" ? "h2" : "h3";
   return (
-    <section aria-labelledby={id} className={variant === "page" ? "swap-in min-w-0" : "swap-in mt-8 min-w-0"}>
-      <div className="flex flex-wrap items-baseline gap-x-4">
-        <Heading id={id} className={variant === "page" ? TITLE : SUBTITLE}>
-          {t(`items.${kind}.title`)}
-        </Heading>
-        {kind === "instructions" ? null : <Tag>{count}</Tag>}
+    <section aria-labelledby={id} className={variant === "page" ? `${WELL} swap-in min-w-0` : "swap-in mt-8 min-w-0"}>
+      <div className={variant === "page" ? "px-4 pt-4 sm:px-5" : ""}>
+        <div className="flex flex-wrap items-baseline gap-x-4">
+          <Heading id={id} className={variant === "page" ? TITLE : SUBTITLE}>
+            {t(`items.${kind}.title`)}
+          </Heading>
+          {kind === "instructions" ? null : <Tag>{count}</Tag>}
+        </div>
+        <p className="mt-1 text-sm text-pretty text-muted">{t(`items.${kind}.intro`)}</p>
       </div>
-      <p className="mt-1 text-sm text-pretty text-muted">{t(`items.${kind}.intro`)}</p>
       {children}
     </section>
   );
 }
 
-function Instructions({ item, picker, accept }: { item: Item; picker: ReactNode; accept: ReactNode }) {
+function Instructions({ item, picker, accept, flags }: { item: Item; picker: ReactNode; accept: ReactNode; flags: ReactNode }) {
   const t = useT();
   return (
     <div className="@container mt-4 flex flex-col gap-3">
@@ -69,6 +74,7 @@ function Instructions({ item, picker, accept }: { item: Item; picker: ReactNode;
         <div className="flex flex-wrap items-center gap-2">
           <StateFlag item={item} />
           {accept}
+          {flags}
         </div>
         <div className="ml-auto w-full @lg:w-auto">{picker}</div>
       </div>
@@ -95,7 +101,7 @@ function PromptPreview({ text }: { text: string }) {
   );
 }
 
-function ItemRow({ item, picker, accept }: { item: Item; picker: ReactNode; accept: ReactNode }) {
+function ItemRow({ item, picker, accept, flags }: { item: Item; picker: ReactNode; accept: ReactNode; flags: ReactNode }) {
   const t = useT();
   return (
     <ChoiceRow
@@ -108,6 +114,7 @@ function ItemRow({ item, picker, accept }: { item: Item; picker: ReactNode; acce
           ) : null}
           <StateFlag item={item} />
           {accept}
+          {flags}
         </>
       }
       description={item.kind === "prompt" ? <PromptPreview text={item.preview} /> : item.preview ? <p className="mt-1 text-sm whitespace-pre-line text-muted">{item.preview}</p> : null}
@@ -117,8 +124,8 @@ function ItemRow({ item, picker, accept }: { item: Item; picker: ReactNode; acce
   );
 }
 
-/** A connector's server instructions, prompts and resources in one section per kind that has any, each item with its text, its access choice and, when quarantined while on or ask, a button that accepts the new text. */
-export function ItemSections({ items, variant, accessOf, pendingOf, choose }: ItemSectionsProps) {
+/** A connector's server instructions, prompts and resources in one section per kind that has any (on a page, each one card with its heading inside), each item with its text, its access choice (at most `mostOf`), the caller's flags and, when it `accepts` and the item is quarantined while on or ask, a button that accepts the new text. */
+export function ItemSections({ items, variant, accessOf, pendingOf, mostOf, flagsOf, accepts = true, choose }: ItemSectionsProps) {
   const t = useT();
   const groups = groupItems(items);
   const pickerOf = (item: Item) => (
@@ -127,22 +134,27 @@ export function ItemSections({ items, variant, accessOf, pendingOf, choose }: It
       of="item"
       choices={accessChoices(item.kind)}
       value={accessOf(item)}
+      most={mostOf?.(item)}
       disabled={pendingOf?.(item) ?? false}
       onChange={(access) => choose(item, access)}
     />
   );
-  const acceptOf = (item: Item) => <Accept item={item} access={accessOf(item)} disabled={pendingOf?.(item) ?? false} choose={choose} />;
+  const acceptOf = (item: Item) => (accepts ? <Accept item={item} access={accessOf(item)} disabled={pendingOf?.(item) ?? false} choose={choose} /> : null);
   return (
     <>
       {ITEM_KINDS.map((kind) =>
         groups[kind].length === 0 ? null : (
           <Section key={kind} kind={kind} count={groups[kind].length} variant={variant}>
             {kind === "instructions" ? (
-              groups[kind].map((item) => <Instructions key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} />)
-            ) : (
-              <ul className={`${WELL} mt-3`}>
+              <div className={variant === "page" ? "px-4 pb-4 sm:px-5" : ""}>
                 {groups[kind].map((item) => (
-                  <ItemRow key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} />
+                  <Instructions key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} flags={flagsOf?.(item)} />
+                ))}
+              </div>
+            ) : (
+              <ul className={variant === "page" ? "mt-3 border-t border-line" : `${WELL} mt-3`}>
+                {groups[kind].map((item) => (
+                  <ItemRow key={item.name} item={item} picker={pickerOf(item)} accept={acceptOf(item)} flags={flagsOf?.(item)} />
                 ))}
               </ul>
             )}

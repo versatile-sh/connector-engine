@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 const (
@@ -22,7 +24,7 @@ const (
 
 var tokenLike = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// Setup is a shareable install: the connectors and skills to add with their choices and the kinds of notification channel, never a secret.
+// Setup is a shareable install: the connectors and skills to add with their choices, the access keys' profiles by key name, and the kinds of notification channel, never a secret.
 type Setup struct {
 	APIVersion    string           `yaml:"apiVersion" json:"api_version"`
 	Kind          string           `yaml:"kind" json:"kind"`
@@ -32,7 +34,7 @@ type Setup struct {
 	Stripped      []string         `yaml:"stripped,omitempty" json:"stripped"`
 }
 
-// SetupConnector is one connector of a setup: its source, MCP address or listing address, and the choice of each function and item.
+// SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off, and the profiles of the keys that do not follow it.
 type SetupConnector struct {
 	Name         string            `yaml:"name" json:"name"`
 	MCP          string            `yaml:"mcp,omitempty" json:"mcp,omitempty"`
@@ -42,6 +44,8 @@ type SetupConnector struct {
 	HeaderSecret bool              `yaml:"headerSecret,omitempty" json:"header_secret,omitempty"`
 	Functions    map[string]Access `yaml:"functions,omitempty" json:"functions"`
 	Items        map[string]Access `yaml:"items,omitempty" json:"items"`
+	NewKeysOff   bool              `yaml:"newKeysOff,omitempty" json:"new_keys_off,omitempty"`
+	Profiles     []Profile         `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	Exists       bool              `yaml:"-" json:"exists"`
 }
 
@@ -120,7 +124,12 @@ func (c *Console) ExportSetup(ctx context.Context) ([]byte, string, error) {
 	s := Setup{APIVersion: setupAPIVersion, Kind: setupKind}
 	for _, cs := range connectors {
 		o, _ := c.State.OriginOf(cs.ID)
-		sc := SetupConnector{Name: cs.Alias, Transport: cs.Transport, Local: o.Local, HeaderSecret: o.HeaderSecret, Functions: map[string]Access{}, Items: map[string]Access{}}
+		sc := SetupConnector{Name: cs.Alias, Transport: cs.Transport, Local: o.Local, HeaderSecret: o.HeaderSecret, Functions: map[string]Access{}, Items: map[string]Access{}, NewKeysOff: cs.NewKeysOff}
+		for _, p := range cs.Profiles {
+			if p.Mode != ProfileFollow {
+				sc.Profiles = append(sc.Profiles, p)
+			}
+		}
 		switch {
 		case o.Listing != "":
 			sc.Listing = stripURL(o.Listing, &s.Stripped)
@@ -181,8 +190,18 @@ func parseSetup(raw []byte) (Setup, error) {
 			return Setup{}, invalid("connector %s gives exactly one of mcp or listing", sc.Name)
 		}
 		for name, a := range mergeChoices(sc) {
-			if !a.Valid() {
-				return Setup{}, invalid("connector %s, %s: access is off, on or ask", sc.Name, name)
+			if !validChoice(name, a) {
+				return Setup{}, invalid("connector %s, %s: access is off, on or ask, and instructions are off or on", sc.Name, name)
+			}
+		}
+		for _, p := range sc.Profiles {
+			if Slug(p.Agent) == "" || p.Mode != ProfileOff && p.Mode != ProfileCustom {
+				return Setup{}, invalid("connector %s, key %q: a profile names a key and is off or custom", sc.Name, p.Agent)
+			}
+			for name, a := range p.Overrides {
+				if !validChoice(name, a) {
+					return Setup{}, invalid("connector %s, key %s, %s: access is off, on or ask, and instructions are off or on", sc.Name, p.Agent, name)
+				}
 			}
 		}
 	}
@@ -247,7 +266,7 @@ func (c *Console) inspectSetup(ctx context.Context, raw []byte) (BackupSummary, 
 	return BackupSummary{Kind: "setup", Counts: map[string]int{"connectors": len(s.Connectors), "skills": len(s.Skills)}, Setup: &s}, nil
 }
 
-// ImportSetup adds what a setup holds through the console's own import, so pinning and the probe still apply; an entry already installed keeps its choices.
+// ImportSetup adds what a setup holds through the console's own import, so pinning and the probe still apply; an entry already installed keeps its choices, and a profile for a key not made yet waits for a key of that name.
 func (c *Console) ImportSetup(ctx context.Context, raw []byte) (SetupResult, error) {
 	s, err := parseSetup(raw)
 	if err != nil {
@@ -257,29 +276,67 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte) (SetupResult, err
 		return SetupResult{}, err
 	}
 	res := SetupResult{Added: []string{}, Kept: []string{}, Failed: map[string]string{}, SignIns: []string{}}
-	add := func(name string, in importRequest) bool {
-		if _, _, err := c.importOne(ctx, in); err != nil {
+	add := func(name string, in importRequest) (string, bool) {
+		id, _, err := c.importOne(ctx, in)
+		if err != nil {
 			res.Failed[name] = err.Error()
-			return false
 		}
-		res.Added = append(res.Added, name)
-		return true
+		return id, err == nil
 	}
 	for _, sc := range s.Connectors {
 		if sc.Exists {
 			res.Kept = append(res.Kept, sc.Name)
 			continue
 		}
-		if add(sc.Name, importRequest{MCP: sc.MCP, Listing: sc.Listing, Local: sc.Local, HeaderSecret: sc.HeaderSecret, Choices: mergeChoices(sc)}) {
-			res.SignIns = append(res.SignIns, sc.Name)
+		id, ok := add(sc.Name, importRequest{MCP: sc.MCP, Listing: sc.Listing, Local: sc.Local, HeaderSecret: sc.HeaderSecret, Choices: mergeChoices(sc)})
+		if !ok {
+			continue
 		}
+		res.SignIns = append(res.SignIns, sc.Name)
+		if err := c.adoptProfiles(ctx, id, sc); err != nil {
+			res.Failed[sc.Name] = "installed without its access key profiles: " + err.Error()
+			continue
+		}
+		res.Added = append(res.Added, sc.Name)
 	}
 	for _, sk := range s.Skills {
 		if sk.Exists {
 			res.Kept = append(res.Kept, sk.Name)
 			continue
 		}
-		add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest})
+		if _, ok := add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest}); ok {
+			res.Added = append(res.Added, sk.Name)
+		}
 	}
 	return res, nil
+}
+
+func validChoice(name string, a Access) bool {
+	kind, item := itemKinds[port.ItemKind(name)]
+	return a.Valid() && (!item || validFor(kind, a))
+}
+
+func (c *Console) adoptProfiles(ctx context.Context, conn string, sc SetupConnector) error {
+	defer c.lockConnector(conn)()
+	if err := c.State.SetNewKeysOff(conn, sc.NewKeysOff); err != nil {
+		return err
+	}
+	agents := c.State.Agents()
+	for _, p := range sc.Profiles {
+		p.Agent = Slug(p.Agent)
+		i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == p.Agent })
+		if i < 0 && sc.NewKeysOff {
+			continue
+		}
+		if i < 0 {
+			if err := c.State.PutPendingProfile(conn, p); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := c.applyProfile(ctx, conn, agents[i], p); err != nil {
+			return fmt.Errorf("key %s: %w", p.Agent, err)
+		}
+	}
+	return nil
 }

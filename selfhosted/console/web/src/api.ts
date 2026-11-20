@@ -44,6 +44,15 @@ export type Item = {
   access: Access;
 };
 
+/** How one access key reaches one connector: not at all, by the connector's own choices, or with some of them narrowed. */
+export type ProfileMode = "off" | "follow" | "custom";
+
+/** One access key's permissions on one connector; a custom profile names the functions and items it holds below the connector's choice. */
+export type Profile = { agent: string; expired?: boolean } & ({ mode: "off" | "follow" } | { mode: "custom"; overrides: Record<string, Access> });
+
+/** The engine's answer for one access key on one function or item, with why when it narrows or refuses it. */
+export type Effect = { name: string; access: Access; reason?: string };
+
 export type Connector = {
   id: string;
   alias: string;
@@ -60,6 +69,9 @@ export type Connector = {
   credentials?: string[];
   functions: FunctionView[] | null;
   items?: Item[] | null;
+  profiles: Profile[];
+  waiting?: Profile[];
+  new_keys_off?: boolean;
 };
 
 export type ProbedTool = {
@@ -324,7 +336,17 @@ export type Account = { username: string; last_export?: string };
 export type BackupKind = "full" | "setup";
 
 /** One connector of a setup: where it comes from, each choice, and whether it is installed here already. */
-export type SetupConnector = { name: string; mcp?: string; listing?: string; transport?: string; functions: Record<string, Access> | null; items: Record<string, Access> | null; exists: boolean };
+export type SetupConnector = {
+  name: string;
+  mcp?: string;
+  listing?: string;
+  transport?: string;
+  functions: Record<string, Access> | null;
+  items: Record<string, Access> | null;
+  new_keys_off?: boolean;
+  profiles?: Profile[];
+  exists: boolean;
+};
 
 /** One skill of a setup, and whether it is installed here already. */
 export type SetupSkill = { name: string; listing: string; digest?: string; access: Access; exists: boolean };

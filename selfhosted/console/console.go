@@ -46,6 +46,7 @@ type Console struct {
 	surf          surfaces
 	signing       signingKey
 	sep           separatorCache
+	writing       sync.Map
 }
 
 // Handler returns every route behind the guard.
@@ -67,6 +68,13 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("POST /api/import", c.authed(c.doImport))
 	mux.HandleFunc("PUT /api/connectors/{id}/functions/{name}", c.authed(c.setAccess))
 	mux.HandleFunc("PUT /api/connectors/{id}/items", c.authed(c.setItemAccess))
+	mux.HandleFunc("PUT /api/connectors/{id}/functions", c.authed(c.setAccessAll))
+	mux.HandleFunc("POST /api/connectors/{id}/profiles:copy", c.authed(c.copyProfile))
+	mux.HandleFunc("PUT /api/connectors/{id}/profiles", c.authed(c.setProfileMode))
+	mux.HandleFunc("GET /api/connectors/{id}/profiles/{agent}", c.authed(c.profileEffects))
+	mux.HandleFunc("PUT /api/connectors/{id}/profiles/{agent}", c.authed(c.setProfileAccess))
+	mux.HandleFunc("PUT /api/connectors/{id}/new-keys", c.authed(c.setNewKeys))
+	mux.HandleFunc("DELETE /api/connectors/{id}/waiting/{agent}", c.authed(c.dropWaiting))
 	mux.HandleFunc("DELETE /api/connectors/{id}", c.authed(c.removeConnector))
 	mux.HandleFunc("GET /api/skills", c.authed(c.listSkills))
 	mux.HandleFunc("PUT /api/skills/{id}/keys", c.authed(c.setSkillAccessAll))

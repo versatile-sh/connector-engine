@@ -42,21 +42,11 @@ type ActivityCall struct {
 // ActivityDetail is one call in full: its row, what the console captured of it and the engine's record.
 type ActivityDetail struct {
 	ActivityCall
-	Tool          string          `json:"tool,omitempty"`
-	Session       string          `json:"session,omitempty"`
-	MCPSession    string          `json:"mcp_session,omitempty"`
-	RPCID         json.RawMessage `json:"rpc_id,omitempty"`
-	Detail        string          `json:"detail,omitempty"`
-	KeptArguments bool            `json:"kept_arguments"`
-	Arguments     string          `json:"arguments,omitempty"`
-	ArgumentsCut  bool            `json:"arguments_cut,omitempty"`
-	KeptResult    bool            `json:"kept_result"`
-	Result        string          `json:"result,omitempty"`
-	ResultCut     bool            `json:"result_cut,omitempty"`
-	ResultBytes   int             `json:"result_bytes,omitempty"`
-	EngineCall    string          `json:"engine_call,omitempty"`
-	CallState     string          `json:"call_state,omitempty"`
-	FinishedAt    time.Time       `json:"finished_at,omitzero"`
+	Tool string `json:"tool,omitempty"`
+	CallPayload
+	EngineCall string    `json:"engine_call,omitempty"`
+	CallState  string    `json:"call_state,omitempty"`
+	FinishedAt time.Time `json:"finished_at,omitzero"`
 }
 
 // HourCount is how many calls started in one UTC hour, by outcome.
@@ -448,9 +438,7 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 func detailOf(j joined) ActivityDetail {
 	d := ActivityDetail{ActivityCall: j.row}
 	if cp := j.capture; cp != nil {
-		d.Tool, d.Session, d.MCPSession, d.RPCID, d.Detail = cp.Tool, cp.Session, cp.MCPSession, cp.RPCID, cp.Detail
-		d.KeptArguments, d.Arguments, d.ArgumentsCut = cp.KeptArguments, cp.Arguments, cp.ArgumentsCut
-		d.KeptResult, d.Result, d.ResultCut, d.ResultBytes = cp.KeptResult, cp.Result, cp.ResultCut, cp.ResultBytes
+		d.Tool, d.CallPayload = cp.Tool, cp.CallPayload
 	}
 	if call := j.call; call != nil {
 		d.EngineCall, d.CallState, d.FinishedAt, d.Session = string(call.ID), string(call.State), call.FinishedAt, string(call.Session)

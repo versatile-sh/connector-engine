@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,18 +10,15 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/port"
 	secretslocal "github.com/versatile-sh/connector-engine/secrets/local"
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
-	"github.com/versatile-sh/connector-engine/selfhosted/console/sealed"
-	"github.com/versatile-sh/connector-engine/selfhosted/console/web"
 	"github.com/versatile-sh/connector-engine/selfhosted/secrets/hostkey"
 )
 
@@ -51,8 +47,8 @@ func or(getenv func(string) string, name, def string) string {
 func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	fs := flag.NewFlagSet("connector-console", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	port := or(getenv, "CONSOLE_PORT", "7465")
-	listen := fs.String("listen", or(getenv, "CONSOLE_LISTEN", "127.0.0.1:"+port), "address the console listens on")
+	consolePort := or(getenv, "CONSOLE_PORT", "7465")
+	listen := fs.String("listen", or(getenv, "CONSOLE_LISTEN", "127.0.0.1:"+consolePort), "address the console listens on")
 	publicURL := fs.String("public-url", getenv("CONSOLE_PUBLIC_URL"), "address the browser and agents use; empty takes http://127.0.0.1 at the port of --listen")
 	engineURL := fs.String("engine", or(getenv, "CONSOLE_ENGINE_URL", "http://127.0.0.1:8080"), "the engine's public listener")
 	operatorURL := fs.String("engine-operator", or(getenv, "CONSOLE_ENGINE_OPERATOR_URL", "http://127.0.0.1:8081"), "the engine's operator listener")
@@ -78,45 +74,26 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		}
 		*publicURL = "http://127.0.0.1:" + p
 	}
-	public, err := url.Parse(strings.TrimRight(*publicURL, "/"))
-	if err != nil || public.Host == "" || public.Port() == "" {
-		fmt.Fprintln(stderr, "--public-url is an absolute URL with a port")
-		return 2
-	}
 	token, err := os.ReadFile(*tokenFile)
 	if err != nil || strings.TrimSpace(string(token)) == "" {
 		fmt.Fprintf(stderr, "operator token: %v\n", err)
 		return 1
 	}
-	state, err := console.OpenState(*statePath)
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return 1
-	}
-	activity, err := console.OpenActivity(filepath.Join(filepath.Dir(*statePath), "activity"), log)
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return 1
-	}
-	defer activity.Close()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	box := &sealed.Box{}
-	if *unlockSocket == "" {
-		store, err := secretslocal.Open(*secretsDir)
-		if err != nil {
-			fmt.Fprintf(stderr, "secrets: %v\n", err)
-			return 1
+	unlock := func(context.Context) (port.SecretStore, error) { return secretslocal.Open(*secretsDir) }
+	if *unlockSocket != "" {
+		unlock = func(ctx context.Context) (port.SecretStore, error) {
+			return hostkey.Open(ctx, *secretsDir, *unlockSocket, log)
 		}
-		box.Unlock(store)
-	} else {
-		go unlockBox(ctx, box, *secretsDir, *unlockSocket, log)
 	}
-	eng := &console.Engine{PublicURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)), Tenant: *tenant, Workspace: *workspace, Person: *person}
-	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: console.LoopbackHosts(public)}, Web: web.App(), Secrets: box,
-		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: *agentTTL, Log: log, Activity: activity, Restart: stop, LoopbackHost: *loopbackHost}
-	go ensureTenant(ctx, eng, log)
-	go c.RunNotifications(ctx)
+	c, closeConsole, err := console.Open(ctx, console.Options{PublicURL: *publicURL, EngineURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)),
+		StatePath: *statePath, Unlock: unlock, Tenant: *tenant, Workspace: *workspace, Person: *person, LoopbackHost: *loopbackHost, AgentTTL: *agentTTL, Restart: stop, Log: log})
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	defer closeConsole()
 	lis, err := net.Listen("tcp", *listen)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -142,7 +119,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 			_ = s.Shutdown(shut)
 		}
 	}()
-	log.Info("console listening", "listen", lis.Addr().String(), "url", public.String())
+	log.Info("console listening", "listen", lis.Addr().String(), "url", *publicURL)
 	if err := srv.Serve(lis); !errors.Is(err, http.ErrServerClosed) {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -150,63 +127,12 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	return 0
 }
 
-func unlockBox(ctx context.Context, box *sealed.Box, dir, socket string, log *slog.Logger) {
-	store, err := hostkey.Open(ctx, dir, socket, log)
-	if err != nil {
-		log.Error("the console's secrets stay locked", "err", err)
-		return
-	}
-	box.Unlock(store)
-	log.Info("the console's secrets are unlocked", "protection", store.Form())
-}
-
-func ensureTenant(ctx context.Context, eng *console.Engine, log *slog.Logger) {
-	for {
-		err := eng.EnsureTenant(ctx)
-		if err == nil {
-			log.Info("tenant ready", "tenant", eng.Tenant)
-			return
-		}
-		log.Warn("waiting for the engine", "error", err)
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(2 * time.Second):
-		}
-	}
-}
-
 func host(args []string, socket string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) != 2 || socket == "" {
 		fmt.Fprintln(stderr, "usage: connector-console host METHOD PATH, with CONSOLE_HOST_SOCKET set; the body is read from stdin")
 		return 2
 	}
-	client := &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "unix", socket)
-	}}}
-	req, err := http.NewRequest(args[0], "http://console"+args[1], stdin)
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return 2
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return 1
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		var e struct {
-			Error string `json:"error"`
-		}
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
-		if json.Unmarshal(raw, &e) != nil || e.Error == "" {
-			e.Error = strings.TrimSpace(string(raw))
-		}
-		fmt.Fprintln(stderr, e.Error)
-		return 1
-	}
-	if _, err := io.Copy(stdout, resp.Body); err != nil {
+	if err := console.HostRequest(context.Background(), socket, args[0], args[1], stdin, stdout); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}

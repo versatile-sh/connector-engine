@@ -89,12 +89,12 @@ const hero = () => {
     wordmark(136, 87),
     text(mono, "open source  ·  MIT", w - 72 - width(mono, "open source  ·  MIT", 14), 86, 14, MUTED),
     text(serif, "connector-engine", 68, 214, 112, PAPER),
-    runs([[serif, "The MCP gateway ", 46, PAPER], [italic, "you run", 46, LIME], [serif, ":", 46, PAPER]], 72, 284),
-    text(serif, "connectors, permissions and approvals for every AI app.", 72, 334, 34, MUTED),
+    runs([[serif, "Every MCP connector, ", 46, PAPER], [italic, "one gateway you control", 46, LIME], [serif, ".", 46, PAPER]], 72, 284),
+    text(serif, "You decide what each AI app may run, and see every call it makes.", 72, 334, 34, MUTED),
     `<path d="M72 364H${w - 72}" stroke="${LINE}" stroke-opacity="0.1"/>`,
     pills,
   ].join("");
-  return frame(w, h, "connector-engine: the MCP gateway you run. Connectors, permissions and approvals for every AI app.", body);
+  return frame(w, h, "connector-engine: every MCP connector, one gateway you control. You decide what each AI app may run, and see every call it makes.", body);
 };
 
 const section = (kicker, plain, accent) => {

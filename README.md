@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner-hero.svg" alt="connector-engine: the MCP gateway you run. Connectors, permissions and approvals for every AI app." width="100%">
+  <img src="docs/assets/banner-hero.svg" alt="connector-engine: every MCP connector, one gateway you control. You decide what each AI app may run, and see every call it makes." width="100%">
 </p>
 
 <p align="center">

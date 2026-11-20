@@ -122,7 +122,7 @@ func (c *Console) follow(ctx context.Context, conn string, a Agent) error {
 	return c.Engine.deleteGrants(ctx, slices.DeleteFunc(rows, func(g port.Grant) bool { return !isOverride(g) }))
 }
 
-// SetProfileAccess narrows one function or item for one access key below the connector's choice, binding a key that was off, or clears the narrowing when access is the connector's own choice; a wider access is refused.
+// SetProfileAccess narrows one function or item for one access key below the connector's choice, or clears the narrowing when access is the connector's own choice; a wider access, or any access for a key that is off there, is refused.
 func (c *Console) SetProfileAccess(ctx context.Context, conn, agent, name string, access Access) error {
 	kind, item := itemKinds[port.ItemKind(name)]
 	if !access.Valid() || item && !validFor(kind, access) {
@@ -157,9 +157,7 @@ func (c *Console) narrow(ctx context.Context, conn string, a Agent, name string,
 		return err
 	}
 	if !bound[a.Name] {
-		if err := c.bind(ctx, conn, a); err != nil {
-			return err
-		}
+		return invalid("%s is off on this connector; set it to custom first", a.Name)
 	}
 	if access != base {
 		return c.writeOverride(ctx, conn, a.Name, f, access)

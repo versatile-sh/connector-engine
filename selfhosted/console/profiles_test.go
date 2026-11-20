@@ -364,3 +364,17 @@ func TestAKeyTurnedOffWhileItRenewsStaysOff(t *testing.T) {
 		}
 	}
 }
+
+func TestAKeyThatIsOffTakesNoOverride(t *testing.T) {
+	p := profiledStack(t)
+	p.mint("beta")
+	p.mode(console.ProfileOff, "beta")
+	for _, access := range []console.Access{console.AccessOn, console.AccessAsk} {
+		if status, raw := p.b.send("PUT", "/api/connectors/"+p.conn+"/profiles/beta", map[string]any{"name": "lookup", "access": access}, nil); status != http.StatusBadRequest {
+			t.Errorf("%s on a key that is off: %d %s", access, status, raw)
+		}
+	}
+	if pr := p.profile("beta"); pr.Mode != console.ProfileOff {
+		t.Fatalf("beta after the refused overrides: %+v", pr)
+	}
+}

@@ -120,4 +120,4 @@ func main() {
 ```
 
 - The console reaches the engine over HTTP only, like any other client; in the no-Docker install both run in one process and still talk over loopback HTTP.
-- Design record: [docs/internal/SELFHOSTED-LAYOUT.md](docs/internal/SELFHOSTED-LAYOUT.md).
+- Design records are kept outside this repository.

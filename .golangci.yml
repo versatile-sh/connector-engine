@@ -46,7 +46,6 @@ linters:
     paths:
       - vendor
       - internal/plugkit
-      - console/web
       - selfhosted/console/web
     rules:
       - path: _test\.go

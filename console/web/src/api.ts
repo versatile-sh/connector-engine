@@ -12,7 +12,11 @@ export type Session = {
   csrf?: string;
   mcp_url: string;
   onboarding_dismissed?: boolean;
+  key_protection?: KeyProtection;
 };
+
+/** How the root keys of the engine and the console rest: waiting for the host's unlock key, a plaintext file, or wrapped by a key in the OS keychain. */
+export type KeyProtection = "" | "locked" | "plaintext" | "wrapped";
 
 export type FunctionView = {
   name: string;

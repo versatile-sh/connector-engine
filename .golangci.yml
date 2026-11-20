@@ -60,7 +60,7 @@ linters:
         linters:
           - gosec
         text: G124
-      - path: (^|/)console/(fetch|server)\.go
+      - path: (^|/)console/(fetch|spa)\.go
         linters:
           - gosec
         text: G70[34]

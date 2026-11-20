@@ -11,3 +11,4 @@ vendor/
 /cnctl
 /testmcp
 /dist/
+/docs/assets/src/node_modules/

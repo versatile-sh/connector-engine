@@ -86,6 +86,13 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 | The gRPC runtime could not dial a plaintext upstream: `app` never set `Insecure` | key `grpc.insecure` (default false), read by `app/build.go` |
 | `createGrant` for an agent row accepted a connector that does not exist, or belongs to another tenant, and stored an orphan row | `service/bindings.go` refuses unless the connector lookup was a permission failure; `service/grantconnector_test.go` |
 
+## Findings of the pre-open-source audit
+
+| Finding | Fix |
+|---|---|
+| `CancelApproval` by a workspace admin authorized inside its store write: a hang on `store/memory`, a second pool connection inside a transaction on Postgres | authorized before the write; `store/memory` panics on a store call from inside a callback (`TestACallFromInsideACallbackPanicsInsteadOfDeadlocking`, `TestAWorkspaceAdminCancelsAnApprovalThatDoesNotNameThem`) |
+| The worker discarded sweep errors, and a panic in the worker, the relay or a gRPC handler ended the process | the worker logs each failed sweep and approved execution and counts it in `connector_worker_sweep_failures_total`; `internal/safe` turns a panic into an error in the worker, the relay and two gRPC interceptors, which answer `INTERNAL` (`TestRunLogsCountsAndSurvivesFailingAndPanickingSweeps`, `TestRunSurvivesASinkThatPanics`, `TestAPanickingHandlerAnswersInternalAndIsLogged`) |
+
 ## Known flake
 
 `runtime/grpc` failed once in a full `go test -race ./...` run on 2026-11-18 (and `internal/grpcdesc` once with "reflection: EOF" while another `go test` process ran). It did not reproduce in 5 isolated runs, 3 loaded runs, 2 more full runs and `-count=30` of both packages. Suspected: a reflection stream closed by a test server shutting down under load. Not fixed.

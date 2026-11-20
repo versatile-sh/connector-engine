@@ -8,6 +8,7 @@ Every secret the engine keeps (credentials, held call arguments, results, client
 |---|---|---|
 | `builtin:localfile` (`secrets/local`) | `root.key`, plaintext hex, mode 0600, refused when group or other can read it | the default, the `headless` profile, any config that does not opt in |
 | `builtin:hostkey` (`selfhosted/secrets/hostkey`) | `root.key.wrapped`: the root sealed with AES-256-GCM under an unlock key that lives in the host's OS keychain | the `person` profile |
+| `builtin:keychain` (`hostkey.Unlock`, registered by `selfhosted/standalone`) | the same `root.key.wrapped`, with the unlock key read from the OS keychain inside the process | the install without Docker (`connector-engine-selfhosted up`) |
 | `builtin:onepassword` (`secrets/onepassword`) | `root.key.wrapped`, under an unlock key read at start from a 1Password item through a 1Password Connect server | opt-in by config, any profile, headless included |
 | `memory` | in the process only | tests and dev |
 
@@ -38,7 +39,11 @@ Tested on Linux with gnome-keyring. The macOS and Windows backends are covered b
 
 Alternatives rejected, from Docker's documentation and not measured here: compose `secrets:` without Swarm are bind mounts of a host file (a plaintext key on the host disk; macOS and Windows have no per-user tmpfs to put it in); environment variables show up in `docker inspect` and `/proc`; a host unix socket bind-mounted into a container is not expected to cross the Docker Desktop VM.
 
-Each install has its own keychain item: service `connector-engine`, account the compose project name (`PROJECT`, default `connector-engine`).
+## Without Docker
+
+`connector-engine-selfhosted up` runs the engine and the console as one process of the user, so it reads the unlock key from the keychain itself, at start, through the same backends: no socket, no `docker exec`, and no locked state after a restart. A fresh root is created wrapped; a plaintext root, left by a run without a keychain, is wrapped (`Migrate`) on the first start that finds one; a wrapped root without its key refuses to start. `--no-keychain`, or a host without a keychain, keeps plaintext roots with the warning of [Without a keychain](#without-a-keychain). The account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item. Layout and commands: [../README.md](../README.md#run-without-docker).
+
+Each Docker install has its own keychain item: service `connector-engine`, account the compose project name (`PROJECT`, default `connector-engine`).
 
 | Host | Store | Notes |
 |---|---|---|

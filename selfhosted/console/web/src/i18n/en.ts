@@ -91,6 +91,7 @@ export const en = {
   "onboarding.step3.action": "Connect an app",
 
   "connectors.title": "Your *connectors*",
+  "connectors.filter": "Filter connectors",
   "connectors.intro": "What your AI apps can reach, function by function.",
   "connectors.import": "Import",
   "connectors.functions": "{count, plural, one {# function} other {# functions}}",
@@ -366,6 +367,7 @@ export const en = {
   "items.templateHint": "A URI template: your AI apps fill in the parts in braces.",
   "items.accept": "Accept the new text",
   "skills.title": "Your *skills*",
+  "skills.filter": "Filter skills",
   "skills.intro": "Instructions and files your AI apps load through the gateway, never run by it. Choose off, on or ask for each access key.",
   "skills.empty.title": "No skills *yet*",
   "skills.empty.body": "Open a skill link from a catalog, or press Import and paste its address. You review it before anything is added.",

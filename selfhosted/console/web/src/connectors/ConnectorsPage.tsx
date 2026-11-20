@@ -8,6 +8,7 @@ import { useSetup } from "../onboarding/useSetup";
 import { connectorsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { EmptyState } from "../ui/EmptyState";
+import { LongList } from "../ui/LongList";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
@@ -18,7 +19,7 @@ import { PasteBox } from "./PasteBox";
 
 const GRID = "grid gap-6 @xl:grid-cols-2 @4xl:grid-cols-3";
 
-/** Every installed connector as a grid of cards in one panel, the first-run guide above it, and the import window. `/import` with no link opens the window at once. */
+/** Every installed connector as a grid of cards in one panel, with a filter past six of them, the first-run guide above it, and the import window. `/import` with no link opens the window at once. */
 export function ConnectorsPage() {
   const t = useT();
   const { path } = useLocation();
@@ -72,11 +73,15 @@ export function ConnectorsPage() {
               </div>
             </EmptyState>
           ) : (
-            <ul className={GRID}>
-              {list.map((connector) => (
-                <ConnectorCard key={connector.id} connector={connector} />
-              ))}
-            </ul>
+            <LongList rows={list} textOf={(c) => `${c.title} ${c.alias} ${c.publisher ?? ""} ${c.description ?? ""}`} keyOf={(c) => c.id} label={t("connectors.filter")} whole>
+              {(shown) => (
+                <ul className={GRID}>
+                  {shown.map(({ row: connector, phase }) => (
+                    <ConnectorCard key={connector.id} phase={phase} connector={connector} />
+                  ))}
+                </ul>
+              )}
+            </LongList>
           )}
         </div>
       )}

@@ -7,9 +7,10 @@ import { Tag } from "../ui/Tag";
 import { AccessBar } from "./AccessBar";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { accessCounts, authState, serverHost } from "./summary";
+import { rowMotion, type RowPhase } from "../ui/kept";
 
 /** One installed connector as a card that opens it: who it is, how its functions are set, and what it still needs. */
-export function ConnectorCard({ connector }: { connector: Connector }) {
+export function ConnectorCard({ connector, phase }: { connector: Connector; phase?: RowPhase }) {
   const t = useT();
   const functions = connector.functions ?? [];
   const counts = accessCounts(functions);
@@ -17,7 +18,7 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
   const changed = functions.filter((fn) => fn.state === "quarantined").length;
   const href = `/connectors/${encodeURIComponent(connector.id)}`;
   return (
-    <li>
+    <li {...rowMotion(phase)}>
       <a
         href={href}
         onClick={(event) => {

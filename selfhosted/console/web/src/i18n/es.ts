@@ -93,6 +93,7 @@ export const es: Record<MessageKey, string> = {
   "onboarding.step3.action": "Conectar una app",
 
   "connectors.title": "Tus *conectores*",
+  "connectors.filter": "Filtrar conectores",
   "connectors.intro": "Lo que tus apps de IA alcanzan, función por función.",
   "connectors.import": "Importar",
   "connectors.functions": "{count, plural, one {# función} other {# funciones}}",
@@ -368,6 +369,7 @@ export const es: Record<MessageKey, string> = {
   "items.templateHint": "Una plantilla de URI: tus apps de IA completan las partes entre llaves.",
   "items.accept": "Aceptar el texto nuevo",
   "skills.title": "Tus *skills*",
+  "skills.filter": "Filtrar skills",
   "skills.intro": "Instrucciones y archivos que tus apps de IA cargan por el gateway, que nunca los ejecuta. Elige Apagada, Activada o Preguntar para cada clave de acceso.",
   "skills.empty.title": "Ninguna skill *todavía*",
   "skills.empty.body": "Abre el enlace de una skill desde un catálogo, o pulsa Importar y pega su dirección. La revisas antes de que se añada nada.",

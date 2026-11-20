@@ -4,14 +4,15 @@ import { Icon } from "../ui/Icon";
 import { LIT_EDGE } from "../ui/styles";
 import { SkillDialog } from "./SkillDialog";
 import { SkillOverview } from "./SkillOverview";
+import { rowMotion, type RowPhase } from "../ui/kept";
 
-type SkillCardProps = { skill: Skill; href: string; open: boolean; onOpen(): void; onClose(): void };
+type SkillCardProps = { skill: Skill; href: string; open: boolean; phase?: RowPhase; onOpen(): void; onClose(): void };
 
 /** One installed skill as a card of the grid that opens it: who made it, two lines of what it does and how its keys are set; open, it grows into a dialog over the page and shrinks back on close. */
-export function SkillCard({ skill, href, open, onOpen, onClose }: SkillCardProps) {
+export function SkillCard({ skill, href, open, phase, onOpen, onClose }: SkillCardProps) {
   const card = useRef<HTMLAnchorElement>(null);
   return (
-    <li>
+    <li {...rowMotion(phase)}>
       <a
         ref={card}
         href={href}

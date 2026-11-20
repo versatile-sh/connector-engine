@@ -1,4 +1,4 @@
-// Package worker drives the timers, the sweep C12, the periodic re-list and the fan-outs.
+// Package worker drives the timers, the call-deadline sweep, the periodic re-list and the fan-outs.
 package worker
 
 import (

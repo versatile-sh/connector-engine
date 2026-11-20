@@ -335,7 +335,7 @@ type FanOut struct {
 // WorkKind names a kind of due work the worker finds through the one cross-tenant view.
 type WorkKind string
 
-// Kinds of due work and C12.
+// Kinds of due work, the call-deadline sweep included.
 const (
 	WorkApprovalExpiry  WorkKind = "approval_expiry"
 	WorkApprovedRecord  WorkKind = "approved_record"

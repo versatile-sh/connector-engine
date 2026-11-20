@@ -121,9 +121,9 @@ func TestARefusedMutationLeavesNoEvent(t *testing.T) {
 	w := newWorld(t, opts{reviewed: true})
 	before := len(w.Events())
 	_, err := w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeTenant, Listing: &ref, Selector: "*", Mode: port.ModeAllow})
-	want(t, port.IsCode(err, port.CodeRowRefused), true, "a tenant row never says allow (G8)")
+	want(t, port.IsCode(err, port.CodeRowRefused), true, "a tenant row never says allow")
 	_, err = w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeSession, ScopeID: "s1", Connector: w.conn.ID, Selector: "fn:search", Mode: port.ModeAllow})
-	want(t, port.IsCode(err, port.CodeRowRefused), true, "a session row is written by an approval only (G5)")
+	want(t, port.IsCode(err, port.CodeRowRefused), true, "a session row is written by an approval only")
 	want(t, len(w.Events()), before, "no event")
 }
 

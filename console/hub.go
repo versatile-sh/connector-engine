@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agents-control/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/surface"
 )
 
 const hubKeepAlive = 25 * time.Second

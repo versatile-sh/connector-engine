@@ -16,10 +16,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/console"
-	"github.com/agents-control/connector-engine/console/testmcp/notes"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/console/testmcp/notes"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func personRelays(c *config.Config) {

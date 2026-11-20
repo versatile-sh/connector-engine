@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/agents-control/connector-engine/credential"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/credential"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func resolver(kind port.CredentialKind, secret string) credential.Resolver {

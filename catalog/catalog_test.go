@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/catalog"
 )
 
 func TestEveryTypeHasASchema(t *testing.T) {

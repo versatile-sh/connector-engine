@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Limits are the approval keys.

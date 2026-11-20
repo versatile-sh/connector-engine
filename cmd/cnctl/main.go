@@ -10,11 +10,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/agents-control/connector-engine/cli/admin"
-	"github.com/agents-control/connector-engine/cli/keychain"
-	"github.com/agents-control/connector-engine/cli/notify"
-	"github.com/agents-control/connector-engine/cli/skills"
-	"github.com/agents-control/connector-engine/cli/tools"
+	"github.com/versatile-sh/connector-engine/cli/admin"
+	"github.com/versatile-sh/connector-engine/cli/keychain"
+	"github.com/versatile-sh/connector-engine/cli/notify"
+	"github.com/versatile-sh/connector-engine/cli/skills"
+	"github.com/versatile-sh/connector-engine/cli/tools"
 )
 
 type command func(ctx context.Context, args []string, stdout, stderr io.Writer, environ []string) int

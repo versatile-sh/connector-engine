@@ -14,12 +14,12 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/internal/grpctest"
-	"github.com/agents-control/connector-engine/internal/sourcetest"
-	"github.com/agents-control/connector-engine/port"
-	runtime "github.com/agents-control/connector-engine/runtime/grpc"
-	"github.com/agents-control/connector-engine/source/bsr"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/grpctest"
+	"github.com/versatile-sh/connector-engine/internal/sourcetest"
+	"github.com/versatile-sh/connector-engine/port"
+	runtime "github.com/versatile-sh/connector-engine/runtime/grpc"
+	"github.com/versatile-sh/connector-engine/source/bsr"
 )
 
 type fakeBSR struct {

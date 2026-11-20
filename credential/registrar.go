@@ -3,7 +3,7 @@ package credential
 import (
 	"context"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Registered is a pre-registered OAuth client; an empty Tenant makes it the default for the issuer.

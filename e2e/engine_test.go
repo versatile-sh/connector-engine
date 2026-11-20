@@ -33,7 +33,7 @@ func build(t *testing.T) binaries {
 	t.Helper()
 	dir := t.TempDir()
 	b := binaries{engine: filepath.Join(dir, "connector-engine"), cnctl: filepath.Join(dir, "cnctl")}
-	for out, pkg := range map[string]string{b.engine: "github.com/agents-control/connector-engine/cmd/connector-engine", b.cnctl: "github.com/agents-control/connector-engine/cmd/cnctl"} {
+	for out, pkg := range map[string]string{b.engine: "github.com/versatile-sh/connector-engine/cmd/connector-engine", b.cnctl: "github.com/versatile-sh/connector-engine/cmd/cnctl"} {
 		if o, err := exec.Command("go", "build", "-o", out, pkg).CombinedOutput(); err != nil {
 			t.Fatalf("go build %s: %v\n%s", pkg, err, o)
 		}

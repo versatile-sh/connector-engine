@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	rtmemory "github.com/agents-control/connector-engine/runtime/memory"
-	"github.com/agents-control/connector-engine/runtime/mux"
+	"github.com/versatile-sh/connector-engine/port"
+	rtmemory "github.com/versatile-sh/connector-engine/runtime/memory"
+	"github.com/versatile-sh/connector-engine/runtime/mux"
 )
 
 func TestKindsGoToTheirRuntimeAndHandlesFollow(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/core/approval"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var states = []port.ApprovalState{"", port.ApprovalPending, port.ApprovalApproved, port.ApprovalExecuting, port.ApprovalExecuted,

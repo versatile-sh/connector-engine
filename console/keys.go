@@ -8,8 +8,8 @@ import (
 
 	"github.com/agents-control/plugkit/discovery"
 
-	"github.com/agents-control/connector-engine/secrets/hostkey"
-	"github.com/agents-control/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/secrets/hostkey"
+	"github.com/versatile-sh/connector-engine/secrets/local"
 )
 
 // keyProtection reports the weakest way the engine's and the console's root keys rest: locked, plaintext or wrapped; empty when neither says.

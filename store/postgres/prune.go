@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Prune deletes the delivered events, idempotency keys, audit rows and finished calls of tenant that are older than r allows.

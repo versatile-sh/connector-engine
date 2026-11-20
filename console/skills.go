@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/source/skillcatalog"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/source/skillcatalog"
 )
 
 // SkillFileView is one file of a skill as the console shows it.

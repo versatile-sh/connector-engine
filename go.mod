@@ -1,4 +1,4 @@
-module github.com/agents-control/connector-engine
+module github.com/versatile-sh/connector-engine
 
 go 1.27.3
 

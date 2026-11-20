@@ -18,12 +18,12 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/console"
-	"github.com/agents-control/connector-engine/console/sealed"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/memory"
-	"github.com/agents-control/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/secrets/memory"
+	"github.com/versatile-sh/connector-engine/surface"
 )
 
 type fakeChannel struct {

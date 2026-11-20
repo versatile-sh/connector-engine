@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Limits of one skill listing: files, bytes of one file and bytes of the whole folder.

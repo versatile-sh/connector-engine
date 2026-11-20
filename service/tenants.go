@@ -4,10 +4,10 @@ import (
 	"context"
 	"slices"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/catalog"
-	corecatalog "github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/catalog"
+	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // RemoveTenantKind is the kind of the fan-out row of a tenant removal.

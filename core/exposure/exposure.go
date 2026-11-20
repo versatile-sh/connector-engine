@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Entry is one function an agent would be listed, under a key that names its connector.

@@ -11,9 +11,9 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 
-	"github.com/agents-control/connector-engine/auth/local"
-	"github.com/agents-control/connector-engine/port"
-	secretsmemory "github.com/agents-control/connector-engine/secrets/memory"
+	"github.com/versatile-sh/connector-engine/auth/local"
+	"github.com/versatile-sh/connector-engine/port"
+	secretsmemory "github.com/versatile-sh/connector-engine/secrets/memory"
 )
 
 func published(t *testing.T, i *local.Issuer) []string {

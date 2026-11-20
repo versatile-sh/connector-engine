@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/internal/tokenscan"
+	"github.com/versatile-sh/connector-engine/internal/tokenscan"
 )
 
 const token = "ab<cd>/ef"

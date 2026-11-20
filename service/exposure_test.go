@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/authz/table"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
-	st "github.com/agents-control/connector-engine/service/servicetest"
+	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
+	st "github.com/versatile-sh/connector-engine/service/servicetest"
 )
 
 func forceAsk(c *service.Config, d *service.Deps) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/agents-control/plugkit/adapters"
 
-	"github.com/agents-control/connector-engine/filter/builtin"
+	"github.com/versatile-sh/connector-engine/filter/builtin"
 )
 
 // Modes of the engine; production refuses unsafe settings unless acknowledged.

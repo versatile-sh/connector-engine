@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // ProblemType is the prefix of the type URN of every problem document.

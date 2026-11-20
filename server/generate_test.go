@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/agents-control/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server"
 )
 
 func TestGeneratedFilesAreFresh(t *testing.T) {

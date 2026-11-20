@@ -13,7 +13,7 @@ import (
 	"io"
 	"regexp"
 
-	"github.com/agents-control/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/secrets/local"
 )
 
 // Service is the keychain service every unlock key is stored under; the account is the install's compose project.

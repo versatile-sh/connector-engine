@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/secrets/local"
 )
 
 // Op names a request on the unlock socket.

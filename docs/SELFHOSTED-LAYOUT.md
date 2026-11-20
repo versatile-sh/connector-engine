@@ -263,7 +263,7 @@ Initial commit: `329d53ecfe45`, the version `go.mod` pins today. `go mod tidy` t
 The module path becomes `github.com/versatile-sh/connector-engine`, in one dedicated commit:
 
 - `go mod edit -module github.com/versatile-sh/connector-engine`.
-- Rewrite every Go import, the `go_package` option in `api/connectorengine/v1/connectorengine.proto`, and the paths in docs, the Makefile and scripts. The pattern is anchored on `github.com/agents-control/connector-engine`, so the plugkit paths and the `agents-control.dev` URIs are untouched.
+- Rewrite every Go import, the `go_package` option in `api/connectorengine/v1/connectorengine.proto`, and the paths in docs, the Makefile and scripts. The pattern is anchored on `github.com/versatile-sh/connector-engine`, so the plugkit paths and the `agents-control.dev` URIs are untouched.
 - **Regenerate** `api/connectorengine/v1/*.pb.go` (protoc-gen-go v1.36.12, protoc v7.36.1, as the file header records). Do not edit it with sed: the raw descriptor holds `go_package` as a length-prefixed string (`Z` tag, length `S` = 83), and the new path is 2 bytes shorter.
 - Downstream tools that import the module switch to the new path after the commit lands.
 

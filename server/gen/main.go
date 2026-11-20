@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/agents-control/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server"
 )
 
-const module = "github.com/agents-control/connector-engine"
+const module = "github.com/versatile-sh/connector-engine"
 
 func main() {
 	root := os.Args[1]

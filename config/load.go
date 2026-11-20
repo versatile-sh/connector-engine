@@ -13,11 +13,11 @@ import (
 	"github.com/agents-control/plugkit/adapters"
 	"gopkg.in/yaml.v3"
 
-	"github.com/agents-control/connector-engine/core/approval"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/filter/builtin"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/filter/builtin"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 // Acknowledgements an adapters file may list; production refuses the matching setting without them.

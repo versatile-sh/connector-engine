@@ -4,10 +4,10 @@ import (
 	"context"
 	"slices"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/catalog"
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // OverlayTarget names what an overlay applies to: one connector, or a listing in every workspace of the tenant.

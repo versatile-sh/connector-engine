@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/console/sealed"
-	"github.com/agents-control/connector-engine/secrets/memory"
+	"github.com/versatile-sh/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/secrets/memory"
 )
 
 const legacyKey = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"

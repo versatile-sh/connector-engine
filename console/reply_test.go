@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/agents-control/connector-engine/console/sealed"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func TestFailAnswersTheStatusTheErrorCarries(t *testing.T) {

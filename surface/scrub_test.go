@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/agents-control/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/surface"
 )
 
 func TestScrubDropsTheAddressAndEverySecret(t *testing.T) {

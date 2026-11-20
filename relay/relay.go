@@ -9,8 +9,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/connector-engine/internal/safe"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/internal/safe"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Relay reads Outbox.Pending, delivers through Sink and marks what was delivered.

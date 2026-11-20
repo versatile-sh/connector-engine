@@ -7,10 +7,10 @@ import (
 	"errors"
 	"io/fs"
 
-	"github.com/agents-control/connector-engine/port"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 //go:embed migrations/*.sql

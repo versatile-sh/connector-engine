@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/agents-control/connector-engine/internal/importer"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/internal/importer"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 const maxListingBytes = 256 << 10

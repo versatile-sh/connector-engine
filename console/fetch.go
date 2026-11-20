@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/agents-control/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/egress"
 )
 
 const (

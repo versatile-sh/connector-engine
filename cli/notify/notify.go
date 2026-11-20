@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agents-control/connector-engine/console"
-	"github.com/agents-control/connector-engine/surface/desktop"
+	"github.com/versatile-sh/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/surface/desktop"
 )
 
 const (

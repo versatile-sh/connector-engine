@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"slices"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // ListCalls returns the audit rows of the caller's tenant, oldest first and the newest limit of them when limit is positive; arguments are references and hashes only.

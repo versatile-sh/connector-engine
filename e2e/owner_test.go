@@ -8,8 +8,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func isUnknownTool(err error) bool {

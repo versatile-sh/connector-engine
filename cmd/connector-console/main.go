@@ -20,11 +20,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/agents-control/connector-engine/console"
-	"github.com/agents-control/connector-engine/console/sealed"
-	"github.com/agents-control/connector-engine/console/web"
-	"github.com/agents-control/connector-engine/secrets/hostkey"
-	secretslocal "github.com/agents-control/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/console"
+	"github.com/versatile-sh/connector-engine/console/sealed"
+	"github.com/versatile-sh/connector-engine/console/web"
+	"github.com/versatile-sh/connector-engine/secrets/hostkey"
+	secretslocal "github.com/versatile-sh/connector-engine/secrets/local"
 )
 
 func main() { os.Exit(run(os.Args[1:], os.Getenv, os.Stdout, os.Stderr)) }

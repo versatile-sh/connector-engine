@@ -13,9 +13,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/agents-control/connector-engine/app"
-	"github.com/agents-control/connector-engine/config"
-	"github.com/agents-control/connector-engine/secrets/hostkey"
+	"github.com/versatile-sh/connector-engine/app"
+	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/secrets/hostkey"
 )
 
 var version = "dev"

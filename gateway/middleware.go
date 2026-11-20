@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/agents-control/connector-engine/port"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var refusedMethods = map[string]bool{

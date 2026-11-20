@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/core/listing"
-	"github.com/agents-control/connector-engine/core/names"
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/listing"
+	"github.com/versatile-sh/connector-engine/core/names"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 type definitionView struct {

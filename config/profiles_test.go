@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/config"
 )
 
 func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {

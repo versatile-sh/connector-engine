@@ -18,7 +18,7 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"github.com/agents-control/connector-engine/surface"
+	"github.com/versatile-sh/connector-engine/surface"
 )
 
 const (

@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 
-	"github.com/agents-control/connector-engine/internal/grpcdesc"
+	"github.com/versatile-sh/connector-engine/internal/grpcdesc"
 )
 
 // DescriptorSet is demo/v1/demo.proto compiled by protoc with its imports.

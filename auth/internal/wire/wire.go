@@ -4,8 +4,8 @@ package wire
 import (
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Claims is the JSON payload of a token.

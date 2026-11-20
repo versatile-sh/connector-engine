@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/cli/skills"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/cli/skills"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func (w *world) exporter(agent string) func(args ...string) (string, error) {

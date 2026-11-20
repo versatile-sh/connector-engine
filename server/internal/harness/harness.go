@@ -9,11 +9,11 @@ import (
 
 	"github.com/agents-control/plugkit/discovery"
 
-	"github.com/agents-control/connector-engine/auth/jwks"
-	"github.com/agents-control/connector-engine/auth/local"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/server"
-	st "github.com/agents-control/connector-engine/service/servicetest"
+	"github.com/versatile-sh/connector-engine/auth/jwks"
+	"github.com/versatile-sh/connector-engine/auth/local"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/server"
+	st "github.com/versatile-sh/connector-engine/service/servicetest"
 )
 
 // Audience is the audience of the management surface in tests.

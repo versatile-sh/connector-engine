@@ -98,7 +98,10 @@ func (c *Console) verify(w http.ResponseWriter, username, password string) bool 
 }
 
 func (c *Console) account(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"username": c.State.OwnerName(), "last_export": c.State.LastExport()})
+	writeJSON(w, http.StatusOK, struct {
+		Username   string    `json:"username"`
+		LastExport time.Time `json:"last_export,omitzero"`
+	}{c.State.OwnerName(), c.State.LastExport()})
 }
 
 func (c *Console) changePassword(w http.ResponseWriter, r *http.Request) {

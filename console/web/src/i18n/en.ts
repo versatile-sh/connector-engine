@@ -46,7 +46,7 @@ export const en = {
   "auth.linkLine1": "A connector",
   "auth.linkLine2": "is waiting.",
   "auth.linkBody": "An install link from {host} wants to add a connector. Sign in to review it; nothing is installed until you confirm.",
-  "auth.setup.title": "Create the owner account",
+  "auth.setup.title": "Create the *owner* account",
   "auth.setup.intro": "This console has one account. It lives only on this machine.",
   "auth.login.title": "Sign in",
   "auth.login.intro": "The owner account of this console.",
@@ -77,7 +77,7 @@ export const en = {
   "onboarding.step3.body": "Create a key, then paste one line in Claude, Cursor, Codex or your own code.",
   "onboarding.step3.action": "Connect an app",
 
-  "connectors.title": "Connectors",
+  "connectors.title": "Your *connectors*",
   "connectors.intro": "What your AI apps can reach, function by function.",
   "connectors.import": "Import",
   "connectors.functions": "{count} functions",
@@ -165,7 +165,7 @@ export const en = {
   "import.noTools": "The server listed no function.",
   "import.home": "Go to the console",
 
-  "keys.title": "Connect an AI app",
+  "keys.title": "*Connect* an AI app",
   "keys.intro": "Any MCP client connects to one endpoint with a key and sees every connector with the permissions you set.",
   "keys.endpoint": "Endpoint",
   "keys.new": "New access key",
@@ -185,7 +185,7 @@ export const en = {
   "keys.once": "Shown once. Pick your app below: the key is already filled in.",
   "keys.key": "Access key",
 
-  "approvals.title": "Approvals",
+  "approvals.title": "Your *approvals*",
   "approvals.intro": "Calls of functions set to ask wait here. The app gets the answer as soon as you decide.",
   "approvals.from": "from {agent}",
   "approvals.session": "session {id}",

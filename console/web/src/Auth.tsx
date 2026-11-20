@@ -6,6 +6,7 @@ import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { Said, Split } from "./Split";
 import { Field } from "./ui/Field";
+import { Marked } from "./ui/Marked";
 import { Arrow } from "./ui/Icon";
 import { button } from "./ui/styles";
 
@@ -87,8 +88,8 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
           <LanguageSwitch className="self-end" />
           <div className="flex flex-1 items-center justify-center py-8">
             <form className="ride-in w-full max-w-md" onSubmit={onSubmit} aria-labelledby="auth-title">
-              <h2 id="auth-title" className="font-serif text-4xl leading-none font-normal tracking-[-0.02em]">
-                {t(mode === "setup" ? "auth.setup.title" : "auth.login.title")}
+              <h2 id="auth-title" className="text-lit font-serif text-5xl leading-none font-normal tracking-[-0.02em]">
+                <Marked text={t(mode === "setup" ? "auth.setup.title" : "auth.login.title")} />
               </h2>
               <p className="mt-2 mb-7 text-muted">{t(mode === "setup" ? "auth.setup.intro" : "auth.login.intro")}</p>
               <Field label={t("auth.username")} className="mb-2" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />

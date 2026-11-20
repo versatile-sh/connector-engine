@@ -317,3 +317,28 @@ func TestAKeyThatHadExpiredFollowsAConnectorAddedMeanwhile(t *testing.T) {
 		t.Fatalf("the engine answers %v", got)
 	}
 }
+
+func TestAnExpiredKeyIsTurnedOffAndStaysOffOnceRenewed(t *testing.T) {
+	p := profiledStack(t)
+	p.mint("live")
+	for _, name := range []string{"old", "older"} {
+		if err := p.c.State.PutAgent(console.Agent{Name: name, ExpiresAt: time.Now().Add(-time.Hour)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var imported struct{ Connector string }
+	p.b.ok("POST", "/api/import", map[string]any{"mcp": newToolServer(t, "maps", "route").URL + "/mcp", "local": true}, &imported)
+	p.conn = imported.Connector
+	if pr := p.profile("old"); pr.Mode != console.ProfileFollow || !pr.Expired {
+		t.Fatalf("an expired key on a new connector: %+v", pr)
+	}
+	p.mode(console.ProfileOff, "old")
+	p.mode(console.ProfileOff)
+	p.mint("old")
+	p.mint("older")
+	for _, name := range []string{"old", "older", "live"} {
+		if pr := p.profile(name); pr.Mode != console.ProfileOff {
+			t.Errorf("%s after every key went off and a renewal: %+v", name, pr)
+		}
+	}
+}

@@ -19,7 +19,7 @@ export function ProfilePicker({ connector, agent }: { connector: Connector; agen
   const t = useT();
   if (connector.profiles.length === 0) return <p className="text-sm text-pretty text-muted">{t("profile.noKeys")}</p>;
   const label = t("profile.pickerLabel", { connector: connector.title });
-  const options = [{ value: "", text: t("profile.default"), hint: t("profile.defaultHint") }, ...connector.profiles.map((p) => ({ value: p.agent, text: p.agent, hint: t(`profile.modeHint.${p.mode}`) }))];
+  const options = [{ value: "", text: t("profile.default"), hint: t("profile.defaultHint") }, ...connector.profiles.map((p) => ({ value: p.agent, text: p.expired ? t("profile.expiredKey", { key: p.agent }) : p.agent, hint: t(`profile.modeHint.${p.mode}`) }))];
   const pick = (next: string) => navigate(profileHref(connector.id, next || undefined), { replace: true, keepScroll: true });
   return (
     <div className="@container flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
@@ -90,6 +90,7 @@ export function KeyBar({ connector, profile, mode, onCustom, onLeave }: KeyBarPr
           <code className="min-w-0 font-mono text-sm font-medium [overflow-wrap:anywhere]" translate="no">
             {profile.agent}
           </code>
+          {profile.expired ? <Tag tone="amber">{t("keys.expired")}</Tag> : null}
           {overrides > 0 ? <Tag tone="paper">{t("profile.overrides", { count: overrides })}</Tag> : null}
         </div>
         <Choice<ProfileMode>

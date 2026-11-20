@@ -286,6 +286,7 @@ export const ptBR: Record<MessageKey, string> = {
   "access.itemHint.off": "Seus apps de IA nunca o veem",
   "access.itemHint.on": "Seus apps de IA podem usá-lo",
   "access.itemHint.ask": "Espera sua aprovação antes que seus apps de IA o usem",
+  "profile.expiredKey": "{key} (expirada)",
   "profile.label": "Perfil",
   "profile.pickerLabel": "De quem são as permissões em {connector} que esta página mostra",
   "profile.default": "Padrão (todas)",

@@ -23,7 +23,7 @@ type FunctionView struct {
 	Access      Access     `json:"access"`
 }
 
-// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, and each live access key's profile.
+// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, and the profile of each access key made so far.
 type ConnectorSummary struct {
 	ID          string         `json:"id"`
 	Alias       string         `json:"alias"`

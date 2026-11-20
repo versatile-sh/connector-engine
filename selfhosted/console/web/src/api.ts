@@ -48,7 +48,7 @@ export type Item = {
 export type ProfileMode = "off" | "follow" | "custom";
 
 /** One access key's permissions on one connector; a custom profile names the functions and items it holds below the connector's choice. */
-export type Profile = { agent: string } & ({ mode: "off" | "follow" } | { mode: "custom"; overrides: Record<string, Access> });
+export type Profile = { agent: string; expired?: boolean } & ({ mode: "off" | "follow" } | { mode: "custom"; overrides: Record<string, Access> });
 
 /** The engine's answer for one access key on one function or item, with why when it narrows or refuses it. */
 export type Effect = { name: string; access: Access; reason?: string };

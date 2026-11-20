@@ -59,15 +59,14 @@ func fileViews(files []port.SkillFile) []SkillFileView {
 	return out
 }
 
-func (c *Console) liveAgents() []Agent {
-	var out []Agent
-	for _, a := range c.State.Agents() {
-		if a.ExpiresAt.After(time.Now()) {
-			out = append(out, a)
-		}
-	}
+func (c *Console) knownAgents() []Agent {
+	out := c.State.Agents()
 	slices.SortFunc(out, func(a, b Agent) int { return strings.Compare(a.Name, b.Name) })
 	return out
+}
+
+func (c *Console) liveAgents() []Agent {
+	return slices.DeleteFunc(c.knownAgents(), func(a Agent) bool { return !a.ExpiresAt.After(time.Now()) })
 }
 
 func httpsOnly(raw string) string {
@@ -186,30 +185,29 @@ func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []st
 	} else if !skill || !v.RemovedAt.IsZero() {
 		return nil, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
 	}
-	return c.eachKey(names, func(a Agent) error { return c.bindSkill(ctx, conn, a, access) }), nil
+	return eachKey(c.liveAgents(), names, func(a Agent) error { return c.bindSkill(ctx, conn, a, access) }), nil
 }
 
 func noKey(name string) error {
 	return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}
 }
 
-func (c *Console) liveAgent(name string) (Agent, error) {
-	agents := c.liveAgents()
+func agentNamed(agents []Agent, name string) (Agent, error) {
 	if i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == name }); i >= 0 {
 		return agents[i], nil
 	}
 	return Agent{}, noKey(name)
 }
 
-func (c *Console) eachKey(names []string, set func(Agent) error) []KeyResult {
+func eachKey(agents []Agent, names []string, set func(Agent) error) []KeyResult {
 	if len(names) == 0 {
-		for _, a := range c.liveAgents() {
+		for _, a := range agents {
 			names = append(names, a.Name)
 		}
 	}
 	results := make([]KeyResult, 0, len(names))
 	for _, name := range names {
-		a, err := c.liveAgent(name)
+		a, err := agentNamed(agents, name)
 		if err == nil {
 			err = set(a)
 		}

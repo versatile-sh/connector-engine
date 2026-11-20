@@ -286,6 +286,7 @@ export const es: Record<MessageKey, string> = {
   "access.itemHint.off": "Tus apps de IA nunca lo ven",
   "access.itemHint.on": "Tus apps de IA pueden usarlo",
   "access.itemHint.ask": "Espera tu aprobación antes de que tus apps de IA lo usen",
+  "profile.expiredKey": "{key} (caducada)",
   "profile.label": "Perfil",
   "profile.pickerLabel": "De quién son los permisos en {connector} que muestra esta página",
   "profile.default": "Por defecto (todas)",

@@ -284,6 +284,7 @@ export const en = {
   "access.itemHint.off": "Your AI apps never see it",
   "access.itemHint.on": "Your AI apps may use it",
   "access.itemHint.ask": "Waits for your approval before your AI apps use it",
+  "profile.expiredKey": "{key} (expired)",
   "profile.label": "Profile",
   "profile.pickerLabel": "Whose permissions on {connector} this page shows",
   "profile.default": "Default (all keys)",

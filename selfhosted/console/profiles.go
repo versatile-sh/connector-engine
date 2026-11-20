@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/versatile-sh/connector-engine/core/grant"
 	"github.com/versatile-sh/connector-engine/port"
@@ -25,6 +26,7 @@ type Profile struct {
 	Agent     string            `yaml:"key" json:"agent"`
 	Mode      ProfileMode       `yaml:"mode" json:"mode"`
 	Overrides map[string]Access `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+	Expired   bool              `yaml:"-" json:"expired,omitempty"`
 }
 
 // Effect is the engine's answer for one access key on one function or item: the access it gets and, when the engine narrows or refuses it, why.
@@ -55,8 +57,8 @@ func (c *Console) profiles(ctx context.Context, conn string) ([]Profile, error) 
 		return nil, err
 	}
 	out := []Profile{}
-	for _, a := range c.liveAgents() {
-		p := Profile{Agent: a.Name, Mode: ProfileOff}
+	for _, a := range c.knownAgents() {
+		p := Profile{Agent: a.Name, Mode: ProfileOff, Expired: !a.ExpiresAt.After(time.Now())}
 		if bound[a.Name] {
 			p.Mode = ProfileFollow
 			for _, g := range rows {
@@ -84,7 +86,7 @@ func (c *Console) plainConnector(ctx context.Context, conn string) error {
 	return err
 }
 
-// SetProfileMode sets the named access keys, or every live key when none is named, to a mode on a connector (off unbinds, follow binds without overrides, custom binds and keeps them) and answers each key's result in order.
+// SetProfileMode sets the named access keys, or every key made so far when none is named, expired ones included, to a mode on a connector (off unbinds, follow binds without overrides, custom binds and keeps them) and answers each key's result in order.
 func (c *Console) SetProfileMode(ctx context.Context, conn string, names []string, mode ProfileMode) ([]KeyResult, error) {
 	set, ok := map[ProfileMode]func(context.Context, string, Agent) error{ProfileOff: c.unbind, ProfileFollow: c.follow, ProfileCustom: c.bind}[mode]
 	if !ok {
@@ -93,7 +95,7 @@ func (c *Console) SetProfileMode(ctx context.Context, conn string, names []strin
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	return c.eachKey(names, func(a Agent) error { return set(ctx, conn, a) }), nil
+	return eachKey(c.knownAgents(), names, func(a Agent) error { return set(ctx, conn, a) }), nil
 }
 
 func (c *Console) unbind(ctx context.Context, conn string, a Agent) error {
@@ -120,7 +122,7 @@ func (c *Console) SetProfileAccess(ctx context.Context, conn, agent, name string
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return err
 	}
-	a, err := c.liveAgent(agent)
+	a, err := agentNamed(c.knownAgents(), agent)
 	if err != nil {
 		return err
 	}
@@ -204,7 +206,7 @@ func (c *Console) ProfileEffects(ctx context.Context, conn, agent string) ([]Eff
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	if _, err := c.liveAgent(agent); err != nil {
+	if _, err := agentNamed(c.knownAgents(), agent); err != nil {
 		return nil, err
 	}
 	fns, err := c.Engine.functions(ctx, conn)

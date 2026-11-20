@@ -116,7 +116,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		return err
 	}
 	if a.Config.Auth.LocalIssuer.Enabled {
-		if a.issuer, err = local.New(a.Config.Auth.LocalIssuer.Name, a.Clock.Now); err != nil {
+		if a.issuer, err = b.localIssuer(ctx, secrets); err != nil {
 			return fmt.Errorf("local issuer: %w", err)
 		}
 	}

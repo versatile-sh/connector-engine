@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -279,9 +280,11 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	}
 	var agents struct{ Agents []console.Agent }
 	o.b.ok("GET", "/api/agents", nil, &agents)
-	if len(agents.Agents) != 1 || agents.Agents[0].Name != "claude-code" {
+	mine := slices.IndexFunc(agents.Agents, func(a console.Agent) bool { return a.ClientID == clientID && strings.HasPrefix(a.Name, "claude-code") })
+	if mine < 0 {
 		t.Fatalf("the approved app is not an access key: %+v", agents.Agents)
 	}
+	key := agents.Agents[mine].Name
 
 	renew := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {refresh}, "client_id": {clientID}}
 	status, next := o.token(renew, "http://localhost:6274")
@@ -290,14 +293,21 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	if status != http.StatusOK || access2 == "" || refresh2 == "" || refresh2 == refresh {
 		t.Fatalf("refresh: %d %v", status, next)
 	}
-	if status, out := o.token(renew, ""); status != http.StatusBadRequest || out["error"] != "invalid_grant" {
-		t.Fatalf("a rotated refresh token reused: %d %v", status, out)
-	}
 	if _, err := o.listTools(access2); err != nil {
 		t.Fatalf("tools/list after refresh: %v", err)
 	}
+	if status, out := o.token(renew, ""); status != http.StatusBadRequest || out["error"] != "invalid_grant" || !strings.Contains(fmt.Sprint(out["error_description"]), "already used") {
+		t.Fatalf("a rotated refresh token reused: %d %v", status, out)
+	}
+	ahead := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {refresh2}, "client_id": {clientID}}
+	if status, out := o.token(ahead, ""); status != http.StatusBadRequest || out["error"] != "invalid_grant" {
+		t.Fatalf("the newer refresh token of a family whose older one was replayed: %d %v", status, out)
+	}
+	if _, err := o.listTools(access2); err == nil {
+		t.Fatal("an access token of a replayed sign-in still lists tools")
+	}
 
-	o.b.ok("DELETE", "/api/agents/claude-code", nil, nil)
+	o.b.ok("DELETE", "/api/agents/"+key, nil, nil)
 	req, _ = http.NewRequest(http.MethodPost, o.base+"/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
 	req.Header.Set("Authorization", "Bearer "+access2)
 	req.Header.Set("Content-Type", "application/json")
@@ -329,12 +339,12 @@ func (o *oauthRig) requestConsent(clientID, redirect string) string {
 
 func TestTheConsentPage(t *testing.T) {
 	o := newOAuthRig(t)
-	redirects := []string{callback, "cursor://anysphere.cursor-mcp/oauth/callback", "vscode://vscode.github-authentication/did-authenticate", "myapp:/oauth"}
+	redirects := []string{callback, "cursor://anysphere.cursor-mcp/oauth/callback", "vscode://vscode.github-authentication/did-authenticate", "com.example.myapp:/oauth"}
 	_, reg := o.register(redirects...)
 	clientID, _ := reg["client_id"].(string)
 
 	t.Run("says where the access goes in plain words", func(t *testing.T) {
-		want := []console.Destination{{Kind: "loopback", Port: "33418"}, {Kind: "app", App: "Cursor"}, {Kind: "app", App: "VS Code"}, {Kind: "scheme", Scheme: "myapp"}}
+		want := []console.Destination{{Kind: "loopback", Port: "33418"}, {Kind: "app", App: "Cursor"}, {Kind: "app", App: "VS Code"}, {Kind: "scheme", Scheme: "com.example.myapp"}}
 		for i, redirect := range redirects {
 			var info struct{ Destination console.Destination }
 			o.b.ok("GET", o.requestConsent(clientID, redirect), nil, &info)
@@ -490,6 +500,7 @@ func TestRedirectURIsAreLoopbackOrAppSchemes(t *testing.T) {
 		"cursor://anysphere.cursor-mcp/oauth/callback": true, "vscode://vscode.github-authentication/did-authenticate": true, "com.example.app:/cb": true,
 		"https://vscode.dev/redirect": false, "https://antigravity.google/oauth-callback": true, "https://antigravity.google/oauth-callback?x=1": false, "https://antigravity.google/other": false, "http://example.com/cb": false, "http://127.0.0.1.evil.example/cb": false, "javascript:alert(1)": false,
 		"data:text/html,x": false, "file:///tmp/x": false, "http://u:p@127.0.0.1/cb": false, "http://127.0.0.1/cb#frag": false, "/relative": false,
+		"smb://evil.example/share": false, "search-ms:query=x": false, "ms-settings:privacy": false, "itms-services://?action=download-manifest": false, "chrome-extension://x/cb": false, "myapp:/cb": false,
 	} {
 		if got := console.RedirectAllowed(raw); got != want {
 			t.Errorf("%s: %v, want %v", raw, got, want)
@@ -523,5 +534,33 @@ func TestTheAuthorizationServerAdvertisesOnlyWhatItServes(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "/oauth/register") {
 		t.Fatalf("a URL client_id: %d %s", resp.StatusCode, body)
+	}
+}
+
+func TestASecondClientWithTheSameNameGetsItsOwnAgent(t *testing.T) {
+	o := newOAuthRig(t)
+	connect := func() string {
+		_, reg := o.register(callback)
+		clientID, _ := reg["client_id"].(string)
+		var out struct{ Redirect string }
+		o.b.ok("POST", o.requestConsent(clientID, callback), map[string]any{"approve": true, "password": ownerPassword}, &out)
+		return clientID
+	}
+	agents := func() []string {
+		var list struct{ Agents []console.AgentView }
+		o.b.ok("GET", "/api/agents", nil, &list)
+		var names []string
+		for _, a := range list.Agents {
+			names = append(names, a.Name)
+		}
+		return names
+	}
+	first := connect()
+	if got := agents(); !slices.Equal(got, []string{"claude-code"}) {
+		t.Fatalf("the first client: %v", got)
+	}
+	second := connect()
+	if got := agents(); !slices.Equal(got, []string{"claude-code", "claude-code-" + second[:8]}) {
+		t.Fatalf("a second client named Claude Code took the first one's agent: %v (first %s)", got, first)
 	}
 }

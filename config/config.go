@@ -63,8 +63,9 @@ type Issuer struct {
 
 // LocalIssuer is the quickstart token issuer; enabling it needs the acknowledgement AckLocalIssuer.
 type LocalIssuer struct {
-	Enabled bool   `yaml:"enabled"`
-	Name    string `yaml:"name"`
+	Enabled     bool          `yaml:"enabled"`
+	Name        string        `yaml:"name"`
+	RotateEvery time.Duration `yaml:"rotateEvery"`
 }
 
 // TrustedProxy is the listener that accepts the identity headers of a fronting proxy; it is off by default and needs AckTrustedProxy.
@@ -373,7 +374,7 @@ func Default() Config {
 	return Config{
 		Mode:   ModeProduction,
 		Server: Server{Listen: ":8080", GRPCListen: ":9090", MaxBodyBytes: 1 << 20, ShutdownGrace: 15 * time.Second},
-		Auth: Auth{LocalIssuer: LocalIssuer{Name: "connector-engine-local"}, AgentTokenMaxLifetime: time.Hour, SenderConstraint: "none",
+		Auth: Auth{LocalIssuer: LocalIssuer{Name: "connector-engine-local", RotateEvery: 30 * 24 * time.Hour}, AgentTokenMaxLifetime: time.Hour, SenderConstraint: "none",
 			Issuers: []Issuer{}, TrustedProxy: TrustedProxy{CIDRs: []string{}}},
 		Bootstrap: Bootstrap{Roles: []RoleRow{}},
 		Gateway: Gateway{ProtocolVersions: []string{"2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"}, RelayInstructions: "never", UpstreamContent: "refuse", ScanArgumentsForToken: true,

@@ -866,3 +866,15 @@ func TestARefusedPromptOrResourceShowsInTheActivity(t *testing.T) {
 		}
 	}
 }
+
+func TestWrongPasswordsSlowTheLoginDownForAMinute(t *testing.T) {
+	r := newActivityRig(t)
+	for i := range 5 {
+		if status, _ := r.b.send("POST", "/api/login", map[string]string{"username": "me", "password": "wrong password"}, nil); status != http.StatusUnauthorized {
+			t.Fatalf("wrong password %d: %d", i, status)
+		}
+	}
+	if status, raw := r.b.send("POST", "/api/login", map[string]string{"username": "me", "password": "correct horse battery"}, nil); status != http.StatusTooManyRequests || !strings.Contains(string(raw), "slow_down") {
+		t.Fatalf("after five wrong passwords: %d %s", status, raw)
+	}
+}

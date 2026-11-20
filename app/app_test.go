@@ -384,3 +384,17 @@ func TestTheLocalIssuerMintsOnlyForTheOperatorAndOnlyItsOwnClaims(t *testing.T) 
 		}
 	}
 }
+
+func TestALocalIssuerTokenSurvivesAnEngineRestart(t *testing.T) {
+	cfg := devConfig(t)
+	cfg.Secrets.Adapter, cfg.Secrets.Dir = "localfile", t.TempDir()
+	adapters := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:localfile}", 1)
+	env := map[string]string{"CN_OPERATOR_TOKEN": "op-secret"}
+	first := boot(t, cfg, adapters, env)
+	ana := first.token(map[string]any{"sub": "ana", "tenant": "t1"})
+	first.shutdown()
+	second := boot(t, cfg, adapters, env)
+	if code, out := second.call(http.MethodGet, second.http+"/v1/roles?tenant=t1&person=ana", ana, nil); code == http.StatusUnauthorized {
+		t.Fatalf("a token minted before the restart is refused: %v", out)
+	}
+}

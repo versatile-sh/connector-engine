@@ -30,6 +30,9 @@ func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
 	if !reflect.DeepEqual(got, want) || !reflect.DeepEqual(f.Acknowledge, []string{"plaintext_root_key"}) {
 		t.Fatalf("headless selects %v acknowledging %v", got, f.Acknowledge)
 	}
+	if cfg.Runtime.AllowPrivateHosts {
+		t.Fatal("headless reaches private hosts")
+	}
 	if cfg.Secrets != (config.Secrets{Adapter: "localfile", DataKeyCache: cfg.Secrets.DataKeyCache, Dir: "/var/lib/connector-engine/secrets"}) || cfg.Secrets.DataKeyCache.Seconds() != 300 {
 		t.Fatalf("headless secrets: %#v", cfg.Secrets)
 	}
@@ -46,5 +49,22 @@ func TestAConfigThatDoesNotOptInDefaultsToTheLocalFileAndStillNeedsTheAcknowledg
 	}
 	if !found {
 		t.Fatal("localfile without plaintext_root_key is refused in production")
+	}
+}
+
+func TestThePersonProfileReachesLocalServersAndLoads(t *testing.T) {
+	cfg, err := config.Load("../deploy/profiles/person/connector-engine.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile("../deploy/profiles/person/adapters.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cfg.LoadAdapters(data, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Runtime.AllowPrivateHosts {
+		t.Fatal("the person profile refuses the local servers its console imports")
 	}
 }

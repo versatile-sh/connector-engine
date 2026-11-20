@@ -409,7 +409,7 @@ export const en = {
   "decide.sessionHours": "Allow for up to {count} hours",
   "decide.sessionMinutes": "Allow for up to {count} minutes",
   "decide.always": "Always allow",
-  "approve.sessionNote": "A session is the app's current token, not one conversation: it ends when the token renews, within an hour for apps signed in through the browser and within 8 hours for a key made here, even across new conversations.",
+  "approve.sessionNote": "A session is the app's current token, not one conversation: it ends when the token renews, within an hour for apps signed in through the browser and later for a key made here, even across new conversations. The button says how long.",
   "approve.expires": "Expires",
   "approve.left": "in {time}",
   "approve.closed": "no longer waiting",

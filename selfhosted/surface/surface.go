@@ -135,18 +135,17 @@ func sessionLabel(left time.Duration, unknown bool) string {
 	switch {
 	case unknown || left <= 0:
 		return "Allow for this session"
-	case left < 90*time.Minute:
-		if m := int(left.Round(time.Minute).Minutes()); m > 1 {
-			return fmt.Sprintf("Allow for up to %d minutes", m)
-		}
+	case left <= time.Minute:
 		return "Allow for up to 1 minute"
+	case left < 90*time.Minute:
+		return fmt.Sprintf("Allow for up to %d minutes", int((left+time.Minute-1)/time.Minute))
 	}
-	return fmt.Sprintf("Allow for up to %d hours", int(left.Round(time.Hour).Hours()))
+	return fmt.Sprintf("Allow for up to %d hours", int((left+time.Hour-1)/time.Hour))
 }
 
 // Sentence is the English line a settled message shows.
 func Sentence(o Outcome) string {
-	what := map[State]string{StateApproved: "Allowed once", StateSession: "Allowed for this session", StateAlways: "Always allowed",
+	what := map[State]string{StateApproved: "Allowed once", StateSession: "Allowed for the app's session", StateAlways: "Always allowed",
 		StateDenied: "Denied", StateExpired: "Expired", StateCancelled: "Cancelled"}[o.State]
 	if what == "" {
 		what = string(o.State)

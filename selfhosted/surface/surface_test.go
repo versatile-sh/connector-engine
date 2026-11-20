@@ -14,6 +14,8 @@ func TestTheSessionChoiceNamesHowLongItLasts(t *testing.T) {
 		{8*time.Hour - time.Second, false, "Allow for up to 8 hours"},
 		{2 * time.Hour, false, "Allow for up to 2 hours"},
 		{59*time.Minute + 50*time.Second, false, "Allow for up to 60 minutes"},
+		{3*time.Hour + 20*time.Minute, false, "Allow for up to 4 hours"},
+		{41*time.Minute + 10*time.Second, false, "Allow for up to 42 minutes"},
 		{10 * time.Second, false, "Allow for up to 1 minute"},
 		{0, false, "Allow for this session"},
 		{time.Hour, true, "Allow for this session"},

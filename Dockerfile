@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/connector-engine ./cmd/connector-engine && \
     go build -ldflags "-s -w" -o /out/cnctl ./cmd/cnctl && \
     go build -ldflags "-s -w" -o /out/connector-console ./cmd/connector-console && \
-    go build -ldflags "-s -w" -o /out/testmcp ./console/testmcp && \
+    go build -ldflags "-s -w" -o /out/testmcp ./internal/testmcp && \
     mkdir -p /dirs/var/lib/connector-engine/secrets /dirs/var/lib/connector-console /dirs/run/connector-engine
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931 AS testmcp

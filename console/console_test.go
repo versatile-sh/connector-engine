@@ -61,7 +61,7 @@ func newUpstream(t *testing.T) *upstream {
 	return u
 }
 
-func bootEngine(t *testing.T, publicURL string) (string, string) {
+func bootEngine(t *testing.T, publicURL string, tweaks ...func(*config.Config)) (string, string) {
 	t.Helper()
 	c := config.Default()
 	c.Mode = config.ModeDev
@@ -74,6 +74,9 @@ func bootEngine(t *testing.T, publicURL string) (string, string) {
 	c.Runtime.AllowPrivateHosts = true
 	c.Approval.HoldWindow = 300 * time.Millisecond
 	c.Approval.SweepInterval = 100 * time.Millisecond
+	for _, tweak := range tweaks {
+		tweak(&c)
+	}
 	file, err := c.LoadAdapters([]byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: memory}\n  secrets: {use: memory}\n  auth: {use: builtin:local}\n"), nil)
 	if err != nil {
 		t.Fatal(err)

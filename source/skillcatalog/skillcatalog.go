@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -155,10 +156,16 @@ func (e Entry) SkillFiles() []port.SkillFile {
 	return out
 }
 
+// HasScriptsDeclaredOrSeen reports has_scripts, or any file the engine would count as executable by its path.
+func (e Entry) HasScriptsDeclaredOrSeen() bool {
+	return e.HasScripts || slices.ContainsFunc(e.SkillFiles(), listing.LooksExecutable)
+}
+
 // Digest is the bundle digest the entry declares, over its paths and sha256 values.
 func (e Entry) Digest() string { return listing.SkillDigest(e.SkillFiles()) }
 
-func publisher(repository, fallback string) string {
+// Publisher is the owner segment of a repository address, or fallback.
+func Publisher(repository, fallback string) string {
 	u, err := url.Parse(repository)
 	if err != nil {
 		return fallback
@@ -194,7 +201,7 @@ func Manifest(ctx context.Context, get Get, entryURL string, e Entry) (port.Mani
 		hasScripts = hasScripts || listing.LooksExecutable(f)
 	}
 	m := port.Manifest{Name: strings.ToLower(u.Hostname()) + "/" + e.ID, Version: e.Source.Commit, Title: e.Title, Description: e.Description, Kind: port.KindSkill,
-		Publisher: port.Publisher{Name: publisher(e.Source.Repository, u.Hostname())}, Licence: e.License.SPDX,
+		Publisher: port.Publisher{Name: Publisher(e.Source.Repository, u.Hostname())}, Licence: e.License.SPDX,
 		Skill: &port.Skill{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: e.Source.URL},
 			Licence: port.SkillLicence{SPDX: e.License.SPDX, From: e.License.From, Redistributable: e.License.Redistributable}, Redistribution: e.Redistribution(),
 			HasScripts: hasScripts, Files: files}}

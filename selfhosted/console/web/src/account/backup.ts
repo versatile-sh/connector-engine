@@ -10,8 +10,8 @@ export const PASSWORD_MIN = 10;
 /** The shortest passphrase a full backup takes. */
 export const PASSPHRASE_MIN = 12;
 
-/** How long after a full import an answer that the console is ready may still come from the old process. */
-export const RESTART_GRACE_MS = 4_000;
+/** How long after a full import a ready answer is trusted without the console having been seen down, as it may come from the old process. */
+export const RESTART_FALLBACK_MS = 15_000;
 
 const DAY_MS = 86_400_000;
 
@@ -47,8 +47,8 @@ export function passwordRefusal(error: unknown): MessageKey | undefined {
   return undefined;
 }
 
-/** Whether the console came back after a full import: ready, and past the grace in which the old process may still answer. */
-export const restarted = (ready: boolean, startedAt: number, now: number) => ready && now - startedAt >= RESTART_GRACE_MS;
+/** Whether the console came back after a full import: ready after it was seen down, or ready once the fallback has passed. */
+export const restarted = (ready: boolean, wentDown: boolean, elapsed: number) => ready && (wentDown || elapsed >= RESTART_FALLBACK_MS);
 
 /** Hands a file the console answered to the browser as a download, under its own name or the fallback. */
 export function saveFile({ blob, name }: Download, fallback: string) {

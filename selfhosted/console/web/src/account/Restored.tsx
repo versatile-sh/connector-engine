@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api";
 import { Mark } from "../Brand";
 import { useT } from "../i18n/I18nProvider";
@@ -11,6 +11,7 @@ export function Restored() {
   const t = useT();
   const client = useQueryClient();
   const [startedAt] = useState(Date.now);
+  const wentDown = useRef(false);
   useQuery({
     queryKey: ["restart", startedAt],
     queryFn: async () => {
@@ -18,7 +19,8 @@ export function Restored() {
         (answer) => answer.ready,
         () => false,
       );
-      if (restarted(ready, startedAt, Date.now())) {
+      if (!ready) wentDown.current = true;
+      if (restarted(ready, wentDown.current, Date.now() - startedAt)) {
         await client.resetQueries({ predicate: (query) => query.queryKey[0] !== "restart" });
         navigate("/", { replace: true });
       }

@@ -332,7 +332,7 @@ export type BackupSummary = {
   kind: BackupKind;
   build?: string;
   created_at?: string;
-  counts: { connectors?: number; skills?: number; keys?: number; oauth_clients?: number };
+  counts: { connectors?: number; skills?: number; keys?: number; oauth_clients?: number } | null;
   replaces: boolean;
   setup?: { connectors: SetupConnector[] | null; skills: SetupSkill[] | null; notifications: string[] | null; stripped: string[] | null };
 };

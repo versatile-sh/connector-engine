@@ -28,7 +28,7 @@ export function BackupSummaryView({ summary }: { summary: BackupSummary }) {
         {COUNTS.map((count) => (
           <div key={count.key} className={`${SURFACE} p-3`}>
             <dt className={CAPTION}>{t(count.label)}</dt>
-            <dd className="mt-1 text-2xl tabular-nums">{summary.counts[count.key] ?? 0}</dd>
+            <dd className="mt-1 text-2xl tabular-nums">{summary.counts?.[count.key] ?? 0}</dd>
           </div>
         ))}
       </dl>

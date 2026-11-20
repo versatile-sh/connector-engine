@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/versatile-sh/connector-engine/cli/command"
 )
 
 const (
@@ -23,7 +25,7 @@ const (
 	maxNames    = 10
 )
 
-// Command is the `tools` group of cnctl; it is an MCP client of the agent endpoint, not a fourth surface.
+// Command is the `tools` group of vsh; it is an MCP client of the agent endpoint, not a fourth surface.
 type Command struct {
 	getenv func(string) string
 }
@@ -49,6 +51,20 @@ type options struct {
 	timeout time.Duration
 }
 
+func flags(fs *flag.FlagSet, sub string) *options {
+	var o options
+	fs.StringVar(&o.out, "out", "", "file for the full answer; a temporary file when empty")
+	if sub == "call" {
+		fs.StringVar(&o.args, "args", "{}", "JSON arguments of the function")
+		fs.StringVar(&o.fields, "fields", "", "comma-separated JSON Pointer paths of the result to keep")
+	}
+	if sub == "search" {
+		fs.IntVar(&o.limit, "limit", 0, "most functions search returns")
+	}
+	fs.DurationVar(&o.timeout, "timeout", 2*time.Minute, "time allowed for the whole command")
+	return &o
+}
+
 // Run executes one subcommand; the full answer goes to the --out file and a summary to stdout.
 func (c *Command) Run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
@@ -56,25 +72,28 @@ func (c *Command) Run(ctx context.Context, args []string, stdout, stderr io.Writ
 		return fmt.Errorf("a subcommand is required")
 	}
 	sub, rest := args[0], args[1:]
+	if _, known := needs[sub]; !known {
+		fmt.Fprintln(stderr, usage)
+		return fmt.Errorf("unknown subcommand %q", sub)
+	}
 	fs := flag.NewFlagSet("tools "+sub, flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	var o options
-	fs.StringVar(&o.out, "out", "", "file for the full answer; a temporary file when empty")
-	fs.StringVar(&o.args, "args", "{}", "JSON arguments of the function")
-	fs.StringVar(&o.fields, "fields", "", "comma-separated JSON Pointer paths of the result to keep")
-	fs.IntVar(&o.limit, "limit", 0, "most functions search returns")
-	fs.DurationVar(&o.timeout, "timeout", 2*time.Minute, "time allowed for the whole command")
+	o := flags(fs, sub)
 	positional, err := parse(fs, rest)
 	if err != nil {
 		return err
 	}
-	needs, known := map[string]string{"list": "", "search": "query", "call": "function name"}[sub]
-	switch {
-	case !known:
-		fmt.Fprintln(stderr, usage)
-		return fmt.Errorf("unknown subcommand %q", sub)
-	case needs != "" && positional == "":
-		return fmt.Errorf("%s needs a %s", sub, needs)
+	return c.do(ctx, sub, positional, *o, stdout)
+}
+
+var needs = map[string]string{"list": "", "search": "query", "call": "function name"}
+
+func (c *Command) do(ctx context.Context, sub, positional string, o options, stdout io.Writer) error {
+	if o.args == "" {
+		o.args = "{}"
+	}
+	if needs[sub] != "" && positional == "" {
+		return fmt.Errorf("%s needs a %s", sub, needs[sub])
 	}
 	ctx, cancel := context.WithTimeout(ctx, o.timeout)
 	defer cancel()
@@ -90,6 +109,27 @@ func (c *Command) Run(ctx context.Context, args []string, stdout, stderr io.Writ
 		return search(ctx, cs, positional, o, stdout)
 	}
 	return call(ctx, cs, positional, o, stdout)
+}
+
+// Commands returns the list, search and call leaves of vsh tools.
+func Commands() []*command.Command {
+	leaf := func(sub, args, summary string) *command.Command {
+		return &command.Command{Name: sub, Args: args, Summary: summary, Long: "Environment: CN_ENDPOINT (the /mcp address), CN_AGENT_TOKEN (the token of this agent).",
+			Setup: func(fs *flag.FlagSet) command.Runner {
+				o := flags(fs, sub)
+				return func(ctx context.Context, x *command.Exec) error {
+					if len(x.Args) > 1 {
+						return command.Usage(x.Path, "unexpected argument %q", x.Args[1])
+					}
+					return New(x.Getenv).do(ctx, sub, strings.Join(x.Args, ""), *o, x.Stdout)
+				}
+			}}
+	}
+	return []*command.Command{
+		leaf("list", "", "List the functions this agent can call."),
+		leaf("search", "<query>", "Search the functions this agent can call."),
+		leaf("call", "<function>", "Call a function and write its answer to a file."),
+	}
 }
 
 func parse(fs *flag.FlagSet, args []string) (string, error) {
@@ -126,7 +166,7 @@ func Dial(ctx context.Context, getenv func(string) string) (*mcp.ClientSession, 
 	if endpoint == "" || token == "" {
 		return nil, fmt.Errorf("set %s and %s", envEndpoint, envToken)
 	}
-	client := mcp.NewClient(&mcp.Implementation{Name: "cnctl", Version: "1"}, nil)
+	client := mcp.NewClient(&mcp.Implementation{Name: "vsh", Version: "1"}, nil)
 	return client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: endpoint, HTTPClient: &http.Client{Transport: bearer{token}}}, nil)
 }
 
@@ -137,7 +177,7 @@ func write(o options, v any) (string, error) {
 	}
 	path := o.out
 	if path == "" {
-		f, err := os.CreateTemp("", "cnctl-tools-*.json")
+		f, err := os.CreateTemp("", "vsh-tools-*.json")
 		if err != nil {
 			return "", err
 		}

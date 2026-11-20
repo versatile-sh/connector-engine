@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/cli/command"
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
 	"github.com/versatile-sh/connector-engine/selfhosted/surface/desktop"
 )
@@ -47,30 +48,25 @@ type Helper struct {
 	shown map[string]context.CancelFunc
 }
 
-// Command parses the flags of cnctl notify and runs the helper until ctx ends.
-func Command(ctx context.Context, args []string, getenv func(string) string, stderr io.Writer) int {
-	fs := flag.NewFlagSet("cnctl notify", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	home, _ := os.UserHomeDir()
-	base := fs.String("console", cmp.Or(getenv("CN_CONSOLE"), defaultConsole), "address of the local console")
-	keyFile := fs.String("key-file", cmp.Or(getenv("CN_NOTIFY_KEY_FILE"), filepath.Join(home, ".config", "versatile", "notify.key")), "file holding the device key from Notifications")
-	if err := fs.Parse(args); err != nil {
-		return 2
-	}
-	raw, err := os.ReadFile(*keyFile)
-	if err != nil || strings.TrimSpace(string(raw)) == "" {
-		fmt.Fprintf(stderr, "cnctl notify: read the device key: %v\n", err)
-		return 1
-	}
-	if st, err := os.Stat(*keyFile); err == nil && st.Mode().Perm()&0o077 != 0 {
-		fmt.Fprintf(stderr, "cnctl notify: %s is readable by others; run chmod 600 on it\n", *keyFile)
-	}
-	h := &Helper{Console: strings.TrimRight(*base, "/"), Key: strings.TrimSpace(string(raw)), Show: desktop.Default(), Log: stderr}
-	if err := h.Run(ctx); err != nil {
-		fmt.Fprintln(stderr, "cnctl notify:", err)
-		return 1
-	}
-	return 0
+// Command is the vsh notify leaf: it follows the console's approvals and shows each as a desktop popup.
+func Command() *command.Command {
+	return &command.Command{Name: "notify", Summary: "Show the console's approvals as desktop popups on this computer.", Setup: func(fs *flag.FlagSet) command.Runner {
+		base := fs.String("console", "", "address of the local console; empty takes $CN_CONSOLE or "+defaultConsole)
+		keyFile := fs.String("key-file", "", "file holding the device key from Notifications; empty takes $CN_NOTIFY_KEY_FILE or ~/.config/versatile/notify.key")
+		return func(ctx context.Context, x *command.Exec) error {
+			home, _ := os.UserHomeDir()
+			key := cmp.Or(*keyFile, x.Getenv("CN_NOTIFY_KEY_FILE"), filepath.Join(home, ".config", "versatile", "notify.key"))
+			raw, err := os.ReadFile(key)
+			if err != nil || strings.TrimSpace(string(raw)) == "" {
+				return command.Fail(command.ExitFailure, "pair this computer on the console's Notifications page", "read the device key: %v", err)
+			}
+			if st, err := os.Stat(key); err == nil && st.Mode().Perm()&0o077 != 0 {
+				fmt.Fprintf(x.Stderr, "vsh notify: %s is readable by others; run chmod 600 on it\n", key)
+			}
+			h := &Helper{Console: strings.TrimRight(cmp.Or(*base, x.Getenv("CN_CONSOLE"), defaultConsole), "/"), Key: strings.TrimSpace(string(raw)), Show: desktop.Default(), Log: x.Stderr}
+			return h.Run(ctx)
+		}
+	}}
 }
 
 // Run follows the stream and reconnects after a loss until ctx ends or the key is refused.

@@ -27,7 +27,7 @@ func (f fake) Set(_ context.Context, a, s string) error { f[a] = s; return nil }
 
 func (f fake) Delete(_ context.Context, a string) error { delete(f, a); return nil }
 
-func cnctl(t *testing.T, kc Keychain, stdin string, args ...string) (int, string) {
+func vsh(t *testing.T, kc Keychain, stdin string, args ...string) (int, string) {
 	t.Helper()
 	var out, errOut bytes.Buffer
 	code := Run(ctx, kc, args, strings.NewReader(stdin), &out, &errOut)
@@ -36,17 +36,17 @@ func cnctl(t *testing.T, kc Keychain, stdin string, args ...string) (int, string
 
 func TestEnsureCreatesTheKeyOnceAndGetReturnsIt(t *testing.T) {
 	kc := fake{}
-	code, first := cnctl(t, kc, "", "ensure", "--name", "p1")
+	code, first := vsh(t, kc, "", "ensure", "--name", "p1")
 	if b, err := hex.DecodeString(first); code != 0 || err != nil || len(b) != 32 {
 		t.Fatalf("ensure: %d %q", code, first)
 	}
-	if code, again := cnctl(t, kc, "", "ensure", "--name", "p1"); code != 0 || again != first {
+	if code, again := vsh(t, kc, "", "ensure", "--name", "p1"); code != 0 || again != first {
 		t.Fatalf("a second ensure keeps the key: %q", again)
 	}
-	if code, got := cnctl(t, kc, "", "get", "--name", "p1"); code != 0 || got != first {
+	if code, got := vsh(t, kc, "", "get", "--name", "p1"); code != 0 || got != first {
 		t.Fatalf("get: %d %q", code, got)
 	}
-	if code, _ := cnctl(t, kc, "", "get", "--name", "p2"); code != 1 {
+	if code, _ := vsh(t, kc, "", "get", "--name", "p2"); code != 1 {
 		t.Fatalf("another install has no key: %d", code)
 	}
 }
@@ -54,25 +54,25 @@ func TestEnsureCreatesTheKeyOnceAndGetReturnsIt(t *testing.T) {
 func TestImportRestoresARecoveryKeyButNeverOverwritesAnother(t *testing.T) {
 	kc := fake{}
 	key := strings.Repeat("ab", 32)
-	if code, out := cnctl(t, kc, key+"\n", "import", "--name", "p1"); code != 0 || kc["p1"] != key {
+	if code, out := vsh(t, kc, key+"\n", "import", "--name", "p1"); code != 0 || kc["p1"] != key {
 		t.Fatalf("import: %d %q", code, out)
 	}
-	if code, _ := cnctl(t, kc, key, "import", "--name", "p1"); code != 0 {
+	if code, _ := vsh(t, kc, key, "import", "--name", "p1"); code != 0 {
 		t.Fatal("importing the same key again is a no-op")
 	}
-	if code, _ := cnctl(t, kc, strings.Repeat("cd", 32), "import", "--name", "p1"); code != 1 || kc["p1"] != key {
+	if code, _ := vsh(t, kc, strings.Repeat("cd", 32), "import", "--name", "p1"); code != 1 || kc["p1"] != key {
 		t.Fatal("another key must not replace the stored one")
 	}
-	if code, _ := cnctl(t, kc, "short", "import", "--name", "p3"); code != 1 {
+	if code, _ := vsh(t, kc, "short", "import", "--name", "p3"); code != 1 {
 		t.Fatal("a malformed key is refused")
 	}
 }
 
 func TestNoKeychainExitsWithItsOwnCode(t *testing.T) {
-	if code, _ := cnctl(t, nil, "", "ensure", "--name", "p1"); code != ExitUnavailable {
+	if code, _ := vsh(t, nil, "", "ensure", "--name", "p1"); code != ExitUnavailable {
 		t.Fatalf("exit %d", code)
 	}
-	if code, _ := cnctl(t, fake{}, "", "ensure", "--name", "../etc"); code != 2 {
+	if code, _ := vsh(t, fake{}, "", "ensure", "--name", "../etc"); code != 2 {
 		t.Fatal("an account that is not a project name is refused")
 	}
 }
@@ -112,7 +112,7 @@ func TestTheSecretTravelsOnStdinNeverAsAnArgument(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var calls []recorded
 			k := kc(recorder(&calls, map[string]int{"find-generic-password": 44, "lookup": 1}))
-			code, key := cnctl(t, k, "", "ensure", "--name", "p1")
+			code, key := vsh(t, k, "", "ensure", "--name", "p1")
 			if code != 0 || len(key) != 64 {
 				t.Fatalf("ensure: %d %q", code, key)
 			}
@@ -139,10 +139,10 @@ func TestTheSecretServiceOfThisSession(t *testing.T) {
 	}
 	b := make([]byte, 4)
 	rand.Read(b)
-	account := "cnctl-test-" + hex.EncodeToString(b)
+	account := "vsh-test-" + hex.EncodeToString(b)
 	kc := secretService{run: execRun}
 	t.Cleanup(func() { _ = kc.Delete(ctx, account) })
-	code, key := cnctl(t, kc, "", "ensure", "--name", account)
+	code, key := vsh(t, kc, "", "ensure", "--name", account)
 	if code != 0 {
 		t.Fatalf("ensure: %q", key)
 	}

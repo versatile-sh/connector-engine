@@ -204,7 +204,7 @@ var scenarios = []scenario{
 	{"idea_openapi_import_lands_unreviewed_and_calls_rest", ideaOpenAPI},
 	{"idea_overlay_accept_and_restore_change_the_served_description", ideaOverlay},
 	{"idea_projection_trims_and_result_filter_masks_cpf", ideaProjectionAndFilter},
-	{"cnctl_tools_list_search_call_write_the_output_file", cliTools},
+	{"vsh_tools_list_search_call_write_the_output_file", cliTools},
 	{"events_webhook_receives_signed_cloudevents", eventsSigned},
 	{"restart_state_and_pending_approval_survive", restartSurvives},
 }

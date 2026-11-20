@@ -19,7 +19,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/versatile-sh/connector-engine/config"
+	cmd "github.com/versatile-sh/connector-engine/cli/command"
 	"github.com/versatile-sh/connector-engine/internal/testmcp/notes"
 	"github.com/versatile-sh/connector-engine/secrets/local"
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/keychain"
@@ -209,7 +209,8 @@ func TestUpServesAnAgentAndKeepsItsDataAcrossARestart(t *testing.T) {
 func run(t *testing.T, name string, stdin string, args ...string) (int, string) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code := Commands("test")[name](config.Config{}, args, strings.NewReader(stdin), &out, &errOut)
+	root := &cmd.Command{Name: "vsh", Subs: Commands("test")}
+	code := cmd.Main(context.Background(), root, append([]string{name}, args...), strings.NewReader(stdin), &out, &errOut, nil)
 	return code, out.String() + errOut.String()
 }
 

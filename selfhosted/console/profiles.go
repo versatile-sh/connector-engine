@@ -308,12 +308,13 @@ func (c *Console) confirmOverrides(ctx context.Context, conn string, f port.Func
 	return nil
 }
 
-// ProfileEffects asks the engine what one access key gets for each function and item of a connector, as tools/list and every call decide it.
+// ProfileEffects asks the engine what one access key gets for each function and item of a connector, as tools/list and every call on behalf of its owner decide it.
 func (c *Console) ProfileEffects(ctx context.Context, conn, agent string) ([]Effect, error) {
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	if _, err := agentNamed(c.knownAgents(), agent); err != nil {
+	key, err := agentNamed(c.knownAgents(), agent)
+	if err != nil {
 		return nil, err
 	}
 	fns, err := c.Engine.functions(ctx, conn)
@@ -325,7 +326,7 @@ func (c *Console) ProfileEffects(ctx context.Context, conn, agent string) ([]Eff
 		if f.State == port.FunctionRemoved {
 			continue
 		}
-		d, err := c.Engine.explain(ctx, conn, agent, f.Name)
+		d, err := c.Engine.explain(ctx, conn, agent, key.Owner, f.Name)
 		if err != nil {
 			return nil, err
 		}

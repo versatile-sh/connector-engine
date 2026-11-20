@@ -21,12 +21,12 @@ On confirm, each file is fetched over public `https`, checked against its sha256
 
 ## Export skills to an app's folder
 
-Some apps read skills from a folder. `cnctl skills export` writes every skill granted to one key there:
+Some apps read skills from a folder. `vsh skills export` writes every skill granted to one key there:
 
 ```sh
 export CN_ENDPOINT=http://127.0.0.1:7465/mcp
 export CN_AGENT_TOKEN=<the access key>
-cnctl skills export --to ~/.claude/skills
+vsh skills export --to ~/.claude/skills
 ```
 
 | Target | App |
@@ -34,7 +34,7 @@ cnctl skills export --to ~/.claude/skills
 | `~/.claude/skills` | Claude Code |
 | `~/.agents/skills` | Codex, Cursor, VS Code, OpenCode, Gemini CLI |
 
-- It checks each file's sha256 and records what it wrote in `DIR/.cnctl-skills.json`.
+- It checks each file's sha256 and records what it wrote in `DIR/.vsh-skills.json`.
 - It never overwrites a file it did not write and never writes through a symlink.
 - `--prune` removes only files listed in that manifest that this export did not write.
 - `--skill NAME` exports one skill.

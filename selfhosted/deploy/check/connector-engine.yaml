@@ -12,7 +12,7 @@ auth:
   operator: {tokenRef: "file:/run/connector-engine/operator-token"}
 bootstrap:
   roles:
-    - {tenant: local, person: owner, role: tenant_admin, scope: t/local}
+    - {tenant: local, person: console, role: tenant_admin, scope: t/local}
 secrets:
   dir: /var/lib/connector-engine/secrets
 runtime:

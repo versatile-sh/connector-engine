@@ -266,7 +266,7 @@ export const ptBR: Record<MessageKey, string> = {
   "clients.where.file": "Cole na sua config: {path}",
   "clients.where.code": "Cole no seu código: {label}",
   "clients.where.values": "Use estes três valores",
-  "clients.where.cnctl": "Ou teste num terminal com o cnctl",
+  "clients.where.vsh": "Ou teste num terminal com o vsh",
   "clients.where.ai": "Cole na sua IA",
   "clients.open": "Abrir no {app}",
   "clients.orByHand": "ou adicione à mão",

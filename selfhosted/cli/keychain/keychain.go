@@ -1,4 +1,4 @@
-// Package keychain keeps the unlock key of a local install in the host's OS keychain; it is the cnctl keychain command.
+// Package keychain keeps the unlock key of a local install in the host's OS keychain; it is the vsh keychain command.
 package keychain
 
 import (
@@ -37,10 +37,10 @@ const ExitUnavailable = 3
 
 var accountName = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]{0,62}$`)
 
-// Run is cnctl keychain get|ensure|import|delete --name NAME: ensure creates the key once, get and ensure print it, import reads it on stdin.
+// Run is vsh keychain get|ensure|import|delete --name NAME: ensure creates the key once, get and ensure print it, import reads it on stdin.
 func Run(ctx context.Context, kc Keychain, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: cnctl keychain get|ensure|import|delete --name NAME")
+		fmt.Fprintln(stderr, "usage: vsh keychain get|ensure|import|delete --name NAME")
 		return 2
 	}
 	fs := flag.NewFlagSet("keychain "+args[0], flag.ContinueOnError)
@@ -50,16 +50,16 @@ func Run(ctx context.Context, kc Keychain, args []string, stdin io.Reader, stdou
 		return 2
 	}
 	if !accountName.MatchString(*name) {
-		fmt.Fprintln(stderr, "cnctl keychain: --name is a compose project name")
+		fmt.Fprintln(stderr, "vsh keychain: --name is a compose project name")
 		return 2
 	}
 	key, err := run(ctx, kc, args[0], *name, stdin)
 	switch {
 	case errors.Is(err, ErrUnavailable):
-		fmt.Fprintln(stderr, "cnctl keychain:", err)
+		fmt.Fprintln(stderr, "vsh keychain:", err)
 		return ExitUnavailable
 	case err != nil:
-		fmt.Fprintln(stderr, "cnctl keychain:", err)
+		fmt.Fprintln(stderr, "vsh keychain:", err)
 		return 1
 	case key != "":
 		fmt.Fprintln(stdout, key)

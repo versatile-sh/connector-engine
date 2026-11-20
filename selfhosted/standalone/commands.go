@@ -17,8 +17,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/versatile-sh/connector-engine/app"
-	"github.com/versatile-sh/connector-engine/config"
+	cmd "github.com/versatile-sh/connector-engine/cli/command"
 	"github.com/versatile-sh/connector-engine/internal/atomicfile"
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/keychain"
 )
@@ -32,43 +31,36 @@ The passphrase cannot be recovered: without it the file opens for nobody, you in
 `
 
 type command struct {
-	fs   *flag.FlagSet
 	data *string
+	args []string
 	io   prompt
 	out  io.Writer
 }
 
-func newCommand(name string, args []string, stdin io.Reader, stdout, stderr io.Writer, run func(c *command) error, extra func(fs *flag.FlagSet)) int {
-	c := &command{fs: flag.NewFlagSet(name, flag.ContinueOnError), io: newPrompt(stdin, stderr), out: stdout}
-	c.fs.SetOutput(stderr)
-	def, _ := DataDir(os.Getenv)
-	c.data = c.fs.String("data", def, "the data directory of the install")
-	if extra != nil {
-		extra(c.fs)
-	}
-	if err := c.fs.Parse(args); err != nil {
-		return 2
-	}
-	abs, err := filepath.Abs(*c.data)
-	if err != nil {
-		fmt.Fprintln(stderr, name+":", err)
-		return 2
-	}
-	*c.data = abs
-	err = run(c)
-	var u usage
-	switch {
-	case errors.As(err, &u):
-		fmt.Fprintln(stderr, err)
-		return 2
-	case errors.Is(err, errNotRunning):
-		fmt.Fprintln(stderr, err)
-		return 3
-	case err != nil:
-		fmt.Fprintln(stderr, name+":", err)
-		return 1
-	}
-	return 0
+func leaf(name, args, summary string, run func(c *command) error, extra func(fs *flag.FlagSet)) *cmd.Command {
+	return &cmd.Command{Name: name, Args: args, Summary: summary, Setup: func(fs *flag.FlagSet) cmd.Runner {
+		def, _ := DataDir(os.Getenv)
+		data := fs.String("data", def, "the data directory of the install")
+		if extra != nil {
+			extra(fs)
+		}
+		return func(_ context.Context, x *cmd.Exec) error {
+			abs, err := filepath.Abs(*data)
+			if err != nil {
+				return cmd.Usage(x.Path, "--data: %v", err)
+			}
+			*data = abs
+			err = run(&command{data: data, args: x.Args, io: newPrompt(x.Stdin, x.Stderr), out: x.Stdout})
+			var u usage
+			switch {
+			case errors.As(err, &u):
+				return cmd.Usage(x.Path, "%s", string(u))
+			case errors.Is(err, errNotRunning):
+				return cmd.Fail(cmd.ExitUnreachable, "start it with 'vsh up'", "%v", err)
+			}
+			return err
+		}
+	}}
 }
 
 type usage string
@@ -79,61 +71,46 @@ var errNotRunning = errors.New("no install runs on this data directory")
 
 func (c *command) live(ctx context.Context) error {
 	if _, ok := running(ctx, *c.data); !ok {
-		return fmt.Errorf("%w (%s): start it with connector-engine-selfhosted up", errNotRunning, *c.data)
+		return fmt.Errorf("%w (%s)", errNotRunning, *c.data)
 	}
 	return nil
 }
 
-// Commands returns the subcommands of a no-Docker install: up, stop, status, export, import, reset-password and uninstall.
-func Commands(version string) map[string]app.Command {
-	return map[string]app.Command{
-		"up": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			var port int
-			var open, noKeychain bool
-			return newCommand("up", args, stdin, stdout, stderr, func(c *command) error {
-				return up(c, Options{Data: *c.data, Port: port, Version: version, Log: slog.New(slog.NewTextHandler(stderr, nil))}, open, noKeychain)
-			}, func(fs *flag.FlagSet) {
-				fs.IntVar(&port, "port", 7465, "the console port on 127.0.0.1")
-				fs.BoolVar(&open, "open", false, "open the console in the browser")
-				fs.BoolVar(&noKeychain, "no-keychain", false, "keep the root keys in plaintext files instead of the OS keychain")
-			})
-		},
-		"stop": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			return newCommand("stop", args, stdin, stdout, stderr, func(c *command) error { return stop(c, true) }, nil)
-		},
-		"status": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			return newCommand("status", args, stdin, stdout, stderr, status, nil)
-		},
-		"export": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			var out string
-			var setup, yes bool
-			return newCommand("export", args, stdin, stdout, stderr, func(c *command) error { return export(c, out, setup, yes) }, func(fs *flag.FlagSet) {
-				fs.StringVar(&out, "out", "", "the file to write; empty writes a dated file in $BACKUP_DIR or ~/connector-engine-backups")
-				fs.BoolVar(&setup, "setup", false, "export a shareable setup without credentials instead of a full backup")
-				fs.BoolVar(&yes, "yes", false, "skip the confirmation")
-			})
-		},
-		"import": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			var yes bool
-			return newCommand("import", args, stdin, stdout, stderr, func(c *command) error { return importFile(c, yes) }, func(fs *flag.FlagSet) {
-				fs.BoolVar(&yes, "yes", false, "skip the confirmation")
-			})
-		},
-		"reset-password": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			var user string
-			return newCommand("reset-password", args, stdin, stdout, stderr, func(c *command) error { return resetPassword(c, user) }, func(fs *flag.FlagSet) {
-				fs.StringVar(&user, "user", "", "the username whose password to set; may be left out while the console has one user")
-			})
-		},
-		"uninstall": func(_ config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			var keep, purge, yes, noKeychain bool
-			return newCommand("uninstall", args, stdin, stdout, stderr, func(c *command) error { return uninstall(c, keep, purge, yes, noKeychain) }, func(fs *flag.FlagSet) {
-				fs.BoolVar(&keep, "keep-data", false, "stop the install and keep its data directory and unlock key")
-				fs.BoolVar(&purge, "purge", false, "stop the install and delete its data directory and its unlock key in the keychain")
-				fs.BoolVar(&yes, "yes", false, "skip the confirmation of --purge")
-				fs.BoolVar(&noKeychain, "no-keychain", false, "leave the OS keychain alone, for an install started with --no-keychain")
-			})
-		},
+// Commands returns the leaves of a no-Docker install: up, stop, status, export, import, reset-password and uninstall.
+func Commands(version string) []*cmd.Command {
+	var (
+		port                             int
+		open, noKeychain, setup, yes     bool
+		keep, purge, noKeychainUninstall bool
+		out, user                        string
+	)
+	return []*cmd.Command{
+		leaf("up", "", "Start the install without Docker in the foreground.", func(c *command) error {
+			return up(c, Options{Data: *c.data, Port: port, Version: version, Log: slog.New(slog.NewTextHandler(c.io.out, nil))}, open, noKeychain)
+		}, func(fs *flag.FlagSet) {
+			fs.IntVar(&port, "port", 7465, "the console port on 127.0.0.1")
+			fs.BoolVar(&open, "open", false, "open the console in the browser")
+			fs.BoolVar(&noKeychain, "no-keychain", false, "keep the root keys in plaintext files instead of the OS keychain")
+		}),
+		leaf("stop", "", "Stop the running install.", func(c *command) error { return stop(c, true) }, nil),
+		leaf("status", "", "Show whether the install runs, its version and its addresses.", status, nil),
+		leaf("export", "", "Write a full backup, or a shareable setup with --setup.", func(c *command) error { return export(c, out, setup, yes) }, func(fs *flag.FlagSet) {
+			fs.StringVar(&out, "out", "", "the file to write; empty writes a dated file in $BACKUP_DIR or ~/connector-engine-backups")
+			fs.BoolVar(&setup, "setup", false, "export a shareable setup without credentials instead of a full backup")
+			fs.BoolVar(&yes, "yes", false, "skip the confirmation")
+		}),
+		leaf("import", "<file>", "Restore a full backup or add what a setup holds.", func(c *command) error { return importFile(c, yes) }, func(fs *flag.FlagSet) {
+			fs.BoolVar(&yes, "yes", false, "skip the confirmation")
+		}),
+		leaf("reset-password", "", "Set a new console password from this machine.", func(c *command) error { return resetPassword(c, user) }, func(fs *flag.FlagSet) {
+			fs.StringVar(&user, "user", "", "the username whose password to set; may be left out while the console has one user")
+		}),
+		leaf("uninstall", "", "Stop the install and keep or delete its data.", func(c *command) error { return uninstall(c, keep, purge, yes, noKeychainUninstall) }, func(fs *flag.FlagSet) {
+			fs.BoolVar(&keep, "keep-data", false, "stop the install and keep its data directory and unlock key")
+			fs.BoolVar(&purge, "purge", false, "stop the install and delete its data directory and its unlock key in the keychain")
+			fs.BoolVar(&yes, "yes", false, "skip the confirmation of --purge")
+			fs.BoolVar(&noKeychainUninstall, "no-keychain", false, "leave the OS keychain alone, for an install started with --no-keychain")
+		}),
 	}
 }
 
@@ -240,10 +217,10 @@ func export(c *command, out string, setup, yes bool) error {
 
 func importFile(c *command, yes bool) error {
 	ctx := context.Background()
-	if c.fs.NArg() != 1 {
-		return usage("usage: connector-engine-selfhosted import [--data DIR] [--yes] FILE")
+	if len(c.args) != 1 {
+		return usage("import takes one file")
 	}
-	raw, err := os.ReadFile(c.fs.Arg(0))
+	raw, err := os.ReadFile(c.args[0])
 	if err != nil {
 		return err
 	}
@@ -253,7 +230,7 @@ func importFile(c *command, yes bool) error {
 	var passphrase []byte
 	full := bytes.HasPrefix(raw, []byte("CEBAK\n"))
 	if full {
-		if passphrase, err = c.io.secret("Passphrase of " + filepath.Base(c.fs.Arg(0))); err != nil {
+		if passphrase, err = c.io.secret("Passphrase of " + filepath.Base(c.args[0])); err != nil {
 			return err
 		}
 	}
@@ -306,7 +283,7 @@ func resetPassword(c *command, user string) error {
 
 func uninstall(c *command, keep, purge, yes, noKeychain bool) error {
 	if keep == purge {
-		return usage("usage: connector-engine-selfhosted uninstall [--data DIR] --keep-data | --purge [--yes]")
+		return usage("give exactly one of --keep-data or --purge")
 	}
 	if purge {
 		if err := holdsInstall(*c.data); err != nil {

@@ -1,16 +1,16 @@
-// Package selfhosted lists what the self-hosted build adds to the core: the hostkey secrets and sqlite store adapters, the unlock command of the engine, and the keychain and notify commands of cnctl.
+// Package selfhosted lists what the self-hosted build adds to the core: the hostkey secrets and sqlite store adapters, the unlock command of the engine, and the keychain and notify commands of vsh.
 package selfhosted
 
 import (
 	"context"
 	"embed"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/versatile-sh/connector-engine/app"
-	"github.com/versatile-sh/connector-engine/cli"
+	"github.com/versatile-sh/connector-engine/cli/command"
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 	"github.com/versatile-sh/connector-engine/port"
@@ -46,16 +46,30 @@ func EngineCommands() map[string]app.Command {
 	}
 }
 
-// Commands returns the subcommands the self-hosted cnctl adds: keychain and notify.
-func Commands() map[string]cli.Command {
-	return map[string]cli.Command{
-		"keychain": func(ctx context.Context, args []string, stdout, stderr io.Writer, _ []string) int {
-			return keychain.Run(ctx, keychain.System(), args, os.Stdin, stdout, stderr)
-		},
-		"notify": func(ctx context.Context, args []string, _, stderr io.Writer, environ []string) int {
-			return notify.Command(ctx, args, cli.Getenv(environ), stderr)
-		},
+// Commands returns the leaves the self-hosted vsh adds to the core: keychain and notify.
+func Commands() []*command.Command {
+	return []*command.Command{keychainCommand(), notify.Command()}
+}
+
+func keychainCommand() *command.Command {
+	verb := func(name, summary string) *command.Command {
+		return &command.Command{Name: name, Summary: summary, Setup: func(fs *flag.FlagSet) command.Runner {
+			install := fs.String("name", "connector-engine", "the install, its compose project name")
+			return func(ctx context.Context, x *command.Exec) error {
+				if len(x.Args) > 0 {
+					return command.Usage(x.Path, "unexpected argument %q", x.Args[0])
+				}
+				if code := keychain.Run(ctx, keychain.System(), []string{name, "--name", *install}, x.Stdin, x.Stdout, x.Stderr); code != 0 {
+					return command.Silent(code)
+				}
+				return nil
+			}
+		}}
 	}
+	return &command.Command{Name: "keychain", Summary: "Keep the unlock key of a Docker install in the OS keychain.", Subs: []*command.Command{
+		verb("get", "Print the unlock key."), verb("ensure", "Create the unlock key once and print it."),
+		verb("import", "Store the unlock key read on stdin."), verb("delete", "Delete the unlock key."),
+	}}
 }
 
 func openSQLite(ctx context.Context, env app.Env) (port.Store, func(), error) {

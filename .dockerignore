@@ -8,5 +8,5 @@ coverage
 /connector-engine
 /connector-engine-selfhosted
 /connector-console
-/cnctl
+/vsh
 /testmcp

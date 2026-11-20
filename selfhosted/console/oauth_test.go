@@ -36,6 +36,7 @@ type oauthRig struct {
 	b      *browser
 	noRedo *http.Client
 	eng    *console.Engine
+	c      *console.Console
 	public string
 	alias  string
 }
@@ -56,7 +57,7 @@ func newOAuthRig(t *testing.T) *oauthRig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", ServicePerson: "console"}
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,7 @@ func newOAuthRig(t *testing.T) *oauthRig {
 	var list struct{ Connectors []console.ConnectorSummary }
 	b.ok("GET", "/api/connectors", nil, &list)
 	noRedo := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &oauthRig{t: t, base: base, b: b, noRedo: noRedo, eng: eng, public: public, alias: list.Connectors[0].Alias}
+	return &oauthRig{t: t, base: base, b: b, noRedo: noRedo, eng: eng, c: c, public: public, alias: list.Connectors[0].Alias}
 }
 
 func (o *oauthRig) register(redirects ...string) (int, map[string]any) {
@@ -295,8 +296,16 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 		t.Fatal("a connected app is listed as signed out")
 	}
 
+	near := agents.Agents[mine]
+	near.ExpiresAt = time.Now().Add(time.Hour).UTC().Truncate(time.Second)
+	if err := o.c.State.PutAgent(near); err != nil {
+		t.Fatal(err)
+	}
 	renew := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {refresh}, "client_id": {clientID}}
 	status, next := o.token(renew, "http://localhost:6274")
+	if a, _ := o.c.State.Agent(key); time.Until(a.ExpiresAt) < 12*time.Hour || a.Owner != "owner" {
+		t.Fatalf("a refresh near the key's expiry did not renew it as its owner: %+v", a)
+	}
 	access2, _ := next["access_token"].(string)
 	refresh2, _ := next["refresh_token"].(string)
 	if status != http.StatusOK || access2 == "" || refresh2 == "" || refresh2 == refresh {

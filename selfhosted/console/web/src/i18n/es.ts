@@ -266,7 +266,7 @@ export const es: Record<MessageKey, string> = {
   "clients.where.file": "Pega en tu config: {path}",
   "clients.where.code": "Pega en tu código: {label}",
   "clients.where.values": "Usa estos tres valores",
-  "clients.where.cnctl": "O pruébalo en una terminal con cnctl",
+  "clients.where.vsh": "O pruébalo en una terminal con vsh",
   "clients.where.ai": "Pégalo en tu IA",
   "clients.open": "Abrir en {app}",
   "clients.orByHand": "o añádelo a mano",

@@ -35,7 +35,7 @@ func engine(t *testing.T, status int, reply string) (*httptest.Server, *seen) {
 
 func run(srv *httptest.Server, args ...string) (int, string, string) {
 	var out, errOut bytes.Buffer
-	cmd := admin.Command(&out, &errOut, []string{"CNCTL_URL=" + srv.URL, "CNCTL_TOKEN=tok"})
+	cmd := admin.Command(&out, &errOut, []string{"VSH_ADMIN_URL=" + srv.URL, "VSH_ADMIN_TOKEN=tok"})
 	code := cmd.Run(context.Background(), args)
 	return code, out.String(), errOut.String()
 }
@@ -109,8 +109,8 @@ func TestEveryAliasNamesAnOperationOfTheTable(t *testing.T) {
 func TestHelpAndFlagErrorsNeverPrintTheToken(t *testing.T) {
 	for _, args := range [][]string{{"-h"}, {"-bogus"}} {
 		var out, errOut bytes.Buffer
-		admin.Command(&out, &errOut, []string{"CNCTL_TOKEN=s3cret-operator-token"}).Run(context.Background(), args)
-		if all := out.String() + errOut.String(); strings.Contains(all, "s3cret-operator-token") || !strings.Contains(all, "$CNCTL_TOKEN") {
+		admin.Command(&out, &errOut, []string{"VSH_ADMIN_TOKEN=s3cret-operator-token"}).Run(context.Background(), args)
+		if all := out.String() + errOut.String(); strings.Contains(all, "s3cret-operator-token") || !strings.Contains(all, "$VSH_ADMIN_TOKEN") {
 			t.Fatalf("%v printed: %q", args, all)
 		}
 	}

@@ -25,7 +25,7 @@ func (w *world) exporter(agent string) func(args ...string) (string, error) {
 	}
 }
 
-func TestCnctlSkillsExport(t *testing.T) {
+func TestVshSkillsExport(t *testing.T) {
 	w := newWorld(t, options{cfg: skillsOn})
 	w.installSkill(port.ModeAllow, "a1")
 	export := w.exporter("a1")

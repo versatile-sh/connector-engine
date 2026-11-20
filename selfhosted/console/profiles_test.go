@@ -332,7 +332,7 @@ func TestEachAccessKeyHasItsOwnPermissionsOnOneConnector(t *testing.T) {
 
 func TestAKeyThatHadExpiredFollowsAConnectorAddedMeanwhile(t *testing.T) {
 	p := profiledStack(t)
-	if err := p.c.State.PutAgent(console.Agent{Name: "old", ExpiresAt: time.Now().Add(-time.Hour)}); err != nil {
+	if err := p.c.State.PutAgent(console.Agent{Name: "old", Owner: "owner", ExpiresAt: time.Now().Add(-time.Hour)}); err != nil {
 		t.Fatal(err)
 	}
 	var imported struct{ Connector string }
@@ -351,7 +351,7 @@ func TestAnExpiredKeyIsTurnedOffAndStaysOffOnceRenewed(t *testing.T) {
 	p := profiledStack(t)
 	p.mint("live")
 	for _, name := range []string{"old", "older"} {
-		if err := p.c.State.PutAgent(console.Agent{Name: name, ExpiresAt: time.Now().Add(-time.Hour)}); err != nil {
+		if err := p.c.State.PutAgent(console.Agent{Name: name, Owner: "owner", ExpiresAt: time.Now().Add(-time.Hour)}); err != nil {
 			t.Fatal(err)
 		}
 	}

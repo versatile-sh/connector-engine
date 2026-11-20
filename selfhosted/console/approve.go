@@ -56,7 +56,7 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "the choice is once, session, always or deny")
 		return
 	}
-	channel, note := "console", "console"
+	ctx, channel, note := r.Context(), "console", "console"
 	if in.Token != "" {
 		device, nonce, err := c.checkLink(in.Token, id)
 		if err == nil && !c.surf.links.spend(nonce, time.Now().Add(24*time.Hour)) {
@@ -67,8 +67,12 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		channel, note = "desktop", "desktop:"+c.deviceName(device)
+		if ctx, err = c.asKeyOwner(ctx, id); err != nil {
+			c.fail(w, err)
+			return
+		}
 	} else {
-		csrf, ok := c.Sessions.Get(r)
+		u, csrf, ok := c.Sessions.Current(r)
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "sign in first")
 			return
@@ -77,8 +81,9 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, "missing or wrong CSRF token")
 			return
 		}
+		ctx = WithActor(ctx, u.Person)
 	}
-	v, lost, err := c.DecideChoice(r.Context(), id, in.Choice, channel, note)
+	v, lost, err := c.DecideChoice(ctx, id, in.Choice, channel, note)
 	if err != nil {
 		c.fail(w, err)
 		return

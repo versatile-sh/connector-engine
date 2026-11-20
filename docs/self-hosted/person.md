@@ -24,17 +24,17 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 | `make notify` | desktop popups for calls waiting for approval |
 | `make export` / `make import FILE=...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
 | `make reset-password` | set a new console password from this machine; `USER=<username>` names whose once there are several users |
-| `make cli ARGS="tools list"` | `cnctl` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
-| `make admin ARGS="tenants create t2"` | `cnctl admin` against the operator listener with the generated operator token |
+| `make cli ARGS="tools list"` | `vsh` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
+| `make admin ARGS="tenants create t2"` | `vsh admin` against the operator listener with the generated operator token |
 | `make keychain-status` / `keychain-migrate` / `keychain-revert` | report, move a plaintext root key under the keychain, or back ([keychain](keychain.md)) |
 | `make keychain-recovery` / `keychain-import` | print the unlock key for a password manager, or restore it from stdin |
 
 ## Without Docker
 
-One binary, `connector-engine-selfhosted`, runs the engine and the console in one process on `127.0.0.1`, over an embedded SQLite store. It needs no Docker, no Postgres and no Go. The installers that put it on your machine are available after the first release (v0.1.0); until then, [build it from source](../../selfhosted/README.md#build).
+One binary, `vsh`, runs the engine and the console in one process on `127.0.0.1`, over an embedded SQLite store. It needs no Docker, no Postgres and no Go. The installers that put it on your machine are available after the first release (v0.1.0); until then, [build it from source](../../selfhosted/README.md#build).
 
 ```sh
-connector-engine-selfhosted up --open
+vsh up --open
 ```
 
 | Command | Flags | Does |
@@ -80,21 +80,21 @@ It is created with mode 0700, and `up` refuses one that group or others can open
 
 1. On the Docker install: `make export`. Keep the `.cebak` file and its passphrase.
 2. `make down`: both installs use port 7465, and `down` keeps the Docker volumes.
-3. `connector-engine-selfhosted up`.
-4. In another terminal: `connector-engine-selfhosted import ~/connector-engine-backups/connector-engine-backup-<stamp>.cebak`, and type the passphrase.
+3. `vsh up`.
+4. In another terminal: `vsh import ~/connector-engine-backups/connector-engine-backup-<stamp>.cebak`, and type the passphrase.
 
 The root keys are wrapped again by this machine's keychain, and the access keys your apps already hold keep working. The way back (SQLite to Postgres) is not supported yet.
 
 ### Run it as a service
 
-`up` stays in the foreground and stops cleanly on SIGTERM. Point a systemd user unit (`ExecStart=/path/to/connector-engine-selfhosted up`, `Restart=on-failure`), a launchd agent (`ProgramArguments` with `up`, `KeepAlive`) or a Windows scheduled task at logon at it.
+`up` stays in the foreground and stops cleanly on SIGTERM. Point a systemd user unit (`ExecStart=/path/to/vsh up`, `Restart=on-failure`), a launchd agent (`ProgramArguments` with `up`, `KeepAlive`) or a Windows scheduled task at logon at it.
 
 ## Port and host
 
 - `CONSOLE_PORT` (default 7465) is the only port setting. Put `CONSOLE_PORT=9123` in `selfhosted/deploy/.env` to keep it.
 - It sets the published port, the Host allowlist (`127.0.0.1`, `localhost` and `[::1]` at that port) and the OAuth redirect `http://127.0.0.1:<port>/oauth/callback`.
 
-Outside Docker, run the console against an engine you started yourself:
+Outside Docker, run the console against an engine you started yourself, with `connector-console` built from source (`go build ./selfhosted/cmd/connector-console`):
 
 ```sh
 connector-console --listen 127.0.0.1:7465 --engine http://127.0.0.1:8080 \
@@ -103,6 +103,23 @@ connector-console --listen 127.0.0.1:7465 --engine http://127.0.0.1:8080 \
 
 `connector-console --help` lists every flag.
 
+## Engine identity
+
+The console acts on the engine as engine persons, never as one shared account:
+
+| Flag (env) | Default | Is |
+|---|---|---|
+| `--person` (`CONSOLE_PERSON`) | `owner` | the first Owner's person; agent tokens made before multi-user name it, so they keep working |
+| `--service-person` (`CONSOLE_SERVICE_PERSON`) | `console` | the person the console reads as and writes role rows as; it must be the `tenant_admin` row of `bootstrap.roles` |
+| `--managers-group` (`CONSOLE_MANAGERS_GROUP`) | `managers` | the engine group that holds every Owner and Admin |
+
+- Every write runs as the person of the console user who made it, so the engine's audit, `decided_by` on approvals and the grants name that user. A write with no user behind it is refused before it reaches the engine.
+- Background writes act for the key's owner: a refresh-token renewal, and a decision from a chat channel, a desktop link or an app's elicitation. "Always allow" acts as the user who chose it.
+- Reads and the approvals watch run as the service person; the console then shows each user what is theirs.
+- At every start, and after a restore, the console writes each user's engine role as the service person: `tenant_admin` over `t/<tenant>` for an Owner or Admin, `agent_configurer` over `t/<tenant>/w/<workspace>` for a Member, and membership of the managers group for Owners and Admins. It removes the rows of its users that should not be there and the old `owner` row once no user is `owner`; rows of other persons stay.
+- Upgrading with your own `connector-engine.yaml`: add the service person's row to `bootstrap.roles`, or the console logs "waiting for the engine" and every page stays empty. The old `owner` row can stay; the console then manages it.
+- Each access key has one owner, the user who made it; its agent tokens and bindings carry that person as `on_behalf_of` and `agent_owner`. Keys from an earlier console belong to the first Owner. A key name another user's key has is refused with "this name is taken".
+
 ## Profile settings
 
 The profile is a pair of files in `selfhosted/deploy/profiles/person/`. What it sets beyond the engine defaults:
@@ -110,6 +127,7 @@ The profile is a pair of files in `selfhosted/deploy/profiles/person/`. What it 
 | Setting | Value | Why |
 |---|---|---|
 | `auth.localIssuer` | enabled | the console mints agent tokens for your apps |
+| `bootstrap.roles` | `{tenant: local, person: console, role: tenant_admin, scope: t/local}` | the console's service person; the users' own rows come from the console ([engine identity](#engine-identity)) |
 | `secrets` port | `builtin:hostkey` | root keys wrapped by a key in your OS keychain |
 | `runtime.allowPrivateHosts` | `true` | you can import servers on your own network or `localhost` |
 | `runtime.loopbackHost` | `host.docker.internal` | a server on the host's loopback is reachable from the container |

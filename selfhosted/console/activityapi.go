@@ -463,7 +463,7 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 	var agent string
 	if engineID, ok := strings.CutPrefix(id, engineRowPrefix); ok {
 		var call port.Call
-		if err := c.Engine.Call(r.Context(), http.MethodGet, "/v1/calls/"+esc(engineID), nil, &call); err != nil {
+		if err := c.Engine.Read(r.Context(), http.MethodGet, "/v1/calls/"+esc(engineID), nil, &call); err != nil {
 			c.fail(w, err)
 			return
 		}

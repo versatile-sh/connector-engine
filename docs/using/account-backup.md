@@ -2,7 +2,7 @@
 
 # Account and backup
 
-The console has one owner account. This page covers the password, full backups, shareable setups, and restoring either.
+The console keeps its users and their access keys. This page covers the password, full backups, shareable setups, and restoring either.
 
 > **Your data lives in Docker volumes.** `docker compose down -v`, `docker system prune --volumes` and `docker volume prune -a` delete them, and with them every connector, credential, access key and the root keys. Nothing can bring them back. Export a backup first.
 
@@ -11,13 +11,13 @@ The console has one owner account. This page covers the password, full backups, 
 - **Account** changes the signed-in user's username and password. A username is unique without regard to case, and the login finds it the same way. A password change asks for the current one, needs at least 10 characters, signs out that user's other sessions and keeps this one; other users stay signed in.
 - Wrong current passwords are rate-limited like the login: 5 a minute.
 - A wrong password and an unknown username get the same answer, "wrong username or password", after the same work.
-- The console keeps its users in the state file, keyed by the engine person id. The first user is an Owner with the configured `--person` (default `owner`). Removing or demoting the last Owner is refused.
+- The console keeps its users in the state file, keyed by the engine person id. The first user is an Owner with the configured `--person` (default `owner`). Removing or demoting the last Owner is refused. Each user acts on the engine as their own person ([engine identity](../self-hosted/person.md#engine-identity)).
 - A state file from an earlier console, with its one `owner` account, becomes that Owner on the first start, and its sessions stay signed in. This is a one-way door: once this console writes the file it has no `owner`, and an earlier console on the same volume would see a first run.
 
 Forgot the password? On the machine that runs the console:
 
 ```sh
-make reset-password                          # without Docker: connector-engine-selfhosted reset-password
+make reset-password                          # without Docker: vsh reset-password
 make reset-password USER=<username>          # once there are several users; without Docker: --user <username>
 ```
 
@@ -52,7 +52,7 @@ make export MODE=setup       # shareable setup, no credentials
 wrote /home/you/connector-engine-backups/connector-engine-backup-20261120T180000Z.cebak (the 7 newest backups are kept in /home/you/connector-engine-backups)
 ```
 
-Without Docker, the same files come from `connector-engine-selfhosted export` (add `--setup` for a shareable setup), and restore with `connector-engine-selfhosted import FILE`.
+Without Docker, the same files come from `vsh export` (add `--setup` for a shareable setup), and restore with `vsh import FILE`.
 
 A setup carries **permissions as reusable sets**; a backup carries **your exact keys**.
 

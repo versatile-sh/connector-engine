@@ -122,26 +122,26 @@ for p in /api/session /api/connectors /api/agents /api/approvals; do
   if api GET "$p" | grep -qF "$optoken"; then fail "$p carries the operator token"; fi
 done
 
-cnctl() { docker run --rm --network host -e CN_ENDPOINT="$base/mcp" -e CN_AGENT_TOKEN="$token" --entrypoint /usr/local/bin/cnctl "$CN_IMAGE" tools "$@"; }
+vsh() { docker run --rm --network host -e CN_ENDPOINT="$base/mcp" -e CN_AGENT_TOKEN="$token" --entrypoint /usr/local/bin/vsh "$CN_IMAGE" tools "$@"; }
 
-step "cnctl tools list through the console's /mcp"
-out="$(cnctl list)"; echo "$out"
+step "vsh tools list through the console's /mcp"
+out="$(vsh list)"; echo "$out"
 grep -q "${alias}__search" <<<"$out" || fail "search is not listed"
 if grep -q "${alias}__mystery" <<<"$out"; then fail "an off function is listed"; fi
 
-step "cnctl tools call: a read runs at once"
-out="$(cnctl call "${alias}__search" --args '{}')"; echo "$out"
+step "vsh tools call: a read runs at once"
+out="$(vsh call "${alias}__search" --args '{}')"; echo "$out"
 grep -q '^ok' <<<"$out" || fail "search did not run"
 
-step "cnctl tools call: an ask function waits for the owner"
-out="$(cnctl call "${alias}__purge" --args '{}')"; echo "$out"
+step "vsh tools call: an ask function waits for the owner"
+out="$(vsh call "${alias}__purge" --args '{}')"; echo "$out"
 grep -q pending_approval <<<"$out" || fail "purge did not wait"
 r="$(api GET /api/approvals)"
 id="$(body "$r" | jq -r '.approvals[0].id')"
 [ -n "$id" ] && [ "$id" != null ] || fail "no approval listed: $r"
 r="$(api POST "/api/approvals/$id" '{"approve":true}')"; [ "$(code "$r")" = 204 ] || fail "approve: $r"
 for _ in $(seq 1 30); do
-  out="$(cnctl call approval_status --args "{\"approval_id\":\"$id\"}")"
+  out="$(vsh call approval_status --args "{\"approval_id\":\"$id\"}")"
   grep -q '^ok' <<<"$out" && break
   sleep 1
 done

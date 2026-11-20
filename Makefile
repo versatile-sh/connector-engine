@@ -31,12 +31,12 @@ ps:
 	$(COMPOSE) --profile $(PROFILE) ps
 
 cli:
-	docker run --rm -i --network host -e CN_ENDPOINT=$(or $(CN_ENDPOINT),http://127.0.0.1:$(CONSOLE_PORT)/mcp) -e CN_AGENT_TOKEN --entrypoint /usr/local/bin/cnctl $(RUN_IMAGE) $(ARGS)
+	docker run --rm -i --network host -e CN_ENDPOINT=$(or $(CN_ENDPOINT),http://127.0.0.1:$(CONSOLE_PORT)/mcp) -e CN_AGENT_TOKEN --entrypoint /usr/local/bin/vsh $(RUN_IMAGE) $(ARGS)
 
 admin:
-	docker run --rm -i --network $(PROJECT)_default -e CNCTL_URL=http://$(ENGINE):8081 \
-		-e CNCTL_TOKEN="$$($(COMPOSE) --profile $(PROFILE) exec -T postgres cat /run/connector-engine/operator-token)" \
-		--entrypoint /usr/local/bin/cnctl $(RUN_IMAGE) admin $(ARGS)
+	docker run --rm -i --network $(PROJECT)_default -e VSH_ADMIN_URL=http://$(ENGINE):8081 \
+		-e VSH_ADMIN_TOKEN="$$($(COMPOSE) --profile $(PROFILE) exec -T postgres cat /run/connector-engine/operator-token)" \
+		--entrypoint /usr/local/bin/vsh $(RUN_IMAGE) admin $(ARGS)
 
 build: vendor
 	$(COMPOSE) --profile $(PROFILE) build

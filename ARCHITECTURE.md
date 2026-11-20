@@ -93,7 +93,7 @@ The strictest mode wins across layers. `core/evaluate` holds the steps and `core
 
 | Profile | Identity | Who decides approvals | Binaries |
 |---|---|---|---|
-| `headless` | tokens from your OIDC/JWKS issuer | your product, through the operator API and events | `cmd/connector-engine`, `cmd/cnctl` |
+| `headless` | tokens from your OIDC/JWKS issuer | your product, through the operator API and events | `cmd/connector-engine`, `cmd/vsh` |
 | `person` | the console is the OAuth 2.1 server for AI apps | one person, in the console or an approval surface | `selfhosted/cmd/*` |
 
 Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `deploy/profiles/headless` or `selfhosted/deploy/profiles/person`.
@@ -103,7 +103,7 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 `selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`), desktop notifications, and the install without Docker (`selfhosted/standalone`), which runs the engine and the console in one process over the `sqlite` store.
 
 - Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
-- Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or `cli.Main` (`cnctl`). `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
+- Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or `cli.Main` (`vsh`). `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
 
 ```go
 // cmd/connector-engine: the core alone

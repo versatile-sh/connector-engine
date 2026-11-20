@@ -25,10 +25,10 @@ To pin a version once releases exist, check out its tag instead of `main`: `git 
 Installed with the installer (available after the first release (v0.1.0)): back up, stop, run the installer again (it replaces the binaries in place), start:
 
 ```sh
-connector-engine-selfhosted export
-connector-engine-selfhosted stop
+vsh export
+vsh stop
 curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh | sh
-connector-engine-selfhosted up --open
+vsh up --open
 ```
 
 Set `CONNECTOR_ENGINE_VERSION=v0.1.0` to install a given release instead of the latest.

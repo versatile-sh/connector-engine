@@ -9,28 +9,12 @@ before:
     - npm --prefix selfhosted/console/web run build
 
 builds:
-  - id: engine-selfhosted
-    main: ./selfhosted/cmd/connector-engine
-    binary: connector-engine-selfhosted
+  - id: vsh-selfhosted
+    main: ./selfhosted/cmd/vsh
+    binary: vsh
     env: [CGO_ENABLED=0]
     flags: [-trimpath]
     ldflags: ["-s -w -X main.version={{ .Version }}"]
-    goos: [linux, darwin, windows]
-    goarch: [amd64, arm64]
-  - id: cnctl-selfhosted
-    main: ./selfhosted/cmd/cnctl
-    binary: cnctl
-    env: [CGO_ENABLED=0]
-    flags: [-trimpath]
-    ldflags: ["-s -w"]
-    goos: [linux, darwin, windows]
-    goarch: [amd64, arm64]
-  - id: console
-    main: ./selfhosted/cmd/connector-console
-    binary: connector-console
-    env: [CGO_ENABLED=0]
-    flags: [-trimpath]
-    ldflags: ["-s -w"]
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
   - id: engine-headless
@@ -41,9 +25,9 @@ builds:
     ldflags: ["-s -w -X main.version={{ .Version }}"]
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
-  - id: cnctl-headless
-    main: ./cmd/cnctl
-    binary: cnctl
+  - id: vsh-headless
+    main: ./cmd/vsh
+    binary: vsh
     env: [CGO_ENABLED=0]
     flags: [-trimpath]
     ldflags: ["-s -w"]
@@ -52,7 +36,7 @@ builds:
 
 archives:
   - id: selfhosted
-    ids: [engine-selfhosted, cnctl-selfhosted, console]
+    ids: [vsh-selfhosted]
     name_template: "connector-engine_{{ .Os }}_{{ .Arch }}"
     formats: [tar.gz]
     format_overrides:
@@ -60,7 +44,7 @@ archives:
         formats: [zip]
     files: [LICENSE, NOTICE, README.md]
   - id: headless
-    ids: [engine-headless, cnctl-headless]
+    ids: [engine-headless, vsh-headless]
     name_template: "connector-engine-headless_{{ .Os }}_{{ .Arch }}"
     formats: [tar.gz]
     format_overrides:

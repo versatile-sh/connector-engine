@@ -8,7 +8,7 @@ vendor/
 /connector-engine
 /connector-engine-selfhosted
 /connector-console
-/cnctl
+/vsh
 /testmcp
 /dist/
 /docs/assets/src/node_modules/

@@ -53,7 +53,11 @@ type User struct {
 // ErrLastOwner refuses a change that would leave the console without an Owner.
 var ErrLastOwner = &statusError{status: http.StatusConflict, err: errors.New("the console keeps at least one owner")}
 
-const defaultPerson = "owner"
+const (
+	defaultPerson        = "owner"
+	defaultServicePerson = "console"
+	defaultManagersGroup = "managers"
+)
 
 var dummySalt = []byte("connector-engine/no-such-user")
 
@@ -106,6 +110,12 @@ func migrateUsers(d *stateFile, person string) {
 		d.LegacyPerson = person
 	}
 	d.Owner = nil
+	for k, a := range d.Agents {
+		if a.Owner == "" {
+			a.Owner = firstOf(d.LegacyPerson, person)
+			d.Agents[k] = a
+		}
+	}
 	for k, v := range d.Sessions {
 		if v.Person == "" {
 			v.Person = d.LegacyPerson
@@ -265,6 +275,21 @@ func (s *State) HostUser(username string) (User, error) {
 		return User{}, ErrNoOwner
 	}
 	return User{}, invalid("this console has several users: name one with USER=<username>")
+}
+
+// HostOwner returns the Owner a host request acts as: the first Owner while they still are one, else the Owner with the smallest person id.
+func (s *State) HostOwner() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	first := firstOf(s.data.LegacyPerson, s.person)
+	if s.data.Users[first].Role == RoleOwner {
+		return first
+	}
+	persons := slices.Sorted(maps.Keys(s.data.Users))
+	if i := slices.IndexFunc(persons, func(p string) bool { return s.data.Users[p].Role == RoleOwner }); i >= 0 {
+		return persons[i]
+	}
+	return ""
 }
 
 type userKey struct{}

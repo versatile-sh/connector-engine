@@ -29,7 +29,7 @@ function Paired({ paired, onDone }: { paired: PairedDevice; onDone(): void }) {
   );
 }
 
-/** Desktop popups: pair this computer for `cnctl notify` in one click, named after its system and browser, the key and command shown once, and every paired computer, the one paired here marked, renamed in place or revoked inline. */
+/** Desktop popups: pair this computer for `vsh notify` in one click, named after its system and browser, the key and command shown once, and every paired computer, the one paired here marked, renamed in place or revoked inline. */
 export function DevicesSection({ devices }: { devices: DeviceView[] }) {
   const t = useT();
   const pair = useMutation(pairDevice);

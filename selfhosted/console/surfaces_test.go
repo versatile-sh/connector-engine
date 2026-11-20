@@ -104,7 +104,7 @@ func newRig(t *testing.T) *rig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", Person: "owner"}
+	eng := &console.Engine{PublicURL: public, OperatorURL: operator, Operator: operatorToken, Tenant: "local", Workspace: "default", ServicePerson: "console"}
 	if err := eng.EnsureTenant(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func (r *rig) call(cs *mcp.ClientSession, function string, args map[string]any) 
 
 func (r *rig) allowed(scopeKind, scopeID, connector, function string) bool {
 	var rows struct{ Items []port.Grant }
-	if err := r.eng.Call(context.Background(), "GET", "/v1/grants?scope_kind="+scopeKind+"&scope_id="+scopeID+"&connector="+connector, nil, &rows); err != nil {
+	if err := r.eng.Read(context.Background(), "GET", "/v1/grants?scope_kind="+scopeKind+"&scope_id="+scopeID+"&connector="+connector, nil, &rows); err != nil {
 		r.t.Fatal(err)
 	}
 	return slices.ContainsFunc(rows.Items, func(g port.Grant) bool {
@@ -323,7 +323,7 @@ func TestADesktopLinkDecidesOnceWithoutASession(t *testing.T) {
 		Command string
 	}
 	r.b.ok("POST", "/api/notifications/devices", map[string]any{"name": "laptop"}, &paired)
-	if !strings.Contains(paired.Command, "cnctl notify --console "+r.base) {
+	if !strings.Contains(paired.Command, "vsh notify --console "+r.base) {
 		t.Fatalf("command %q", paired.Command)
 	}
 	if status, _ := (&browser{t: t, base: r.base, client: http.DefaultClient}).send("GET", "/api/notify/stream", nil, map[string]string{"Authorization": "Bearer nope"}); status != http.StatusUnauthorized {

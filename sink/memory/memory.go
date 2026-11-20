@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Sink records delivered events; Fail, when set, decides each delivery.

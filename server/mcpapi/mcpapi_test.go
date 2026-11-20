@@ -10,9 +10,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/server"
-	"github.com/agents-control/connector-engine/server/internal/harness"
-	"github.com/agents-control/connector-engine/server/mcpapi"
+	"github.com/versatile-sh/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server/internal/harness"
+	"github.com/versatile-sh/connector-engine/server/mcpapi"
 )
 
 type bearer struct{ token string }

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/plugkit/discovery"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/discovery"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 // WatchPoll is how long a watch sleeps between two reads of an empty stream.

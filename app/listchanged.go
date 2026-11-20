@@ -4,7 +4,7 @@ import (
 	"context"
 	"slices"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var listChangingEvents = []string{

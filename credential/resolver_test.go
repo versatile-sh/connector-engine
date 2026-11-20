@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agents-control/connector-engine/credential"
-	"github.com/agents-control/connector-engine/port"
-	secretsmemory "github.com/agents-control/connector-engine/secrets/memory"
-	"github.com/agents-control/connector-engine/store/memory"
+	"github.com/versatile-sh/connector-engine/credential"
+	"github.com/versatile-sh/connector-engine/port"
+	secretsmemory "github.com/versatile-sh/connector-engine/secrets/memory"
+	"github.com/versatile-sh/connector-engine/store/memory"
 )
 
 func TestResolverOpensOnlyTheCredentialOfItsTenantAndUnwrapsOAuthTokens(t *testing.T) {

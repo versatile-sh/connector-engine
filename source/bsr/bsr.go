@@ -13,12 +13,12 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	"github.com/agents-control/connector-engine/internal/digest"
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/internal/fetch"
-	"github.com/agents-control/connector-engine/internal/grpcdesc"
-	"github.com/agents-control/connector-engine/internal/importer"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/internal/digest"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/fetch"
+	"github.com/versatile-sh/connector-engine/internal/grpcdesc"
+	"github.com/versatile-sh/connector-engine/internal/importer"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 const (

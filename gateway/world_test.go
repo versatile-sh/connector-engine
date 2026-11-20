@@ -8,17 +8,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/auth/jwks"
-	"github.com/agents-control/connector-engine/auth/local"
-	"github.com/agents-control/connector-engine/filter/builtin"
-	"github.com/agents-control/connector-engine/gateway"
-	"github.com/agents-control/connector-engine/index/lexical"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/runtime/mux"
-	rtskill "github.com/agents-control/connector-engine/runtime/skill"
-	"github.com/agents-control/connector-engine/service"
-	st "github.com/agents-control/connector-engine/service/servicetest"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/versatile-sh/connector-engine/auth/jwks"
+	"github.com/versatile-sh/connector-engine/auth/local"
+	"github.com/versatile-sh/connector-engine/filter/builtin"
+	"github.com/versatile-sh/connector-engine/gateway"
+	"github.com/versatile-sh/connector-engine/index/lexical"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/runtime/mux"
+	rtskill "github.com/versatile-sh/connector-engine/runtime/skill"
+	"github.com/versatile-sh/connector-engine/service"
+	st "github.com/versatile-sh/connector-engine/service/servicetest"
 )
 
 const (

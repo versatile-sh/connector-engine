@@ -5,7 +5,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Sink logs each event at info level; it never fails.

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/internal/sourcetest"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/source/files"
+	"github.com/versatile-sh/connector-engine/internal/sourcetest"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/source/files"
 )
 
 func TestImportsEveryFileAsUnreviewed(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/egress"
 )
 
 func TestForbidden(t *testing.T) {

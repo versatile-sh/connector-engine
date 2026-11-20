@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/agents-control/connector-engine/internal/sourcetest"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/source/docker"
+	"github.com/versatile-sh/connector-engine/internal/sourcetest"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/source/docker"
 )
 
 func TestImportsTheCatalog(t *testing.T) {

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	deadlines "github.com/agents-control/connector-engine/internal/deadline"
-	"github.com/agents-control/connector-engine/internal/handles"
-	"github.com/agents-control/connector-engine/port"
+	deadlines "github.com/versatile-sh/connector-engine/internal/deadline"
+	"github.com/versatile-sh/connector-engine/internal/handles"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Handler answers one call of a scripted connector.

@@ -3,8 +3,8 @@ package server
 import (
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
 )
 
 // ListingKey names a listing version; an empty owner is an installation listing.

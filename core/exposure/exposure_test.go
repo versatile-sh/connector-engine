@@ -3,8 +3,8 @@ package exposure_test
 import (
 	"testing"
 
-	"github.com/agents-control/connector-engine/core/exposure"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/exposure"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func flag(b bool) *bool { return &b }

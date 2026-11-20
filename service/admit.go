@@ -8,12 +8,12 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/connector-engine/catalog"
-	"github.com/agents-control/connector-engine/core/approval"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/core/pinning"
-	"github.com/agents-control/connector-engine/core/projection"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/core/pinning"
+	"github.com/versatile-sh/connector-engine/core/projection"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func catalogDenied(sub port.Subject, connector port.ConnectorID, function string, reason port.Code) catalog.CallDenied {

@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/store/postgres"
-	"github.com/agents-control/connector-engine/store/storetest"
 	"github.com/jackc/pgx/v5"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/store/postgres"
+	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 
 var pg *storetest.Postgres

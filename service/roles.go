@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/authz/table"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func (s *Service) roleGate(ctx context.Context, p port.Principal, tenant port.TenantID) (port.Scope, error) {

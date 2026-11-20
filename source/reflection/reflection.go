@@ -11,11 +11,11 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/agents-control/connector-engine/internal/digest"
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/internal/grpcdesc"
-	"github.com/agents-control/connector-engine/internal/importer"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/internal/digest"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/grpcdesc"
+	"github.com/versatile-sh/connector-engine/internal/importer"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Registry is the name recorded as the provenance of a reflection import.

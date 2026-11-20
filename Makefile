@@ -1,20 +1,17 @@
 SHELL    := /bin/bash
 PROJECT  ?= connector-engine
-COMPOSE  ?= docker compose -f deploy/compose.yaml -p $(PROJECT)
-CNCTL    ?= bin/cnctl
 PROFILE  ?= person
+COMPOSE_FILE := $(if $(filter headless,$(PROFILE)),deploy/compose.yaml,selfhosted/deploy/compose.yaml)
+COMPOSE  ?= docker compose -f $(COMPOSE_FILE) -p $(PROJECT)
 IMAGE    ?= connector-engine:local
 export CN_IMAGE := $(IMAGE)
 ARGS     ?= --help
 -include deploy/.env
 CONSOLE_PORT ?= 7465
 export CONSOLE_PORT
-SEED_ADDR ?= 127.0.0.1:7477
 ENGINE   := $(if $(filter headless,$(PROFILE)),engine-headless,engine)
 
-KEYS     = COMPOSE="$(COMPOSE) --profile person" CNCTL="$(CNCTL)" PROJECT="$(PROJECT)" scripts/keychain.sh
-
-.PHONY: up down logs ps cli admin build test vendor check seed cnctl unlock keychain-status keychain-migrate keychain-revert keychain-recovery keychain-import notify
+.PHONY: up down logs ps cli admin build test vendor layering
 
 up: vendor
 	$(COMPOSE) --profile $(PROFILE) up -d --build
@@ -44,39 +41,13 @@ build: vendor
 vendor:
 	@if command -v go >/dev/null 2>&1; then go mod vendor; fi
 
-test:
+layering:
+	scripts/check-layering.sh
+
+test: layering
 	go test -race ./...
-	cd console/web && npm ci --no-audit --no-fund && npm run typecheck
-	go run ./cmd/connector-engine --config deploy/profiles/person/connector-engine.yaml --adapters deploy/profiles/person/adapters.yaml adapters check
+	cd selfhosted/console/web && npm ci --no-audit --no-fund && npm run typecheck
 	go run ./cmd/connector-engine --config deploy/profiles/headless/connector-engine.yaml --adapters deploy/profiles/headless/adapters.yaml adapters check
+	go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check
 
-cnctl:
-	@if command -v go >/dev/null 2>&1; then go build -o bin/cnctl ./cmd/cnctl; else echo "no Go on this host: the keychain is skipped" >&2; fi
-
-unlock: cnctl
-	@$(KEYS) unlock
-
-keychain-status:
-	@$(KEYS) status
-
-keychain-migrate: cnctl
-	@$(KEYS) migrate
-
-keychain-revert:
-	@$(KEYS) revert
-
-keychain-recovery: cnctl
-	@$(KEYS) recovery
-
-keychain-import: cnctl
-	@$(KEYS) import
-
-check: vendor
-	scripts/console-check.sh
-
-seed:
-	cd console/web && npm ci --no-audit --no-fund && npm run build
-	CN_SEED_ADDR=$(SEED_ADDR) go test ./console -run '^TestSeedPlayground$$' -count=1 -timeout 0 -v
-
-notify: cnctl
-	$(CNCTL) notify --console http://127.0.0.1:$(CONSOLE_PORT)
+include selfhosted/selfhosted.mk

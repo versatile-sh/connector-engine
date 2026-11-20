@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/service/internal/schemacheck"
+	"github.com/versatile-sh/connector-engine/service/internal/schemacheck"
 )
 
 func TestValidate(t *testing.T) {

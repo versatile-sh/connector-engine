@@ -5,9 +5,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/core/grant"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Facts is what the evaluation reads for one agent on one connector; DestructiveMax is ask_once unless it says ask.

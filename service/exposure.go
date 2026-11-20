@@ -4,9 +4,9 @@ import (
 	"context"
 	"slices"
 
-	"github.com/agents-control/connector-engine/catalog"
-	"github.com/agents-control/connector-engine/core/exposure"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/catalog"
+	"github.com/versatile-sh/connector-engine/core/exposure"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 var exposureOps = []string{"PutBinding", "DeleteBinding", "SetAgentLevel", "SetConnectorLevel", "CreateGrant", "DeleteGrant", "ConfirmGrant", "InstallConnector",

@@ -9,8 +9,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/agents-control/connector-engine/internal/grpcdesc"
-	"github.com/agents-control/connector-engine/internal/grpctest"
+	"github.com/versatile-sh/connector-engine/internal/grpcdesc"
+	"github.com/versatile-sh/connector-engine/internal/grpctest"
 )
 
 func TestMethodsAndHints(t *testing.T) {

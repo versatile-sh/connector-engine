@@ -111,6 +111,7 @@ type Gateway struct {
 	ToolNameMax           int           `yaml:"toolNameMax"`
 	Separator             string        `yaml:"separator"`
 	DenyAs                string        `yaml:"denyAs"`
+	Skills                string        `yaml:"skills"`
 }
 
 // Apps is apps.*.
@@ -270,6 +271,12 @@ type OpenAPISource struct {
 	URLs    []string `yaml:"urls"`
 }
 
+// SkillCatalog is the source over skill catalog entries at https addresses; the engine names no catalog itself.
+type SkillCatalog struct {
+	Enabled bool     `yaml:"enabled"`
+	URLs    []string `yaml:"urls"`
+}
+
 // ReflectionSource is the source over gRPC server reflection.
 type ReflectionSource struct {
 	Enabled  bool     `yaml:"enabled"`
@@ -285,6 +292,7 @@ type Sources struct {
 	Files        Directory        `yaml:"files"`
 	OpenAPI      OpenAPISource    `yaml:"openapi"`
 	Reflection   ReflectionSource `yaml:"reflection"`
+	SkillCatalog SkillCatalog     `yaml:"skillCatalog"`
 	SyncInterval time.Duration    `yaml:"syncInterval"`
 }
 
@@ -354,7 +362,7 @@ func Default() Config {
 			Issuers: []Issuer{}, TrustedProxy: TrustedProxy{CIDRs: []string{}}},
 		Bootstrap: Bootstrap{Roles: []RoleRow{}},
 		Gateway: Gateway{ProtocolVersions: []string{"2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"}, RelayInstructions: "never", ScanArgumentsForToken: true,
-			ListTTL: 60 * time.Second, ToolNameMax: 64, Separator: "__", DenyAs: "unknown_tool"},
+			ListTTL: 60 * time.Second, ToolNameMax: 64, Separator: "__", DenyAs: "unknown_tool", Skills: "off"},
 		Apps:    Apps{AppOnlyFunctions: "refuse"},
 		Manage:  Manage{MCP: MCP{Operations: []string{ReadOnly}}},
 		Catalog: Catalog{TenantDefault: "none", OfferDefault: "enabled_sources", DefaultCeiling: "write", PrivateListings: true},
@@ -372,7 +380,7 @@ func Default() Config {
 		Overlay:      Overlay{Suggester: "none"},
 		CLI:          CLI{DefaultForCodingAgents: true},
 		GRPC:         GRPC{UnaryOnly: true},
-		Sources: Sources{Official: Official{URL: "https://registry.modelcontextprotocol.io"}, OpenAPI: OpenAPISource{URLs: []string{}},
+		Sources: Sources{Official: Official{URL: "https://registry.modelcontextprotocol.io"}, OpenAPI: OpenAPISource{URLs: []string{}}, SkillCatalog: SkillCatalog{URLs: []string{}},
 			Reflection: ReflectionSource{Targets: []string{}}, BSR: BSRSource{Owners: []string{}, Targets: map[string]string{}}, SyncInterval: 6 * time.Hour},
 		Listing:     Listing{RequireDigest: true},
 		Credentials: Credentials{RefreshMargin: 300 * time.Second, RegistrationOrder: []string{"pre_registered", "cimd", "dcr", "manual"}, Fallback: "none", Clients: []OAuthClient{}},

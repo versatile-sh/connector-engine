@@ -4,13 +4,13 @@ import { LONG_LIST_FROM, shownOf } from "./longList";
 import { SearchBox } from "./SearchBox";
 import { button } from "./styles";
 
-type LongListProps<T> = { rows: readonly T[]; textOf(row: T): string; label: string; children(shown: readonly T[]): ReactNode };
+type LongListProps<T> = { rows: readonly T[]; textOf(row: T): string; label: string; whole?: boolean; children(shown: readonly T[]): ReactNode };
 
-/** A list that stays short: past a few rows it shows the first ones, a filter over all of them and Show all; `children` renders the rows shown. */
-export function LongList<T>({ rows, textOf, label, children }: LongListProps<T>) {
+/** A list that stays short: past a few rows it shows the first ones, a filter over all of them and Show all; a `whole` list, where every row must be seen, keeps all of them and only the filter. `children` renders the rows shown. */
+export function LongList<T>({ rows, textOf, label, whole = false, children }: LongListProps<T>) {
   const t = useT();
   const [filter, setFilter] = useState("");
-  const [all, setAll] = useState(false);
+  const [all, setAll] = useState(whole);
   const { shown, hidden } = shownOf(rows, textOf, { filter, all });
   return (
     <>

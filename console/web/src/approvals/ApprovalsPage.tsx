@@ -92,7 +92,7 @@ export function ApprovalsPage() {
           </button>
         </div>
       ) : (
-        <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} label={t("approvals.filter")}>
+        <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} label={t("approvals.filter")} whole>
           {(shown) => (
             <ul aria-live="polite" className="flex flex-col gap-3">
               {shown.map((approval) => (

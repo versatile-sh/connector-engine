@@ -7,14 +7,14 @@ type AccessPickerProps = { name: string; value: Access | undefined; disabled?: b
 
 const HINT = { function: "access.hint", skill: "access.skillHint", item: "access.itemHint" } as const;
 
-/** The choice of one function, skill, item or key, off, on or ask (or the given subset), each explained on hover: a small segmented control where its container has 28rem, a select where it has less, so its row never stacks; with no value nothing is chosen. */
+/** The choice of one function, skill, item or key, off, on or ask (or the given subset), each explained on hover: a small segmented control where its container has 22rem, a select where it has less, so its row never stacks; with no value nothing is chosen. */
 export function AccessPicker({ name, value, disabled = false, of = "function", choices = ACCESS, onChange }: AccessPickerProps) {
   const t = useT();
   const label = t("access.label", { name });
   const options = choices.map((access) => ({ value: access, text: t(`access.${access}`), hint: t(`${HINT[of]}.${access}`) }));
   return (
     <>
-      <span className="hidden @md:block">
+      <span className="hidden @min-[22rem]:block">
         <Segmented<Access> label={label} size="sm" value={value} disabled={disabled} onChange={onChange} options={options} />
       </span>
       <select
@@ -25,7 +25,7 @@ export function AccessPicker({ name, value, disabled = false, of = "function", c
           const next = choices.find((access) => access === event.target.value);
           if (next) onChange(next);
         }}
-        className={`${PILL} pr-2 disabled:opacity-60 @md:hidden`}
+        className={`${PILL} pr-2 disabled:opacity-60 @min-[22rem]:hidden`}
       >
         {value === undefined ? <option value="">—</option> : null}
         {options.map((option) => (

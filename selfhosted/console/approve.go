@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/selfhosted/console/sealed"
 
 	"github.com/versatile-sh/connector-engine/selfhosted/surface"
@@ -35,15 +36,6 @@ func refuseLink(w http.ResponseWriter, err error, refused string) {
 	writeError(w, http.StatusUnauthorized, refused)
 }
 
-func (c *Console) deviceName(id string) string {
-	for _, d := range c.State.Devices() {
-		if d.ID == id {
-			return d.Name
-		}
-	}
-	return id
-}
-
 func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Choice surface.Choice `json:"choice"`
@@ -67,11 +59,8 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 			refuseLink(w, err, errBadToken.Error())
 			return
 		}
-		channel, note = "desktop", "desktop:"+c.deviceName(device)
-		if ctx, err = c.asKeyOwner(ctx, id); err != nil {
-			c.fail(w, err)
-			return
-		}
+		channel, note = "desktop", "desktop:"+device.Name
+		ctx = WithActor(ctx, device.Owner)
 	} else {
 		u, csrf, ok := c.Sessions.Current(r)
 		if !ok {
@@ -85,6 +74,10 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 		ctx = WithActor(ctx, u.Person)
 	}
 	v, lost, err := c.DecideChoice(ctx, id, in.Choice, channel, note)
+	if notApprover(err) {
+		writeJSON(w, http.StatusForbidden, apiError{Error: errNotApprover.Error(), Code: string(port.CodeNotAnApprover)})
+		return
+	}
 	if err != nil {
 		c.fail(w, err)
 		return

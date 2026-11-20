@@ -24,11 +24,41 @@ type surfaces struct {
 	always  map[string]alwaysMark
 	shown   map[string]presented
 	status  map[string]channelStatus
+	owners  map[string]approvalOwner
 	changed chan struct{}
 	relay   *surface.Relay
 	links   spentSet
 	hub     deviceHub
 	el      elicitState
+}
+
+type approvalOwner struct {
+	person string
+	until  time.Time
+}
+
+func (s *surfaces) setOwner(approval, person string, expires time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.owners == nil {
+		s.owners = map[string]approvalOwner{}
+	}
+	now := time.Now()
+	expire(s.owners, now, func(v approvalOwner) time.Time { return v.until })
+	if expires.Before(now) {
+		expires = now
+	}
+	s.owners[approval] = approvalOwner{person: person, until: expires.Add(time.Hour)}
+}
+
+func (s *surfaces) ownerOf(approval string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.owners[approval].person
+}
+
+func (s *surfaces) reaches(approval, person string) bool {
+	return person != "" && s.ownerOf(approval) == person
 }
 
 type alwaysMark struct {
@@ -152,6 +182,7 @@ var interactiveKinds = map[string]bool{"discord": true, "slack": true, "telegram
 type tracked struct {
 	surface.Channel
 	id      string
+	owner   string
 	secrets []string
 	surf    *surfaces
 }
@@ -167,6 +198,9 @@ func (t tracked) scrub(err error) string {
 }
 
 func (t tracked) Notify(ctx context.Context, p surface.Prompt) (surface.Ref, error) {
+	if t.owner != "" && !t.surf.reaches(p.Approval, t.owner) {
+		return "", nil
+	}
 	ref, err := t.Channel.Notify(ctx, p)
 	if err != nil {
 		t.surf.setStatus(t.id, "error", t.scrub(err))
@@ -179,7 +213,9 @@ func (t tracked) Listen(ctx context.Context, click surface.ClickFunc) error {
 	if interactiveKinds[t.Kind()] {
 		t.surf.setStatus(t.id, "connected", "")
 	}
-	err := t.Channel.Listen(ctx, click)
+	err := t.Channel.Listen(ctx, func(ctx context.Context, c surface.Click) (surface.Outcome, error) {
+		return click(WithActor(ctx, t.owner), c)
+	})
 	if err != nil && ctx.Err() == nil {
 		t.surf.setStatus(t.id, "error", t.scrub(err))
 		return errors.New(t.scrub(err))
@@ -199,8 +235,11 @@ func (c *Console) factory() ChannelFactory {
 func (c *Console) buildChannels(ctx context.Context) []surface.Channel {
 	var out []surface.Channel
 	for _, sc := range c.State.Channels() {
+		if sc.Owner == "" {
+			continue
+		}
 		settings, err := c.settingsOf(ctx, sc)
-		t := tracked{id: sc.ID, secrets: secretValues(sc.Kind, settings), surf: &c.surf}
+		t := tracked{id: sc.ID, owner: sc.Owner, secrets: secretValues(sc.Kind, settings), surf: &c.surf}
 		var ch surface.Channel
 		if err == nil {
 			ch, err = c.factory()(sc.Kind, settings)
@@ -273,16 +312,16 @@ func (d desk) Prompt(ctx context.Context, id string) (surface.Prompt, error) {
 	if v.State != string(port.ApprovalPending) {
 		return surface.Prompt{}, surface.ErrSettled
 	}
+	d.c.surf.setOwner(v.ID, string(v.approval.OnBehalfOf), v.ExpiresAt)
 	return surface.Prompt{Approval: v.ID, Connector: v.Connector.Title, ConnectorIcon: v.Connector.Icon, Function: v.Function, FunctionTitle: v.FunctionTitle,
 		Kind: string(v.Kind), App: v.App, ExpiresAt: v.ExpiresAt, Choices: v.Choices, SessionUntil: v.SessionUntil, ConsoleURL: d.c.publicBase() + "/approve/" + v.ID}, nil
 }
 
 func (d desk) Decide(ctx context.Context, id string, choice surface.Choice, channel, by string) (surface.Outcome, error) {
-	ctx, err := d.c.asKeyOwner(ctx, id)
-	if err != nil {
-		return surface.Outcome{}, err
-	}
 	v, _, err := d.c.DecideChoice(ctx, id, choice, channel, by)
+	if notApprover(err) {
+		return surface.Outcome{}, errNotApprover
+	}
 	if err != nil {
 		return surface.Outcome{}, err
 	}

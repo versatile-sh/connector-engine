@@ -4,7 +4,6 @@ import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { useT } from "../i18n/I18nProvider";
 import { Icon } from "../ui/Icon";
 import { SearchBox } from "../ui/SearchBox";
-import { Segmented } from "../ui/Segmented";
 import { CHIP, CONTROL, button } from "../ui/styles";
 import { dayOf, isNarrowed, lastWeek, periodOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
 
@@ -90,7 +89,7 @@ function AppSearch({ apps, value, onChange }: { apps: readonly string[]; value: 
 
 type FilterRowProps = { filter: ActivityFilter; data: ActivityData | undefined; named: ReadonlyMap<string, Named>; onChange(filter: ActivityFilter): void };
 
-/** The page's filters in one row: the range or custom days, the connector as a chip with its icon once chosen, the app (a searchable box past ten apps), the outcome, a search by function name, and Clear filters while anything narrows the page. */
+/** The page's filters in one wrapping row: the range as chips or custom days, the connector as a chip with its icon once chosen, the app (a searchable box past ten apps), the outcome, a search by function name, and Clear filters while anything narrows the page. */
 export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
   const t = useT();
   const now = new Date();
@@ -99,12 +98,13 @@ export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
   const period = (next: ActivityPeriod) => onChange({ ...filter, ...next });
   return (
     <div role="group" aria-label={t("activity.filters")} className="mb-8 flex flex-wrap items-center gap-2">
-      <Segmented
-        label={t("activity.range")}
-        value={filter.range}
-        onChange={(range) => period(range === "custom" ? lastWeek(now) : { range })}
-        options={[...RANGES.map((range) => ({ value: range.value, text: t(`activity.range.${range.value}`) })), { value: "custom" as const, text: t("activity.range.custom") }]}
-      />
+      <div role="group" aria-label={t("activity.range")} className="flex flex-wrap gap-2">
+        {[...RANGES.map((range) => range.value), "custom" as const].map((range) => (
+          <button key={range} type="button" aria-pressed={filter.range === range} className={`${CHIP} h-9 px-3.5 text-sm`} onClick={() => filter.range !== range && period(range === "custom" ? lastWeek(now) : { range })}>
+            {t(`activity.range.${range}`)}
+          </button>
+        ))}
+      </div>
       {filter.range === "custom" ? (
         <span className="swap-in flex items-center gap-1.5">
           <input type="date" aria-label={t("activity.from")} required min={dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - KEPT_DAYS))} max={filter.to} value={filter.from} onChange={(event) => event.target.value && period({ ...filter, from: event.target.value })} className={CONTROL} />

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useT } from "../i18n/I18nProvider";
 import { Display } from "./Display";
 import { Marked } from "./Marked";
-import { EYEBROW } from "./styles";
+import { EYEBROW, LEAD } from "./styles";
 
 type PageTitleProps = { section: string; title: string; count?: number | undefined; children?: ReactNode };
 
@@ -20,7 +20,7 @@ export function PageTitle({ section, title, count, children }: PageTitleProps) {
         </Display>
         {count === undefined ? null : <span className="font-mono text-sm text-muted tabular-nums">{count}</span>}
       </div>
-      {children ? <div className="mt-4 max-w-2xl text-pretty text-muted">{children}</div> : null}
+      {children ? <div className={`${LEAD} mt-4`}>{children}</div> : null}
     </>
   );
 }

@@ -16,7 +16,7 @@ export function Identity({ preview, as = "h3" }: { preview: Preview; as?: "h1" |
   ];
   return (
     <div className="min-w-0">
-      <div className={`flex items-center ${page ? "gap-5" : "gap-4"}`}>
+      <div className={page ? "flex flex-col items-start gap-5 sm:flex-row sm:items-center" : "flex items-center gap-4"}>
         <ConnectorIcon src={preview.icon} title={preview.title} size={page ? "lg" : "md"} />
         <div className="min-w-0">
           {page ? <Display className="[overflow-wrap:anywhere]">{preview.title}</Display> : <h3 className="text-xl leading-snug font-medium [overflow-wrap:anywhere]">{preview.title}</h3>}

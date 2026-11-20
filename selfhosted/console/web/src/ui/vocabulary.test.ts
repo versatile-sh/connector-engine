@@ -14,7 +14,7 @@ const sources = (dir: string): string[] =>
 
 const files = sources(ROOT).map((path) => ({ name: relative(ROOT, path), text: readFileSync(path, "utf8") }));
 
-const using = (pattern: RegExp) => files.filter((file) => pattern.test(file.text)).map((file) => file.name);
+const using = (pattern: RegExp) => files.filter((file) => pattern.test(file.text)).map((file) => file.name).sort();
 
 describe("the console's design vocabulary", () => {
   test("sets the serif only in Display and the logotype", () => {
@@ -27,5 +27,9 @@ describe("the console's design vocabulary", () => {
 
   test("uses no type tokens outside the theme", () => {
     assert.deepEqual(using(/\bfont-(display|bold|black|extrabold)\b/), []);
+  });
+
+  test("uses no colour or effect class the stylesheet no longer defines", () => {
+    assert.deepEqual(using(/\b(text|bg|border|fill|stroke|outline|ring|decoration|from|via|to)-amber(?![\w-])|\bbackdrop-(grid|beam|glow)\b|\bride-in\b/), []);
   });
 });

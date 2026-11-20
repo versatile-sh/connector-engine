@@ -2,6 +2,7 @@ import { errorText, type ImportSource } from "../api";
 import { Frame } from "../Frame";
 import { useT } from "../i18n/I18nProvider";
 import { navigate } from "../router";
+import { Display } from "../ui/Display";
 import { Arrow, Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { CAPTION, PANEL, SKELETON_LINE, TITLE, button } from "../ui/styles";
@@ -34,6 +35,8 @@ export function ImportLanding({ source }: { source: ImportSource }) {
             <div className="swap-in">
               <Identity preview={preview.data} as="h1" />
             </div>
+          ) : preview.isError ? (
+            <Display className="[overflow-wrap:anywhere]">{host}</Display>
           ) : (
             <div aria-hidden="true" className="flex items-center gap-5">
               <div className="shimmer size-16 rounded-2xl" />

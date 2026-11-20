@@ -285,6 +285,15 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 		t.Fatalf("the approved app is not an access key: %+v", agents.Agents)
 	}
 	key := agents.Agents[mine].Name
+	signedOut := func() bool {
+		var list struct{ Agents []console.Agent }
+		o.b.ok("GET", "/api/agents", nil, &list)
+		i := slices.IndexFunc(list.Agents, func(a console.Agent) bool { return a.Name == key })
+		return i >= 0 && !list.Agents[i].SignedOutAt.IsZero()
+	}
+	if signedOut() {
+		t.Fatal("a connected app is listed as signed out")
+	}
 
 	renew := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {refresh}, "client_id": {clientID}}
 	status, next := o.token(renew, "http://localhost:6274")
@@ -305,6 +314,13 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	}
 	if _, err := o.listTools(access2); err == nil {
 		t.Fatal("an access token of a replayed sign-in still lists tools")
+	}
+	if !signedOut() {
+		t.Fatal("an app whose sign-in a replay ended is still listed as connected")
+	}
+	exchange.Set("code", o.code(clientID, verifier))
+	if status, again := o.token(exchange, ""); status != http.StatusOK || again["access_token"] == nil || signedOut() {
+		t.Fatalf("an app that connected again is still signed out: %d %v", status, again)
 	}
 
 	o.b.ok("DELETE", "/api/agents/"+key, nil, nil)

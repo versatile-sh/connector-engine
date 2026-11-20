@@ -23,6 +23,7 @@ export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps)
         </code>
         <span className="font-mono text-xs text-muted @max-md:ml-5.5 @max-md:min-w-0 @max-md:grow @max-md:basis-0">{t("keys.until", { date: new Date(entry.expires_at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) })}</span>
         {expired ? <Tag tone="amber">{t("keys.expired")}</Tag> : null}
+        {entry.signed_out_at ? <Tag tone="amber">{t("keys.signedOut")}</Tag> : null}
         {asking ? null : (
           <button
             type="button"

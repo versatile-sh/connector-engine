@@ -190,6 +190,7 @@ export const ptBR: Record<MessageKey, string> = {
   "keys.revokeAsk": "Revogar {name}? Todo app que usa esta chave para na hora, e não dá para desfazer.",
   "keys.revokeConfirm": "Revogar chave",
   "keys.newBadge": "nova",
+  "keys.signedOut": "desconectado: conecte o app de novo",
   "keys.viaBrowser": "conectada pelo login no navegador",
   "keys.revoking": "Revogando…",
   "keys.empty": "Nenhum app conectado ainda. Os apps que entram pelo navegador aparecem aqui, e as chaves que você criar também.",

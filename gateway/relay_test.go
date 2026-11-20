@@ -258,6 +258,12 @@ func TestWithInstructionsNeverNothingIsCapturedOrServed(t *testing.T) {
 	if fns := st.Ok(r.Svc.ListFunctionsOf(r.Ctx, r.admin, c.ID)); len(fns) != 4 {
 		t.Fatalf("functions: %+v", fns)
 	}
+	r.accept(c, "search")
+	st.Ok(r.Svc.ClassifyFunction(r.Ctx, r.admin, c.ID, "search", port.ClassRead))
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "notes__search", Arguments: map[string]any{}})
+	if err != nil || len(res.Content) != 2 || res.Content[1].(*mcp.ResourceLink).URI != "notes://1" {
+		t.Fatalf("a link is rewritten with the relay off: %+v %v", res, err)
+	}
 }
 
 func instructions(alias, text string) service.ServedItem {
@@ -440,7 +446,7 @@ func TestAnAskPromptHoldsThenTheApprovalReturnsItOnce(t *testing.T) {
 	params := &mcp.GetPromptParams{Name: "notes__summarize", Arguments: map[string]string{"topic": "tea"}}
 	_, err := cs.GetPrompt(context.Background(), params)
 	var rpc *jsonrpc.Error
-	if !errors.As(err, &rpc) || rpc.Code != -32000 || !strings.Contains(string(rpc.Data), `"state":"pending"`) {
+	if !errors.As(err, &rpc) || rpc.Code != -32050 || !strings.Contains(string(rpc.Data), `"state":"pending"`) {
 		t.Fatalf("an ask prompt does not hold: %v", err)
 	}
 	var data struct {
@@ -499,5 +505,23 @@ func TestASkillPromptKeepsItsPlainNameBesideAConnectorPrompt(t *testing.T) {
 	prompt, err := cs.GetPrompt(context.Background(), &mcp.GetPromptParams{Name: "notes__summarize", Arguments: map[string]string{"topic": "tea"}})
 	if err != nil || promptText(prompt) != "user:Summarize my notes about tea.\n" {
 		t.Fatalf("the connector prompt: %v %v", prompt, err)
+	}
+}
+
+func TestAReadIsFilteredAndAudited(t *testing.T) {
+	r := newRelay(t, content)
+	c := r.install("notes", newNotes(t, notes.Options{Readme: "owner cpf " + cpf}))
+	r.on(c, "res:file:///README.md", port.ModeAllow)
+	from := len(r.Events())
+	got, err := r.session("2026-07-28").ReadResource(context.Background(), &mcp.ReadResourceParams{URI: "notes+file:///README.md"})
+	if err != nil || strings.Contains(got.Contents[0].Text, cpf) || !strings.Contains(got.Contents[0].Text, "[REDACTED:") {
+		t.Fatalf("the result filter did not run on a read: %+v %v", got, err)
+	}
+	finished := false
+	for _, ev := range r.Events()[from:] {
+		finished = finished || ev.Type == "connector.call.finished" && ev.Data["function"] == "res:file:///README.md"
+	}
+	if !finished {
+		t.Fatalf("no call row for the read: %v", r.Types(from))
 	}
 }

@@ -283,7 +283,7 @@ func TestASkillPromptOnAskHoldsThenReturnsOnce(t *testing.T) {
 	cs, _ := w.agent("a1", "s1", "2025-11-25")
 	_, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"})
 	var rpc *jsonrpc.Error
-	if !errors.As(err, &rpc) || rpc.Code != -32000 {
+	if !errors.As(err, &rpc) || rpc.Code != -32050 {
 		t.Fatalf("an ask skill prompt does not hold: %v", err)
 	}
 	var data struct {
@@ -300,7 +300,7 @@ func TestASkillPromptOnAskHoldsThenReturnsOnce(t *testing.T) {
 	if err != nil || !strings.Contains(res.Messages[0].Content.(*mcp.TextContent).Text, skillMD) {
 		t.Fatalf("after approval: %+v %v", res, err)
 	}
-	if _, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"}); rpcCode(err) != -32000 {
+	if _, err := cs.GetPrompt(t.Context(), &mcp.GetPromptParams{Name: "pdf"}); rpcCode(err) != -32050 {
 		t.Fatalf("ask asks again after the answer was delivered: %v", err)
 	}
 }

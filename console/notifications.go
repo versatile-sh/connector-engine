@@ -15,7 +15,10 @@ import (
 	"github.com/agents-control/connector-engine/surface"
 )
 
-const maxLabel = 60
+const (
+	maxLabel          = 60
+	defaultDeviceName = "This computer"
+)
 
 var (
 	digits    = regexp.MustCompile(`^[0-9]{1,24}$`)
@@ -160,6 +163,7 @@ func (c *Console) surfaceRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/notifications/channels/{id}/test", c.authed(c.testChannel))
 	mux.HandleFunc("PUT /api/notifications/apps/{name}", c.authed(c.setElicit))
 	mux.HandleFunc("POST /api/notifications/devices", c.authed(c.pairDevice))
+	mux.HandleFunc("PATCH /api/notifications/devices/{id}", c.authed(c.renameDevice))
 	mux.HandleFunc("DELETE /api/notifications/devices/{id}", c.authed(c.revokeDevice))
 	mux.HandleFunc("GET /api/notify/stream", c.notifyStream)
 }
@@ -305,9 +309,9 @@ func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	name := strings.TrimSpace(in.Name)
-	if name == "" || len([]rune(name)) > maxLabel {
-		writeError(w, http.StatusBadRequest, "give the computer a name of at most 60 characters")
+	name, ok := deviceName(in.Name)
+	if !ok {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("give the computer a name of at most %d characters", maxLabel))
 		return
 	}
 	key := "cnk_" + randomID()
@@ -319,6 +323,37 @@ func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 	c.surf.wake()
 	cmd := fmt.Sprintf("umask 077 && mkdir -p ~/.config/versatile && printf '%%s' '%s' > ~/.config/versatile/notify.key && cnctl notify --console %s", key, c.publicBase())
 	writeJSON(w, http.StatusCreated, map[string]any{"device": DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt}, "key": key, "command": cmd})
+}
+
+func deviceName(raw string) (string, bool) {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		name = defaultDeviceName
+	}
+	return name, len([]rune(name)) <= maxLabel
+}
+
+func (c *Console) renameDevice(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name string `json:"name"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	name, ok := deviceName(in.Name)
+	if !ok {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("give the computer a name of at most %d characters", maxLabel))
+		return
+	}
+	found, err := c.State.RenameDevice(r.PathValue("id"), name)
+	switch {
+	case err != nil:
+		c.fail(w, err)
+	case !found:
+		writeError(w, http.StatusNotFound, "no such device")
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 func (c *Console) revokeDevice(w http.ResponseWriter, r *http.Request) {

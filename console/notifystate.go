@@ -92,6 +92,19 @@ func (s *State) PutDevice(d Device) error {
 	return s.save()
 }
 
+// RenameDevice names a paired host helper again, reporting whether it existed.
+func (s *State) RenameDevice(id, name string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	d, ok := s.data.Notify.Devices[id]
+	if !ok {
+		return false, nil
+	}
+	d.Name = name
+	s.data.Notify.Devices[id] = d
+	return true, s.save()
+}
+
 // DeleteDevice revokes a paired host helper, reporting whether it existed.
 func (s *State) DeleteDevice(id string) (bool, error) {
 	s.mu.Lock()

@@ -29,6 +29,7 @@ gateway:
     - "2025-06-18"
     - "2025-03-26"
   relayInstructions: never
+  upstreamContent: refuse
   scanArgumentsForToken: true
   listTtl: 1m0s
   toolNameMax: 64

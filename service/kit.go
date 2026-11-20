@@ -56,7 +56,7 @@ func (s *Service) dropSessionRows(tx port.Tx, connector port.ConnectorID, functi
 		return err
 	}
 	for _, g := range rows {
-		if function == "" || g.Selector == port.SelectorFunction+function {
+		if function == "" || g.Selector == port.SelectorOf(function) {
 			if err := s.revokeGrant(tx, g, by, "session_rows_dropped"); err != nil {
 				return err
 			}

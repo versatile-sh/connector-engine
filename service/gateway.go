@@ -27,10 +27,11 @@ type ServedFunction struct {
 	OverlayHash port.Hash
 }
 
-// FunctionList is what ListFunctions answers: tools, skills, and whether approval_status and approval_cancel are listed too.
+// FunctionList is what ListFunctions answers: tools, skills, connector items, and whether approval_status and approval_cancel are listed too.
 type FunctionList struct {
 	Functions     []ServedFunction
 	Skills        []ServedSkill
+	Items         []ServedItem
 	ApprovalTools bool
 	TTL           time.Duration
 	Exposure      port.Exposure
@@ -70,12 +71,13 @@ type Outcome struct {
 	Findings       map[string]int
 }
 
-// CallRequest is one tools/call, or a skill load when Skill is set and Name is the skill's alias, with the projection paths of §10.5.
+// CallRequest is one tools/call, a skill load when Skill is set and Name is the skill's alias, or a prompt get or resource read when Item names its kind and Name its agent-facing name or URI, with the projection paths of §10.5.
 type CallRequest struct {
 	Name      string
 	Arguments json.RawMessage
 	Fields    []string
 	Skill     bool
+	Item      string
 }
 
 func subjectOf(c port.Claims) port.Subject {
@@ -94,6 +96,7 @@ type target struct {
 	Fn       port.Function
 	Bind     port.Binding
 	Manifest port.Manifest
+	Args     json.RawMessage
 }
 
 func (s *Service) boundConnectors(tx port.Tx, sub port.Subject) ([]port.Connector, error) {
@@ -114,16 +117,22 @@ func (s *Service) boundConnectors(tx port.Tx, sub port.Subject) ([]port.Connecto
 	return out, nil
 }
 
-func (s *Service) resolve(ctx context.Context, sub port.Subject, name string, skill bool) (target, bool, error) {
+func (s *Service) resolve(ctx context.Context, sub port.Subject, req CallRequest) (target, bool, error) {
 	var t target
 	found := false
+	name := req.Name
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: sub.Tenant}, func(tx port.Tx) error {
 		conns, err := s.boundConnectors(tx, sub)
 		if err != nil {
 			return err
 		}
-		if skill {
-			if t.Conn, t.Fn, found, err = s.resolveSkill(tx, conns, name); err != nil || !found {
+		if req.Skill || req.Item != "" {
+			if req.Skill {
+				t.Conn, t.Fn, found, err = s.resolveSkill(tx, conns, name)
+			} else {
+				t, found, err = s.resolveItem(tx, conns, req.Item, name)
+			}
+			if err != nil || !found {
 				return err
 			}
 			if t.Bind, err = tx.GetBinding(t.Conn.ID, sub.Agent); err != nil {
@@ -147,6 +156,9 @@ func (s *Service) resolve(ctx context.Context, sub port.Subject, name string, sk
 				return err
 			}
 			for _, f := range fns {
+				if port.ItemKind(f.Name) != "" {
+					continue
+				}
 				if _, err := names.Exposed(c.Alias, f.Name, s.cfg.Separator, s.cfg.NameMax); err == nil {
 					entries = append(entries, names.Entry{Connector: c.ID, Function: f.Name})
 				}
@@ -254,6 +266,10 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 				if err != nil {
 					return err
 				}
+				if port.ItemKind(fn) != "" {
+					s.serveItem(&out, c, f, mode)
+					continue
+				}
 				out.ApprovalTools = out.ApprovalTools || mode == port.ModeAsk || mode == port.ModeAskOnce
 				if skill {
 					out.Skills = append(out.Skills, servedSkill(c, f, mode))
@@ -277,6 +293,7 @@ func (s *Service) functionsFor(ctx context.Context, sub port.Subject) (FunctionL
 		return nil
 	})
 	slices.SortFunc(out.Functions, func(a, b ServedFunction) int { return cmp.Compare(a.Name, b.Name) })
+	slices.SortFunc(out.Items, func(a, b ServedItem) int { return cmp.Compare(a.Name, b.Name) })
 	return out, err
 }
 
@@ -331,12 +348,14 @@ func (s *Service) Call(ctx context.Context, p port.Principal, req CallRequest) (
 }
 
 func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subject, req CallRequest, args json.RawMessage) (Outcome, error) {
-	t, found, err := s.resolve(ctx, sub, req.Name, req.Skill)
+	t, found, err := s.resolve(ctx, sub, req)
 	if err != nil || !found {
 		return unknown(port.ReasonUnknownFunction), err
 	}
-	query := port.Query{Tenant: sub.Tenant, Workspace: t.Conn.Workspace, Agent: sub.Agent, AgentOwner: sub.AgentOwner, OnBehalfOf: sub.OnBehalfOf, Caller: sub.Caller,
-		Session: sub.Session, Connector: t.Conn.ID, Function: t.Fn.Name, Class: t.Fn.Class, Arguments: args}
+	if t.Args != nil {
+		args = t.Args
+	}
+	query := queryOf(sub, t, args)
 	dec, err := s.d.Authorizer.Evaluate(ctx, query)
 	if err != nil {
 		return Outcome{}, err
@@ -345,7 +364,7 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 		if _, err := s.Relist(ctx, sub.Tenant, t.Conn.ID); err != nil {
 			return Outcome{}, err
 		}
-		if t, _, err = s.resolve(ctx, sub, req.Name, req.Skill); err != nil {
+		if t, _, err = s.resolve(ctx, sub, req); err != nil {
 			return Outcome{}, err
 		}
 		query.Class = t.Fn.Class
@@ -388,6 +407,11 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 		return s.forwardDirect(ctx, in, *adm.Forward)
 	}
 	return adm.Out, nil
+}
+
+func queryOf(sub port.Subject, t target, args json.RawMessage) port.Query {
+	return port.Query{Tenant: sub.Tenant, Workspace: t.Conn.Workspace, Agent: sub.Agent, AgentOwner: sub.AgentOwner, OnBehalfOf: sub.OnBehalfOf, Caller: sub.Caller,
+		Session: sub.Session, Connector: t.Conn.ID, Function: t.Fn.Name, Class: t.Fn.Class, Arguments: args}
 }
 
 func (s *Service) checkArguments(p port.Principal, t target, req CallRequest, args json.RawMessage) *Outcome {

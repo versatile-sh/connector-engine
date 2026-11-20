@@ -63,6 +63,7 @@ const (
 	ClassSourceReviewed        ClassSource = "reviewed"
 	ClassSourceAnnotationRaise ClassSource = "annotation_raise"
 	ClassSourceDefault         ClassSource = "default"
+	ClassSourceItem            ClassSource = "item"
 )
 
 // FunctionState is the lifecycle state of a function of a connector (§5.3).

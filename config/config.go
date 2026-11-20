@@ -106,6 +106,7 @@ type Bootstrap struct {
 type Gateway struct {
 	ProtocolVersions      []string      `yaml:"protocolVersions"`
 	RelayInstructions     string        `yaml:"relayInstructions"`
+	UpstreamContent       string        `yaml:"upstreamContent"`
 	ScanArgumentsForToken bool          `yaml:"scanArgumentsForToken"`
 	ListTTL               time.Duration `yaml:"listTtl"`
 	ToolNameMax           int           `yaml:"toolNameMax"`
@@ -361,7 +362,7 @@ func Default() Config {
 		Auth: Auth{LocalIssuer: LocalIssuer{Name: "connector-engine-local"}, AgentTokenMaxLifetime: time.Hour, SenderConstraint: "none",
 			Issuers: []Issuer{}, TrustedProxy: TrustedProxy{CIDRs: []string{}}},
 		Bootstrap: Bootstrap{Roles: []RoleRow{}},
-		Gateway: Gateway{ProtocolVersions: []string{"2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"}, RelayInstructions: "never", ScanArgumentsForToken: true,
+		Gateway: Gateway{ProtocolVersions: []string{"2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"}, RelayInstructions: "never", UpstreamContent: "refuse", ScanArgumentsForToken: true,
 			ListTTL: 60 * time.Second, ToolNameMax: 64, Separator: "__", DenyAs: "unknown_tool", Skills: "off"},
 		Apps:    Apps{AppOnlyFunctions: "refuse"},
 		Manage:  Manage{MCP: MCP{Operations: []string{ReadOnly}}},
@@ -401,7 +402,6 @@ func (c Config) inert() adapters.Findings {
 		key string
 		ok  bool
 	}{
-		{"gateway.relayInstructions", c.Gateway.RelayInstructions == d.Gateway.RelayInstructions},
 		{"gateway.denyAs", c.Gateway.DenyAs == d.Gateway.DenyAs},
 		{"audit.arguments", c.Audit.Arguments == d.Audit.Arguments},
 		{"audit.hashChain", c.Audit.HashChain == d.Audit.HashChain},

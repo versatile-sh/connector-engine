@@ -6,6 +6,12 @@ How `connector-engine` is built from its specification, `adaptable-research-engi
 
 The owner delegated engineering choices on 2026-11-18 ("pode planejar o connector e executar a construção e depois testar"). Every open owner decision OD-1 to OD-49 is built at the study's recommendation, and every default is a configuration key (§14), so a later decision changes configuration, not code. The name is `connector-engine` (OD-1).
 
+Decisions taken after the study, recorded here until the study's `02-options.md` carries them (keys are never renumbered):
+
+| Id | Decision | Built as |
+|---|---|---|
+| OD-50 (2026-11-19, supersedes OD-32) | A connector's own prompts, resources and server instructions are relayed under the user's control, not refused. Evidence: the research note `connector-engine-skills-prompts-resources.md` (sections 1, 2, 5 and 6); owner choices SK-1 (resources proposed on, prompts proposed off, with a preview), SK-8 (this row) and SK-9 (`pinned` instructions) | `gateway.relayInstructions: never \| pinned` and `gateway.upstreamContent: refuse \| granted`, defaults `never` and `refuse` (OD-32's behaviour, the `headless` profile); the `person` profile sets `pinned` and `granted`. Items pinned like functions, selectors `prompt:`, `res:`, `instructions:` never reached by `*` or `class:`; subscriptions are not relayed |
+
 | Convention (copied from vm-engine) | Rule here |
 |---|---|
 | Layers | `port/` holds neutral types, port interfaces and error codes. `core/*` is pure and imports only `port`. Adapters import `port`. `app/` is the only composition root. `service/` holds the use cases |

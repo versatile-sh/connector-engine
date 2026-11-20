@@ -3,6 +3,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -34,6 +35,7 @@ type Core interface {
 	Call(ctx context.Context, p port.Principal, req service.CallRequest) (service.Outcome, error)
 	ApprovalStatus(ctx context.Context, p port.Principal, id port.ApprovalID) (service.Outcome, error)
 	ApprovalCancelByAgent(ctx context.Context, p port.Principal, id port.ApprovalID) (service.Outcome, error)
+	Complete(ctx context.Context, p port.Principal, req service.CallRequest) (json.RawMessage, bool, error)
 	MarkDelivered(ctx context.Context, p port.Principal, id port.ApprovalID) error
 	TenantActive(ctx context.Context, tenant port.TenantID) error
 }
@@ -50,6 +52,9 @@ type Config struct {
 	SearchResultMax     int
 	SessionTimeout      time.Duration
 	Skills              bool
+	Instructions        bool
+	Content             bool
+	SkillPrompts        bool
 	Logger              *slog.Logger
 }
 
@@ -81,8 +86,7 @@ func New(core Core, verifier port.PrincipalVerifier, index port.ToolIndex, cfg C
 		cfg.HoldPoll = defaultHoldPoll
 	}
 	g := &Gateway{core: core, verifier: verifier, index: index, cfg: cfg}
-	g.server = mcp.NewServer(&mcp.Implementation{Name: serverName, Version: "1"},
-		&mcp.ServerOptions{Capabilities: &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{ListChanged: true}}, Instructions: instructions})
+	g.server = mcp.NewServer(&mcp.Implementation{Name: serverName, Version: "1"}, &mcp.ServerOptions{Capabilities: cfg.capabilities(), Instructions: instructions})
 	g.server.AddReceivingMiddleware(g.middleware)
 	sessionless := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return g.server }, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
 	sessions := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return g.server }, &mcp.StreamableHTTPOptions{SessionTimeout: cfg.SessionTimeout})
@@ -100,10 +104,31 @@ func New(core Core, verifier port.PrincipalVerifier, index port.ToolIndex, cfg C
 // Handler serves /mcp: requests of protocol 2026-07-28 and later run without a session, older ones in an SDK session, and each request carries its own identity.
 func (g *Gateway) Handler() http.Handler { return g.handler }
 
-// ToolsChanged sends notifications/tools/list_changed to the sessions and listen streams that can receive it (§10.2 L7).
+func (c Config) prompts() bool { return c.Content || c.SkillPrompts }
+
+func (c Config) capabilities() *mcp.ServerCapabilities {
+	caps := &mcp.ServerCapabilities{Tools: &mcp.ToolCapabilities{ListChanged: true}}
+	if c.prompts() {
+		caps.Prompts = &mcp.PromptCapabilities{ListChanged: true}
+	}
+	if c.Content {
+		caps.Resources, caps.Completions = &mcp.ResourceCapabilities{ListChanged: true}, &mcp.CompletionCapabilities{}
+	}
+	return caps
+}
+
+// ToolsChanged sends the list_changed notifications of tools, and of the prompts and resources it serves, to the sessions and listen streams that can receive them (§10.2 L7).
 func (g *Gateway) ToolsChanged() {
 	g.server.AddTool(&mcp.Tool{Name: changedSentinel, InputSchema: map[string]any{"type": "object"}}, nil)
 	g.server.RemoveTools(changedSentinel)
+	if g.cfg.prompts() {
+		g.server.AddPrompt(&mcp.Prompt{Name: changedSentinel}, nil)
+		g.server.RemovePrompts(changedSentinel)
+	}
+	if g.cfg.Content {
+		g.server.AddResource(&mcp.Resource{Name: changedSentinel, URI: "sentinel:" + changedSentinel}, nil)
+		g.server.RemoveResources("sentinel:" + changedSentinel)
+	}
 }
 
 func (g *Gateway) verify(ctx context.Context, token string, _ *http.Request) (*auth.TokenInfo, error) {

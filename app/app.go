@@ -142,7 +142,8 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	gcfg := gateway.DefaultConfig(a.Config.Audience())
 	gcfg.ViewTokens = a.Config.Apps.AppOnlyFunctions == "view_token"
 	gcfg.ResourceMetadataURL = a.Config.ResourceMetadataURL()
-	gcfg.HoldWindow, gcfg.Logger, gcfg.Skills = a.Config.Approval.HoldWindow, a.log, a.Config.Gateway.Skills == "tools"
+	gcfg.HoldWindow, gcfg.Logger, gcfg.Skills, gcfg.SkillPrompts = a.Config.Approval.HoldWindow, a.log, a.Config.Gateway.Skills != "off", a.Config.Gateway.Skills == "tools+prompts"
+	gcfg.Instructions, gcfg.Content = a.Config.Gateway.RelayInstructions == "pinned", a.Config.Gateway.UpstreamContent == "granted"
 	gcfg.ThresholdTokens, gcfg.ThresholdFunctions, gcfg.SearchResultMax = a.Config.Search.ThresholdTokens, a.Config.Search.ThresholdFunctions, a.Config.Search.ResultMax
 	a.metrics = telemetry.New(a.outbox, a.Clock.Now)
 	agent, err := gateway.New(a.metrics.Core(a.Service), a.Verifier, a.Index, gcfg)

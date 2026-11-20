@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -136,7 +137,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 			return nil, err
 		}
 		for _, f := range fns.Items {
-			if f.State == port.FunctionRemoved {
+			if f.State == port.FunctionRemoved || port.ItemKind(f.Name) != "" {
 				continue
 			}
 			title, desc := describe(f.Definition)
@@ -269,6 +270,7 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/connectors/"+esc(conn)+"/functions", nil, &fns); err != nil {
 		return conn, err
 	}
+	fns.Items = slices.DeleteFunc(fns.Items, func(f port.Function) bool { return port.ItemKind(f.Name) != "" })
 	seen := map[string]port.Hash{}
 	for _, f := range fns.Items {
 		if f.State == port.FunctionQuarantined {

@@ -67,7 +67,7 @@ func newWorld(t *testing.T, o options) *world {
 	t.Helper()
 	w := &world{t: t}
 	w.Env = st.New(t, func(_ *service.Config, d *service.Deps) {
-		d.Filter = builtin.New()
+		d.Filter, _ = builtin.New(builtin.DefaultLocales...)
 		d.Runtime, _ = mux.New(d.Runtime, rtskill.New())
 	})
 	list, hashes := definitions()

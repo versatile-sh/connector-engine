@@ -15,6 +15,7 @@ import (
 
 	"github.com/agents-control/connector-engine/core/approval"
 	"github.com/agents-control/connector-engine/core/grant"
+	"github.com/agents-control/connector-engine/filter/builtin"
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 )
@@ -128,6 +129,11 @@ func (c Config) Check(acknowledged func(string) bool) adapters.Findings {
 	for key, allowed := range oneOf {
 		if v := c.values()[key]; !slices.Contains(allowed, v) {
 			add(adapters.LevelError, key, "%q is not one of %s", v, strings.Join(allowed, ", "))
+		}
+	}
+	for _, l := range c.ResultFilter.Locales {
+		if !slices.Contains(builtin.Locales(), l) {
+			add(adapters.LevelError, "resultFilter.locales", "%q is not one of %s", l, strings.Join(builtin.Locales(), ", "))
 		}
 	}
 	if c.Secrets.Adapter == "hostkey" && c.Secrets.UnlockSocket == "" {

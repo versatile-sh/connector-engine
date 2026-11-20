@@ -214,3 +214,11 @@ func TestOnlyThePersonProfileRelaysServerGuidance(t *testing.T) {
 		t.Error("the engine default relays server guidance")
 	}
 }
+
+func TestAnUnknownResultFilterLocaleIsRefused(t *testing.T) {
+	cfg := config.Default()
+	cfg.ResultFilter.Locales = []string{"br", "xx"}
+	if !has(cfg.Check(none), "resultFilter.locales", adapters.LevelError) {
+		t.Fatal("the unknown locale xx was accepted")
+	}
+}

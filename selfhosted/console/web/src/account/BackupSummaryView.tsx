@@ -1,7 +1,7 @@
 import type { BackupSummary } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import type { MessageKey } from "../i18n";
-import { CAPTION, EYEBROW, SURFACE } from "../ui/styles";
+import { CAPTION, EYEBROW, WELL } from "../ui/styles";
 import { NameList } from "./NameList";
 
 const COUNTS: readonly { key: "connectors" | "skills" | "keys"; label: MessageKey }[] = [
@@ -26,7 +26,7 @@ export function BackupSummaryView({ summary }: { summary: BackupSummary }) {
       {facts.length > 0 ? <p className={`mt-1 ${CAPTION}`}>{facts.join(" · ")}</p> : null}
       <dl className="mt-4 grid grid-cols-3 gap-2">
         {COUNTS.map((count) => (
-          <div key={count.key} className={`${SURFACE} p-3`}>
+          <div key={count.key} className={`${WELL} p-3`}>
             <dt className={CAPTION}>{t(count.label)}</dt>
             <dd className="mt-1 text-2xl tabular-nums">{summary.counts?.[count.key] ?? 0}</dd>
           </div>

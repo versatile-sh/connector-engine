@@ -14,9 +14,10 @@ export function AccountPage() {
   const account = useQuery(accountQuery);
   return (
     <section aria-labelledby="page-title">
-      <header className="mb-8">
-        <PageTitle section={t("nav.account")} title={t("account.title")} />
-        <p className="mt-3 max-w-2xl text-muted">{t("account.intro")}</p>
+      <header className="mb-10">
+        <PageTitle section={t("nav.account")} title={t("account.title")}>
+          <p>{t("account.intro")}</p>
+        </PageTitle>
       </header>
       {account.isError ? <Notice>{errorText(account.error)}</Notice> : null}
       {account.isPending ? (

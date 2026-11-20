@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Warning } from "../approve/Warning";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { Section } from "../notifications/Section";
+import { Notice } from "../ui/Notice";
 import { button } from "../ui/styles";
 import { daysSince, needsExport } from "./backup";
 import { ExportDialog } from "./ExportDialog";
@@ -21,7 +21,7 @@ export function BackupSection({ lastExport }: { lastExport: string | undefined }
       intro={t("backup.intro")}
       action={
         <div className="flex gap-2">
-          <button type="button" className={button({ variant: "accent", size: "sm" })} onClick={() => setOpen("export")}>
+          <button type="button" className={button({ variant: "primary", size: "sm" })} onClick={() => setOpen("export")}>
             {t("backup.export")}
           </button>
           <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => setOpen("import")}>
@@ -33,7 +33,7 @@ export function BackupSection({ lastExport }: { lastExport: string | undefined }
       <p className="text-sm" title={days === undefined ? undefined : new Date(lastExport ?? "").toLocaleString(locale)}>
         {days === undefined ? t("backup.never") : t("backup.last", { when: new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(-days, "day") })}
       </p>
-      {needsExport(days) ? <Warning className="mt-3">{t("backup.nudge")}</Warning> : null}
+      {needsExport(days) ? <Notice live={false} className="mt-3">{t("backup.nudge")}</Notice> : null}
       {open === "export" ? <ExportDialog onClose={() => setOpen(undefined)} /> : null}
       {open === "import" ? <ImportDialog onClose={() => setOpen(undefined)} /> : null}
     </Section>

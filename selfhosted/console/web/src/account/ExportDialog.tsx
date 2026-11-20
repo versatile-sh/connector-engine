@@ -1,17 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { Warning } from "../approve/Warning";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { exportBackup } from "../mutations";
 import { Field } from "../ui/Field";
+import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { Switch } from "../ui/Switch";
-import { LIT_EDGE, PRESS, SURFACE, button } from "../ui/styles";
+import { OPTION_CARD, button } from "../ui/styles";
 import { PASSPHRASE_MIN, passwordRefusal, saveFile, secretProblem } from "./backup";
 import { SecretPair } from "./SecretPair";
-
-const CHOICE = `${SURFACE} ${LIT_EDGE} ${PRESS} flex w-full flex-col items-start gap-1 p-4 text-left disabled:opacity-60`;
 
 type Step = "pick" | "warn" | "form";
 
@@ -54,7 +52,7 @@ function FullForm({ onBack, onDone }: { onBack(): void; onDone(): void }) {
           checked={checked}
           onChange={(value, again) => setPassphrase({ value, again })}
         />
-        <p role="alert" className="text-sm text-amber empty:hidden">
+        <p role="alert" className="text-sm text-amber-400 empty:hidden">
           {run.isError && !refusal ? errorText(run.error) : ""}
         </p>
       </div>
@@ -62,7 +60,7 @@ function FullForm({ onBack, onDone }: { onBack(): void; onDone(): void }) {
         <button type="button" className={button({ variant: "quiet", size: "sm" })} onClick={onBack}>
           {t("backup.back")}
         </button>
-        <button type="submit" disabled={!understood || run.isPending} className={button({ variant: "accent", size: "sm" })}>
+        <button type="submit" disabled={!understood || run.isPending} className={button({ variant: "primary", size: "sm" })}>
           {run.isPending ? t("backup.exporting") : t("backup.full.submit")}
         </button>
       </div>
@@ -82,13 +80,13 @@ function FullWarning({ onBack, onContinue }: { onBack(): void; onContinue(): voi
           <li>{t("backup.full.holds3")}</li>
         </ul>
       </div>
-      <Warning>{t("backup.full.danger")}</Warning>
+      <Notice live={false}>{t("backup.full.danger")}</Notice>
       <p className="text-muted">{t("backup.full.lost")}</p>
       <div className="flex flex-wrap justify-end gap-2">
         <button type="button" className={button({ variant: "quiet", size: "sm" })} onClick={onBack}>
           {t("backup.back")}
         </button>
-        <button type="button" autoFocus className={button({ variant: "accent", size: "sm" })} onClick={onContinue}>
+        <button type="button" autoFocus className={button({ variant: "primary", size: "sm" })} onClick={onContinue}>
           {t("backup.full.continue")}
         </button>
       </div>
@@ -117,16 +115,16 @@ export function ExportDialog({ onClose }: { onClose(): void }) {
         <div className="swap-in">
           <p className="text-sm text-muted">{t("backup.export.pick")}</p>
           <div role="group" aria-label={t("backup.export.kind")} className="mt-3 flex flex-col gap-2">
-            <button type="button" className={CHOICE} onClick={() => setStep("warn")}>
+            <button type="button" className={OPTION_CARD} onClick={() => setStep("warn")}>
               <span className="font-semibold">{t("backup.full.title")}</span>
               <span className="text-sm text-muted">{t("backup.full.body")}</span>
             </button>
-            <button type="button" disabled={setup.isPending} className={CHOICE} onClick={onSetup}>
+            <button type="button" disabled={setup.isPending} className={OPTION_CARD} onClick={onSetup}>
               <span className="font-semibold">{t("backup.setup.title")}</span>
               <span className="text-sm text-muted">{setup.isPending ? t("backup.exporting") : t("backup.setup.body")}</span>
             </button>
           </div>
-          <p role="alert" className="mt-3 text-sm text-amber empty:hidden">
+          <p role="alert" className="mt-3 text-sm text-amber-400 empty:hidden">
             {setup.isError ? errorText(setup.error) : ""}
           </p>
         </div>

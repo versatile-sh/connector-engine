@@ -323,7 +323,7 @@ func TestADesktopLinkDecidesOnceWithoutASession(t *testing.T) {
 		Command string
 	}
 	r.b.ok("POST", "/api/notifications/devices", map[string]any{"name": "laptop"}, &paired)
-	if !strings.Contains(paired.Command, "cnctl notify --console "+r.base) {
+	if !strings.Contains(paired.Command, "vsh notify --console "+r.base) {
 		t.Fatalf("command %q", paired.Command)
 	}
 	if status, _ := (&browser{t: t, base: r.base, client: http.DefaultClient}).send("GET", "/api/notify/stream", nil, map[string]string{"Authorization": "Bearer nope"}); status != http.StatusUnauthorized {

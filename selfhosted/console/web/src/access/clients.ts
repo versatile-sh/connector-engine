@@ -202,7 +202,7 @@ const APPS: readonly App[] = [
     withKey: (url, key) => ({
       blocks: [
         { where: "clients.where.values", text: `URL        ${url}\nTransport  Streamable HTTP\nHeader     Authorization: ${bearerOf(key)}` },
-        { where: "clients.where.cnctl", text: `export CN_ENDPOINT=${url}\nexport CN_AGENT_TOKEN=${key}\ncnctl tools list` },
+        { where: "clients.where.vsh", text: `export CN_ENDPOINT=${url}\nexport CN_AGENT_TOKEN=${key}\nvsh tools list` },
       ],
       note: "clients.note.generic",
     }),

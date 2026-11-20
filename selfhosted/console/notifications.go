@@ -326,7 +326,7 @@ func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.surf.wake()
-	cmd := fmt.Sprintf("umask 077 && mkdir -p ~/.config/versatile && printf '%%s' '%s' > ~/.config/versatile/notify.key && cnctl notify --console %s", key, c.publicBase())
+	cmd := fmt.Sprintf("umask 077 && mkdir -p ~/.config/versatile && printf '%%s' '%s' > ~/.config/versatile/notify.key && vsh notify --console %s", key, c.publicBase())
 	status := http.StatusCreated
 	if again {
 		status = http.StatusOK

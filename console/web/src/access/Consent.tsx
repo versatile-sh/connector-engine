@@ -43,7 +43,7 @@ export function Consent({ id }: { id: string }) {
               {t("consent.title", { client })}
             </h1>
             <p className="mt-3 text-muted">{t("consent.body", { client })}</p>
-            <p className="mt-3 font-mono text-xs text-muted">
+            <p className="mt-3 font-mono text-xs text-muted [overflow-wrap:anywhere]">
               {t("consent.returns", { target: request.data.redirect })}
             </p>
             {done ? (

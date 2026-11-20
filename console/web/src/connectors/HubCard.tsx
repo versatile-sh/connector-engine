@@ -17,7 +17,7 @@ export function HubCard({ className = "" }: { className?: string }) {
       <span aria-hidden="true" className={`${ACCENT_BAR} bg-lime`} />
       <span className="bubble-word shrink-0 bg-lime px-2 py-0.5 font-mono text-xs font-semibold text-ink">{t("hub.pill")}</span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[0.9375rem] leading-snug font-semibold">{t("hub.title", { where: href.replace(/^https?:\/\//, "") })}</span>
+        <span className="block text-[0.9375rem] leading-snug font-semibold [overflow-wrap:anywhere]">{t("hub.title", { where: href.replace(/^https?:\/\//, "") })}</span>
         <span className="block text-sm text-muted">{t("hub.body")}</span>
       </span>
       <Icon name="external" className="size-4 text-muted transition-colors group-hover:text-lime" />

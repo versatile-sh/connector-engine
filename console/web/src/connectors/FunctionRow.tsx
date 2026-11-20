@@ -13,7 +13,7 @@ export function FunctionRow({ name, title, description, flags, children }: { nam
           {flags}
         </div>
         {description ? (
-          <p title={description} className="mt-1 line-clamp-2 text-sm text-muted">
+          <p title={description} className="mt-1 line-clamp-2 text-sm text-muted [overflow-wrap:anywhere]">
             {description}
           </p>
         ) : null}

@@ -24,7 +24,7 @@ export function Identity({ preview, onLime = false }: { preview: Preview; onLime
           </p>
         </div>
       </div>
-      {preview.description ? <p title={preview.description} className={`mt-4 line-clamp-4 max-w-xl ${onLime ? "text-ink/85" : "text-muted"}`}>{preview.description}</p> : null}
+      {preview.description ? <p title={preview.description} className={`mt-4 line-clamp-4 max-w-xl [overflow-wrap:anywhere] ${onLime ? "text-ink/85" : "text-muted"}`}>{preview.description}</p> : null}
       <dl className={`mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm ${soft}`}>
         {facts.map((fact) => (
           <div key={fact.label} className="contents">

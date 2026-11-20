@@ -44,7 +44,7 @@ export function ImportLanding({ source }: { source: ImportSource }) {
         <>
           {home}
           <div className="flex flex-1 flex-col justify-center pt-8 pb-2 lg:py-0">
-            <p className="bubble-word mb-6 inline-flex self-start bg-ink px-3 py-1 font-mono text-xs text-lime" translate="no">
+            <p className="bubble-word mb-6 inline-flex max-w-full self-start bg-ink px-3 py-1 font-mono text-xs text-lime [overflow-wrap:anywhere]" translate="no">
               {t("import.linkEyebrow", { host })}
             </p>
             {preview.isSuccess ? (

@@ -3,7 +3,6 @@ package console
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -21,20 +20,20 @@ var slugUnsafe = regexp.MustCompile(`[^a-z0-9-]+`)
 func ParseManifest(data []byte) (port.Manifest, error) {
 	var generic any
 	if err := yaml.Unmarshal(data, &generic); err != nil {
-		return port.Manifest{}, fmt.Errorf("the listing is not YAML: %w", err)
+		return port.Manifest{}, invalid("the listing is not YAML: %w", err)
 	}
 	raw, err := json.Marshal(generic)
 	if err != nil {
-		return port.Manifest{}, fmt.Errorf("the listing has keys that are not strings: %w", err)
+		return port.Manifest{}, invalid("the listing has keys that are not strings: %w", err)
 	}
 	var m port.Manifest
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
-		return port.Manifest{}, fmt.Errorf("the listing is not an engine manifest: %w", err)
+		return port.Manifest{}, invalid("the listing is not an engine manifest: %w", err)
 	}
 	if m.Name == "" || m.Kind == "" {
-		return port.Manifest{}, fmt.Errorf("the listing has no name or kind")
+		return port.Manifest{}, invalid("the listing has no name or kind")
 	}
 	return m, nil
 }
@@ -94,7 +93,7 @@ func Slug(s string) string {
 func ManifestFor(p Probed, headerSecret bool) (port.Manifest, error) {
 	u, err := url.Parse(p.URL)
 	if err != nil {
-		return port.Manifest{}, err
+		return port.Manifest{}, invalid("%w", err)
 	}
 	host := strings.ToLower(u.Hostname())
 	if strings.Contains(host, ":") {

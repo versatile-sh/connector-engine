@@ -192,7 +192,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) error {
 	kind, item := itemKinds[port.ItemKind(name)]
 	if !a.Valid() || item && !validFor(kind, a) {
-		return fmt.Errorf("access %q is not a choice for %s", a, name)
+		return invalid("access %q is not a choice for %s", a, name)
 	}
 	f, err := c.function(ctx, conn, name)
 	if err != nil {
@@ -438,7 +438,7 @@ type AgentToken struct {
 func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
-		return Agent{}, fmt.Errorf("the agent name has letters or digits")
+		return Agent{}, invalid("the agent name has letters or digits")
 	}
 	if ttl <= 0 || ttl > c.MaxAgentTTL {
 		ttl = c.MaxAgentTTL
@@ -567,5 +567,5 @@ func (c *Console) OAuthIssuer(ctx context.Context, conn string) (string, error) 
 			return a.Issuer, nil
 		}
 	}
-	return "", fmt.Errorf("the listing of this connector declares no OAuth issuer")
+	return "", invalid("the listing of this connector declares no OAuth issuer")
 }

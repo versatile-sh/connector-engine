@@ -273,7 +273,7 @@ func call(ctx context.Context, cs *mcp.ClientSession, name string, o options, st
 		fmt.Fprintf(stdout, "error %v: %v\nfull answer in %s\n", structured["code"], structured["detail"], path)
 		return fmt.Errorf("the call failed, see %s", path)
 	case structured["status"] == "pending_approval":
-		fmt.Fprintf(stdout, "pending_approval approval_id=%v poll_after_seconds=%v\nask again with: tools call approval_status --args '{\"approval_id\":%q}'\nfull answer in %s\n",
+		fmt.Fprintf(stdout, "pending_approval approval_id=%v poll_after_seconds=%v\nask again with: vsh tools call approval_status --args '{\"approval_id\":%q}'\nfull answer in %s\n",
 			structured["approval_id"], structured["poll_after_seconds"], structured["approval_id"], path)
 	default:
 		fmt.Fprintf(stdout, "ok, %d bytes\nfull answer in %s\n", len(raw), path)

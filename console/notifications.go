@@ -1,0 +1,295 @@
+package console
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"regexp"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/agents-control/connector-engine/surface"
+)
+
+const maxLabel = 60
+
+var (
+	digits    = regexp.MustCompile(`^[0-9]{1,24}$`)
+	slackUser = regexp.MustCompile(`^[UW][A-Z0-9]{2,20}$`)
+)
+
+type kindSpec struct {
+	required []string
+	optional []string
+	secrets  []string
+	owner    *regexp.Regexp
+	hosts    []string
+}
+
+var kinds = map[string]kindSpec{
+	"discord":         {required: []string{"token", "owner_user_id"}, secrets: []string{"token"}, owner: digits},
+	"slack":           {required: []string{"app_token", "bot_token", "owner_user_id"}, secrets: []string{"bot_token", "app_token"}, owner: slackUser},
+	"telegram":        {required: []string{"token", "owner_user_id"}, secrets: []string{"token"}, owner: digits},
+	"ntfy":            {required: []string{"url"}, optional: []string{"token"}, secrets: []string{"url", "token"}},
+	"discord_webhook": {required: []string{"url"}, secrets: []string{"url"}, hosts: []string{"discord.com", "discordapp.com"}},
+	"slack_webhook":   {required: []string{"url"}, secrets: []string{"url"}, hosts: []string{"hooks.slack.com"}},
+}
+
+func secretValues(kind string, settings map[string]string) []string {
+	var out []string
+	for _, k := range kinds[kind].secrets {
+		out = append(out, settings[k])
+	}
+	return out
+}
+
+func checkSettings(kind string, in map[string]string) (map[string]string, error) {
+	spec, ok := kinds[kind]
+	if !ok {
+		return nil, fmt.Errorf("unknown channel kind %q", kind)
+	}
+	out := map[string]string{}
+	for _, k := range append(slices.Clone(spec.required), spec.optional...) {
+		v := strings.TrimSpace(in[k])
+		if v == "" && slices.Contains(spec.required, k) {
+			return nil, fmt.Errorf("%s is required", k)
+		}
+		if strings.ContainsAny(v, " \r\n\t") || len(v) > 2048 {
+			return nil, fmt.Errorf("%s has spaces or is too long", k)
+		}
+		if v != "" {
+			out[k] = v
+		}
+	}
+	if spec.owner != nil && !spec.owner.MatchString(out["owner_user_id"]) {
+		return nil, fmt.Errorf("owner_user_id does not look like a %s user id", kind)
+	}
+	if raw, ok := out["url"]; ok {
+		u, err := url.Parse(raw)
+		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
+			return nil, fmt.Errorf("the URL is an https address")
+		}
+		if len(spec.hosts) > 0 && !slices.Contains(spec.hosts, strings.ToLower(u.Hostname())) {
+			return nil, fmt.Errorf("a %s URL is on %s", kind, strings.Join(spec.hosts, " or "))
+		}
+	}
+	return out, nil
+}
+
+// ChannelView is a configured channel as the settings page shows it; it never carries a secret.
+type ChannelView struct {
+	ID          string    `json:"id"`
+	Kind        string    `json:"kind"`
+	Label       string    `json:"label"`
+	Interactive bool      `json:"interactive"`
+	Owner       string    `json:"owner,omitempty"`
+	SecretHint  string    `json:"secret_hint,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	Status      string    `json:"status"`
+	Error       string    `json:"error,omitempty"`
+}
+
+// DeviceView is a paired host helper as the settings page shows it.
+type DeviceView struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	LastSeen  time.Time `json:"last_seen,omitzero"`
+}
+
+func (c *Console) channelView(sc StoredChannel) ChannelView {
+	v := ChannelView{ID: sc.ID, Kind: sc.Kind, Label: sc.Label, Interactive: interactiveKinds[sc.Kind], Owner: sc.Settings["owner_user_id"], CreatedAt: sc.CreatedAt}
+	if s := kinds[sc.Kind].secrets; len(s) > 0 {
+		if secret := sc.Settings[s[0]]; len(secret) > 8 {
+			v.SecretHint = secret[len(secret)-4:]
+		}
+	}
+	st := c.surf.statusOf(sc.ID)
+	v.Status, v.Error = st.State, st.Error
+	if v.Status == "" {
+		v.Status = map[bool]string{true: "connecting", false: "notify_only"}[v.Interactive]
+	}
+	return v
+}
+
+func (c *Console) logger() *slog.Logger {
+	if c.Log == nil {
+		return slog.New(slog.DiscardHandler)
+	}
+	return c.Log
+}
+
+func (c *Console) surfaceRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/approvals/{id}", c.approvalPage)
+	mux.HandleFunc("POST /api/approvals/{id}/decide", c.decideChoice)
+	mux.HandleFunc("GET /api/notifications", c.authed(c.listNotifications))
+	mux.HandleFunc("POST /api/notifications/channels", c.authed(c.addChannel))
+	mux.HandleFunc("DELETE /api/notifications/channels/{id}", c.authed(c.removeChannel))
+	mux.HandleFunc("POST /api/notifications/channels/{id}/test", c.authed(c.testChannel))
+	mux.HandleFunc("PUT /api/notifications/apps/{name}", c.authed(c.setElicit))
+	mux.HandleFunc("POST /api/notifications/devices", c.authed(c.pairDevice))
+	mux.HandleFunc("DELETE /api/notifications/devices/{id}", c.authed(c.revokeDevice))
+	mux.HandleFunc("GET /api/notify/stream", c.notifyStream)
+}
+
+func (c *Console) listNotifications(w http.ResponseWriter, _ *http.Request) {
+	chans := c.State.Channels()
+	slices.SortFunc(chans, func(a, b StoredChannel) int { return a.CreatedAt.Compare(b.CreatedAt) })
+	views := make([]ChannelView, 0, len(chans))
+	for _, sc := range chans {
+		views = append(views, c.channelView(sc))
+	}
+	devices := []DeviceView{}
+	for _, d := range c.State.Devices() {
+		devices = append(devices, DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt, LastSeen: d.LastSeen})
+	}
+	slices.SortFunc(devices, func(a, b DeviceView) int { return a.CreatedAt.Compare(b.CreatedAt) })
+	elicit := c.State.ElicitApps()
+	type app struct {
+		Name   string `json:"name"`
+		Elicit bool   `json:"elicit"`
+	}
+	apps := []app{}
+	for _, a := range c.State.Agents() {
+		apps = append(apps, app{Name: a.Name, Elicit: elicit[a.Name]})
+	}
+	slices.SortFunc(apps, func(a, b app) int { return strings.Compare(a.Name, b.Name) })
+	writeJSON(w, http.StatusOK, map[string]any{"channels": views, "devices": devices, "apps": apps})
+}
+
+func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Kind     string            `json:"kind"`
+		Label    string            `json:"label"`
+		Settings map[string]string `json:"settings"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	settings, err := checkSettings(in.Kind, in.Settings)
+	if err == nil {
+		_, err = c.factory()(in.Kind, settings)
+	}
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": tracked{secrets: secretValues(in.Kind, in.Settings)}.scrub(err)})
+		return
+	}
+	label := strings.TrimSpace(in.Label)
+	if label == "" {
+		label = in.Kind
+	}
+	if len([]rune(label)) > maxLabel {
+		label = string([]rune(label)[:maxLabel])
+	}
+	sc := StoredChannel{ID: randomID()[:12], Kind: in.Kind, Label: label, Settings: settings, CreatedAt: time.Now().UTC().Truncate(time.Second)}
+	if err := c.State.PutChannel(sc); err != nil {
+		c.fail(w, err)
+		return
+	}
+	c.surf.wake()
+	writeJSON(w, http.StatusCreated, c.channelView(sc))
+}
+
+func (c *Console) storedChannel(id string) (StoredChannel, bool) {
+	all := c.State.Channels()
+	i := slices.IndexFunc(all, func(sc StoredChannel) bool { return sc.ID == id })
+	if i < 0 {
+		return StoredChannel{}, false
+	}
+	return all[i], true
+}
+
+func (c *Console) removeChannel(w http.ResponseWriter, r *http.Request) {
+	ok, err := c.State.DeleteChannel(r.PathValue("id"))
+	switch {
+	case err != nil:
+		c.fail(w, err)
+	case !ok:
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such channel"})
+	default:
+		c.surf.wake()
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (c *Console) testChannel(w http.ResponseWriter, r *http.Request) {
+	sc, ok := c.storedChannel(r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such channel"})
+		return
+	}
+	t := tracked{id: sc.ID, secrets: secretValues(sc.Kind, sc.Settings), surf: &c.surf}
+	ch, err := c.factory()(sc.Kind, sc.Settings)
+	if err == nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		defer cancel()
+		p := surface.Prompt{Approval: "test", Connector: "versatile.sh", Function: "test_message", FunctionTitle: "Test message", Kind: "read", App: "console",
+			ExpiresAt: time.Now().Add(10 * time.Minute), ConsoleURL: c.publicBase() + "/notifications"}
+		_, err = ch.Notify(ctx, p)
+	}
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "error": t.scrub(err)})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (c *Console) setElicit(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Elicit bool `json:"elicit"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	name := r.PathValue("name")
+	if !slices.ContainsFunc(c.State.Agents(), func(a Agent) bool { return a.Name == name }) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such app"})
+		return
+	}
+	if err := c.State.SetElicit(name, in.Elicit); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name string `json:"name"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	name := strings.TrimSpace(in.Name)
+	if name == "" || len([]rune(name)) > maxLabel {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "give the computer a name of at most 60 characters"})
+		return
+	}
+	key := "cnk_" + randomID()
+	d := Device{ID: randomID()[:12], Name: name, KeyHash: keyHash(key), CreatedAt: time.Now().UTC().Truncate(time.Second)}
+	if err := c.State.PutDevice(d); err != nil {
+		c.fail(w, err)
+		return
+	}
+	c.surf.wake()
+	cmd := fmt.Sprintf("umask 077 && mkdir -p ~/.config/versatile && printf '%%s' '%s' > ~/.config/versatile/notify.key && cnctl notify --console %s", key, c.publicBase())
+	writeJSON(w, http.StatusCreated, map[string]any{"device": DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt}, "key": key, "command": cmd})
+}
+
+func (c *Console) revokeDevice(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	ok, err := c.State.DeleteDevice(id)
+	switch {
+	case err != nil:
+		c.fail(w, err)
+	case !ok:
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such device"})
+	default:
+		c.surf.hub.drop(id)
+		c.surf.wake()
+		w.WriteHeader(http.StatusNoContent)
+	}
+}

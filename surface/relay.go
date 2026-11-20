@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base32"
+	"errors"
 	"log/slog"
 	"strings"
 	"sync"
@@ -102,6 +103,17 @@ func (r *Relay) Held(approval string) (Prompt, bool) {
 	return h.prompt, true
 }
 
+// Pending returns the prompts the relay holds, for a surface that connects late.
+func (r *Relay) Pending() []Prompt {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := make([]Prompt, 0, len(r.byKey))
+	for _, h := range r.byKey {
+		out = append(out, h.prompt)
+	}
+	return out
+}
+
 func (r *Relay) handle(ctx context.Context, ev Event) {
 	switch ev.Kind {
 	case EventRequested:
@@ -122,7 +134,9 @@ func (r *Relay) request(ctx context.Context, approval string) {
 	r.mu.Unlock()
 	p, err := r.Desk.Prompt(ctx, approval)
 	if err != nil {
-		r.Log.Warn("approval prompt", "approval", approval, "error", err)
+		if !errors.Is(err, ErrSettled) {
+			r.Log.Warn("approval prompt", "approval", approval, "error", err)
+		}
 		r.mu.Lock()
 		delete(r.byApproval, approval)
 		r.mu.Unlock()

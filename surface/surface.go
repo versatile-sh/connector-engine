@@ -110,6 +110,9 @@ type Desk interface {
 // ErrExpired answers a click on a prompt the relay no longer holds.
 var ErrExpired = errors.New("this request expired or was already answered; open the console")
 
+// ErrSettled is what a desk answers for an approval that is no longer pending.
+var ErrSettled = errors.New("the approval is no longer pending")
+
 // ErrNotOwner answers a click from someone other than the configured owner.
 var ErrNotOwner = errors.New("only the owner can answer")
 

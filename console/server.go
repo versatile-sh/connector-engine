@@ -54,6 +54,7 @@ type Console struct {
 	Fetch         skillcatalog.Get
 	Activity      *Activity
 	Secrets       *sealed.Box
+	NewChannel    ChannelFactory
 
 	loginMu sync.Mutex
 	iconMu  sync.Mutex
@@ -68,6 +69,7 @@ type Console struct {
 	refreshMu  sync.Mutex
 
 	consentFails []time.Time
+	surf         surfaces
 }
 
 // Handler returns every route behind the guard.
@@ -120,6 +122,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /oauth/authorize", c.authorize)
 	mux.HandleFunc("GET /api/oauth/requests/{id}", c.authed(c.consentInfo))
 	mux.HandleFunc("POST /api/oauth/requests/{id}", c.authed(c.consent))
+	c.surfaceRoutes(mux)
 	mux.HandleFunc("GET /", c.spa)
 	return c.Guard.Wrap(mux)
 }

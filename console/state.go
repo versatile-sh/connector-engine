@@ -121,23 +121,34 @@ func put[K comparable, V any](m *map[K]V, k K, v V) {
 }
 
 func writeAtomic(path string, raw []byte) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".state-*")
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".state-*")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(raw); err != nil {
-		tmp.Close()
+	err = tmp.Chmod(0o600)
+	if err == nil {
+		_, err = tmp.Write(raw)
+	}
+	if err == nil {
+		err = tmp.Sync()
+	}
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
 		return err
 	}
-	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
+	if err := os.Rename(tmp.Name(), path); err != nil {
 		return err
 	}
-	if err := tmp.Close(); err != nil {
+	d, err := os.Open(dir)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp.Name(), path)
+	defer d.Close()
+	return d.Sync()
 }
 
 // HasOwner reports whether the owner account exists.

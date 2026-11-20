@@ -1,6 +1,8 @@
 package console
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -17,5 +19,22 @@ func TestExpireDropsOnlyThePastAndTheWindowCountsOneMinute(t *testing.T) {
 	w.hit(now.Add(-30 * time.Second))
 	if w.full(now, 2) || !w.full(now, 1) {
 		t.Fatalf("one hit is left in the minute: %v", w.hits)
+	}
+}
+
+func TestWriteAtomicLeavesOnlyTheOwnerReadableFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.json")
+	if err := writeAtomic(path, []byte(`{"a":1}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeAtomic(path, []byte(`{"a":2}`)); err != nil {
+		t.Fatal(err)
+	}
+	entries, _ := os.ReadDir(dir)
+	info, err := os.Stat(path)
+	raw, _ := os.ReadFile(path)
+	if err != nil || len(entries) != 1 || info.Mode().Perm() != 0o600 || string(raw) != `{"a":2}` {
+		t.Fatalf("entries %v, mode %v, body %s, %v", entries, info.Mode(), raw, err)
 	}
 }

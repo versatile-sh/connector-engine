@@ -14,6 +14,7 @@ import { AccessPicker } from "./AccessPicker";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { Credentials } from "./Credentials";
 import { FunctionRow } from "./FunctionRow";
+import { KindLabel } from "./KindLabel";
 import { accessCounts, serverHost } from "./summary";
 
 const FILTER_FROM = 8;
@@ -58,7 +59,7 @@ function Functions({ connector }: { connector: Connector }) {
           <Bubble>{functions.length}</Bubble>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {(["read", "write", "ask", "off"] as const).map((access) =>
+          {(["on", "ask", "off"] as const).map((access) =>
             counts[access] > 0 ? (
               <Bubble key={access} tone={access === "ask" ? "outline" : "neutral"}>
                 {t(`access.count.${access}`, { count: counts[access] })}
@@ -87,7 +88,7 @@ function Functions({ connector }: { connector: Connector }) {
               description={fn.description}
               flags={
                 <>
-                  <Bubble>{fn.class || t("detail.unclassified")}</Bubble>
+                  <KindLabel kind={fn.kind} />
                   {fn.state !== "active" ? (
                     <Bubble tone="amber" title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
                       {fn.state}

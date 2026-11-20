@@ -7,7 +7,7 @@ import { LIT_EDGE } from "../ui/styles";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { accessCounts, authState, serverHost } from "./summary";
 
-const BAR = { read: "bg-paper/55", write: "bg-paper", ask: "bg-lime" } as const;
+const BAR = { on: "bg-paper", ask: "bg-lime" } as const;
 
 /** One installed connector as a card that opens it: who it is, how its functions are set, and what it still needs. */
 export function ConnectorCard({ connector }: { connector: Connector }) {
@@ -41,14 +41,13 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
         </div>
         <p className="mt-3 line-clamp-2 min-h-10 text-sm text-muted">{connector.description}</p>
         <div aria-hidden="true" className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-line">
-          {(["read", "write", "ask"] as const).map((access) =>
+          {(["on", "ask"] as const).map((access) =>
             counts[access] > 0 ? <span key={access} className={BAR[access]} style={{ width: `${(counts[access] / functions.length) * 100}%` }} /> : null,
           )}
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           <Bubble>{t("connectors.functions", { count: functions.length })}</Bubble>
-          {counts.read > 0 ? <Bubble>{t("access.count.read", { count: counts.read })}</Bubble> : null}
-          {counts.write > 0 ? <Bubble>{t("access.count.write", { count: counts.write })}</Bubble> : null}
+          {counts.on > 0 ? <Bubble>{t("access.count.on", { count: counts.on })}</Bubble> : null}
           {counts.ask > 0 ? <Bubble tone="outline">{t("access.count.ask", { count: counts.ask })}</Bubble> : null}
           {changed > 0 ? <Bubble tone="amber">{t("connectors.changed", { count: changed })}</Bubble> : null}
           {auth === "key" ? <Bubble tone="amber">{t("connectors.needsKey")}</Bubble> : null}

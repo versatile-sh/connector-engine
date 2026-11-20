@@ -1,8 +1,8 @@
 import type { Access, ProbedTool } from "../api";
 import { AccessPicker } from "../connectors/AccessPicker";
 import { FunctionRow } from "../connectors/FunctionRow";
+import { KindLabel } from "../connectors/KindLabel";
 import { useT } from "../i18n/I18nProvider";
-import { Bubble } from "../ui/Bubble";
 
 /** The proposed access of every function a server lists, each one changeable before the install. */
 export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; accessOf(name: string, proposed: Access): Access; choose(name: string, access: Access): void }) {
@@ -16,7 +16,7 @@ export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; acce
           name={tool.name}
           title={tool.title}
           description={tool.description}
-          flags={<Bubble tone={!tool.read_only && tool.destructive ? "amber" : "neutral"}>{t(tool.read_only ? "import.tool.readOnly" : tool.destructive ? "import.tool.destructive" : "import.tool.changes")}</Bubble>}
+          flags={<KindLabel kind={tool.kind} />}
         >
           <AccessPicker name={tool.name} value={accessOf(tool.name, tool.proposed)} onChange={(access) => choose(tool.name, access)} />
         </FunctionRow>

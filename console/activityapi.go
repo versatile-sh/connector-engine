@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/agents-control/connector-engine/port"
-	skillruntime "github.com/agents-control/connector-engine/runtime/skill"
 )
 
 const (
@@ -174,7 +173,7 @@ func (c *Console) engineFacts(ctx context.Context, since time.Time, agent string
 	}
 	f.calls = calls.items
 	for _, call := range f.calls {
-		if call.Function == skillruntime.Function {
+		if call.Function == port.SkillFunction {
 			f.skills[string(call.Connector)] = false
 		}
 	}
@@ -226,7 +225,7 @@ func join(captures []Capture, f engineFacts) []joined {
 		alias, fn, found := strings.Cut(cp.Tool, toolSeparator)
 		switch {
 		case cp.Skill != "":
-			alias, fn = cp.Skill, skillruntime.Function
+			alias, fn = cp.Skill, port.SkillFunction
 		case !found:
 			alias, fn = "", cp.Tool
 		}

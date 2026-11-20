@@ -50,7 +50,7 @@ func listed(skills []service.ServedSkill) []listedSkill {
 }
 
 func (g *Gateway) skill(ctx context.Context, p port.Principal, d *deliveries, tool string, raw json.RawMessage) (*mcp.CallToolResult, error) {
-	if tool == toolSkillList {
+	if tool == port.ToolSkillList {
 		fl, err := g.core.ListFunctions(ctx, p)
 		if err != nil {
 			return nil, g.failure(err)

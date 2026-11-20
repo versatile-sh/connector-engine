@@ -17,17 +17,17 @@ func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Resul
 	}
 	params, d := req.Params, deliveriesOf(req)
 	switch params.Name {
-	case toolFind:
+	case port.ToolFind:
 		return g.find(ctx, p, params.Arguments)
-	case toolCall:
+	case port.ToolCall:
 		var a callArgs
 		if err := json.Unmarshal(params.Arguments, &a); err != nil || a.Name == "" {
 			return toolError(port.CodeInvalidArgument, "call takes a name and arguments"), nil
 		}
 		return g.forward(ctx, p, d, service.CallRequest{Name: a.Name, Arguments: a.Arguments, Fields: fieldsOf(a.Fields, params.Meta)})
-	case toolApprovalStatus, toolApprovalCancel:
+	case port.ToolApprovalStatus, port.ToolApprovalCancel:
 		return g.approval(ctx, p, d, params.Name, params.Arguments)
-	case toolSkillList, toolSkillLoad:
+	case port.ToolSkillList, port.ToolSkillLoad:
 		if g.cfg.Skills {
 			return g.skill(ctx, p, d, params.Name, params.Arguments)
 		}
@@ -91,7 +91,7 @@ func (g *Gateway) approval(ctx context.Context, p port.Principal, d *deliveries,
 		return toolError(port.CodeInvalidArgument, tool+" takes an approval_id"), nil
 	}
 	ask := g.core.ApprovalStatus
-	if tool == toolApprovalCancel {
+	if tool == port.ToolApprovalCancel {
 		ask = g.core.ApprovalCancelByAgent
 	}
 	out, err := ask(ctx, p, port.ApprovalID(a.ApprovalID))
@@ -101,7 +101,7 @@ func (g *Gateway) approval(ctx context.Context, p port.Principal, d *deliveries,
 	if err != nil {
 		return nil, g.failure(err)
 	}
-	if tool == toolApprovalCancel && cancelled(out) {
+	if tool == port.ToolApprovalCancel && cancelled(out) {
 		return structured(map[string]any{"status": "cancelled", "approval_id": a.ApprovalID}), nil
 	}
 	owed(d, out)

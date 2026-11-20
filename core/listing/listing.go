@@ -13,7 +13,7 @@ import (
 var (
 	reverseDNS = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+/[a-zA-Z0-9._-]+$`)
 	grpcName   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*_[A-Za-z_][A-Za-z0-9_]*$`)
-	kinds      = []port.Kind{port.KindMCPRemote, port.KindMCPPackage, port.KindRESTDeclarative, port.KindGRPCDeclarative}
+	kinds      = []port.Kind{port.KindMCPRemote, port.KindMCPPackage, port.KindRESTDeclarative, port.KindGRPCDeclarative, port.KindSkill}
 )
 
 // Lint returns every problem of a manifest; requireDigest is listing.requireDigest (§14).
@@ -62,6 +62,8 @@ func Lint(m port.Manifest, requireDigest bool) []port.Finding {
 		}
 	case port.KindGRPCDeclarative:
 		lintGRPC(m.GRPC, requireDigest, bad)
+	case port.KindSkill:
+		lintSkill(m.Skill, bad)
 	}
 	return out
 }

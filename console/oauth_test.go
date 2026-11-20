@@ -488,7 +488,7 @@ func TestRedirectURIsAreLoopbackOrAppSchemes(t *testing.T) {
 	for raw, want := range map[string]bool{
 		"http://127.0.0.1:33418/": true, "http://127.0.0.1/callback": true, "http://localhost:8787/callback": true, "http://[::1]:9/cb": true,
 		"cursor://anysphere.cursor-mcp/oauth/callback": true, "vscode://vscode.github-authentication/did-authenticate": true, "com.example.app:/cb": true,
-		"https://vscode.dev/redirect": false, "http://example.com/cb": false, "http://127.0.0.1.evil.example/cb": false, "javascript:alert(1)": false,
+		"https://vscode.dev/redirect": false, "https://antigravity.google/oauth-callback": true, "https://antigravity.google/oauth-callback?x=1": false, "https://antigravity.google/other": false, "http://example.com/cb": false, "http://127.0.0.1.evil.example/cb": false, "javascript:alert(1)": false,
 		"data:text/html,x": false, "file:///tmp/x": false, "http://u:p@127.0.0.1/cb": false, "http://127.0.0.1/cb#frag": false, "/relative": false,
 	} {
 		if got := console.RedirectAllowed(raw); got != want {

@@ -8,7 +8,7 @@ import { CONTROL } from "./styles";
 /** One choice of a `Select`: the value it sets, the text it shows and an optional leading icon. */
 export type SelectOption<T extends string> = { value: T; text: string; icon?: ReactNode };
 
-type SelectProps<T extends string> = { label: string; value: T | undefined; options: readonly SelectOption<T>[]; onChange(value: T): void; disabled?: boolean; className?: string };
+type SelectProps<T extends string> = { label: string; value: T | undefined; options: readonly SelectOption<T>[]; onChange(value: T): void; disabled?: boolean; placeholder?: string; className?: string };
 
 const PLACED = ["--select-top", "--select-bottom", "--select-left", "--select-width", "--select-room"];
 
@@ -28,8 +28,8 @@ const reveal = (row: HTMLElement | null) => row?.scrollIntoView({ block: "neares
 
 const within = (target: EventTarget | null, ...elements: (HTMLElement | null)[]) => target instanceof Node && elements.some((element) => element?.contains(target));
 
-/** The one dropdown, controlled as a native select: the field at control height with the chosen option and a chevron, opening a list in raised ink under it, or over it near the bottom, or as a sheet from the bottom on a phone. The row under the keyboard or the pointer is paper at 10%, the chosen one has a check, and past eight options a filter tops the list, focused at once only with a fine pointer so a phone's keyboard does not cover the list. The keyboard is the select-only combobox's: the arrows, Home, End, typing a name, Enter or Space to choose, Escape to close; the list closes on a click or focus outside it and follows its field as the page scrolls. */
-export function Select<T extends string>({ label, value, options, onChange, disabled = false, className = "" }: SelectProps<T>) {
+/** The one dropdown, controlled as a native select (with no value it shows `placeholder`, a dash unless given, so it can also list actions): the field at control height with the chosen option and a chevron, opening a list in raised ink under it, or over it near the bottom, or as a sheet from the bottom on a phone. The row under the keyboard or the pointer is paper at 10%, the chosen one has a check, and past eight options a filter tops the list, focused at once only with a fine pointer so a phone's keyboard does not cover the list. The keyboard is the select-only combobox's: the arrows, Home, End, typing a name, Enter or Space to choose, Escape to close; the list closes on a click or focus outside it and follows its field as the page scrolls. */
+export function Select<T extends string>({ label, value, options, onChange, disabled = false, placeholder = "—", className = "" }: SelectProps<T>) {
   const t = useT();
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -132,7 +132,7 @@ export function Select<T extends string>({ label, value, options, onChange, disa
         className={`${CONTROL} group inline-flex items-center gap-2 text-left disabled:opacity-50 ${className}`}
       >
         {chosen?.icon}
-        <span className={`min-w-0 flex-1 truncate ${chosen ? "" : "text-muted"}`}>{chosen?.text ?? "—"}</span>
+        <span className={`min-w-0 flex-1 truncate ${chosen ? "" : "text-muted"}`}>{chosen?.text ?? placeholder}</span>
         <Icon name="chevron" className="size-4 text-muted transition-transform duration-200 ease-(--ease-glide) group-aria-expanded:rotate-180" />
       </button>
       <div

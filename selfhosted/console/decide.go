@@ -172,7 +172,7 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	return v, lost, nil
 }
 
-// allowAfterRun turns the approval's function or skill on once its approved call has run, since replacing the row earlier would cancel that run.
+// allowAfterRun turns the approval's function or skill on once its approved call has run, since replacing the row earlier would cancel that run, and clears the calling key's narrowing of that function.
 func (c *Console) allowAfterRun(v ApprovalView) {
 	ctx, cancel := context.WithTimeout(context.Background(), allowWait)
 	defer cancel()
@@ -191,8 +191,8 @@ func (c *Console) allowAfterRun(v ApprovalView) {
 	var err error
 	if v.Skill {
 		err = c.SetSkillAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), AccessOn)
-	} else {
-		err = c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn)
+	} else if err = c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn); err == nil {
+		err = c.SetProfileAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), v.approval.Function, AccessOn)
 	}
 	if err != nil {
 		c.logger().Warn("always allow", "approval", v.ID, "error", err)

@@ -1,12 +1,16 @@
 package console_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
 	storememory "github.com/versatile-sh/connector-engine/store/memory"
 )
@@ -40,9 +44,9 @@ func (s *stack) choices() map[string]map[string]console.Access {
 	return out
 }
 
-func freshOwner(t *testing.T) *stack {
+func freshOwner(t *testing.T, tweaks ...func(*config.Config)) *stack {
 	t.Helper()
-	s := openStack(t, t.TempDir(), storememory.New())
+	s := openStack(t, t.TempDir(), storememory.New(), tweaks...)
 	s.b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": ownerPassword}, nil)
 	s.signIn()
 	return s
@@ -145,5 +149,183 @@ func TestASharedSetupAddsToAnInstallWithoutChangingWhatIsThere(t *testing.T) {
 	}
 	if _, ok := got["mine"]; !ok || len(got) != 5 {
 		t.Fatalf("after the setup: %v", got)
+	}
+}
+
+func TestASharedSetupCarriesEachKeyProfile(t *testing.T) {
+	src := profiledStack(t)
+	for _, name := range []string{"alpha", "beta", "gamma"} {
+		src.mint(name)
+	}
+	src.narrow("alpha", "lookup", console.AccessOff)
+	src.mode(console.ProfileOff, "beta")
+	file := src.exportSetup()
+	if strings.Contains(string(file), "gamma") || strings.Contains(string(file), "newKeysOff") {
+		t.Fatalf("the setup:\n%s", file)
+	}
+
+	dst := profiled{stack: freshOwner(t, personRelays)}
+	beta := dst.mint("beta")
+	var res console.SetupResult
+	status, raw := dst.upload("/api/backup/import", file, "")
+	if err := json.Unmarshal(raw, &res); status != http.StatusOK || err != nil || len(res.Failed) != 0 {
+		t.Fatalf("import: %d %s", status, raw)
+	}
+	var conns struct{ Connectors []console.ConnectorSummary }
+	dst.b.ok("GET", "/api/connectors", nil, &conns)
+	dst.conn = conns.Connectors[0].ID
+	alpha, delta := dst.mint("alpha"), dst.mint("delta")
+	got := map[string]console.Profile{}
+	for _, p := range dst.summary().Profiles {
+		got[p.Agent] = p
+	}
+	if p := got["alpha"]; p.Mode != console.ProfileCustom || p.Overrides["lookup"] != console.AccessOff {
+		t.Errorf("alpha, made after the import: %+v", p)
+	}
+	if got["beta"].Mode != console.ProfileOff || got["delta"].Mode != console.ProfileFollow {
+		t.Errorf("beta, made before the import, and a new key: %+v", got)
+	}
+	if got := toolsOf(t, alpha); !slices.Equal(got, []string{"file"}) {
+		t.Errorf("alpha lists %v", got)
+	}
+	if len(toolsOf(t, beta)) != 0 || len(toolsOf(t, delta)) != 2 {
+		t.Error("beta lists the connector's tools, or delta does not")
+	}
+}
+
+func (p *profiled) importSetup(file []byte) {
+	p.t.Helper()
+	var res console.SetupResult
+	status, raw := p.upload("/api/backup/import", file, "")
+	if err := json.Unmarshal(raw, &res); status != http.StatusOK || err != nil || len(res.Failed) != 0 {
+		p.t.Fatalf("import: %d %s", status, raw)
+	}
+	var conns struct{ Connectors []console.ConnectorSummary }
+	p.b.ok("GET", "/api/connectors", nil, &conns)
+	p.conn = conns.Connectors[0].ID
+}
+
+func TestNewKeysStartOffEvenWithAWaitingProfile(t *testing.T) {
+	src := profiledStack(t)
+	src.mint("alpha")
+	src.narrow("alpha", "lookup", console.AccessOff)
+	plain := src.exportSetup()
+	src.b.ok("PUT", "/api/connectors/"+src.conn+"/new-keys", map[string]bool{"off": true}, nil)
+	startOff := src.exportSetup()
+	if !strings.Contains(string(startOff), "newKeysOff: true") {
+		t.Fatalf("the setup:\n%s", startOff)
+	}
+
+	t.Run("a setup whose new keys start off leaves no profile waiting", func(t *testing.T) {
+		dst := profiled{stack: freshOwner(t, personRelays)}
+		dst.importSetup(startOff)
+		if w := dst.summary().Waiting; len(w) != 0 {
+			t.Fatalf("waiting %+v", w)
+		}
+		if p := dst.profile(dst.mint("alpha").Agent); p.Mode != console.ProfileOff {
+			t.Fatalf("alpha: %+v", p)
+		}
+	})
+
+	t.Run("making new keys start off drops the profiles waiting there", func(t *testing.T) {
+		dst := profiled{stack: freshOwner(t, personRelays)}
+		dst.importSetup(plain)
+		if w := dst.summary().Waiting; len(w) != 1 || w[0].Agent != "alpha" || w[0].Mode != console.ProfileCustom {
+			t.Fatalf("waiting %+v", w)
+		}
+		dst.b.ok("PUT", "/api/connectors/"+dst.conn+"/new-keys", map[string]bool{"off": true}, nil)
+		if w := dst.summary().Waiting; len(w) != 0 {
+			t.Fatalf("still waiting %+v", w)
+		}
+		if p := dst.profile(dst.mint("alpha").Agent); p.Mode != console.ProfileOff {
+			t.Fatalf("alpha: %+v", p)
+		}
+	})
+
+	t.Run("a waiting profile is cleared by hand", func(t *testing.T) {
+		dst := profiled{stack: freshOwner(t, personRelays)}
+		dst.importSetup(plain)
+		dst.b.ok("DELETE", "/api/connectors/"+dst.conn+"/waiting/alpha", nil, nil)
+		if w := dst.summary().Waiting; len(w) != 0 {
+			t.Fatalf("still waiting %+v", w)
+		}
+		if p := dst.profile(dst.mint("alpha").Agent); p.Mode != console.ProfileFollow {
+			t.Fatalf("alpha: %+v", p)
+		}
+	})
+
+	t.Run("a profile names a key as a key name is written", func(t *testing.T) {
+		dst := profiled{stack: freshOwner(t, personRelays)}
+		dst.importSetup(bytes.Replace(plain, []byte("key: alpha"), []byte("key: Alpha"), 1))
+		if p := dst.profile(dst.mint("alpha").Agent); p.Mode != console.ProfileCustom {
+			t.Fatalf("alpha: %+v", p)
+		}
+	})
+
+	t.Run("a setup refuses a profile that follows or asks on instructions", func(t *testing.T) {
+		dst := freshOwner(t, personRelays)
+		for name, file := range map[string][]byte{
+			"follow":              bytes.Replace(plain, []byte("mode: custom"), []byte("mode: follow"), 1),
+			"ask on instructions": bytes.Replace(plain, []byte("lookup: \"off\""), []byte(`"instructions:server": ask`), 1),
+		} {
+			if status, raw := dst.upload("/api/backup/inspect", file, ""); status != http.StatusBadRequest {
+				t.Errorf("%s: %d %s\n%s", name, status, raw, file)
+			}
+		}
+	})
+}
+
+func TestAWaitingProfileNeverStopsItsKeyBeingMade(t *testing.T) {
+	src := profiledStack(t)
+	src.mint("beta")
+	src.narrow("beta", "lookup", console.AccessAsk)
+	src.b.ok("PUT", "/api/connectors/"+src.conn+"/functions/lookup", map[string]string{"access": "off"}, nil)
+	file := src.exportSetup()
+
+	dst := profiled{stack: freshOwner(t, personRelays)}
+	if status, raw := dst.upload("/api/backup/import", file, ""); status != http.StatusOK {
+		t.Fatalf("import: %d %s", status, raw)
+	}
+	var conns struct{ Connectors []console.ConnectorSummary }
+	dst.b.ok("GET", "/api/connectors", nil, &conns)
+	dst.conn = conns.Connectors[0].ID
+	beta := dst.mint("beta")
+	if p := dst.profile("beta"); p.Mode != console.ProfileCustom || p.Overrides["lookup"] != console.AccessAsk {
+		t.Fatalf("beta keeps its dormant override: %+v", p)
+	}
+	if got := toolsOf(t, beta); !slices.Equal(got, []string{"file"}) {
+		t.Fatalf("beta lists %v", got)
+	}
+}
+
+type refuseOverrides struct{ next http.RoundTripper }
+
+func (r refuseOverrides) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodPost && req.URL.Path == "/v1/grants" && req.Body != nil {
+		raw, _ := io.ReadAll(req.Body)
+		req.Body = io.NopCloser(bytes.NewReader(raw))
+		if bytes.Contains(raw, []byte(`"mode":"deny"`)) {
+			return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{"code":"internal","detail":"refused"}`)), Header: http.Header{}, Request: req}, nil
+		}
+	}
+	return r.next.RoundTrip(req)
+}
+
+func TestAConnectorWhoseProfilesFailIsReportedOnce(t *testing.T) {
+	src := profiledStack(t)
+	src.mint("alpha")
+	src.narrow("alpha", "lookup", console.AccessOff)
+	file := src.exportSetup()
+
+	dst := profiled{stack: freshOwner(t, personRelays)}
+	dst.mint("alpha")
+	dst.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: refuseOverrides{next: http.DefaultTransport}}
+	var res console.SetupResult
+	status, raw := dst.upload("/api/backup/import", file, "")
+	if err := json.Unmarshal(raw, &res); status != http.StatusOK || err != nil {
+		t.Fatalf("import: %d %s", status, raw)
+	}
+	if _, failed := res.Failed["notes"]; !failed || slices.Contains(res.Added, "notes") {
+		t.Fatalf("result %+v", res)
 	}
 }

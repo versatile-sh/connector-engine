@@ -3,23 +3,19 @@ import { useState } from "react";
 import { errorText, type Connector } from "../api";
 import { hrefOf } from "../activity/activity";
 import { useT } from "../i18n/I18nProvider";
-import { removeConnector, setFunctionAccess } from "../mutations";
+import { removeConnector } from "../mutations";
 import { connectorsQuery } from "../queries";
-import { navigate } from "../router";
+import { navigate, useLocation } from "../router";
 import { Display } from "../ui/Display";
 import { Arrow, Icon } from "../ui/Icon";
-import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
-import { CAPTION, PANEL, QUIET_LINK, SKELETON, SKELETON_LINE, TITLE, WELL, button } from "../ui/styles";
+import { CAPTION, PANEL, QUIET_LINK, SKELETON, SKELETON_LINE, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
-import { AccessPicker } from "./AccessPicker";
+import { ConnectorChoices } from "./ConnectorChoices";
 import { ConnectorIcon } from "./ConnectorIcon";
-import { ConnectorItems } from "./ConnectorItems";
 import { Credentials } from "./Credentials";
-import { ChoiceRow } from "./ChoiceRow";
-import { KindLabel } from "./KindLabel";
-import { accessCounts, serverHost } from "./summary";
+import { serverHost } from "./summary";
 
 function Back() {
   const t = useT();
@@ -35,73 +31,6 @@ function Back() {
       <Arrow back />
       {t("detail.back")}
     </a>
-  );
-}
-
-const TONE = { on: "paper", ask: "lime", off: "muted" } as const;
-
-function Functions({ connector }: { connector: Connector }) {
-  const t = useT();
-  const setAccess = useMutation(setFunctionAccess);
-  const functions = connector.functions ?? [];
-  const counts = accessCounts(functions);
-  const pending = (name: string) => setAccess.isPending && setAccess.variables.name === name;
-  return (
-    <section aria-labelledby="functions-title" className="min-w-0">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h2 id="functions-title" className={TITLE}>
-          {t("detail.functions")}
-        </h2>
-        <span className="flex flex-wrap gap-x-3">
-          <Tag>{functions.length}</Tag>
-          {(["on", "ask", "off"] as const).map((access) =>
-            counts[access] > 0 ? (
-              <Tag key={access} tone={TONE[access]}>
-                {t(`access.count.${access}`, { count: counts[access] })}
-              </Tag>
-            ) : null,
-          )}
-        </span>
-      </div>
-      <p role="alert" className="mt-2 text-sm text-amber-400 empty:hidden">
-        {setAccess.isError ? errorText(setAccess.error) : ""}
-      </p>
-      {functions.length === 0 ? (
-        <p className="py-6 text-sm text-muted">{t("detail.none")}</p>
-      ) : (
-        <LongList rows={functions} textOf={(fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`} label={t("detail.filter")}>
-          {(shown) => (
-            <ul className={`${WELL} mt-3`}>
-              {shown.map((fn) => (
-                <ChoiceRow
-                  key={fn.name}
-                  name={fn.name}
-                  title={fn.title}
-                  description={fn.description}
-                  flags={
-                    <>
-                      <KindLabel kind={fn.kind} />
-                      {fn.state !== "active" ? (
-                        <Tag tone="amber" dot title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
-                          {fn.state}
-                        </Tag>
-                      ) : null}
-                    </>
-                  }
-                >
-                  <AccessPicker
-                    name={fn.name}
-                    value={pending(fn.name) ? setAccess.variables?.access : fn.access}
-                    disabled={pending(fn.name)}
-                    onChange={(access) => setAccess.mutate({ connector: connector.id, name: fn.name, access })}
-                  />
-                </ChoiceRow>
-              ))}
-            </ul>
-          )}
-        </LongList>
-      )}
-    </section>
   );
 }
 
@@ -126,9 +55,10 @@ function Remove({ connector, remove, onClose }: { connector: Connector; remove: 
   );
 }
 
-/** One connector in full: who it is, every function and item with its access, its credentials, and its removal behind a confirmation. */
+/** One connector in full: who it is, every function and item with its access for the default or one key's profile, its one credential every key shares, and its removal behind a confirmation. */
 export function ConnectorDetail({ id }: { id: string }) {
   const t = useT();
+  const { query } = useLocation();
   const connectors = useQuery(connectorsQuery);
   const [removing, setRemoving] = useState(false);
   const remove = useMutation(removeConnector);
@@ -195,12 +125,9 @@ export function ConnectorDetail({ id }: { id: string }) {
         </div>
       </header>
       <article className={`${PANEL} p-4 sm:p-8 xl:p-10`}>
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] xl:gap-14">
-          <div className="flex min-w-0 flex-col gap-10">
-            <Functions connector={connector} />
-            <ConnectorItems connector={connector} />
-          </div>
-          <aside className="flex flex-col gap-8 lg:self-start lg:tall:sticky lg:tall:top-24">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
+          <ConnectorChoices connector={connector} agent={query.get("profile")} />
+          <aside className="flex flex-col gap-6 lg:self-start lg:tall:sticky lg:tall:top-24">
             <Credentials connector={connector} />
             <dl className="grid gap-4 text-sm">
               {facts.map((fact) => (

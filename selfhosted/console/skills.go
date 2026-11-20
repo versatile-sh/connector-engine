@@ -59,15 +59,14 @@ func fileViews(files []port.SkillFile) []SkillFileView {
 	return out
 }
 
-func (c *Console) liveAgents() []Agent {
-	var out []Agent
-	for _, a := range c.State.Agents() {
-		if a.ExpiresAt.After(time.Now()) {
-			out = append(out, a)
-		}
-	}
+func (c *Console) knownAgents() []Agent {
+	out := c.State.Agents()
 	slices.SortFunc(out, func(a, b Agent) int { return strings.Compare(a.Name, b.Name) })
 	return out
+}
+
+func (c *Console) liveAgents() []Agent {
+	return slices.DeleteFunc(c.knownAgents(), func(a Agent) bool { return !a.ExpiresAt.After(time.Now()) })
 }
 
 func httpsOnly(raw string) string {
@@ -166,14 +165,14 @@ func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access
 	return results[0].Err
 }
 
-// KeyResult is what one access key's choice on a skill came to: set when Err is nil.
-type KeyResult struct {
-	Agent string
-	Err   error
+// Result is what one change of a batch came to, for an access key or a function or item: done when Err is nil.
+type Result struct {
+	Name string
+	Err  error
 }
 
 // SetSkillAccessAll sets one access on a skill for the named access keys, or every live key when none is named, and answers each key's result in order.
-func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []string, access Access) ([]KeyResult, error) {
+func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []string, access Access) ([]Result, error) {
 	if !access.Valid() {
 		return nil, invalid("access %q is not off, on or ask", access)
 	}
@@ -186,21 +185,35 @@ func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []st
 	} else if !skill || !v.RemovedAt.IsZero() {
 		return nil, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
 	}
-	agents := c.liveAgents()
+	return eachKey(c.liveAgents(), names, func(a Agent) error { return c.bindSkill(ctx, conn, a, access) }), nil
+}
+
+func noKey(name string) error {
+	return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}
+}
+
+func agentNamed(agents []Agent, name string) (Agent, error) {
+	if i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == name }); i >= 0 {
+		return agents[i], nil
+	}
+	return Agent{}, noKey(name)
+}
+
+func eachKey(agents []Agent, names []string, set func(Agent) error) []Result {
 	if len(names) == 0 {
 		for _, a := range agents {
 			names = append(names, a.Name)
 		}
 	}
-	results := make([]KeyResult, 0, len(names))
+	results := make([]Result, 0, len(names))
 	for _, name := range names {
-		r := KeyResult{Agent: name, Err: &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}}
-		if i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == name }); i >= 0 {
-			r.Err = c.bindSkill(ctx, conn, agents[i], access)
+		a, err := agentNamed(agents, name)
+		if err == nil {
+			err = set(a)
 		}
-		results = append(results, r)
+		results = append(results, Result{Name: name, Err: err})
 	}
-	return results, nil
+	return results
 }
 
 // Skills lists the workspace's installed skills with each access key's choice and the required connectors not installed.

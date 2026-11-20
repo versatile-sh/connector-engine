@@ -1,5 +1,5 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, apiFile, setCsrf, type Access, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
+import { api, apiFile, setCsrf, type Access, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
 import { accountQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
@@ -60,6 +60,46 @@ export const setFunctionAccess = mutationOptions({
 /** Sets one item of a connector to off, on or ask, by name in the body since names hold `/` and `:`. */
 export const setItemAccess = mutationOptions({
   mutationFn: ({ connector, name, access }: { connector: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "items")}`, { name, access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Sets the named access keys, or every key, to off, follow or custom on a connector, in one request that answers each key. */
+export const setProfileMode = mutationOptions({
+  mutationFn: ({ connector, mode, keys }: { connector: string; mode: ProfileMode; keys?: string[] }) => api<{ keys: KeyResult[] }>("PUT", `/api/connectors/${at(connector, "profiles")}`, keys ? { mode, keys } : { mode }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** What one function or item of a batch came to: done without an error. */
+export type ItemResult = { name: string; error?: string; code?: string };
+
+/** Sets many functions of a connector to off, on or ask for every key that follows it, in one request that answers each. */
+export const setFunctionsAccess = mutationOptions({
+  mutationFn: ({ connector, names, access }: { connector: string; names: readonly string[]; access: Access }) => api<{ items: ItemResult[] }>("PUT", `/api/connectors/${at(connector, "functions")}`, { names, access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Narrows many functions or items for one access key, or resets them to the connector's own access, in one request that answers each; names go in the body since item names hold `/` and `:`. */
+export const setProfileAccess = mutationOptions({
+  mutationFn: ({ connector, agent, names, access }: { connector: string; agent: string; names: readonly string[]; access: Access | "default" }) =>
+    api<{ items: ItemResult[] }>("PUT", `/api/connectors/${at(connector, "profiles", agent)}`, access === "default" ? { names, reset: true } : { names, access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Gives other access keys the profile one key has on a connector, in one request that answers each key. */
+export const copyProfile = mutationOptions({
+  mutationFn: ({ connector, from, keys }: { connector: string; from: string; keys: readonly string[] }) => api<{ keys: KeyResult[] }>("POST", `/api/connectors/${encodeURIComponent(connector)}/profiles:copy`, { from, keys }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Forgets a setup's profile waiting on a connector for an access key not made yet. */
+export const dropWaiting = mutationOptions({
+  mutationFn: ({ connector, agent }: { connector: string; agent: string }) => api("DELETE", `/api/connectors/${at(connector, "waiting", agent)}`),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Makes the access keys made from now on start off on a connector, or follow it. */
+export const setNewKeysOff = mutationOptions({
+  mutationFn: ({ connector, off }: { connector: string; off: boolean }) => api("PUT", `/api/connectors/${at(connector, "new-keys")}`, { off }),
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 

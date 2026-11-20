@@ -43,6 +43,37 @@ AI apps follow the MCP authorization spec: the app registers itself, opens the c
 
 The review shows the origin, title, icon, publisher and each function's proposed choice, after sign-in. Nothing is installed before you confirm.
 
+## Access keys on a connector
+
+A connector keeps one credential that every key shares; keys differ only in permissions. The **Profile** picker above a connector's functions shows **Default (all keys)**, the connector's own off, on or ask that every key follows, or one key's profile. `?profile=<key>` in the address opens that key's.
+
+| Mode | The key | Engine rows |
+|---|---|---|
+| Off | cannot see the connector: no tool, prompt or resource is listed, and a call answers like an unknown tool | no binding |
+| Follow default | gets the default choices and follows every change to them | a binding and the agent wildcards (`*`, `instructions:*`, `prompt:*`, `res:*`) |
+| Custom | narrows some functions and items below the default; every other row follows it | the same, plus an agent-scoped `fn:` or item row for each narrowing |
+
+- An override can only narrow. The engine takes the stricter of the workspace row and the key's row, so a key never gets more than the default; choices above it show but cannot be taken. Choosing the default's own value, or **Reset to default**, removes the override.
+- An override is kept while the default drops below it, and applies again when the default comes back.
+- A row whose engine answer differs from the console's choice says so, with the engine's reason (for example `forced_ask` from the exposure check). The console reads it from `/v1/access:explain`.
+- Off unbinds the key, which drops its overrides; turning it back to custom starts from the default.
+- **Every key** sets all keys to off or the default in one request, which reports each key's result; either drops every key's overrides.
+- Off or the default asks first, in place, when it would drop overrides; with none to lose it applies at once.
+- **New keys start off** makes keys made from then on start off on this connector; by default they follow it. Renewing a key keeps its profile on every connector.
+- Always allow on a held call also removes the calling key's override of that function.
+- The **Access** page lists, for each key, every connector with its mode and a link to its profile.
+- Many at once: tick functions (or select all the filter shows), then set them to off, on or ask, or back to the default in a key's profile, in one request that says which were not changed. The **More…** menu holds the class presets (all reads on, all changes ask, all deletes off) for the profile shown, and copies a key's profile: from another key onto the one shown, or from the default onto several keys at once.
+
+| Console endpoint | Does |
+|---|---|
+| `PUT /api/connectors/{id}/functions` | `{"names": [...], "access": ...}` sets many functions for the default in one request; answers each name's result |
+| `PUT /api/connectors/{id}/profiles` | `{"mode": "off" \| "follow" \| "custom", "keys": [...]}`, every key when `keys` is empty; answers each key's result |
+| `PUT /api/connectors/{id}/profiles/{key}` | `{"names": [...], "access": ...}` narrows functions or items for one key, or `{"names": [...], "reset": true}` returns them to the default; answers each name's result |
+| `POST /api/connectors/{id}/profiles:copy` | `{"from": key, "keys": [...]}` gives other keys one key's mode and overrides; answers each key's result |
+| `GET /api/connectors/{id}/profiles/{key}` | the engine's answer for that key on each function and item |
+| `PUT /api/connectors/{id}/new-keys` | `{"off": true}` makes new keys start off |
+| `DELETE /api/connectors/{id}/waiting/{key}` | forgets a setup's profile waiting for a key not made yet |
+
 ## Approvals
 
 A function set to "ask" holds the call until a person decides. Besides the console's Approvals page, an answer can come from:
@@ -92,7 +123,7 @@ Account → **Export** offers two files.
 | Mode | File | Holds | For |
 |---|---|---|---|
 | Full backup, with credentials | `connector-engine-backup-<UTC time>.cebak` | everything: the engine's rows and keys, the console's state, keys and activity | moving or restoring your own install |
-| Shareable setup, without credentials | `connector-engine-setup-<UTC time>.setup.yaml` | each connector's source and choices, the skills with their catalog address, pinned digest and default access, the kinds of notification channel | handing your setup to a friend or a teammate |
+| Shareable setup, without credentials | `connector-engine-setup-<UTC time>.setup.yaml` | each connector's source and choices, whether its new keys start off and the profile of each key that does not follow it, by key name; the skills with their catalog address, pinned digest and default access, the kinds of notification channel | handing your setup to a friend or a teammate |
 
 A **full backup** holds every credential of the install: provider sign-ins and API keys, the access keys and the root keys, the account and its activity. The console asks you to confirm that, and asks for your password and for a passphrase, twice. `make export` prints the same warning and asks y/N (`YES=1` skips the question). It writes to `~/connector-engine-backups/` and keeps the 7 newest.
 
@@ -112,8 +143,10 @@ Account → **Import**, or **Restore from a backup** on the first-run screen, or
   - Importing the same backup again gives the same result.
 - Signed in, a full import asks for your password again. The first-run restore works only while no owner account exists.
 - A **setup** shows what it would add, then adds each connector and skill through the normal import: the server is probed, functions are pinned, and a skill whose digest changed is refused. An entry that is already installed keeps its choices, and nothing is deleted. Afterwards, sign in to each added connector.
+  - The review lists each new connector's key profiles by key name, and whether its new keys start off.
+  - A key profile applies at once to a key of that name. A profile for a key not made yet waits in the console's state and applies when a key of that name is made, unless the connector's new keys start off; the connector's page lists the waiting profiles and clears them one by one.
 
-A setup never holds credentials, tokens, API keys, OAuth clients, access keys, root keys, account data, activity or device pairings.
+A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, in profiles), root keys, account data, activity or device pairings.
 - Every address loses its user name and password, its query and its fragment.
 - An address whose path holds a token-like segment (20 or more letters, digits, `-` or `_`, with a digit) is left out.
 - The file lists each removal under `stripped`, naming only the site. A skill imported before the console recorded catalog addresses is left out and listed there too.

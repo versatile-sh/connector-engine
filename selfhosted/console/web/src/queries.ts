@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { apiQueryOf, type ActivityFilter } from "./activity/activity";
-import { api, setCsrf, type Account, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type NotificationsData, type Session, type Skill } from "./api";
+import { api, setCsrf, type Account, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type Session, type Skill } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -21,6 +21,14 @@ export const connectorsQuery = queryOptions({
   queryFn: () => api<{ connectors: Connector[] }>("GET", "/api/connectors"),
   select: (data) => data.connectors,
 });
+
+/** What the engine gives one access key on each function and item of a connector; its key sits under the connectors' one, so every connector change reads it again. */
+export const profileEffectsQuery = (connector: string, agent: string) =>
+  queryOptions({
+    queryKey: [...connectorsQuery.queryKey, connector, "effects", agent],
+    queryFn: () => api<{ effects: Effect[] }>("GET", `/api/connectors/${encodeURIComponent(connector)}/profiles/${encodeURIComponent(agent)}`),
+    select: (data) => data.effects,
+  });
 
 /** Every installed skill with each access key's choice. */
 export const skillsQuery = queryOptions({

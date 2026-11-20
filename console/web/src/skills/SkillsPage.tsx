@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { ImportDialog } from "../import/ImportDialog";
@@ -10,11 +10,10 @@ import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { button } from "../ui/styles";
-import { expandedOf, skillsHref, toggled } from "./expanded";
+import { expandedOf, skillsHref } from "./expanded";
 import { SkillCard } from "./SkillCard";
-import { useReflow } from "./useReflow";
 
-/** Every installed skill as a grid of compact cards; one at a time maximizes in place, named by `?skill=` so it survives a reload and Back. Import reads a skill link like a connector link. */
+/** Every installed skill as a grid of compact cards; one at a time opens in a dialog over the grid, named by `?skill=` so it survives a reload and Back closes it. Import reads a skill link like a connector link. */
 export function SkillsPage() {
   const t = useT();
   const { query } = useLocation();
@@ -22,7 +21,11 @@ export function SkillsPage() {
   const [importing, setImporting] = useState(false);
   const list = skills.data ?? [];
   const open = expandedOf(query, list);
-  const reflow = useReflow<HTMLUListElement>(open);
+  const pushed = useRef(false);
+  const close = () => {
+    if (pushed.current) window.history.back();
+    else navigate(skillsHref(query), { replace: true, keepScroll: true });
+  };
   return (
     <section aria-labelledby="page-title">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -60,16 +63,18 @@ export function SkillsPage() {
           </div>
         </section>
       ) : (
-        <ul ref={reflow.list} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((skill) => (
             <SkillCard
               key={skill.id}
               skill={skill}
+              href={skillsHref(query, skill.id)}
               open={skill.id === open}
-              onToggle={(pressed) => {
-                reflow.before(pressed);
-                navigate(skillsHref(query, toggled(open, skill.id)), { keepScroll: true });
+              onOpen={() => {
+                pushed.current = true;
+                navigate(skillsHref(query, skill.id), { keepScroll: true });
               }}
+              onClose={close}
             />
           ))}
         </ul>

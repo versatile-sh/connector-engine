@@ -308,8 +308,6 @@ export const en = {
   "skills.remove": "Remove",
   "skills.removeAsk": "Remove {name}? Your AI apps stop seeing it at once.",
   "skills.removeConfirm": "Remove skill",
-  "skills.maximize": "Maximize {name}",
-  "skills.minimize": "Minimize {name}",
   "import.skillChoose": "Review the skill",
   "import.skillChooseIntro": "What it carries, where it comes from, and who may load it.",
   "import.skillKeys": "For your {count} access keys",

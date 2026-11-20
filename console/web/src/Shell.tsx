@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api, setCsrf } from "./api";
 import { Wordmark } from "./Brand";
+import { Footer } from "./Footer";
 import type { MessageKey } from "./i18n";
 import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
@@ -30,7 +31,7 @@ const OAUTH: Record<string, MessageKey> = {
   failed: "oauth.failed",
 };
 
-const NAV_LINK = `bubble-word inline-flex h-9 shrink-0 items-center gap-2 px-3.5 text-sm font-semibold text-muted hover:bg-paper/8 hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${PRESS}`;
+const NAV_LINK = `inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm text-muted hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${PRESS}`;
 
 function Endpoint({ url }: { url: string }) {
   const t = useT();
@@ -60,7 +61,7 @@ function SetupProgress() {
   );
 }
 
-/** The frame of every signed-in page: the lit backdrop, the top bar with the sections, the setup progress, the endpoint, the language and sign-out, and the main landmark. */
+/** The frame of every signed-in page: the lit backdrop, the top bar with the sections, the setup progress, the endpoint, the language and sign-out, the main landmark and the site's footer. */
 export function Shell({ section, endpoint, children }: { section: Section; endpoint: string; children: ReactNode }) {
   const t = useT();
   const { path, query } = useLocation();
@@ -83,6 +84,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
         {t("app.skip")}
       </a>
       <header className="sticky top-0 z-30 border-b border-line bg-ink/85 backdrop-blur-md">
+        <div aria-hidden="true" className="light-lamp pointer-events-none absolute inset-x-0 -bottom-px mx-auto h-px w-1/3" />
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-5 sm:px-8">
           <a
             href="/"
@@ -130,6 +132,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           {children}
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

@@ -63,6 +63,9 @@ export const es: Record<MessageKey, string> = {
   "hub.pill": "Hub",
   "hub.title": "Explora más de 900 conectores listos en {where}",
   "hub.body": "Elige uno y pulsa Importar: se abre aquí ya completado.",
+  "footer.thesis": "Ejecuta donde sea. Ejecuta lo que sea.",
+  "footer.answer": "Sé versátil",
+  "footer.hub": "Hub de conectores",
 
   "paste.label": "URL del servidor MCP o enlace de instalación",
   "paste.submit": "Leer",

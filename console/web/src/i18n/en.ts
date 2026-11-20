@@ -61,6 +61,9 @@ export const en = {
   "hub.pill": "Hub",
   "hub.title": "Browse 900+ ready connectors at {where}",
   "hub.body": "Pick one and click Import: it opens here already filled.",
+  "footer.thesis": "Run anywhere. Run anything.",
+  "footer.answer": "Be versatile",
+  "footer.hub": "Connector hub",
 
   "paste.label": "MCP server URL or install link",
   "paste.submit": "Read",

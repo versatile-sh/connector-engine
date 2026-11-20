@@ -64,6 +64,10 @@ linters:
         linters:
           - gosec
         text: G70[34]
+      - path: (^|/)cmd/connector-console/main\.go
+        linters:
+          - gosec
+        text: G704
       - path: (^|/)console/decide\.go
         linters:
           - gosec

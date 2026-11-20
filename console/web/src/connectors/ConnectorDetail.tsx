@@ -7,8 +7,8 @@ import { removeConnector, setFunctionAccess } from "../mutations";
 import { connectorsQuery } from "../queries";
 import { navigate } from "../router";
 import { Bubble } from "../ui/Bubble";
-import { Field } from "../ui/Field";
 import { Arrow, Icon } from "../ui/Icon";
+import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { SKELETON, SURFACE, button } from "../ui/styles";
@@ -16,11 +16,9 @@ import { AccessPicker } from "./AccessPicker";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { ConnectorItems } from "./ConnectorItems";
 import { Credentials } from "./Credentials";
-import { FunctionRow } from "./FunctionRow";
+import { ChoiceRow } from "./ChoiceRow";
 import { KindLabel } from "./KindLabel";
 import { accessCounts, serverHost } from "./summary";
-
-const FILTER_FROM = 8;
 
 function Back() {
   const t = useT();
@@ -41,12 +39,10 @@ function Back() {
 
 function Functions({ connector }: { connector: Connector }) {
   const t = useT();
-  const [filter, setFilter] = useState("");
   const setAccess = useMutation(setFunctionAccess);
   const functions = connector.functions ?? [];
-  const needle = filter.trim().toLowerCase();
-  const shown = functions.filter((fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`.toLowerCase().includes(needle));
   const counts = accessCounts(functions);
+  const pending = (name: string) => setAccess.isPending && setAccess.variables.name === name;
   return (
     <section aria-labelledby="functions-title" className={`${SURFACE} min-w-0 p-5 sm:p-6`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -66,44 +62,43 @@ function Functions({ connector }: { connector: Connector }) {
           )}
         </div>
       </div>
-      {functions.length >= FILTER_FROM ? (
-        <Field label={t("detail.filter")} className="mt-4" type="search" mono value={filter} onChange={(event) => setFilter(event.target.value)} autoComplete="off" spellCheck={false} />
-      ) : null}
       <p role="alert" className="min-h-0 text-sm text-amber empty:hidden">
         {setAccess.isError ? errorText(setAccess.error) : ""}
       </p>
       {functions.length === 0 ? (
         <p className="py-6 text-sm text-muted">{t("detail.none")}</p>
-      ) : shown.length === 0 ? (
-        <p className="py-6 text-sm text-muted">{t("detail.noMatch")}</p>
       ) : (
-        <ul className="@container mt-2">
-          {shown.map((fn) => (
-            <FunctionRow
-              key={fn.name}
-              name={fn.name}
-              title={fn.title}
-              description={fn.description}
-              flags={
-                <>
-                  <KindLabel kind={fn.kind} />
-                  {fn.state !== "active" ? (
-                    <Bubble tone="amber" title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
-                      {fn.state}
-                    </Bubble>
-                  ) : null}
-                </>
-              }
-            >
-              <AccessPicker
-                name={fn.name}
-                value={setAccess.isPending && setAccess.variables.name === fn.name ? setAccess.variables.access : fn.access}
-                disabled={setAccess.isPending && setAccess.variables.name === fn.name}
-                onChange={(access) => setAccess.mutate({ connector: connector.id, name: fn.name, access })}
-              />
-            </FunctionRow>
-          ))}
-        </ul>
+        <LongList rows={functions} textOf={(fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`} label={t("detail.filter")}>
+          {(shown) => (
+            <ul className="mt-2">
+              {shown.map((fn) => (
+                <ChoiceRow
+                  key={fn.name}
+                  name={fn.name}
+                  title={fn.title}
+                  description={fn.description}
+                  flags={
+                    <>
+                      <KindLabel kind={fn.kind} />
+                      {fn.state !== "active" ? (
+                        <Bubble tone="amber" title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
+                          {fn.state}
+                        </Bubble>
+                      ) : null}
+                    </>
+                  }
+                >
+                  <AccessPicker
+                    name={fn.name}
+                    value={pending(fn.name) ? setAccess.variables?.access : fn.access}
+                    disabled={pending(fn.name)}
+                    onChange={(access) => setAccess.mutate({ connector: connector.id, name: fn.name, access })}
+                  />
+                </ChoiceRow>
+              ))}
+            </ul>
+          )}
+        </LongList>
       )}
     </section>
   );

@@ -1,27 +1,26 @@
 import type { Access, ProbedTool } from "../api";
 import { AccessPicker } from "../connectors/AccessPicker";
-import { FunctionRow } from "../connectors/FunctionRow";
+import { ChoiceRow } from "../connectors/ChoiceRow";
 import { KindLabel } from "../connectors/KindLabel";
 import { useT } from "../i18n/I18nProvider";
+import { LongList } from "../ui/LongList";
 
 /** The proposed access of every function a server lists, each one changeable before the install. */
 export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; accessOf(name: string, proposed: Access): Access; choose(name: string, access: Access): void }) {
   const t = useT();
   if (tools.length === 0) return <p className="py-6 text-sm text-muted">{t("import.noTools")}</p>;
   return (
-    <ul className="@container">
-      {tools.map((tool) => (
-        <FunctionRow
-          key={tool.name}
-          name={tool.name}
-          title={tool.title}
-          description={tool.description}
-          flags={<KindLabel kind={tool.kind} />}
-        >
-          <AccessPicker name={tool.name} value={accessOf(tool.name, tool.proposed)} onChange={(access) => choose(tool.name, access)} />
-        </FunctionRow>
-      ))}
-    </ul>
+    <LongList rows={tools} textOf={(tool) => `${tool.name} ${tool.title ?? ""} ${tool.description ?? ""}`} label={t("detail.filter")}>
+      {(shown) => (
+        <ul>
+          {shown.map((tool) => (
+            <ChoiceRow key={tool.name} name={tool.name} title={tool.title} description={tool.description} flags={<KindLabel kind={tool.kind} />}>
+              <AccessPicker name={tool.name} value={accessOf(tool.name, tool.proposed)} onChange={(access) => choose(tool.name, access)} />
+            </ChoiceRow>
+          ))}
+        </ul>
+      )}
+    </LongList>
   );
 }
 

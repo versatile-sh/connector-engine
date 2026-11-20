@@ -132,9 +132,13 @@ describe("mutations", () => {
   });
 
   describe("signOut", () => {
-    test("forgets every cached answer", async () => {
+    test("forgets every answer but the session, which it reads again", async () => {
       const { client } = await staleAfter(mutations.signOut, undefined);
-      assert.equal(client.getQueryCache().getAll().length, 0);
+      assert.deepEqual(
+        client.getQueryCache().getAll().map((query) => query.queryKey[0]),
+        [sessionQuery.queryKey[0]],
+      );
+      assert.equal(client.getQueryData(sessionQuery.queryKey), undefined);
     });
   });
 

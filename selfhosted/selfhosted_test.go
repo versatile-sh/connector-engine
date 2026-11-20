@@ -60,6 +60,9 @@ func TestThePersonProfileReachesLocalServersAndKeepsItsRetention(t *testing.T) {
 	if !cfg.Runtime.AllowPrivateHosts {
 		t.Fatal("the person profile refuses the local servers its console imports")
 	}
+	if !cfg.Server.Snapshot {
+		t.Fatal("the person profile does not serve the snapshot its console backs up")
+	}
 	week, quarter := 7*24*time.Hour, 90*24*time.Hour
 	if want := (config.Retention{Every: time.Hour, DeliveredEvents: week, IdempotencyKeys: week, Audit: quarter, Calls: quarter}); cfg.Retention != want {
 		t.Fatalf("person retention %+v, want %+v", cfg.Retention, want)

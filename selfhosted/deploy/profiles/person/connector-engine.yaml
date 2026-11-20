@@ -5,6 +5,7 @@ server:
   operatorListen: 0.0.0.0:8081
   publicURL: ""
   maxBodyBytes: 8388608
+  snapshot: true
 auth:
   audience: urn:connector-engine:local:mcp
   manageAudience: urn:connector-engine:local

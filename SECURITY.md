@@ -31,7 +31,8 @@ The engine is a policy point between AI apps and tool servers. It assumes the ag
 | What a function does | definitions pinned by RFC 8785 hash; a change or a new function is quarantined until a person accepts it |
 | Approval decisions | an approved call runs once; repeats attach to the same record; chat surfaces accept clicks only from the configured owner id; link tokens are single-use HMACs |
 | Upstream credentials and console secrets | envelope encryption with a key per tenant; destroying the key shreds the data; secrets are never returned by an API |
-| Tenant isolation | Postgres row-level security per tenant; a superuser database role is refused at boot |
+| Tenant isolation | Postgres row-level security per tenant; a superuser database role is refused at boot; the SQLite store of the install without Docker applies the same predicates in every query, checked by the cross-tenant matrix of `store/storetest` |
+| The install without Docker | a per-user 0700 data directory owned by its user, a 0600 database, and a control socket (export, import, reset-password) that serves only a peer of the same user |
 | The local console | listens on `127.0.0.1` only, with a Host allowlist, Origin checks and CSRF tokens; AI apps sign in with OAuth 2.1 and PKCE S256 |
 | Call arguments | the engine stores a hash; the console's activity log redacts likely secrets before writing |
 

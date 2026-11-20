@@ -80,7 +80,7 @@ The binary name and the flags below are a stable interface: the installers and t
 | `export` | `--data DIR`, `--out FILE`, `--setup`, `--yes` | writes a full encrypted backup (`.cebak`, asks a passphrase twice) or, with `--setup`, a shareable setup without credentials; the default file is dated, in `$BACKUP_DIR` or `~/connector-engine-backups` |
 | `import FILE` | `--data DIR`, `--yes` | shows what the file holds, asks, then restores it; a full backup replaces everything and the process restarts the engine and the console on the restored data |
 | `reset-password` | `--data DIR` | sets a new console password and signs every console session out |
-| `uninstall` | `--data DIR`, `--keep-data` or `--purge`, `--yes`, `--no-keychain` | stops the install; `--purge` also deletes the data directory (only one that holds an install) and the unlock key in the keychain; the binary itself is removed by its installer or by hand |
+| `uninstall` | `--data DIR`, `--keep-data` or `--purge`, `--yes`, `--no-keychain` | stops the install; `--purge` also deletes the data directory and the unlock key in the keychain, but only a real directory (not a symlink) whose entries are all part of an install; the binary itself is removed by its installer or by hand |
 
 `export`, `import` and `reset-password` reach the running process through its control socket, so the install must be up. Every command takes `--data`; the default comes from `$CN_DATA_DIR`, else the per-user data directory of the OS.
 
@@ -92,15 +92,15 @@ The binary name and the flags below are a stable interface: the installers and t
 | macOS | `~/Library/Application Support/connector-engine` |
 | Windows | `%AppData%\connector-engine` |
 
-The directory and its subdirectories are created with mode 0700, and `up` refuses one that group or others can open:
+The directory and its subdirectories are created with mode 0700, and `up` refuses one that group or others can open or that another user owns:
 
 | Path | Holds |
 | --- | --- |
-| `engine/store.db` (and `-wal`, `-shm`) | the engine's database: SQLite in WAL mode, `synchronous=FULL`, a 5 s busy timeout |
+| `engine/store.db` (and `-wal`, `-shm`) | the engine's database, mode 0600: SQLite in WAL mode, `synchronous=FULL`, a 5 s busy timeout |
 | `engine/secrets/` | the engine's key store: the root key, the key ring and the local issuer's signing keys |
 | `console/` | the owner account, access keys and agents, OAuth clients, activity, settings, and the console's key store in `console/secrets/` |
 | `operator-token` | the token the console uses on the engine's operator listener, written once with mode 0600 |
-| `control.sock` | the control socket of the running process, mode 0600; it also refuses a second `up` on the same directory |
+| `control.sock` | the control socket of the running process, mode 0600; it serves only a peer of the same user (`SO_PEERCRED` on Linux, `LOCAL_PEERCRED` on macOS) and refuses a second `up` on the same directory. Windows has no peer credentials on AF_UNIX: the socket rests on the ACL of the data directory, private under `%AppData%`; keep a `CN_DATA_DIR` there private too |
 
 ### Network
 
@@ -108,7 +108,7 @@ The console listens on `127.0.0.1:7465` (`--port`). The engine's public and oper
 
 ### Keychain
 
-The unlock key lives in the OS keychain (macOS Keychain, Secret Service on Linux, DPAPI on Windows) under the service `connector-engine` and the account `local-<12 hex digits of the data directory's hash>`, so it never collides with a Docker install's account. The process reads it directly at start: no socket, no `docker exec`. A fresh root key is created wrapped; a plaintext root key left by an earlier run without a keychain is wrapped on the first start that finds one. Without a keychain (or with `--no-keychain`) the root keys stay plaintext files and the console shows the same warning as the Docker install; a wrapped root key never falls back to plaintext.
+The unlock key lives in the OS keychain (macOS Keychain, Secret Service on Linux, DPAPI on Windows) under the service `connector-engine` and the account `local-<12 hex digits of the data directory's hash>`, so it never collides with a Docker install's account. The process reads it directly at start: no socket, no `docker exec`. A fresh root key is created wrapped; a plaintext root key left by an earlier run without a keychain is wrapped on the first start that finds one. Without a keychain (or with `--no-keychain`) the root keys stay plaintext files and the console shows the same warning as the Docker install; a wrapped root key never falls back to plaintext, and a missing keychain item for a wrapped root key stops the start instead of minting a new key.
 
 ### Move a Docker install here
 

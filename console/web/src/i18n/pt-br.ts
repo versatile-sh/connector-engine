@@ -1,6 +1,6 @@
 import type { MessageKey } from "./en";
 
-/** O dicionário em português do Brasil. */
+/** The Brazilian Portuguese dictionary. */
 export const ptBR: Record<MessageKey, string> = {
   "app.loading": "Carregando o console",
   "app.failed": "O console não conseguiu falar com o servidor.",

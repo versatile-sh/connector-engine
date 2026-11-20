@@ -56,19 +56,20 @@ type StoredSession struct {
 }
 
 type stateFile struct {
-	Owner               *Owner                   `json:"owner,omitempty"`
-	Agents              map[string]Agent         `json:"agents,omitempty"`
-	Sessions            map[string]StoredSession `json:"sessions,omitempty"`
-	Revoked             map[string]time.Time     `json:"revoked,omitempty"`
-	OnboardingDismissed bool                     `json:"onboarding_dismissed,omitempty"`
-	Clients             map[string]OAuthClient   `json:"oauth_clients,omitempty"`
-	Refresh             map[string]RefreshGrant  `json:"oauth_refresh,omitempty"`
-	Spent               map[string]RefreshGrant  `json:"oauth_refresh_spent,omitempty"`
-	Notify              notifyState              `json:"notifications,omitzero"`
-	LastExport          time.Time                `json:"last_export,omitzero"`
-	Origins             map[string]Origin        `json:"origins,omitempty"`
-	NewKeysOff          map[string]bool          `json:"new_keys_off,omitempty"`
-	Pending             map[string][]Profile     `json:"pending_profiles,omitempty"`
+	Owner               *Owner                       `json:"owner,omitempty"`
+	Agents              map[string]Agent             `json:"agents,omitempty"`
+	Sessions            map[string]StoredSession     `json:"sessions,omitempty"`
+	Revoked             map[string]time.Time         `json:"revoked,omitempty"`
+	OnboardingDismissed bool                         `json:"onboarding_dismissed,omitempty"`
+	Clients             map[string]OAuthClient       `json:"oauth_clients,omitempty"`
+	Refresh             map[string]RefreshGrant      `json:"oauth_refresh,omitempty"`
+	Spent               map[string]RefreshGrant      `json:"oauth_refresh_spent,omitempty"`
+	Notify              notifyState                  `json:"notifications,omitzero"`
+	LastExport          time.Time                    `json:"last_export,omitzero"`
+	Origins             map[string]Origin            `json:"origins,omitempty"`
+	NewKeysOff          map[string]bool              `json:"new_keys_off,omitempty"`
+	Pending             map[string][]Profile         `json:"pending_profiles,omitempty"`
+	NewKeyLimits        map[string]map[string]Access `json:"new_key_limits,omitempty"`
 }
 
 // Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
@@ -511,11 +512,49 @@ func (s *State) dropPending(drop func(conn string, p Profile) bool) error {
 	})
 }
 
-// ForgetConnector drops the new-key default and the waiting profiles of a removed connector.
+// ForgetConnector drops the new-key default, the new-key limits and the waiting profiles of a removed connector.
 func (s *State) ForgetConnector(conn string) error {
 	return s.update(func(d *stateFile) error {
 		delete(d.NewKeysOff, conn)
+		delete(d.NewKeyLimits, conn)
 		delete(d.Pending, conn)
+		return nil
+	})
+}
+
+// LimitNewKeys records that access keys made from now on get at most a on the connector's function or item, kept from an always allow given to one key.
+func (s *State) LimitNewKeys(conn, name string, a Access) error {
+	return s.update(func(d *stateFile) error {
+		limits := maps.Clone(d.NewKeyLimits[conn])
+		put(&limits, name, a)
+		put(&d.NewKeyLimits, conn, limits)
+		return nil
+	})
+}
+
+// NewKeyLimits returns the most access keys made from now on get on the connector's functions and items, by name.
+func (s *State) NewKeyLimits(conn string) map[string]Access {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return maps.Clone(s.data.NewKeyLimits[conn])
+}
+
+// LiftNewKeyLimits forgets the new-key limits of the named functions and items once the owner sets their choice again.
+func (s *State) LiftNewKeyLimits(conn string, names []string) error {
+	return s.update(func(d *stateFile) error {
+		limits := d.NewKeyLimits[conn]
+		if !slices.ContainsFunc(names, func(n string) bool { _, ok := limits[n]; return ok }) {
+			return errUnchanged
+		}
+		limits = maps.Clone(limits)
+		for _, n := range names {
+			delete(limits, n)
+		}
+		if len(limits) == 0 {
+			delete(d.NewKeyLimits, conn)
+		} else {
+			d.NewKeyLimits[conn] = limits
+		}
 		return nil
 	})
 }

@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -379,8 +380,25 @@ func (c *Console) join(ctx context.Context, conn port.Connector, a Agent, known 
 	if c.State.NewKeysOff(id) {
 		return nil
 	}
-	if p, ok := c.State.PendingProfile(id, a.Name); ok {
-		return c.applyProfile(ctx, id, a, p)
+	p, ok := c.State.PendingProfile(id, a.Name)
+	if !ok {
+		p = Profile{Agent: a.Name, Mode: ProfileFollow}
 	}
-	return c.bind(ctx, id, a)
+	if p = limited(p, c.State.NewKeyLimits(id)); p.Mode == ProfileFollow {
+		return c.bind(ctx, id, a)
+	}
+	return c.applyProfile(ctx, id, a, p)
+}
+
+func limited(p Profile, limits map[string]Access) Profile {
+	if p.Mode == ProfileOff || len(limits) == 0 {
+		return p
+	}
+	p.Mode, p.Overrides = ProfileCustom, maps.Clone(p.Overrides)
+	for name, most := range limits {
+		if have, ok := p.Overrides[name]; !ok || have.mode().Rank() > most.mode().Rank() {
+			put(&p.Overrides, name, most)
+		}
+	}
+	return p
 }

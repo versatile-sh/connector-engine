@@ -60,7 +60,7 @@ A connector keeps one credential that every key shares; keys differ only in perm
 - **Every key** sets all keys to off or the default in one request, which reports each key's result; either drops every key's overrides.
 - Off or the default asks first, in place, when it would drop overrides; with none to lose it applies at once.
 - **New keys start off** makes keys made from then on start off on this connector; by default they follow it. Renewing a key keeps its profile on every connector.
-- Always allow on a held call also removes the calling key's override of that function.
+- **Always allow this app** on a held call allows that function for the calling key only: every other key, and every key made later, keeps the function's former access as its own override, then the default rises to on and the calling key's override is removed. Setting the function's default again lifts the limit for keys made later. A failure shows on the approval instead of only in the log.
 - The **Access** page lists, for each key, every connector with its mode and a link to its profile.
 - Many at once: tick functions (or select all the filter shows), then set them to off, on or ask, or back to the default in a key's profile, in one request that says which were not changed. The **More…** menu holds the class presets (all reads on, all changes ask, all deletes off) for the profile shown, and copies a key's profile: from another key onto the one shown, or from the default onto several keys at once.
 

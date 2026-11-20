@@ -161,7 +161,7 @@ func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) er
 	return nil
 }
 
-// SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, and answers each name's result in order, then one entry per bound key it failed to give the item rows.
+// SetAccessAll writes one choice for many functions or items of a connector, as SetAccess does for one, lifts the new-key limits of the names written, and answers each name's result in order, then one entry per bound key it failed to give the item rows.
 func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string, a Access) ([]Result, error) {
 	switch {
 	case len(names) == 0:
@@ -178,11 +178,17 @@ func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string,
 	}
 	defer unlock()
 	results := make([]Result, 0, len(names))
-	items := false
+	items, written := false, []string{}
 	for _, name := range names {
 		err := c.writeAccess(ctx, conn, name, a)
 		results = append(results, Result{Name: name, Err: err})
 		items = items || err == nil && port.ItemKind(name) != ""
+		if err == nil {
+			written = append(written, name)
+		}
+	}
+	if err := c.State.LiftNewKeyLimits(conn, written); err != nil {
+		results = append(results, Result{Name: "keys", Err: err})
 	}
 	if !items || a == AccessOff {
 		return results, nil
@@ -465,7 +471,7 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, takes a setup's waiting profile, and starts off on skills. It records the agent until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide.
+// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, takes a setup's waiting profile within the connector's new-key limits, and starts off on skills. It records the agent until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide.
 func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
 	name = Slug(name)
 	if name == "" {

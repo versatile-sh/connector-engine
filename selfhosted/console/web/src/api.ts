@@ -301,6 +301,7 @@ export type ApprovalView = {
   decided_by?: string;
   decided_at?: string;
   channel?: string;
+  always_error?: string;
 };
 
 /** What POST /api/approvals/{id}/decide answers: the record now, and whether someone else had decided it first. */

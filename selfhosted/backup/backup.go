@@ -32,9 +32,13 @@ const (
 	magic        = "CEBAK\n"
 	manifestName = "manifest.json"
 	maxHeader    = 4 << 10
-	maxMemoryKiB = 1 << 20
+	maxMemoryKiB = 256 << 10
+	maxTime      = 8
+	maxThreads   = 16
 	maxSize      = 1 << 30
 )
+
+var opening = make(chan struct{}, 1)
 
 var (
 	// ErrNotBackup is returned for a file that does not start like a backup.
@@ -160,10 +164,12 @@ func Open(r io.Reader, passphrase []byte) (Manifest, map[string][]byte, error) {
 	if h.Format > Format || h.Format < 1 {
 		return Manifest{}, nil, ErrVersion
 	}
-	if h.KDF != "argon2id" || h.Time == 0 || h.Time > 16 || h.MemoryKiB == 0 || h.MemoryKiB > maxMemoryKiB || h.Threads == 0 || len(h.Nonce) != 12 || len(h.Salt) < 16 {
+	if h.KDF != "argon2id" || h.Time == 0 || h.Time > maxTime || h.MemoryKiB == 0 || h.MemoryKiB > maxMemoryKiB || h.Threads == 0 || h.Threads > maxThreads || len(h.Nonce) != 12 || len(h.Salt) < 16 {
 		return Manifest{}, nil, ErrTampered
 	}
+	opening <- struct{}{}
 	enc, check := h.keys(passphrase)
+	<-opening
 	if !hmac.Equal(check, h.Check) {
 		return Manifest{}, nil, ErrPassphrase
 	}
@@ -175,7 +181,7 @@ func Open(r io.Reader, passphrase []byte) (Manifest, map[string][]byte, error) {
 	if err != nil {
 		return Manifest{}, nil, err
 	}
-	plain, err := aead.Open(nil, h.Nonce, sealed, aad)
+	plain, err := aead.Open(sealed[:0], h.Nonce, sealed, aad)
 	if err != nil {
 		return Manifest{}, nil, ErrTampered
 	}
@@ -185,19 +191,21 @@ func Open(r io.Reader, passphrase []byte) (Manifest, map[string][]byte, error) {
 func unpack(plain []byte) (Manifest, map[string][]byte, error) {
 	var m Manifest
 	files := map[string][]byte{}
+	budget := int64(len(plain))
 	tr := tar.NewReader(bytes.NewReader(plain))
 	for {
 		hd, err := tr.Next()
 		if errors.Is(err, io.EOF) {
 			break
 		}
-		if err != nil {
+		if err != nil || hd.Typeflag != tar.TypeReg || hd.Size < 0 || hd.Size > budget {
 			return Manifest{}, nil, ErrTampered
 		}
-		b, err := io.ReadAll(tr)
-		if err != nil {
+		b, err := io.ReadAll(io.LimitReader(tr, hd.Size))
+		if err != nil || int64(len(b)) != hd.Size {
 			return Manifest{}, nil, ErrTampered
 		}
+		budget -= hd.Size
 		if hd.Name == manifestName {
 			if err := json.Unmarshal(b, &m); err != nil {
 				return Manifest{}, nil, ErrTampered

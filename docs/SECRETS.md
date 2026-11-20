@@ -8,6 +8,7 @@ Every secret the engine keeps (credentials, held call arguments, results, client
 |---|---|---|
 | `builtin:localfile` (`secrets/local`) | `root.key`, plaintext hex, mode 0600, refused when group or other can read it | the default, the `headless` profile, any config that does not opt in |
 | `builtin:hostkey` (`secrets/hostkey`) | `root.key.wrapped`: the root sealed with AES-256-GCM under an unlock key that lives in the host's OS keychain | the `person` profile |
+| `builtin:onepassword` (`secrets/onepassword`) | `root.key.wrapped`, under an unlock key read at start from a 1Password item through a 1Password Connect server | opt-in by config, any profile, headless included |
 | `memory` | in the process only | tests and dev |
 
 `hostkey` is `secrets/local` with the root file wrapped; the key ring, the rotation files (`root.key.next`, `root.key.next.wrapped`) and the crash recovery are the same code. Selecting it is opt-in (`secrets.adapter: hostkey`, `secrets.unlockSocket`, `ports.secrets.use: builtin:hostkey`); the engine binary never needs it, and the `headless` selection is pinned by `config/profiles_test.go`.
@@ -58,6 +59,40 @@ When `bin/cnctl` cannot be built (no Go on the host) or the host has no keychain
 A failure before the removal leaves `root.key` in place and the store running on it; run the command again. If both files exist after a crash, the plaintext one wins and the next migration finishes the job. `make keychain-revert` writes `root.key` back (checked the same way) and removes the wrapped file; the keychain item stays.
 
 Recovery: `make keychain-recovery` prints the unlock key once, for a password manager. On a new machine, `make keychain-import` reads it on stdin into that machine's keychain. Without the unlock key and without a backup of `root.key`, the records cannot be opened: that is the point.
+
+## 1Password
+
+`builtin:onepassword` reads the unlock key once at start from one field of one 1Password item, through a [1Password Connect](https://developer.1password.com/docs/connect/) server you run (`GET /v1/vaults/{vault}/items/{item}`, bearer token, the item's `fields[].label` and `value`). The adapter is tested against a fake of that endpoint, not against a live Connect server. Then it is the same wrapped `secrets/local` store. Nothing else talks to 1Password and nothing is written back. It is opt-in and has no default.
+
+1. Deploy a Connect server reachable from the engine (for example in the same compose network). Create a Connect token that can read one vault.
+2. In the 1Password app, add an item `connector-engine-unlock` with a password field labelled `unlock` that holds 64 hexadecimal characters (for example `openssl rand -hex 32`, pasted into the app rather than written into a shell command, where it would sit in argv and the history). Note the vault id and the item id (`op item get connector-engine-unlock --format json`).
+3. Put the Connect token in a file only the engine reads, then configure:
+   ```yaml
+   # connector-engine.yaml
+   secrets:
+     adapter: onepassword
+     dir: /var/lib/connector-engine/secrets
+     onePassword: {connectUrl: "http://op-connect:8080", tokenRef: "file:/run/connector-engine/op-connect-token", vault: <vault id>, item: <item id>, field: unlock}
+   # adapters.yaml
+   ports:
+     secrets: {use: builtin:onepassword}
+   ```
+   No `plaintext_root_key` acknowledgement is needed.
+4. Start the engine.
+   - A fresh directory gets a wrapped root.
+   - A directory with a plaintext `root.key` is migrated at the first start, with the same verified steps as `make keychain-migrate`. Selecting the adapter is the consent.
+   - Keep a copy of the field: without it the records cannot be opened.
+
+Limits:
+- The engine fails to start when Connect is unreachable, the token is refused, or the field is missing or not 64 hexadecimal characters.
+- Rotating the item field is not supported: the value in 1Password must stay the one the root was wrapped with.
+- Service account tokens are not supported. They need the `op` CLI or an SDK, and the distroless image ships neither; a Connect server is the path inside the container.
+
+| Threat | `onepassword` |
+|---|---|
+| Copy of the volumes, disk image, backup | nothing opens without the item |
+| Malware as the owner, root, the Docker socket | the Connect token file is in the volume next to the engine: whoever reads it can ask Connect for the field, while Connect is up and the token is valid |
+| Compromised engine process | the key is in memory while it runs |
 
 ## Threat model
 

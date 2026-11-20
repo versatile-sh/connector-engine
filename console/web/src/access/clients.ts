@@ -1,10 +1,10 @@
 import type { MessageKey, Translate } from "../i18n";
 
 /** The AI apps and ways in the picker offers. */
-export type ClientId = "claude-code" | "claude-desktop" | "codex" | "opencode" | "cursor" | "vscode" | "code" | "generic" | "ai";
+export type ClientId = "claude-code" | "claude-desktop" | "codex" | "opencode" | "cursor" | "vscode" | "antigravity" | "pi" | "code" | "generic" | "ai";
 
-/** One block to paste: where it goes, the file when it is one, and the exact text with the key filled in. */
-export type Block = { where: MessageKey; path?: string; label?: string; text: string };
+/** One block to paste: where it goes, the file when it is one, and the exact text with the key filled in; `setup` marks a one-time install step that carries no key. */
+export type Block = { where: MessageKey; path?: string; label?: string; text: string; setup?: boolean };
 
 /** How one app connects: its name, what kind of step it takes, a one-click link when it has one, the blocks to paste, and a short note. `choose` shows one block at a time. */
 export type Guide = { id: ClientId; name: string; kind: MessageKey; link?: { href: string; app: string }; blocks: Block[]; choose?: boolean; note: MessageKey };
@@ -61,6 +61,23 @@ export function oauthGuides(url: string, t: Translate): Guide[] {
       link: { app: "VS Code", href: `vscode:mcp/install?${encodeURIComponent(JSON.stringify({ name: NAME, type: "http", url }))}` },
       blocks: [{ where: "clients.where.file", path: ".vscode/mcp.json", text: json({ servers: { [NAME]: { type: "http", url } } }) }],
       note: "clients.note.vscodeOAuth",
+    },
+    {
+      id: "antigravity",
+      name: "Antigravity",
+      kind: "clients.kind.config",
+      blocks: [{ where: "clients.where.file", path: "~/.gemini/config/mcp_config.json", text: json({ mcpServers: { [NAME]: { serverUrl: url } } }) }],
+      note: "clients.note.antigravityOAuth",
+    },
+    {
+      id: "pi",
+      name: "Pi",
+      kind: "clients.kind.terminal",
+      blocks: [
+        { where: "clients.where.terminal", text: "pi install npm:pi-mcp-adapter", setup: true },
+        { where: "clients.where.file", path: "~/.pi/agent/mcp.json", text: json({ mcpServers: { [NAME]: { url } } }) },
+      ],
+      note: "clients.note.piOAuth",
     },
     {
       id: "generic",
@@ -132,6 +149,23 @@ export function guides(url: string, key: string, t: Translate): Guide[] {
       link: { app: "VS Code", href: `vscode:mcp/install?${encodeURIComponent(JSON.stringify({ name: NAME, type: "http", url, headers }))}` },
       blocks: [{ where: "clients.where.file", path: ".vscode/mcp.json", text: json({ servers: { [NAME]: { type: "http", url, headers } } }) }],
       note: "clients.note.vscode",
+    },
+    {
+      id: "antigravity",
+      name: "Antigravity",
+      kind: "clients.kind.config",
+      blocks: [{ where: "clients.where.file", path: "~/.gemini/config/mcp_config.json", text: json({ mcpServers: { [NAME]: { serverUrl: url, headers } } }) }],
+      note: "clients.note.antigravity",
+    },
+    {
+      id: "pi",
+      name: "Pi",
+      kind: "clients.kind.terminal",
+      blocks: [
+        { where: "clients.where.terminal", text: "pi install npm:pi-mcp-adapter", setup: true },
+        { where: "clients.where.file", path: "~/.pi/agent/mcp.json", text: json({ mcpServers: { [NAME]: { url, headers } } }) },
+      ],
+      note: "clients.note.pi",
     },
     {
       id: "code",

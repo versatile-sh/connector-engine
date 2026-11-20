@@ -12,8 +12,12 @@ const guide = (id: string) => {
 };
 
 describe("guides", () => {
-  test("puts the key in every block", () => {
-    for (const g of all) for (const block of g.blocks) assert.ok(block.text.includes(key), `${g.id} ${block.where}`);
+  test("puts the key in every block but one-time install steps", () => {
+    for (const g of all) for (const block of g.blocks) assert.ok(block.setup === true || block.text.includes(key), `${g.id} ${block.where}`);
+  });
+
+  test("keeps the key out of install steps", () => {
+    for (const g of all) for (const block of g.blocks.filter((b) => b.setup)) assert.ok(!block.text.includes(key), g.id);
   });
 
   describe("Cursor", () => {

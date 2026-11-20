@@ -116,11 +116,11 @@ export function ExportDialog({ onClose }: { onClose(): void }) {
           <p className="text-sm text-muted">{t("backup.export.pick")}</p>
           <div role="group" aria-label={t("backup.export.kind")} className="mt-3 flex flex-col gap-2">
             <button type="button" className={OPTION_CARD} onClick={() => setStep("warn")}>
-              <span className="font-semibold">{t("backup.full.title")}</span>
+              <span className="text-sm font-medium">{t("backup.full.title")}</span>
               <span className="text-sm text-muted">{t("backup.full.body")}</span>
             </button>
             <button type="button" disabled={setup.isPending} className={OPTION_CARD} onClick={onSetup}>
-              <span className="font-semibold">{t("backup.setup.title")}</span>
+              <span className="text-sm font-medium">{t("backup.setup.title")}</span>
               <span className="text-sm text-muted">{setup.isPending ? t("backup.exporting") : t("backup.setup.body")}</span>
             </button>
           </div>

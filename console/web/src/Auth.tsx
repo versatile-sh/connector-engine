@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, errorText, setCsrf } from "./api";
+import { useMutation } from "@tanstack/react-query";
+import { errorText } from "./api";
 import { Wordmark } from "./Brand";
 import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { signIn } from "./mutations";
 import { Said, Split } from "./Split";
 import { Field } from "./ui/Field";
 import { Marked } from "./ui/Marked";
@@ -66,19 +67,12 @@ function Pitch({ endpoint, waitingHost }: { endpoint: string; waitingHost?: stri
 /** First-visit owner creation or sign-in as the live front page: the pitch on lime, the form on ink. An install link waiting in the address bar is named on the lime half and opens once signed in. */
 export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
   const t = useT();
-  const queryClient = useQueryClient();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const submit = useMutation({
-    mutationFn: () => api<{ csrf: string }>("POST", mode === "setup" ? "/api/setup" : "/api/login", { username, password }),
-    onSuccess: (result) => {
-      setCsrf(result.csrf);
-      void queryClient.invalidateQueries({ queryKey: ["session"] });
-    },
-  });
+  const submit = useMutation(signIn);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    submit.mutate();
+    submit.mutate({ mode, username, password });
   };
   return (
     <Split

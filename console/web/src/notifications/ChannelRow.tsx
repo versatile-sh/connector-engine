@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
-import { api, errorText, type ChannelView } from "../api";
+import { errorText, type ChannelView } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { testChannel } from "../mutations";
 import { Bubble } from "../ui/Bubble";
 import { button } from "../ui/styles";
 import { InlineConfirm } from "./InlineConfirm";
@@ -14,7 +15,7 @@ type ChannelRowProps = { channel: ChannelView; remove: ReturnType<typeof useRemo
 /** One channel: its label and kind, its status, the owner id and the last characters of its secret, a Test message, and an inline Remove. */
 export function ChannelRow({ channel, remove }: ChannelRowProps) {
   const t = useT();
-  const test = useMutation({ mutationFn: () => api<{ ok: boolean; error?: string }>("POST", `/api/notifications/channels/${encodeURIComponent(channel.id)}/test`) });
+  const test = useMutation(testChannel);
   const asking = remove.asking(channel.id);
   const failed = test.isError ? errorText(test.error) : test.data && !test.data.ok ? (test.data.error ?? t("notify.channels.testFailed")) : undefined;
   return (
@@ -33,11 +34,11 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
         </Bubble>
         {asking ? null : (
           <div className="flex shrink-0 gap-2">
-            <button type="button" disabled={test.isPending} className={button({ variant: "secondary", size: "xs" })} onClick={() => test.mutate()}>
+            <button type="button" disabled={test.isPending} className={button({ variant: "secondary", size: "xs" })} onClick={() => test.mutate(channel.id)}>
               {test.isPending ? t("notify.channels.testing") : t("notify.channels.test")}
             </button>
             <button type="button" autoFocus={remove.returning(channel.id)} aria-label={t("notify.channels.removeLabel", { name: channel.label })} className={button({ variant: "danger", size: "xs" })} onClick={() => remove.ask(channel.id)}>
-              {t("notify.remove")}
+              {t("common.remove")}
             </button>
           </div>
         )}
@@ -50,7 +51,7 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
         <InlineConfirm
           label={t("notify.channels.removeLabel", { name: channel.label })}
           question={t("notify.channels.removeAsk", { name: channel.label })}
-          confirm={t("notify.remove")}
+          confirm={t("common.remove")}
           working={t("notify.removing")}
           busy={remove.busy}
           error={remove.error}

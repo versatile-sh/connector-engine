@@ -56,11 +56,7 @@ func servedSkill(c port.Connector, f port.Function, mode port.Mode) ServedSkill 
 
 func markUnbound(skills []ServedSkill, bound map[string]bool) {
 	for i := range skills {
-		for _, r := range skills[i].Requires {
-			if !bound[r] {
-				skills[i].Unbound = append(skills[i].Unbound, r)
-			}
-		}
+		skills[i].Unbound = port.Missing(skills[i].Requires, bound)
 	}
 	slices.SortFunc(skills, func(a, b ServedSkill) int { return cmp.Compare(a.Name, b.Name) })
 }

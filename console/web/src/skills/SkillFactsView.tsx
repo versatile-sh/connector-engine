@@ -1,5 +1,6 @@
 import type { SkillFacts } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { Disclosure } from "../ui/Disclosure";
 import { Notice } from "../ui/Notice";
 import { formatBytes, shortCommit, skillWarnings, sourceLink, totalBytes } from "./summary";
 
@@ -36,11 +37,15 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
           <span className="sr-only"> {t("common.opensNewTab")}</span>
         </dd>
       </dl>
-      <details className="group bubble border border-line-strong bg-ink-raised/60">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm pointer-coarse:min-h-11">
-          <span>{t("skills.files", { count: skill.files.length })}</span>
-          <span className="font-mono text-xs text-muted">{formatBytes(totalBytes(skill.files))}</span>
-        </summary>
+      <Disclosure
+        className="bubble border border-line-strong bg-ink-raised/60"
+        summary={
+          <>
+            <span>{t("skills.files", { count: skill.files.length })}</span>
+            <span className="font-mono text-xs text-muted">{formatBytes(totalBytes(skill.files))}</span>
+          </>
+        }
+      >
         <ul className="border-t border-line px-4 py-2">
           {skill.files.map((file) => (
             <li key={file.path} className="flex items-center justify-between gap-4 py-1 font-mono text-xs">
@@ -51,7 +56,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
             </li>
           ))}
         </ul>
-      </details>
+      </Disclosure>
     </div>
   );
 }

@@ -54,24 +54,28 @@ func (s *State) Channels() []StoredChannel {
 
 // PutChannel stores an approval channel.
 func (s *State) PutChannel(ch StoredChannel) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Notify.Channels == nil {
-		s.data.Notify.Channels = map[string]StoredChannel{}
-	}
-	s.data.Notify.Channels[ch.ID] = ch
-	return s.save()
+	return s.update(func(d *stateFile) error {
+		put(&d.Notify.Channels, ch.ID, ch)
+		return nil
+	})
 }
 
 // DeleteChannel removes an approval channel and its secrets, reporting whether it existed.
 func (s *State) DeleteChannel(id string) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, ok := s.data.Notify.Channels[id]; !ok {
-		return false, nil
-	}
-	delete(s.data.Notify.Channels, id)
-	return true, s.save()
+	return deleteFrom(s, func(d *stateFile) map[string]StoredChannel { return d.Notify.Channels }, id)
+}
+
+func deleteFrom[V any](s *State, table func(*stateFile) map[string]V, id string) (bool, error) {
+	found := false
+	err := s.update(func(d *stateFile) error {
+		m := table(d)
+		if _, found = m[id]; !found {
+			return errUnchanged
+		}
+		delete(m, id)
+		return nil
+	})
+	return found && err == nil, err
 }
 
 // Devices returns the paired host helpers.
@@ -82,38 +86,31 @@ func (s *State) Devices() []Device {
 }
 
 // PutDevice stores a paired host helper.
-func (s *State) PutDevice(d Device) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Notify.Devices == nil {
-		s.data.Notify.Devices = map[string]Device{}
-	}
-	s.data.Notify.Devices[d.ID] = d
-	return s.save()
+func (s *State) PutDevice(dev Device) error {
+	return s.update(func(d *stateFile) error {
+		put(&d.Notify.Devices, dev.ID, dev)
+		return nil
+	})
 }
 
 // RenameDevice names a paired host helper again, reporting whether it existed.
 func (s *State) RenameDevice(id, name string) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	d, ok := s.data.Notify.Devices[id]
-	if !ok {
-		return false, nil
-	}
-	d.Name = name
-	s.data.Notify.Devices[id] = d
-	return true, s.save()
+	found := false
+	err := s.update(func(d *stateFile) error {
+		dev, ok := d.Notify.Devices[id]
+		if found = ok; !ok {
+			return errUnchanged
+		}
+		dev.Name = name
+		d.Notify.Devices[id] = dev
+		return nil
+	})
+	return found && err == nil, err
 }
 
 // DeleteDevice revokes a paired host helper, reporting whether it existed.
 func (s *State) DeleteDevice(id string) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, ok := s.data.Notify.Devices[id]; !ok {
-		return false, nil
-	}
-	delete(s.data.Notify.Devices, id)
-	return true, s.save()
+	return deleteFrom(s, func(d *stateFile) map[string]Device { return d.Notify.Devices }, id)
 }
 
 // DeviceByKey returns the device whose key hashes to keyHash.
@@ -144,32 +141,33 @@ func (s *State) Elicits(app string) bool {
 
 // SetElicit turns asking in the app's own window on or off.
 func (s *State) SetElicit(app string, on bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if on {
-		if s.data.Notify.Elicit == nil {
-			s.data.Notify.Elicit = map[string]bool{}
+	return s.update(func(d *stateFile) error {
+		if on {
+			put(&d.Notify.Elicit, app, true)
+		} else {
+			delete(d.Notify.Elicit, app)
 		}
-		s.data.Notify.Elicit[app] = true
-	} else {
-		delete(s.data.Notify.Elicit, app)
-	}
-	return s.save()
+		return nil
+	})
 }
 
 // LinkKey returns the key that signs approval links and request states, made on first use.
 func (s *State) LinkKey() ([]byte, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Notify.LinkKey == "" {
+	var key string
+	err := s.update(func(d *stateFile) error {
+		if key = d.Notify.LinkKey; key != "" {
+			return errUnchanged
+		}
 		b := make([]byte, 32)
 		rand.Read(b)
-		s.data.Notify.LinkKey = hex.EncodeToString(b)
-		if err := s.save(); err != nil {
-			return nil, err
-		}
+		key = hex.EncodeToString(b)
+		d.Notify.LinkKey = key
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return hex.DecodeString(s.data.Notify.LinkKey)
+	return hex.DecodeString(key)
 }
 
 // Cursor returns the last approval event sequence the relay handled.
@@ -181,13 +179,13 @@ func (s *State) Cursor() int64 {
 
 // SetCursor records the last approval event sequence the relay handled.
 func (s *State) SetCursor(seq int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if seq <= s.data.Notify.Cursor {
+	return s.update(func(d *stateFile) error {
+		if seq <= d.Notify.Cursor {
+			return errUnchanged
+		}
+		d.Notify.Cursor = seq
 		return nil
-	}
-	s.data.Notify.Cursor = seq
-	return s.save()
+	})
 }
 
 type channelSecrets struct {
@@ -225,18 +223,15 @@ func (s channelSecrets) put(ctx context.Context, channel string, secrets map[str
 	if err != nil {
 		return err
 	}
-	s.state.mu.Lock()
-	defer s.state.mu.Unlock()
-	if s.state.data.Notify.Sealed == nil {
-		s.state.data.Notify.Sealed = map[string]port.Sealed{}
-	}
-	s.state.data.Notify.Sealed[channel] = v
-	return s.state.save()
+	return s.state.update(func(d *stateFile) error {
+		put(&d.Notify.Sealed, channel, v)
+		return nil
+	})
 }
 
 func (s channelSecrets) remove(channel string) error {
-	s.state.mu.Lock()
-	defer s.state.mu.Unlock()
-	delete(s.state.data.Notify.Sealed, channel)
-	return s.state.save()
+	return s.state.update(func(d *stateFile) error {
+		delete(d.Notify.Sealed, channel)
+		return nil
+	})
 }

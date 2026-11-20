@@ -5,12 +5,10 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
-	"maps"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -33,40 +31,22 @@ func sessionKey(id string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Sessions holds the owner's sessions keyed by the SHA-256 of their cookie, kept in the state file when one is given so a restart does not sign the owner out.
+// Sessions is the owner's sessions as the state file keeps them, keyed by the SHA-256 of their cookie, so a restart does not sign the owner out.
 type Sessions struct {
-	mu    sync.Mutex
-	byKey map[string]StoredSession
 	state *State
 }
 
-// NewSessions returns the session table, loaded from state when it is not nil.
-func NewSessions(state *State) *Sessions {
-	s := &Sessions{byKey: map[string]StoredSession{}, state: state}
-	if state != nil {
-		s.byKey = state.Sessions()
-	}
-	return s
-}
-
-func (s *Sessions) persist() {
-	if s.state == nil {
-		return
-	}
-	_ = s.state.PutSessions(maps.Clone(s.byKey))
-}
+// NewSessions returns the sessions kept in state.
+func NewSessions(state *State) *Sessions { return &Sessions{state: state} }
 
 // Start opens a session, sets its HttpOnly SameSite=Strict cookie and returns its CSRF token.
-func (s *Sessions) Start(w http.ResponseWriter) string {
+func (s *Sessions) Start(w http.ResponseWriter) (string, error) {
 	id, csrf := randomID(), randomID()
-	now := time.Now()
-	s.mu.Lock()
-	expire(s.byKey, now, func(v StoredSession) time.Time { return v.Expires })
-	s.byKey[sessionKey(id)] = StoredSession{CSRF: csrf, Expires: now.Add(sessionTTL)}
-	s.persist()
-	s.mu.Unlock()
+	if err := s.state.putSession(sessionKey(id), StoredSession{CSRF: csrf, Expires: time.Now().Add(sessionTTL)}); err != nil {
+		return "", err
+	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: int(sessionTTL.Seconds())})
-	return csrf
+	return csrf, nil
 }
 
 // Get returns the CSRF token of the request's live session.
@@ -75,24 +55,19 @@ func (s *Sessions) Get(r *http.Request) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	v, ok := s.byKey[sessionKey(c.Value)]
-	if !ok || time.Now().After(v.Expires) {
-		return "", false
-	}
-	return v.CSRF, true
+	v, ok := s.state.session(sessionKey(c.Value))
+	return v.CSRF, ok
 }
 
 // End closes the request's session and clears its cookie.
-func (s *Sessions) End(w http.ResponseWriter, r *http.Request) {
+func (s *Sessions) End(w http.ResponseWriter, r *http.Request) error {
 	if c, err := r.Cookie(sessionCookie); err == nil {
-		s.mu.Lock()
-		delete(s.byKey, sessionKey(c.Value))
-		s.persist()
-		s.mu.Unlock()
+		if err := s.state.endSession(sessionKey(c.Value)); err != nil {
+			return err
+		}
 	}
 	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+	return nil
 }
 
 // Guard refuses a request whose Host is not one of the console's own addresses (DNS rebinding) and a mutating request whose Origin is not the console (CSRF), and sets the security headers.

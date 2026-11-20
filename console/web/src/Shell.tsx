@@ -1,11 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { api, setCsrf } from "./api";
 import { Wordmark } from "./Brand";
 import { Footer } from "./Footer";
 import type { MessageKey } from "./i18n";
 import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
+import { signOut } from "./mutations";
 import { useSetup } from "./onboarding/useSetup";
 import { approvalsQuery, sessionQuery } from "./queries";
 import { navigate, useLocation } from "./router";
@@ -84,15 +84,8 @@ function SetupProgress() {
 export function Shell({ section, endpoint, children }: { section: Section; endpoint: string; children: ReactNode }) {
   const t = useT();
   const { path, query } = useLocation();
-  const queryClient = useQueryClient();
   const waiting = useQuery(approvalsQuery).data?.length ?? 0;
-  const logout = useMutation({
-    mutationFn: () => api("POST", "/api/logout"),
-    onSettled: () => {
-      setCsrf(undefined);
-      queryClient.clear();
-    },
-  });
+  const logout = useMutation(signOut);
   const oauth = query.get("oauth");
   const oauthKey = oauth ? OAUTH[oauth] : undefined;
   return (

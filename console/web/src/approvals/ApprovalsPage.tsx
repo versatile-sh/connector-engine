@@ -1,9 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, errorText, type Approval, type ApprovalChoice, type Decision } from "../api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { errorText, type Approval, type ApprovalChoice } from "../api";
 import { listChoices } from "../approve/choices";
 import { DecisionButtons } from "../approve/DecisionButtons";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import type { Locale } from "../i18n";
+import { decideApproval } from "../mutations";
 import { approvalsQuery, connectorsQuery, skillsQuery } from "../queries";
 import { navigate } from "../router";
 import { Bubble } from "../ui/Bubble";
@@ -51,20 +52,10 @@ function Held({ approval, connector, skill, deciding, onDecide }: { approval: Ap
 /** Calls of functions set to ask, held until the owner approves or denies each one; the list refreshes on its own. */
 export function ApprovalsPage() {
   const t = useT();
-  const queryClient = useQueryClient();
   const approvals = useQuery(approvalsQuery);
   const connectors = useQuery(connectorsQuery);
   const skills = useQuery(skillsQuery);
-  const decide = useMutation({
-    mutationFn: ({ id, choice }: { id: string; choice: ApprovalChoice }) => api<Decision>("POST", `/api/approvals/${encodeURIComponent(id)}/decide`, { choice }),
-    onSettled: (_, __, { choice }) => {
-      if (choice === "always") {
-        void queryClient.invalidateQueries({ queryKey: ["connectors"] });
-        void queryClient.invalidateQueries({ queryKey: ["skills"] });
-      }
-      return queryClient.invalidateQueries({ queryKey: ["approvals"] });
-    },
-  });
+  const decide = useMutation(decideApproval);
   const list = approvals.data ?? [];
   const titleOf = (id: string) => connectors.data?.find((c) => c.id === id)?.title ?? id;
   const skillOf = (id: string) => skills.data?.find((s) => s.id === id)?.title;

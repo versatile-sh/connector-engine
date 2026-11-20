@@ -99,7 +99,7 @@ func (c *Console) callsIn(r *http.Request, body []byte) *inflight {
 		if m.Method != "tools/call" || len(m.ID) == 0 || json.Unmarshal(m.Params, &p) != nil {
 			continue
 		}
-		cp := &Capture{ID: newCaptureID(now), At: now, Agent: claims.Agent, Session: claims.Session, MCPSession: r.Header.Get("Mcp-Session-Id"), RPCID: m.ID, Tool: p.Name}
+		cp := &Capture{ID: newCaptureID(now), At: now, Agent: claims.Agent, Tool: p.Name, CallPayload: CallPayload{Session: claims.Session, MCPSession: r.Header.Get("Mcp-Session-Id"), RPCID: m.ID}}
 		switch p.Name {
 		case "find", "approval_cancel", "skill_list":
 			continue

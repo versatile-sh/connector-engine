@@ -59,11 +59,12 @@ export function AccessPage() {
   });
   const markSeen = useMutation({ mutationFn: () => api("POST", "/api/agents/seen") }).mutate;
   const anyNew = keys.data?.agents.some((key) => key.new) ?? false;
+  const settled = keys.isSuccess && !keys.isFetching;
   useEffect(
     function tellServerNewKeysWereSeen() {
-      if (anyNew) markSeen();
+      if (anyNew && settled) markSeen();
     },
-    [anyNew, markSeen],
+    [anyNew, settled, markSeen],
   );
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
   const revoke = useMutation({

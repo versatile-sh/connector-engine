@@ -70,6 +70,8 @@ CN_OPERATOR_TOKEN=dev /tmp/ce/connector-engine --config config/connector-engine.
 
 Upstream connections (MCP servers, OAuth issuers, sources) dial through the egress guard, which refuses non-public addresses unless `runtime.allowPrivateHosts` is set. The `person` profile sets it so that local servers can be imported; `headless` does not. They ignore `HTTP_PROXY` and `HTTPS_PROXY`: through a proxy the guard would check the proxy's address, not the upstream's.
 
+The worker prunes history every `retention.every` once a retention is set: `retention.deliveredEvents`, `retention.idempotencyKeys`, `retention.audit` and `retention.calls`. The engine default and `headless` keep everything (`0s`); the `person` profile keeps delivered events and idempotency keys 7 days, audit rows and finished calls 90 days.
+
 Every number is a key of `config/connector-engine.yaml`; the ports (store, secrets, auth, runtime, source, sink, filter, index) are chosen in `adapters.yaml`. `connector-engine adapters check` validates a file the way boot does.
 
 ## The CLI

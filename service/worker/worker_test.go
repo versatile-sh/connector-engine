@@ -222,3 +222,37 @@ func TestShutdownLetsARunningApprovedExecutionFinishWithinTheGrace(t *testing.T)
 		}
 	}
 }
+
+func TestSweepPrunesDeliveredEventsOncePerInterval(t *testing.T) {
+	f := newFixture(t)
+	events := func() int {
+		n := 0
+		for _, src := range []port.TenantID{port.Installation, "t1"} {
+			_ = f.Store.Read(f.Ctx, port.Scope{Tenant: src, Installation: src == port.Installation}, func(tx port.Tx) error {
+				evs, err := tx.EventsAfter(port.SourceOf(src), 0, 0)
+				n += len(evs)
+				return err
+			})
+		}
+		return n
+	}
+	pending := st.Ok(f.Store.Pending(f.Ctx, 0))
+	ids := make([]string, len(pending))
+	for i, e := range pending {
+		ids[i] = e.ID
+	}
+	if err := f.Store.MarkDelivered(f.Ctx, ids); err != nil {
+		t.Fatal(err)
+	}
+	before := events()
+	w := worker.New(f.Svc, f.Store, f.Clock, worker.Config{Retention: port.Retention{Delivered: time.Hour}, PruneEvery: time.Hour})
+	st.Ok(w.Sweep(f.Ctx))
+	if events() != before {
+		t.Fatal("events younger than the retention were pruned")
+	}
+	f.Clock.Advance(2 * time.Hour)
+	st.Ok(w.Sweep(f.Ctx))
+	if before == 0 || events() != 0 {
+		t.Fatalf("delivered events older than the retention survive: %d of %d", events(), before)
+	}
+}

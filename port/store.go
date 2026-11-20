@@ -186,6 +186,19 @@ type Tx interface {
 	MarkInbox(id string, at time.Time) (bool, error)
 }
 
+// Retention is how long a Store keeps the rows only history reads: delivered events, idempotency keys, audit rows and finished calls; zero keeps them forever.
+type Retention struct {
+	Delivered time.Duration
+	Inbox     time.Duration
+	Audit     time.Duration
+	Calls     time.Duration
+}
+
+// Pruner is the capability of a Store to delete the history rows of one tenant, or of the installation, older than a Retention allows, and return the counts.
+type Pruner interface {
+	Prune(ctx context.Context, tenant TenantID, now time.Time, r Retention) (map[string]int, error)
+}
+
 // TenantPurger is the capability of a Store to delete every row of a removed tenant and return the counts (§4.4 step 4); removal needs it.
 type TenantPurger interface {
 	PurgeTenant(ctx context.Context, tenant TenantID) (map[string]int, error)

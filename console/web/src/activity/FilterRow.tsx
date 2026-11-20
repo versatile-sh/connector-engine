@@ -4,12 +4,12 @@ import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { useT } from "../i18n/I18nProvider";
 import { Icon } from "../ui/Icon";
 import { Segmented } from "../ui/Segmented";
-import { CHIP, PRESS, button } from "../ui/styles";
+import { CHIP, button } from "../ui/styles";
 import { dayOf, isNarrowed, lastWeek, periodOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
 
 const FILTER_OUTCOMES: readonly CallOutcome[] = ["ok", "error", "denied", "pending"];
 
-const CONTROL = `h-8 min-w-0 rounded-full border border-line-strong bg-ink px-3 font-mono text-xs text-paper hover:border-paper/50 focus-visible:border-paper/80 focus-visible:outline-none ${PRESS} active:scale-100`;
+const CONTROL = "h-8 min-w-0 rounded-full border border-line-strong bg-ink px-3 font-mono text-xs text-paper transition-colors duration-150 hover:border-paper/50 focus-visible:border-paper/80 focus-visible:outline-none";
 
 const KEPT_DAYS = 30;
 
@@ -88,7 +88,7 @@ export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
         </span>
       ) : null}
       {filter.connector ? (
-        <button type="button" aria-label={t("activity.connector.clear", { name: titleOf(filter.connector) })} className={`${CHIP} swap-in h-8 gap-1.5 border-paper/60 bg-paper/10 pr-2.5 pl-1.5 text-xs text-paper`} onClick={() => onChange({ ...filter, connector: undefined })}>
+        <button type="button" aria-pressed="true" title={t("activity.connector.clear", { name: titleOf(filter.connector) })} className={`${CHIP} swap-in h-8 gap-1.5 pr-2.5 pl-1.5 text-xs`} onClick={() => onChange({ ...filter, connector: undefined })}>
           <ConnectorIcon src={named.get(filter.connector)?.icon} title={titleOf(filter.connector)} size="xs" />
           <span className="max-w-40 truncate font-semibold">{titleOf(filter.connector)}</span>
           <Icon name="close" className="size-3.5 text-muted" />

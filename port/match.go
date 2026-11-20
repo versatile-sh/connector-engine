@@ -55,3 +55,14 @@ func (f RoleFilter) Match(r RoleAssignment) bool { return f.Person == "" || r.Pe
 func (f MemberFilter) Match(m GroupMember) bool {
 	return (f.Person == "" || m.Person == f.Person) && (f.Group == "" || m.Group == f.Group)
 }
+
+// Missing returns the names of want that have does not hold, in order.
+func Missing(want []string, have map[string]bool) []string {
+	var out []string
+	for _, w := range want {
+		if !have[w] {
+			out = append(out, w)
+		}
+	}
+	return out
+}

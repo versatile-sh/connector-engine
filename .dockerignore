@@ -1,0 +1,7 @@
+.git
+**/node_modules
+console/web/dist/app
+bin
+coverage
+*.test
+.claude

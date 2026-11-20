@@ -85,3 +85,11 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 ## Known flake
 
 `runtime/grpc` failed once in a full `go test -race ./...` run on 2026-11-18 (and `internal/grpcdesc` once with "reflection: EOF" while another `go test` process ran). It did not reproduce in 5 isolated runs, 3 loaded runs, 2 more full runs and `-count=30` of both packages. Suspected: a reflection stream closed by a test server shutting down under load. Not fixed.
+
+## Local console and packaging
+
+| Item | Level | Notes |
+|---|---|---|
+| `connector-console` (owner account, sessions, Host/Origin/CSRF guards, import by MCP URL or listing link, per-function choice, access keys for MCP clients, approvals, `/mcp` proxy) | Run | `console/console_test.go` drives it in process against the engine on the memory store; `scripts/console-check.sh` drives the `person` compose profile on Postgres with `cnctl tools` through `/mcp` |
+| Credentials from the console (header secret, OAuth with a pre-registered client) | Built | calls `createCredential`, `putClientRegistration`, `beginConnect`, `completeConnect`; no run against a real provider |
+| `headless` profile | Built | `adapters check` only; it needs a real JWKS issuer to run |

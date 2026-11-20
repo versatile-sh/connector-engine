@@ -11,6 +11,9 @@ const (
 	toolCall           = "call"
 	toolApprovalStatus = "approval_status"
 	toolApprovalCancel = "approval_cancel"
+	toolSkillList      = "skill_list"
+	toolSkillLoad      = "skill_load"
+	alwaysLoadMeta     = "anthropic/alwaysLoad"
 )
 
 func object(required []string, props map[string]any) map[string]any {
@@ -36,6 +39,20 @@ var approvalTools = []*mcp.Tool{
 		InputSchema: object([]string{"approval_id"}, map[string]any{"approval_id": approvalID})},
 	{Name: toolApprovalCancel, Description: "Withdraws a call that waits for a person's approval.",
 		InputSchema: object([]string{"approval_id"}, map[string]any{"approval_id": approvalID})},
+}
+
+var skillTools = []*mcp.Tool{
+	{Name: toolSkillList, Description: "Lists the skills granted to you: instructions and files written for tasks; load one with skill_load before such a task.",
+		InputSchema: object(nil, map[string]any{}), Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}, Meta: mcp.Meta{alwaysLoadMeta: true}},
+	{Name: toolSkillLoad, Description: "Returns a skill's SKILL.md, or one of its files by path, as text. Files are never run by the gateway.",
+		InputSchema: object([]string{"skill"}, map[string]any{"skill": map[string]any{"type": "string", "description": "The name skill_list gives."},
+			"path": map[string]any{"type": "string", "description": "A file of the skill folder; SKILL.md when empty."}}),
+		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true}, Meta: mcp.Meta{alwaysLoadMeta: true}},
+}
+
+type skillArgs struct {
+	Skill string `json:"skill"`
+	Path  string `json:"path"`
 }
 
 type findArgs struct {

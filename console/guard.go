@@ -150,7 +150,7 @@ func (g Guard) Wrap(next http.Handler) http.Handler {
 			return
 		}
 		origin := r.Header.Get("Origin")
-		if isOAuthPath(r.URL.Path) {
+		if isAppPath(r.URL.Path) {
 			if origin != "" && !appOrigin(origin) {
 				http.Error(w, "cross-origin request refused", http.StatusForbidden)
 				return
@@ -172,14 +172,6 @@ func (g Guard) Wrap(next http.Handler) http.Handler {
 
 func isAgentPath(p string) bool {
 	return p == "/mcp"
-}
-
-func isOAuthPath(p string) bool {
-	switch p {
-	case "/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp", "/.well-known/oauth-authorization-server", "/oauth/register", "/oauth/token":
-		return true
-	}
-	return false
 }
 
 func appOrigin(origin string) bool {

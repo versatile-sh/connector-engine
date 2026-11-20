@@ -148,19 +148,42 @@ func cors(w http.ResponseWriter) {
 	h.Set("Cross-Origin-Resource-Policy", "cross-origin")
 }
 
-func (c *Console) preflight(w http.ResponseWriter, _ *http.Request) {
-	cors(w)
-	w.WriteHeader(http.StatusNoContent)
+type appRoute struct {
+	method, path string
+	serve        func(*Console, http.ResponseWriter, *http.Request)
+}
+
+var appRoutes = []appRoute{
+	{http.MethodGet, "/.well-known/oauth-protected-resource", (*Console).protectedResource},
+	{http.MethodGet, "/.well-known/oauth-protected-resource/mcp", (*Console).protectedResource},
+	{http.MethodGet, "/.well-known/oauth-authorization-server", (*Console).authServerMetadata},
+	{http.MethodPost, "/oauth/register", (*Console).register},
+	{http.MethodPost, "/oauth/token", (*Console).token},
+}
+
+func isAppPath(p string) bool {
+	return slices.ContainsFunc(appRoutes, func(r appRoute) bool { return r.path == p })
+}
+
+func (c *Console) appRoutes(mux *http.ServeMux) {
+	for _, rt := range appRoutes {
+		mux.HandleFunc(rt.method+" "+rt.path, func(w http.ResponseWriter, r *http.Request) {
+			cors(w)
+			rt.serve(c, w, r)
+		})
+		mux.HandleFunc("OPTIONS "+rt.path, func(w http.ResponseWriter, _ *http.Request) {
+			cors(w)
+			w.WriteHeader(http.StatusNoContent)
+		})
+	}
 }
 
 func (c *Console) protectedResource(w http.ResponseWriter, r *http.Request) {
-	cors(w)
 	o := c.origin(r)
 	writeJSON(w, http.StatusOK, map[string]any{"resource": o + "/mcp", "authorization_servers": []string{o}, "bearer_methods_supported": []string{"header"}, "resource_name": "connector-engine"})
 }
 
 func (c *Console) authServerMetadata(w http.ResponseWriter, r *http.Request) {
-	cors(w)
 	o := c.origin(r)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"issuer":                                         o,
@@ -181,7 +204,6 @@ func oauthError(w http.ResponseWriter, status int, code, detail string) {
 }
 
 func (c *Console) register(w http.ResponseWriter, r *http.Request) {
-	cors(w)
 	c.asMu.Lock()
 	now := time.Now()
 	c.registered = slices.DeleteFunc(c.registered, func(t time.Time) bool { return now.Sub(t) > time.Minute })
@@ -434,7 +456,6 @@ func pkceOK(verifier, challenge string) bool {
 }
 
 func (c *Console) token(w http.ResponseWriter, r *http.Request) {
-	cors(w)
 	w.Header().Set("Pragma", "no-cache")
 	r.Body = http.MaxBytesReader(w, r.Body, maxAPIBody)
 	if err := r.ParseForm(); err != nil {

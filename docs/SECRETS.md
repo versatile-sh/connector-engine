@@ -29,9 +29,11 @@ make up | make unlock
 - The key travels on pipes only: never in argv, an environment variable, a log line, a compose file or a file on any disk. `cnctl keychain` writes it on the stdin of `security -i` (macOS) and `secret-tool store` (Linux), never as an argument.
 - The socket is in a `tmpfs` mount of each container, owned by the image user. No other container and no host process reaches it; `docker exec` needs the Docker socket, which is root-equivalent anyway.
 - It behaves the same on Linux, Docker Desktop for macOS and for Windows: it needs neither a bind-mounted host socket (those do not cross the Docker Desktop VM) nor a host file.
-- After a restart (a crash, `docker restart`, a reboot with `restart: unless-stopped`) the container comes back locked and waits on the socket: the engine logs `waiting for the host to deliver the unlock key` and serves nothing; the console serves and shows "locked". `make unlock` opens both. This is the price of never resting the key outside the keychain.
+- After a restart (a crash, `docker restart`, a reboot with `restart: unless-stopped`) the container comes back locked and waits on the socket: the engine logs `waiting for the host to deliver the unlock key` and serves nothing; the console serves and shows "locked". `make unlock` opens both. This is the price of never resting the key outside the keychain. A locked engine with an unlocked console shows no banner: the console only sees an engine that does not answer.
 
-Alternatives rejected: compose `secrets:` without Swarm are bind mounts of a host file, which is a plaintext key on the host disk (and macOS and Windows have no per-user tmpfs). Environment variables show up in `docker inspect` and in `/proc`. A host socket bind mount does not work through Docker Desktop.
+Tested on Linux with gnome-keyring. The macOS and Windows backends are covered by command-line fakes and a cross-compile only.
+
+Alternatives rejected, from Docker's documentation and not measured here: compose `secrets:` without Swarm are bind mounts of a host file (a plaintext key on the host disk; macOS and Windows have no per-user tmpfs to put it in); environment variables show up in `docker inspect` and `/proc`; a host unix socket bind-mounted into a container is not expected to cross the Docker Desktop VM.
 
 Each install has its own keychain item: service `connector-engine`, account the compose project name (`PROJECT`, default `connector-engine`).
 

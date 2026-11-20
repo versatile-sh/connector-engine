@@ -71,6 +71,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/connectors/{id}/profiles/{agent}", c.authed(c.profileEffects))
 	mux.HandleFunc("PUT /api/connectors/{id}/profiles/{agent}", c.authed(c.setProfileAccess))
 	mux.HandleFunc("PUT /api/connectors/{id}/new-keys", c.authed(c.setNewKeys))
+	mux.HandleFunc("DELETE /api/connectors/{id}/waiting/{agent}", c.authed(c.dropWaiting))
 	mux.HandleFunc("DELETE /api/connectors/{id}", c.authed(c.removeConnector))
 	mux.HandleFunc("GET /api/skills", c.authed(c.listSkills))
 	mux.HandleFunc("PUT /api/skills/{id}/keys", c.authed(c.setSkillAccessAll))

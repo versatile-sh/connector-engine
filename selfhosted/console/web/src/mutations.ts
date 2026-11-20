@@ -75,6 +75,12 @@ export const setProfileAccess = mutationOptions({
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 
+/** Forgets a setup's profile waiting on a connector for an access key not made yet. */
+export const dropWaiting = mutationOptions({
+  mutationFn: ({ connector, agent }: { connector: string; agent: string }) => api("DELETE", `/api/connectors/${at(connector, "waiting", agent)}`),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
 /** Makes the access keys made from now on start off on a connector, or follow it. */
 export const setNewKeysOff = mutationOptions({
   mutationFn: ({ connector, off }: { connector: string; off: boolean }) => api("PUT", `/api/connectors/${at(connector, "new-keys")}`, { off }),

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 const (
@@ -188,17 +190,17 @@ func parseSetup(raw []byte) (Setup, error) {
 			return Setup{}, invalid("connector %s gives exactly one of mcp or listing", sc.Name)
 		}
 		for name, a := range mergeChoices(sc) {
-			if !a.Valid() {
-				return Setup{}, invalid("connector %s, %s: access is off, on or ask", sc.Name, name)
+			if !validChoice(name, a) {
+				return Setup{}, invalid("connector %s, %s: access is off, on or ask, and instructions are off or on", sc.Name, name)
 			}
 		}
 		for _, p := range sc.Profiles {
-			if p.Mode != ProfileOff && p.Mode != ProfileFollow && p.Mode != ProfileCustom {
-				return Setup{}, invalid("connector %s, key %s: mode is off, follow or custom", sc.Name, p.Agent)
+			if Slug(p.Agent) == "" || p.Mode != ProfileOff && p.Mode != ProfileCustom {
+				return Setup{}, invalid("connector %s, key %q: a profile names a key and is off or custom", sc.Name, p.Agent)
 			}
 			for name, a := range p.Overrides {
-				if !a.Valid() {
-					return Setup{}, invalid("connector %s, key %s, %s: access is off, on or ask", sc.Name, p.Agent, name)
+				if !validChoice(name, a) {
+					return Setup{}, invalid("connector %s, key %s, %s: access is off, on or ask, and instructions are off or on", sc.Name, p.Agent, name)
 				}
 			}
 		}
@@ -307,13 +309,22 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte) (SetupResult, err
 	return res, nil
 }
 
+func validChoice(name string, a Access) bool {
+	kind, item := itemKinds[port.ItemKind(name)]
+	return a.Valid() && (!item || validFor(kind, a))
+}
+
 func (c *Console) adoptProfiles(ctx context.Context, conn string, sc SetupConnector) error {
 	if err := c.State.SetNewKeysOff(conn, sc.NewKeysOff); err != nil {
 		return err
 	}
 	agents := c.State.Agents()
 	for _, p := range sc.Profiles {
+		p.Agent = Slug(p.Agent)
 		i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == p.Agent })
+		if i < 0 && sc.NewKeysOff {
+			continue
+		}
 		if i < 0 {
 			if err := c.State.PutPendingProfile(conn, p); err != nil {
 				return err

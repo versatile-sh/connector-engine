@@ -232,7 +232,15 @@ func (c *Console) ProfileEffects(ctx context.Context, conn, agent string) ([]Eff
 	return out, nil
 }
 
-// SetNewKeysOff records whether access keys made from now on start off on a connector instead of following its choices; keys already made keep theirs.
+// DropWaitingProfile forgets a setup's profile waiting on a connector for an access key not made yet.
+func (c *Console) DropWaitingProfile(ctx context.Context, conn, agent string) error {
+	if err := c.plainConnector(ctx, conn); err != nil {
+		return err
+	}
+	return c.State.DropPendingProfile(conn, agent)
+}
+
+// SetNewKeysOff records whether access keys made from now on start off on a connector instead of following its choices; keys already made keep theirs, and starting off drops the profiles waiting there that are not off.
 func (c *Console) SetNewKeysOff(ctx context.Context, conn string, off bool) error {
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return err
@@ -257,11 +265,11 @@ func (c *Console) join(ctx context.Context, conn port.Connector, a Agent, known 
 	case known:
 		return nil
 	}
-	if p, ok := c.State.PendingProfile(id, a.Name); ok {
-		return c.applyProfile(ctx, id, a, p)
-	}
 	if c.State.NewKeysOff(id) {
 		return nil
+	}
+	if p, ok := c.State.PendingProfile(id, a.Name); ok {
+		return c.applyProfile(ctx, id, a, p)
 	}
 	return c.bind(ctx, id, a)
 }

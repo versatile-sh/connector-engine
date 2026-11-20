@@ -23,7 +23,7 @@ type FunctionView struct {
 	Access      Access     `json:"access"`
 }
 
-// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, and the profile of each access key made so far.
+// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far and the profiles a setup left waiting for keys not made yet.
 type ConnectorSummary struct {
 	ID          string         `json:"id"`
 	Alias       string         `json:"alias"`
@@ -42,6 +42,7 @@ type ConnectorSummary struct {
 	Functions   []FunctionView `json:"functions"`
 	Items       []Item         `json:"items"`
 	Profiles    []Profile      `json:"profiles"`
+	Waiting     []Profile      `json:"waiting,omitempty"`
 	NewKeysOff  bool           `json:"new_keys_off,omitempty"`
 }
 
@@ -120,7 +121,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		if s.Profiles, err = c.profiles(ctx, string(conn.ID)); err != nil {
 			return nil, err
 		}
-		s.NewKeysOff = c.State.NewKeysOff(string(conn.ID))
+		s.NewKeysOff, s.Waiting = c.State.NewKeysOff(string(conn.ID)), c.State.PendingProfiles(string(conn.ID))
 		if creds, err := c.Engine.credentials(ctx, string(conn.ID)); err == nil {
 			for _, cr := range creds {
 				s.Credentials = append(s.Credentials, string(cr.Kind)+":"+string(cr.Status))

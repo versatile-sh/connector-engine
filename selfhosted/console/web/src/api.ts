@@ -70,6 +70,7 @@ export type Connector = {
   functions: FunctionView[] | null;
   items?: Item[] | null;
   profiles: Profile[];
+  waiting?: Profile[];
   new_keys_off?: boolean;
 };
 

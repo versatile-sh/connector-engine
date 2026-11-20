@@ -428,7 +428,7 @@ func (s *State) OriginOf(id string) (Origin, bool) {
 	return o, ok
 }
 
-// SetNewKeysOff records whether access keys made from now on start off on the connector instead of following its choices.
+// SetNewKeysOff records whether access keys made from now on start off on the connector instead of following its choices; starting off drops the connector's waiting profiles that are not off.
 func (s *State) SetNewKeysOff(conn string, off bool) error {
 	return s.update(func(d *stateFile) error {
 		if !off {
@@ -436,6 +436,11 @@ func (s *State) SetNewKeysOff(conn string, off bool) error {
 			return nil
 		}
 		put(&d.NewKeysOff, conn, true)
+		if rest := slices.DeleteFunc(d.Pending[conn], func(p Profile) bool { return p.Mode != ProfileOff }); len(rest) > 0 {
+			d.Pending[conn] = rest
+		} else {
+			delete(d.Pending, conn)
+		}
 		return nil
 	})
 }
@@ -456,6 +461,13 @@ func (s *State) PutPendingProfile(conn string, p Profile) error {
 	})
 }
 
+// PendingProfiles returns the setup's profiles waiting on the connector for access keys not made yet.
+func (s *State) PendingProfiles(conn string) []Profile {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.data.Pending[conn])
+}
+
 // PendingProfile returns the setup's profile waiting on the connector for an access key of this name.
 func (s *State) PendingProfile(conn, agent string) (Profile, bool) {
 	s.mu.Lock()
@@ -469,10 +481,19 @@ func (s *State) PendingProfile(conn, agent string) (Profile, bool) {
 
 // DropPendingProfiles forgets every profile waiting for an access key of this name, once the key is made.
 func (s *State) DropPendingProfiles(agent string) error {
+	return s.dropPending(func(_ string, p Profile) bool { return p.Agent == agent })
+}
+
+// DropPendingProfile forgets the profile waiting on the connector for an access key of this name.
+func (s *State) DropPendingProfile(conn, agent string) error {
+	return s.dropPending(func(c string, p Profile) bool { return c == conn && p.Agent == agent })
+}
+
+func (s *State) dropPending(drop func(conn string, p Profile) bool) error {
 	return s.update(func(d *stateFile) error {
 		changed := false
 		for conn, list := range d.Pending {
-			rest := slices.DeleteFunc(slices.Clone(list), func(p Profile) bool { return p.Agent == agent })
+			rest := slices.DeleteFunc(slices.Clone(list), func(p Profile) bool { return drop(conn, p) })
 			switch {
 			case len(rest) == len(list):
 				continue

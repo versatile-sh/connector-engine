@@ -295,11 +295,15 @@ func seeded(t *testing.T) (*stack, console.AgentToken, port.Sealed) {
 
 func TestAFullBackupMovesEverythingToAFreshInstall(t *testing.T) {
 	src, tok, box := seeded(t)
+	first := src.view().Connectors[0].ID
+	if _, err := src.c.State.PutSlot(console.KeySlot{Name: "from-a-setup", Profiles: map[string]console.Profile{first: {Mode: console.ProfileCustom, Overrides: map[string]console.Access{"lookup": console.AccessAsk}}}}); err != nil {
+		t.Fatal(err)
+	}
 	want := src.view()
 	if !slices.ContainsFunc(want.Connectors, func(c console.ConnectorSummary) bool {
 		return c.NewKeysOff && len(c.Profiles) == 1 && c.Profiles[0].Overrides["search"] == console.AccessOff
-	}) {
-		t.Fatalf("the seeded install has no key profile: %+v", want.Connectors)
+	}) || !slices.ContainsFunc(want.Connectors, func(c console.ConnectorSummary) bool { return len(c.Slots) == 1 }) {
+		t.Fatalf("the seeded install has no key profile or permission set: %+v", want.Connectors)
 	}
 
 	if status, raw := src.b.send("POST", "/api/backup/export", map[string]any{"mode": "full", "password": ownerPassword, "passphrase": passphrase}, nil); status != http.StatusBadRequest || !strings.Contains(string(raw), "confirm_required") {

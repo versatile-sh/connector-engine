@@ -3,7 +3,7 @@ package postgres
 import (
 	"context"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // PurgeTenant deletes the rows of a tenant, its audit and inbox rows and its delivered events, and keeps the registry row.

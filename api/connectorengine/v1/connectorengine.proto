@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package connectorengine.v1;
 
-option go_package = "github.com/agents-control/connector-engine/api/connectorengine/v1;connectorenginev1";
+option go_package = "github.com/versatile-sh/connector-engine/api/connectorengine/v1;connectorenginev1";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";

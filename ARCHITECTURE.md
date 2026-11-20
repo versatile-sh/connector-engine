@@ -98,15 +98,21 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 
 ## The self-hosted layer
 
-`selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`secrets/hostkey`, `cli/keychain`) and desktop notifications.
+`selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`) and desktop notifications.
 
 - Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
-- Composition: the core exposes `app.Main(..., app.Extensions)` and `cli.Main(..., commands)`. Each main passes what its build adds. `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
+- Composition: every adapter, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or `cli.Main` (`cnctl`). `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
 
 ```go
-func main() { os.Exit(app.Main(os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr, app.Extensions{})) }
+// cmd/connector-engine: the core alone
+func main() { os.Exit(app.Main(app.Build{Version: version}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr)) }
 
-func main() { os.Exit(app.Main(os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr, selfhosted.Engine())) }
+// selfhosted/cmd/connector-engine: the core plus hostkey and unlock
+func main() {
+	adapters := app.Core()
+	selfhosted.Register(adapters)
+	os.Exit(app.Main(app.Build{Version: version, Adapters: adapters, Commands: selfhosted.EngineCommands()}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr))
+}
 ```
 
 - The console reaches the engine over HTTP only, like any other client.

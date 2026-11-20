@@ -5,9 +5,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/plugkit/adapters"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 
-	"github.com/agents-control/connector-engine/filter/builtin"
+	"github.com/versatile-sh/connector-engine/filter/builtin"
 )
 
 // Modes of the engine; production refuses unsafe settings unless acknowledged.
@@ -44,6 +44,8 @@ type Config struct {
 	Audit        Audit        `yaml:"audit"`
 	Outbox       Outbox       `yaml:"outbox"`
 	Retention    Retention    `yaml:"retention"`
+
+	builtins []Builtin
 }
 
 // Server holds the addresses the binary listens on; it is not a key.
@@ -325,7 +327,7 @@ type Credentials struct {
 	Clients           []OAuthClient `yaml:"clients"`
 }
 
-// Secrets is secrets.*; Dir is where the file-backed adapters keep their root key, UnlockSocket where hostkey waits for the host's unlock key.
+// Secrets is secrets.*; Dir is where the file-backed adapters keep their root key, UnlockSocket where an adapter of the build receives its unlock key.
 type Secrets struct {
 	Adapter      string        `yaml:"adapter"`
 	DataKeyCache time.Duration `yaml:"dataKeyCache"`

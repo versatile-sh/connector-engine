@@ -12,8 +12,8 @@ import (
 
 	"golang.org/x/sync/singleflight"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Deps are the ports a Service runs on; Store, Clock, Authorizer, Secrets and Runtime are required.

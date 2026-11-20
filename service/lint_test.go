@@ -3,8 +3,8 @@ package service_test
 import (
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	st "github.com/agents-control/connector-engine/service/servicetest"
+	"github.com/versatile-sh/connector-engine/port"
+	st "github.com/versatile-sh/connector-engine/service/servicetest"
 )
 
 func TestLintCaptureNeedsTheCreatorOrReviewerRole(t *testing.T) {

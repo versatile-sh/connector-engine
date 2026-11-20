@@ -13,9 +13,9 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/server"
-	"github.com/agents-control/connector-engine/server/grpcapi"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server/grpcapi"
 )
 
 func find(t *testing.T, id string) server.Operation {

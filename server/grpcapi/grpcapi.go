@@ -17,10 +17,10 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 
-	connectorenginev1 "github.com/agents-control/connector-engine/api/connectorengine/v1"
-	"github.com/agents-control/connector-engine/internal/safe"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/server"
+	connectorenginev1 "github.com/versatile-sh/connector-engine/api/connectorengine/v1"
+	"github.com/versatile-sh/connector-engine/internal/safe"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/server"
 )
 
 // TrailerErrorCode is the trailer that carries the error code string of a failed call.

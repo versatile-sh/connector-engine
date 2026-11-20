@@ -4,9 +4,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"time"
 
-	"github.com/agents-control/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/config"
 )
 
 func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
@@ -18,7 +17,7 @@ func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f, err := cfg.LoadAdapters(data, nil)
+	f, err := core(cfg).LoadAdapters(data, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +42,7 @@ func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
 }
 
 func TestAConfigThatDoesNotOptInDefaultsToTheLocalFileAndStillNeedsTheAcknowledgement(t *testing.T) {
-	cfg := config.Default()
+	cfg := core(config.Default())
 	if d := cfg.AdaptersSpec().Ports[config.PortSecrets].Default; !reflect.DeepEqual(d, []string{"builtin:localfile"}) {
 		t.Fatalf("default secrets adapter: %v", d)
 	}
@@ -53,26 +52,5 @@ func TestAConfigThatDoesNotOptInDefaultsToTheLocalFileAndStillNeedsTheAcknowledg
 	}
 	if !found {
 		t.Fatal("localfile without plaintext_root_key is refused in production")
-	}
-}
-
-func TestThePersonProfileReachesLocalServersAndLoads(t *testing.T) {
-	cfg, err := config.Load("../deploy/profiles/person/connector-engine.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile("../deploy/profiles/person/adapters.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := cfg.LoadAdapters(data, nil); err != nil {
-		t.Fatal(err)
-	}
-	if !cfg.Runtime.AllowPrivateHosts {
-		t.Fatal("the person profile refuses the local servers its console imports")
-	}
-	week, quarter := 7*24*time.Hour, 90*24*time.Hour
-	if want := (config.Retention{Every: time.Hour, DeliveredEvents: week, IdempotencyKeys: week, Audit: quarter, Calls: quarter}); cfg.Retention != want {
-		t.Fatalf("person retention %+v, want %+v", cfg.Retention, want)
 	}
 }

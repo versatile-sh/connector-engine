@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/authz/table"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
-	st "github.com/agents-control/connector-engine/service/servicetest"
-	"github.com/agents-control/connector-engine/store/memory"
-	"github.com/agents-control/connector-engine/store/postgres"
-	"github.com/agents-control/connector-engine/store/storetest"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
+	st "github.com/versatile-sh/connector-engine/service/servicetest"
+	"github.com/versatile-sh/connector-engine/store/memory"
+	"github.com/versatile-sh/connector-engine/store/postgres"
+	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 
 const benchAgents, benchConnectors = 20, 20

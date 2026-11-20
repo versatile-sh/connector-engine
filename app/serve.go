@@ -16,12 +16,12 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/relay"
-	"github.com/agents-control/connector-engine/server"
-	"github.com/agents-control/connector-engine/server/grpcapi"
-	"github.com/agents-control/connector-engine/server/httpapi"
-	"github.com/agents-control/connector-engine/server/mcpapi"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/relay"
+	"github.com/versatile-sh/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server/grpcapi"
+	"github.com/versatile-sh/connector-engine/server/httpapi"
+	"github.com/versatile-sh/connector-engine/server/mcpapi"
 )
 
 func (a *App) api(authn server.Authenticator) (http.Handler, error) {

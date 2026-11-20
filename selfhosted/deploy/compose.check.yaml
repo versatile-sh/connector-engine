@@ -1,0 +1,12 @@
+services:
+  testmcp:
+    image: connector-engine-testmcp:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: testmcp
+    profiles: [person]
+
+  engine:
+    volumes:
+      - ./check:/etc/connector-engine:ro

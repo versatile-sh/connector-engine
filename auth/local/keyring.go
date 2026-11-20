@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Keyring is where Open keeps the issuer's keys: one file of keys sealed by Secrets under the installation, the age that rotates the signing key, and how long a retired key keeps verifying.

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Specificity ranks a selector: 2 for fn: and an exact item, 1 for class: and an item kind's wildcard, 0 for *.

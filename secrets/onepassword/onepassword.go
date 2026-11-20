@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/secrets/local"
 )
 
 // Config names the Connect server, its access token and the item field that holds the 64 hexadecimal characters of the unlock key.

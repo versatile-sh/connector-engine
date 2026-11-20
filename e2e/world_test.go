@@ -16,11 +16,11 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/internal/grpctest"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
-	"github.com/agents-control/connector-engine/store/storetest"
-	plugout "github.com/agents-control/plugkit/outbox"
+	"github.com/versatile-sh/connector-engine/internal/grpctest"
+	plugout "github.com/versatile-sh/connector-engine/internal/plugkit/outbox"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
+	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 
 const workspace = "w1"

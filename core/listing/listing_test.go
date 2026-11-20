@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/core/listing"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/listing"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 func yes() *bool { v := true; return &v }

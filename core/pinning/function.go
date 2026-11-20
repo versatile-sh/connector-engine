@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Effects is what a function transition asks the use case to do in the same transaction.

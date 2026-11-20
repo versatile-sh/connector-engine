@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Injector writes a credential into the headers of an outbound request; the zero value sends API keys as a bearer token.

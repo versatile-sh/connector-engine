@@ -3,10 +3,10 @@ package table
 import (
 	"time"
 
-	"github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/core/evaluate"
-	"github.com/agents-control/connector-engine/core/exposure"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/core/evaluate"
+	"github.com/versatile-sh/connector-engine/core/exposure"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Settings are the installation keys the evaluation reads: permission.destructiveMax and exposure.onTrifecta.

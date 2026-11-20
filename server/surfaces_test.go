@@ -17,11 +17,11 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	connectorenginev1 "github.com/agents-control/connector-engine/api/connectorengine/v1"
-	"github.com/agents-control/connector-engine/server"
-	"github.com/agents-control/connector-engine/server/grpcapi"
-	"github.com/agents-control/connector-engine/server/httpapi"
-	"github.com/agents-control/connector-engine/server/internal/harness"
+	connectorenginev1 "github.com/versatile-sh/connector-engine/api/connectorengine/v1"
+	"github.com/versatile-sh/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server/grpcapi"
+	"github.com/versatile-sh/connector-engine/server/httpapi"
+	"github.com/versatile-sh/connector-engine/server/internal/harness"
 )
 
 type surfaces struct {

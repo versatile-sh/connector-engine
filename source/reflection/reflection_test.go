@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/internal/grpctest"
-	"github.com/agents-control/connector-engine/internal/sourcetest"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/source/reflection"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/grpctest"
+	"github.com/versatile-sh/connector-engine/internal/sourcetest"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/source/reflection"
 )
 
 func TestImportsAServerThroughReflection(t *testing.T) {

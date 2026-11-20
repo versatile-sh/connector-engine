@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/sink/memory"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/sink/memory"
 )
 
 func TestSinkRecordsInOrderAndFailsOnDemand(t *testing.T) {

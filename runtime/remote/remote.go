@@ -13,12 +13,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/credential"
-	deadlines "github.com/agents-control/connector-engine/internal/deadline"
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/internal/handles"
-	"github.com/agents-control/connector-engine/internal/outcome"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/credential"
+	deadlines "github.com/versatile-sh/connector-engine/internal/deadline"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/handles"
+	"github.com/versatile-sh/connector-engine/internal/outcome"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 type page struct {

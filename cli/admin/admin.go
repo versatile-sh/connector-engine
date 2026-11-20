@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server"
 )
 
 // Alias is a "group verb" shorthand for one operation; Positional names the fields the arguments after the path parameters fill.

@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/agents-control/connector-engine/auth/internal/wire"
-	"github.com/agents-control/connector-engine/port"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/versatile-sh/connector-engine/auth/internal/wire"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // Issuer signs tokens under one name with its newest key and publishes every key it still keeps.

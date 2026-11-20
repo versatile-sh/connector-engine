@@ -5,12 +5,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/agents-control/connector-engine/authz"
-	"github.com/agents-control/connector-engine/authz/table"
-	"github.com/agents-control/connector-engine/catalog"
-	corecatalog "github.com/agents-control/connector-engine/core/catalog"
-	"github.com/agents-control/connector-engine/core/listing"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/catalog"
+	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
+	"github.com/versatile-sh/connector-engine/core/listing"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // CaptureFunc captures the function definitions of a manifest; Service.Capture is the runtime-backed one.

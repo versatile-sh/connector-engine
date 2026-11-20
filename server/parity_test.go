@@ -15,11 +15,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 
-	connectorenginev1 "github.com/agents-control/connector-engine/api/connectorengine/v1"
-	"github.com/agents-control/connector-engine/server"
-	"github.com/agents-control/connector-engine/server/grpcapi"
-	"github.com/agents-control/connector-engine/server/httpapi"
-	"github.com/agents-control/connector-engine/server/internal/harness"
+	connectorenginev1 "github.com/versatile-sh/connector-engine/api/connectorengine/v1"
+	"github.com/versatile-sh/connector-engine/server"
+	"github.com/versatile-sh/connector-engine/server/grpcapi"
+	"github.com/versatile-sh/connector-engine/server/httpapi"
+	"github.com/versatile-sh/connector-engine/server/internal/harness"
 )
 
 func service() protoreflect.ServiceDescriptor {

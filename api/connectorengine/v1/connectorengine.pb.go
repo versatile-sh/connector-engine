@@ -11387,7 +11387,7 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\fGetOperation\x12$.connectorengine.v1.OperationRequest\x1a\x1d.connectorengine.v1.Operation\x12H\n" +
 	"\x0eListEventTypes\x12\x16.google.protobuf.Empty\x1a\x1e.connectorengine.v1.EventTypes\x12S\n" +
 	"\fGetEventType\x12$.connectorengine.v1.EventTypeRequest\x1a\x1d.connectorengine.v1.EventType\x12D\n" +
-	"\fListAdapters\x12\x16.google.protobuf.Empty\x1a\x1c.connectorengine.v1.DocumentBUZSgithub.com/agents-control/connector-engine/api/connectorengine/v1;connectorenginev1b\x06proto3"
+	"\fListAdapters\x12\x16.google.protobuf.Empty\x1a\x1c.connectorengine.v1.DocumentBSZQgithub.com/versatile-sh/connector-engine/api/connectorengine/v1;connectorenginev1b\x06proto3"
 
 var (
 	file_connectorengine_v1_connectorengine_proto_rawDescOnce sync.Once

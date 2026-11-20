@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/agents-control/connector-engine/gateway"
-	"github.com/agents-control/connector-engine/port"
-	"github.com/agents-control/connector-engine/service"
-	sinkmemory "github.com/agents-control/connector-engine/sink/memory"
-	"github.com/agents-control/connector-engine/store/memory"
-	"github.com/agents-control/connector-engine/telemetry"
+	"github.com/versatile-sh/connector-engine/gateway"
+	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/service"
+	sinkmemory "github.com/versatile-sh/connector-engine/sink/memory"
+	"github.com/versatile-sh/connector-engine/store/memory"
+	"github.com/versatile-sh/connector-engine/telemetry"
 )
 
 type core struct {

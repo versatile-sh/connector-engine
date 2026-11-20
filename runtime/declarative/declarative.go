@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agents-control/connector-engine/credential"
-	deadlines "github.com/agents-control/connector-engine/internal/deadline"
-	"github.com/agents-control/connector-engine/internal/egress"
-	"github.com/agents-control/connector-engine/internal/handles"
-	"github.com/agents-control/connector-engine/internal/hints"
-	"github.com/agents-control/connector-engine/internal/outcome"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/credential"
+	deadlines "github.com/versatile-sh/connector-engine/internal/deadline"
+	"github.com/versatile-sh/connector-engine/internal/egress"
+	"github.com/versatile-sh/connector-engine/internal/handles"
+	"github.com/versatile-sh/connector-engine/internal/hints"
+	"github.com/versatile-sh/connector-engine/internal/outcome"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 const maxResponse = 8 << 20

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agents-control/connector-engine/port"
-	sinklog "github.com/agents-control/connector-engine/sink/log"
+	"github.com/versatile-sh/connector-engine/port"
+	sinklog "github.com/versatile-sh/connector-engine/sink/log"
 )
 
 func TestSinkLogsIdentityNeverData(t *testing.T) {

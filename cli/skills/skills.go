@@ -18,9 +18,9 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/agents-control/connector-engine/cli/tools"
-	"github.com/agents-control/connector-engine/core/listing"
-	"github.com/agents-control/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/cli/tools"
+	"github.com/versatile-sh/connector-engine/core/listing"
+	"github.com/versatile-sh/connector-engine/port"
 )
 
 // ManifestFile is the file an export writes in its folder, naming every file it wrote.

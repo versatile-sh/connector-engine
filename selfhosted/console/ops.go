@@ -172,6 +172,9 @@ func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string,
 	if err := checkBatch(names); err != nil {
 		return nil, err
 	}
+	if err := c.plainConnector(ctx, conn); err != nil {
+		return nil, err
+	}
 	unlock, err := c.lockConnector(ctx, conn)
 	if err != nil {
 		return nil, err
@@ -396,6 +399,7 @@ func (c *Console) Remove(ctx context.Context, conn string) error {
 		return err
 	}
 	defer unlock()
+	defer c.writing.Delete(conn)
 	if len(c.State.Agents()) > 0 {
 		if err := c.State.DismissOnboarding(); err != nil {
 			return err
@@ -404,7 +408,6 @@ func (c *Console) Remove(ctx context.Context, conn string) error {
 	if err := c.Engine.removeConnector(ctx, conn); err != nil {
 		return err
 	}
-	c.writing.Delete(conn)
 	return c.State.ForgetConnector(conn)
 }
 

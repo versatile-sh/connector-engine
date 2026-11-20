@@ -269,6 +269,8 @@ func seeded(t *testing.T) (*stack, console.AgentToken, port.Sealed) {
 	src.b.ok("POST", "/api/connectors/"+imported.Connector+"/headers", map[string]any{"headers": map[string]string{"X-Api-Key": apiKey}}, nil)
 	var tok console.AgentToken
 	src.b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
+	src.b.ok("PUT", "/api/connectors/"+imported.Connector+"/profiles/claude-code", map[string]string{"name": "search", "access": "off"}, nil)
+	src.b.ok("PUT", "/api/connectors/"+imported.Connector+"/new-keys", map[string]bool{"off": true}, nil)
 	var pv console.Preview
 	src.b.ok("POST", "/api/preview", map[string]any{"listing": catalogBase + "pdf.yaml"}, &pv)
 	src.b.ok("POST", "/api/import", map[string]any{"listing": catalogBase + "pdf.yaml", "digest": pv.Skill.Digest, "access": "ask"}, nil)
@@ -288,6 +290,11 @@ func seeded(t *testing.T) (*stack, console.AgentToken, port.Sealed) {
 func TestAFullBackupMovesEverythingToAFreshInstall(t *testing.T) {
 	src, tok, box := seeded(t)
 	want := src.view()
+	if !slices.ContainsFunc(want.Connectors, func(c console.ConnectorSummary) bool {
+		return c.NewKeysOff && len(c.Profiles) == 1 && c.Profiles[0].Overrides["search"] == console.AccessOff
+	}) {
+		t.Fatalf("the seeded install has no key profile: %+v", want.Connectors)
+	}
 
 	if status, raw := src.b.send("POST", "/api/backup/export", map[string]any{"mode": "full", "password": ownerPassword, "passphrase": passphrase}, nil); status != http.StatusBadRequest || !strings.Contains(string(raw), "confirm_required") {
 		t.Fatalf("an export without the confirmation: %d %s", status, raw)

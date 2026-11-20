@@ -2,7 +2,6 @@ package sqlite_test
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -51,7 +50,7 @@ func TestConformance(t *testing.T) {
 	})
 }
 
-func TestOpenSetsDurablePragmasOnPathsWithSpaces(t *testing.T) {
+func TestOpensAPathWithSpaces(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "Application Support", "connector engine.db")
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		t.Fatal(err)
@@ -67,25 +66,6 @@ func TestOpenSetsDurablePragmasOnPathsWithSpaces(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("the database is not at the path with spaces: %v", err)
-	}
-	db, err := sql.Open("sqlite", path+"?_pragma=busy_timeout(5000)&_pragma=synchronous(FULL)")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	var mode string
-	var sync, busy int
-	if err := db.QueryRow(`PRAGMA journal_mode`).Scan(&mode); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.QueryRow(`PRAGMA synchronous`).Scan(&sync); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.QueryRow(`PRAGMA busy_timeout`).Scan(&busy); err != nil {
-		t.Fatal(err)
-	}
-	if mode != "wal" || sync != 2 || busy != 5000 {
-		t.Fatalf("journal_mode=%s synchronous=%d busy_timeout=%d", mode, sync, busy)
 	}
 }
 

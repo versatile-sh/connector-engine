@@ -15,9 +15,6 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Function is the name of a skill listing's one function, short so that any alias fits the exposed-name limit.
-const Function = "skill"
-
 // Runtime answers a skill listing from the bytes stored in its manifest.
 type Runtime struct {
 	started *handles.Registry[port.Manifest]
@@ -75,7 +72,7 @@ func Definition(m port.Manifest) (port.RawDefinition, error) {
 	s := m.Skill
 	no := false
 	def := map[string]any{
-		"name": Function, "title": m.Title, "description": m.Description,
+		"name": port.SkillFunction, "title": m.Title, "description": m.Description,
 		"inputSchema": map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{
 			"path": map[string]any{"type": "string", "description": "A file of the skill folder; SKILL.md when empty."}}},
 		"annotations": map[string]any{"readOnlyHint": true, "openWorldHint": &no},
@@ -83,7 +80,7 @@ func Definition(m port.Manifest) (port.RawDefinition, error) {
 			Licence: s.Licence, Source: s.Source, Requires: s.Requires, Files: views(s.Files)}},
 	}
 	raw, err := json.Marshal(def)
-	return port.RawDefinition{Name: Function, Raw: raw}, err
+	return port.RawDefinition{Name: port.SkillFunction, Raw: raw}, err
 }
 
 // ListFunctions returns the skill's one definition.
@@ -116,7 +113,7 @@ func (r *Runtime) Call(_ context.Context, h port.Handle, function string, argume
 		return port.Result{}, err
 	}
 	s := m.Skill
-	if function != Function {
+	if function != port.SkillFunction {
 		return port.Result{}, port.Errorf(port.CodeNotFound, "skill %s has no function %s", s.Name, function)
 	}
 	var in struct {

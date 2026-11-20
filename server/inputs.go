@@ -1,6 +1,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/service"
 )
@@ -274,6 +276,8 @@ type ListApprovalsRequest struct {
 	Session   port.SessionID     `json:"session,omitempty"`
 	Agent     port.AgentID       `json:"agent,omitempty"`
 	Connector port.ConnectorID   `json:"connector,omitempty"`
+	Since     time.Time          `json:"since,omitzero"`
+	Limit     int                `json:"limit,omitempty"`
 }
 
 // ApprovalRequest names an approval.
@@ -331,6 +335,8 @@ type ListCallsRequest struct {
 	Session   port.SessionID   `json:"session,omitempty"`
 	Connector port.ConnectorID `json:"connector,omitempty"`
 	State     port.CallState   `json:"state,omitempty"`
+	Since     time.Time        `json:"since,omitzero"`
+	Limit     int              `json:"limit,omitempty"`
 }
 
 // RotateKeyRequest names what to rotate: the root key, or the key of one tenant.

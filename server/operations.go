@@ -159,6 +159,13 @@ func indexOf(fields []Field, name string) int {
 }
 
 func parse(dst reflect.Value, raw string) error {
+	if dst.Type() == TimeType {
+		t, err := time.Parse(time.RFC3339Nano, raw)
+		if err == nil {
+			dst.Set(reflect.ValueOf(t))
+		}
+		return err
+	}
 	switch dst.Kind() {
 	case reflect.String:
 		dst.SetString(raw)

@@ -396,6 +396,8 @@ func oneOpenRecord(e *env) {
 		e.same([]port.ApprovalID{"a1", "a4"}, []port.ApprovalID{got[0].ID, got[1].ID})
 		open, _ := tx.ListApprovals(port.ApprovalFilter{States: []port.ApprovalState{port.ApprovalPending}})
 		e.same(2, len(open))
+		later, _ := tx.ListApprovals(port.ApprovalFilter{Session: "s1", Since: t0.Add(time.Second)})
+		e.same([]port.ApprovalID{"a4"}, []port.ApprovalID{later[0].ID})
 		return err
 	}))
 }
@@ -737,11 +739,12 @@ func callsClientsAndSyncs(e *env) {
 		all, err1 := tx.ListCalls(port.CallFilter{})
 		byAgent, err2 := tx.ListCalls(port.CallFilter{Agent: "x"})
 		byState, err3 := tx.ListCalls(port.CallFilter{State: port.CallFinished})
+		since, err6 := tx.ListCalls(port.CallFilter{Since: t0.Add(2 * time.Second)})
 		a, okA, err4 := tx.GetClient("https://idp")
 		_, okMissing, err5 := tx.GetClient("https://other")
-		e.same([]any{[]string{"k1", "k2", "k3"}, []string{"k1", "k2"}, []string{"k2", "k3"}, "a", true, false, "z"},
-			[]any{ids(all), ids(byAgent), ids(byState), a.ClientID, okA, okMissing, string(a.Secret.Ciphertext)})
-		return errors.Join(err1, err2, err3, err4, err5)
+		e.same([]any{[]string{"k1", "k2", "k3"}, []string{"k1", "k2"}, []string{"k2", "k3"}, []string{"k2", "k3"}, "a", true, false, "z"},
+			[]any{ids(all), ids(byAgent), ids(byState), ids(since), a.ClientID, okA, okMissing, string(a.Secret.Ciphertext)})
+		return errors.Join(err1, err2, err3, err4, err5, err6)
 	}))
 	e.must(e.read(scopeB, func(tx port.Tx) error {
 		all, err1 := tx.ListCalls(port.CallFilter{})

@@ -9,8 +9,8 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// ListCalls returns the audit rows of the caller's tenant, oldest first; arguments are references and hashes only (§13.1 listCalls).
-func (s *Service) ListCalls(ctx context.Context, p port.Principal, f port.CallFilter) ([]port.Call, error) {
+// ListCalls returns the audit rows of the caller's tenant, oldest first and the newest limit of them when limit is positive; arguments are references and hashes only (§13.1 listCalls).
+func (s *Service) ListCalls(ctx context.Context, p port.Principal, f port.CallFilter, limit int) ([]port.Call, error) {
 	if err := s.authorize(ctx, p, authz.AuditRead, s.tenantResource(p)); err != nil {
 		return nil, err
 	}
@@ -19,7 +19,14 @@ func (s *Service) ListCalls(ctx context.Context, p port.Principal, f port.CallFi
 		out, err = tx.ListCalls(f)
 		return err
 	})
-	return out, err
+	return newest(out, limit), err
+}
+
+func newest[T any](rows []T, limit int) []T {
+	if limit <= 0 || len(rows) <= limit {
+		return rows
+	}
+	return rows[len(rows)-limit:]
 }
 
 // SourceStatus is one configured listing source and what its last sync did; a source never synced has a zero time.

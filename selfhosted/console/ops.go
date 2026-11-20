@@ -412,7 +412,7 @@ func (c *Console) Remove(ctx context.Context, conn string) error {
 }
 
 func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
-	if err := c.Engine.bind(ctx, conn, a.Name); err != nil {
+	if err := c.Engine.bind(ctx, conn, a.Name, a.Owner); err != nil {
 		return err
 	}
 	for _, sel := range agentSelectors {
@@ -478,7 +478,7 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, within each connector's new-key limits, and starts off on skills. A named permission set gives the key its profile on the set's connectors and is forgotten once the key is recorded. It records the agent until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide.
+// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, within each connector's new-key limits, and starts off on skills. A named permission set gives the key its profile on the set's connectors and is forgotten once the key is recorded. It records the agent, owned by the context's actor, until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide; a name another person's key has is refused before any engine write.
 func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration, slotName string) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
@@ -491,7 +491,14 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration,
 	if ttl <= 0 || ttl > c.MaxAgentTTL {
 		ttl = c.MaxAgentTTL
 	}
-	a := Agent{Name: name, ExpiresAt: time.Now().Add(ttl).UTC().Truncate(time.Second)}
+	owner := actorOf(ctx)
+	if owner == "" {
+		return Agent{}, ErrNoActor
+	}
+	if old, ok := c.State.Agent(name); ok && old.Owner != owner {
+		return Agent{}, ErrNameTaken
+	}
+	a := Agent{Name: name, Owner: owner, ExpiresAt: time.Now().Add(ttl).UTC().Truncate(time.Second)}
 	live, err := c.Engine.liveConnectors(ctx)
 	if err != nil {
 		return Agent{}, err
@@ -522,7 +529,8 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration,
 }
 
 func (c *Console) agentToken(ctx context.Context, name string, ttl time.Duration) (string, error) {
-	return c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": c.Engine.Person}, ttl)
+	owner := c.State.KeyOwner(name)
+	return c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": owner, "agent_owner": owner}, ttl)
 }
 
 // MintAgent binds the agent as BindAgent does, with the named permission set when one is named, and mints its token, living until the key expires.
@@ -547,7 +555,7 @@ func (c *Console) Approvals(ctx context.Context) ([]port.Approval, error) {
 	return out, err
 }
 
-// Decide approves that one waiting call, or denies it, as the owner.
+// Decide approves that one waiting call, or denies it, as the context's actor.
 func (c *Console) Decide(ctx context.Context, id string, approve bool) error {
 	d := port.DecisionDeny
 	if approve {

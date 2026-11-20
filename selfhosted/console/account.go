@@ -19,7 +19,7 @@ func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 			writeError(w, http.StatusForbidden, "missing or wrong CSRF token")
 			return
 		}
-		next(w, r.WithContext(withUser(r.Context(), u)))
+		next(w, r.WithContext(WithActor(withUser(r.Context(), u), u.Person)))
 	}
 }
 
@@ -51,6 +51,9 @@ func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		c.fail(w, err)
 	default:
+		if err := c.ReconcileRoles(r.Context()); err != nil {
+			c.logger().Warn("the first owner's engine role waits for the next start", "error", err)
+		}
 		c.signIn(w, http.StatusCreated, u.Person)
 	}
 }

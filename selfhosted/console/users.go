@@ -53,7 +53,11 @@ type User struct {
 // ErrLastOwner refuses a change that would leave the console without an Owner.
 var ErrLastOwner = &statusError{status: http.StatusConflict, err: errors.New("the console keeps at least one owner")}
 
-const defaultPerson = "owner"
+const (
+	defaultPerson        = "owner"
+	defaultServicePerson = "console"
+	defaultManagersGroup = "managers"
+)
 
 var dummySalt = []byte("connector-engine/no-such-user")
 
@@ -106,6 +110,12 @@ func migrateUsers(d *stateFile, person string) {
 		d.LegacyPerson = person
 	}
 	d.Owner = nil
+	for k, a := range d.Agents {
+		if a.Owner == "" {
+			a.Owner = firstOf(d.LegacyPerson, person)
+			d.Agents[k] = a
+		}
+	}
 	for k, v := range d.Sessions {
 		if v.Person == "" {
 			v.Person = d.LegacyPerson

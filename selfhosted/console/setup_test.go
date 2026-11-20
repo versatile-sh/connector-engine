@@ -74,7 +74,7 @@ func TestASharedSetupHoldsNoSecret(t *testing.T) {
 	src, tok, query := seededSetup(t)
 	hidden := newToolServer(t, "hidden", "peek")
 	src.b.ok("POST", "/api/import", map[string]any{"mcp": hidden.URL + "/mcp/sk-ak-0123456789abcdefghij/sse?k=K-SECRET-8", "local": true}, nil)
-	if err := src.c.State.PutAgent(console.Agent{Name: "an-app-client-1", ClientID: "client-1", ViaBrowser: true, ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+	if err := src.c.State.PutAgent(console.Agent{Name: "an-app-client-1", Owner: "owner", ClientID: "client-1", ViaBrowser: true, ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
 		t.Fatal(err)
 	}
 	out := src.exportSetup()

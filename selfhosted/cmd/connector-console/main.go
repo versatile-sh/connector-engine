@@ -59,7 +59,9 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	hostSocket := fs.String("host-socket", getenv("CONSOLE_HOST_SOCKET"), "socket for the requests only the local machine makes, such as a password reset; empty serves none")
 	tenant := fs.String("tenant", or(getenv, "CONSOLE_TENANT", "local"), "tenant of the local install")
 	workspace := fs.String("workspace", or(getenv, "CONSOLE_WORKSPACE", "default"), "workspace connectors are installed in")
-	person := fs.String("person", or(getenv, "CONSOLE_PERSON", "owner"), "engine person the console acts as; a tenant admin in bootstrap.roles")
+	person := fs.String("person", or(getenv, "CONSOLE_PERSON", "owner"), "engine person of the first Owner")
+	servicePerson := fs.String("service-person", or(getenv, "CONSOLE_SERVICE_PERSON", "console"), "engine person the console reads and writes role rows as; a tenant admin in bootstrap.roles")
+	managersGroup := fs.String("managers-group", or(getenv, "CONSOLE_MANAGERS_GROUP", "managers"), "engine group holding every Owner and Admin")
 	loopbackHost := fs.String("loopback-host", getenv("CONSOLE_LOOPBACK_HOST"), "host a local server at localhost is dialled as, such as host.docker.internal in a container; empty dials loopback itself")
 	agentTTL := fs.Duration("agent-ttl", 720*time.Hour, "longest agent token; at most auth.agentTokenMaxLifetime")
 	if err := fs.Parse(args); err != nil {
@@ -88,7 +90,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		}
 	}
 	c, closeConsole, err := console.Open(ctx, console.Options{PublicURL: *publicURL, EngineURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)),
-		StatePath: *statePath, Unlock: unlock, Tenant: *tenant, Workspace: *workspace, Person: *person, LoopbackHost: *loopbackHost, AgentTTL: *agentTTL, Restart: stop, Log: log})
+		StatePath: *statePath, Unlock: unlock, Tenant: *tenant, Workspace: *workspace, Person: *person, ServicePerson: *servicePerson, ManagersGroup: *managersGroup, LoopbackHost: *loopbackHost, AgentTTL: *agentTTL, Restart: stop, Log: log})
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1

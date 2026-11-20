@@ -29,19 +29,38 @@ func (e *EngineError) Error() string {
 	return fmt.Sprintf("engine %d %s: %s", e.Status, e.Code, e.Detail)
 }
 
-// Engine calls the engine's public listener as the local person and its operator listener with the operator token.
+// Engine calls the engine's public listener as the acting person or the service person, and its operator listener with the operator token.
 type Engine struct {
-	PublicURL   string
-	OperatorURL string
-	Operator    string
-	Tenant      string
-	Workspace   string
-	Person      string
-	HTTP        *http.Client
+	PublicURL     string
+	OperatorURL   string
+	Operator      string
+	Tenant        string
+	Workspace     string
+	ServicePerson string
+	HTTP          *http.Client
 
-	mu      sync.Mutex
+	mu     sync.Mutex
+	tokens map[string]personToken
+}
+
+type personToken struct {
 	token   string
 	expires time.Time
+}
+
+type actorKey struct{}
+
+// ErrNoActor refuses an engine write whose context names no acting person.
+var ErrNoActor = errors.New("an engine write needs an acting person")
+
+// WithActor returns ctx with person as the actor of the engine writes made under it.
+func WithActor(ctx context.Context, person string) context.Context {
+	return context.WithValue(ctx, actorKey{}, person)
+}
+
+func actorOf(ctx context.Context) string {
+	p, _ := ctx.Value(actorKey{}).(string)
+	return p
 }
 
 var (
@@ -133,29 +152,45 @@ func (e *Engine) Mint(ctx context.Context, claims map[string]any, ttl time.Durat
 	return out.Token, nil
 }
 
-func (e *Engine) personToken(ctx context.Context, fresh bool) (string, error) {
+func (e *Engine) service() string { return firstOf(e.ServicePerson, defaultServicePerson) }
+
+func (e *Engine) personToken(ctx context.Context, person string, fresh bool) (string, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if !fresh && e.token != "" && time.Until(e.expires) > time.Minute {
-		return e.token, nil
+	if t, ok := e.tokens[person]; !fresh && ok && time.Until(t.expires) > time.Minute {
+		return t.token, nil
 	}
-	tok, err := e.Mint(ctx, map[string]any{"sub": e.Person, "tenant": e.Tenant}, personTokenTTL)
+	tok, err := e.Mint(ctx, map[string]any{"sub": person, "tenant": e.Tenant}, personTokenTTL)
 	if err != nil {
 		return "", err
 	}
-	e.token, e.expires = tok, time.Now().Add(personTokenTTL)
+	expire(e.tokens, time.Now().Add(time.Minute), func(t personToken) time.Time { return t.expires })
+	put(&e.tokens, person, personToken{token: tok, expires: time.Now().Add(personTokenTTL)})
 	return tok, nil
 }
 
-// Call runs one operation of the public API as the local person; a refused token is minted again once, since the issuer key changes when the engine restarts.
+// Call runs one write or decision of the public API as the context's actor and refuses, sending nothing, when the context has none.
 func (e *Engine) Call(ctx context.Context, method, path string, in, out any) error {
-	tok, err := e.personToken(ctx, false)
+	person := actorOf(ctx)
+	if person == "" {
+		return ErrNoActor
+	}
+	return e.as(ctx, person, method, path, in, out)
+}
+
+// Read runs one read of the public API as the service person, whose reads the console then filters by ownership.
+func (e *Engine) Read(ctx context.Context, method, path string, in, out any) error {
+	return e.as(ctx, e.service(), method, path, in, out)
+}
+
+func (e *Engine) as(ctx context.Context, person, method, path string, in, out any) error {
+	tok, err := e.personToken(ctx, person, false)
 	if err != nil {
 		return err
 	}
 	err = e.do(ctx, e.PublicURL, tok, method, path, in, out)
 	if ee := (*EngineError)(nil); errors.As(err, &ee) && ee.Status == http.StatusUnauthorized {
-		if tok, err = e.personToken(ctx, true); err != nil {
+		if tok, err = e.personToken(ctx, person, true); err != nil {
 			return err
 		}
 		return e.do(ctx, e.PublicURL, tok, method, path, in, out)

@@ -554,7 +554,7 @@ func (c *Console) refresh(w http.ResponseWriter, r *http.Request, f url.Values) 
 		return
 	}
 	if time.Until(a.ExpiresAt) < c.MaxAgentTTL/2 {
-		if _, err := c.BindAgent(r.Context(), a.Name, c.MaxAgentTTL, ""); err != nil {
+		if _, err := c.BindAgent(WithActor(r.Context(), a.Owner), a.Name, c.MaxAgentTTL, ""); err != nil {
 			oauthError(w, http.StatusServiceUnavailable, "temporarily_unavailable", "the gateway is not reachable")
 			return
 		}

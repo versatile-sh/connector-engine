@@ -56,7 +56,7 @@ func IsCode(err error, code string) bool {
 
 func list[T any](ctx context.Context, e *Engine, path string) ([]T, error) {
 	var out items[T]
-	err := e.Call(ctx, http.MethodGet, path, nil, &out)
+	err := e.Read(ctx, http.MethodGet, path, nil, &out)
 	return out.Items, err
 }
 
@@ -77,7 +77,7 @@ func (e *Engine) liveConnectors(ctx context.Context) ([]port.Connector, error) {
 
 func (e *Engine) connector(ctx context.Context, conn string) (port.Connector, error) {
 	var v connectorView
-	err := e.Call(ctx, http.MethodGet, connectorPath(conn), nil, &v)
+	err := e.Read(ctx, http.MethodGet, connectorPath(conn), nil, &v)
 	return v.Connector, err
 }
 
@@ -93,7 +93,7 @@ func (e *Engine) removeConnector(ctx context.Context, conn string) error {
 
 func (e *Engine) version(ctx context.Context, ref port.VersionRef) (port.ListingVersion, error) {
 	var lv port.ListingVersion
-	err := e.Call(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", e.Workspace, "owner", string(ref.Listing.Owner), "name", ref.Listing.Name, "version", ref.Version), nil, &lv)
+	err := e.Read(ctx, http.MethodGet, "/v1/listings/version"+q("workspace", e.Workspace, "owner", string(ref.Listing.Owner), "name", ref.Listing.Name, "version", ref.Version), nil, &lv)
 	return lv, err
 }
 
@@ -129,8 +129,8 @@ func (e *Engine) setClass(ctx context.Context, conn, function string, class port
 	return f, err
 }
 
-func (e *Engine) bind(ctx context.Context, conn, agent string) error {
-	return e.Call(ctx, http.MethodPut, connectorPath(conn, "/bindings/", esc(agent)), map[string]any{"credential_policy": port.CredentialShared, "ask_requester": true}, nil)
+func (e *Engine) bind(ctx context.Context, conn, agent, owner string) error {
+	return e.Call(ctx, http.MethodPut, connectorPath(conn, "/bindings/", esc(agent)), map[string]any{"credential_policy": port.CredentialShared, "ask_requester": true, "agent_owner": owner}, nil)
 }
 
 func (e *Engine) unbind(ctx context.Context, conn, agent string) error {
@@ -165,9 +165,9 @@ func (e *Engine) confirmGrant(ctx context.Context, id port.GrantID) error {
 	return e.Call(ctx, http.MethodPost, "/v1/grants/"+esc(string(id))+":confirm", nil, nil)
 }
 
-func (e *Engine) explain(ctx context.Context, conn, agent, function string) (port.AccessDecision, error) {
+func (e *Engine) explain(ctx context.Context, conn, agent, owner, function string) (port.AccessDecision, error) {
 	var d port.AccessDecision
-	err := e.Call(ctx, http.MethodPost, "/v1/access:explain", map[string]any{"workspace": e.Workspace, "agent": agent, "on_behalf_of": e.Person, "connector": conn, "function": function}, &d)
+	err := e.Read(ctx, http.MethodPost, "/v1/access:explain", map[string]any{"workspace": e.Workspace, "agent": agent, "on_behalf_of": owner, "connector": conn, "function": function}, &d)
 	return d, err
 }
 
@@ -189,7 +189,7 @@ func (e *Engine) pendingApprovals(ctx context.Context, agent, session string) ([
 
 func (e *Engine) approval(ctx context.Context, id string) (approvalDetail, error) {
 	var d approvalDetail
-	err := e.Call(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &d)
+	err := e.Read(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &d)
 	return d, err
 }
 

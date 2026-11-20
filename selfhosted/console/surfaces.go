@@ -278,6 +278,10 @@ func (d desk) Prompt(ctx context.Context, id string) (surface.Prompt, error) {
 }
 
 func (d desk) Decide(ctx context.Context, id string, choice surface.Choice, channel, by string) (surface.Outcome, error) {
+	ctx, err := d.c.asKeyOwner(ctx, id)
+	if err != nil {
+		return surface.Outcome{}, err
+	}
 	v, _, err := d.c.DecideChoice(ctx, id, choice, channel, by)
 	if err != nil {
 		return surface.Outcome{}, err

@@ -36,9 +36,11 @@ type Console struct {
 	NewChannel    ChannelFactory
 	Restart       func()
 	LoopbackHost  string
+	ManagersGroup string
 
 	loginMu       sync.Mutex
 	restoring     sync.Mutex
+	reconciling   sync.Mutex
 	passwordFails minuteWindow
 	icons         iconCache
 	connects      connectStates

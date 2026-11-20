@@ -244,7 +244,7 @@ func (c *Console) apply(ctx context.Context, v ApprovalView, a elicitAnswer, age
 	default:
 		return
 	}
-	if _, _, err := c.DecideChoice(ctx, v.ID, choice, elicitChannel, elicitChannel+":"+agent); err != nil {
+	if _, _, err := c.DecideChoice(WithActor(ctx, c.State.KeyOwner(agent)), v.ID, choice, elicitChannel, elicitChannel+":"+agent); err != nil {
 		c.logger().Warn("elicitation decision", "approval", v.ID, "error", err)
 	}
 }

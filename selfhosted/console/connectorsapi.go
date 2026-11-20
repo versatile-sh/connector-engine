@@ -209,6 +209,7 @@ func (c *Console) setHeaders(w http.ResponseWriter, r *http.Request) {
 
 type pendingOAuth struct {
 	issuer  string
+	person  string
 	expires time.Time
 }
 
@@ -217,12 +218,12 @@ type connectStates struct {
 	m  map[string]pendingOAuth
 }
 
-func (cs *connectStates) add(state, issuer string) {
+func (cs *connectStates) add(state, issuer, person string) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 	now := time.Now()
 	expire(cs.m, now, func(v pendingOAuth) time.Time { return v.expires })
-	put(&cs.m, state, pendingOAuth{issuer: issuer, expires: now.Add(oauthStateTTL)})
+	put(&cs.m, state, pendingOAuth{issuer: issuer, person: person, expires: now.Add(oauthStateTTL)})
 }
 
 func (cs *connectStates) take(state string) (pendingOAuth, bool) {
@@ -258,7 +259,7 @@ func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	c.connects.add(state, issuer)
+	c.connects.add(state, issuer, actorOf(r.Context()))
 	writeJSON(w, http.StatusOK, map[string]string{"url": to})
 }
 
@@ -275,7 +276,7 @@ func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	case qv.Has("iss") && strings.TrimRight(qv.Get("iss"), "/") != strings.TrimRight(pend.issuer, "/"):
 		back("issuer_mismatch")
 	default:
-		if err := c.CompleteOAuth(r.Context(), state, qv.Get("code")); err != nil {
+		if err := c.CompleteOAuth(WithActor(r.Context(), pend.person), state, qv.Get("code")); err != nil {
 			c.logger().Warn("oauth completion failed", "error", err)
 			back("failed")
 			return

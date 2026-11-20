@@ -33,7 +33,7 @@ It reaches the console through a socket that only `docker compose exec` can open
 | Mode | File | Holds | For |
 |---|---|---|---|
 | Full backup, with credentials | `connector-engine-backup-<UTC time>.cebak` | everything: the engine's rows and keys, the console's state, keys and activity | moving or restoring your own install |
-| Shareable setup, without credentials | `connector-engine-setup-<UTC time>.setup.yaml` | each connector's source and choices, key profiles by key name, skills with their pinned digest, the kinds of notification channel | handing your setup to a friend or a teammate |
+| Shareable setup, without credentials | `connector-engine-setup-<UTC time>.setup.yaml` | each connector's source and choices, whether its new keys start off, each key's profile there (received as reusable [permission sets](permissions.md#permission-sets) named after the keys), skills with their pinned digest, the kinds of notification channel | handing your setup to a friend or a teammate |
 
 From the command line:
 
@@ -47,6 +47,8 @@ wrote /home/you/connector-engine-backups/connector-engine-backup-20261120T180000
 ```
 
 Without Docker, the same files come from `connector-engine-selfhosted export` (add `--setup` for a shareable setup), and restore with `connector-engine-selfhosted import FILE`.
+
+A setup carries **permissions as reusable sets**; a backup carries **your exact keys**.
 
 ### Full backups
 
@@ -62,7 +64,7 @@ File format:
 
 ### Shareable setups
 
-A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, in profiles), root keys, account data, activity or device pairings.
+A setup never holds credentials, tokens, API keys, OAuth clients, access keys (only their names, as the names of permission sets), root keys, account data, activity or device pairings.
 
 - Every address loses its user name and password, its query and its fragment.
 - An address whose path holds a token-like segment (20 or more letters, digits, `-` or `_`, with a digit) is left out.
@@ -94,7 +96,10 @@ A full restore, step by step:
 - A refusal before the engine's commit leaves the install as it was.
 - Importing the same backup again gives the same result. If a disk fails right after the commit, restore the same backup again.
 - Signed in, a full import asks for your password again. The first-run restore works only while no owner account exists.
-- A setup's key profile applies at once to a key of that name, or waits for a key of that name to be made. The connector's page lists the waiting profiles.
+- A setup's review shows each new connector's host, whether it is `local` (it reaches a private or loopback address on this machine), whether its new keys start off, and each choice the file sets above what this console proposes. Every choice is capped at this console's proposal, local connectors included, and the result lists what was lowered.
+- Keys made already start off on the connectors and skills a setup adds, unless **Give my existing keys the new connectors** is on.
+- Per permission set the review chooses **Keep** (the default), **Apply** to an existing key, or **Discard**. A set whose name is taken gets the first free `-2`, `-3` suffix. `make import` takes the defaults: every set kept, existing keys off, choices capped.
+- A full backup restores the keys and the sets exactly as they were; it creates none.
 
 ## Where state lives
 

@@ -39,8 +39,25 @@ The **Profile** picker above a connector's functions shows **Default (all keys)*
 - An override is kept while the default drops below it, and applies again when the default comes back.
 - A row whose engine answer differs from your choice says so, with the engine's reason (for example `forced_ask` from the exposure check).
 - **New keys start off** makes keys made from then on start off on this connector. By default they follow it. Renewing a key keeps its profile.
-- **Always allow** on a held call also removes the calling key's override of that function.
 - The **Access** page lists, for each key, every connector with its mode and a link to its profile.
+
+## Always allow this app
+
+**Always allow this app** on a held call allows that function for the calling key only:
+
+- every other key, and every key made later, keeps the function's former access as its own override;
+- then the default rises to on, and the calling key's override is removed.
+
+Setting the function's default again lifts the limit for keys made later. The pins are ordinary overrides: resetting a key to the default, copying a profile onto it, or turning it off and back on removes them, and the key then follows the raised default.
+
+A failure shows on the approval page, which keeps reading the call for three minutes after an allow. The chat surfaces have already said "Always allowed" by then, and the failure is kept in memory only, until the console restarts.
+
+## Permission sets
+
+A [shareable setup](account-backup.md#shareable-setups) carries each key's profile as a **permission set** (a key slot), named after the key, such as `claude-code`. Nothing binds by name: a key here with the same name is a different key.
+
+- Claim a set when an app connects (**Use permissions from** on the consent page), when making a key by hand on **Access**, or with **Apply to key…** under **Unclaimed permission sets** on Access and on each connector's page.
+- Claiming gives the key exactly the set's profiles, within the connector's choices and its new-key limits, and consumes the set. **Discard** drops it. Removing a connector drops it from every set.
 
 ## Many at once
 
@@ -50,15 +67,22 @@ The console API behind these actions:
 
 | Endpoint | Does |
 |---|---|
-| `PUT /api/connectors/{id}/functions` | `{"names": [...], "access": ...}` sets many functions for the default |
+| `PUT /api/connectors/{id}/functions` | `{"names": [...], "access": ...}` sets many functions for the default; also answers one entry per key it failed to give the new item rows |
 | `PUT /api/connectors/{id}/profiles` | `{"mode": "off" \| "follow" \| "custom", "keys": [...]}`; every key when `keys` is empty |
 | `PUT /api/connectors/{id}/profiles/{key}` | `{"names": [...], "access": ...}` narrows for one key, or `{"names": [...], "reset": true}` returns to the default |
 | `POST /api/connectors/{id}/profiles:copy` | `{"from": key, "keys": [...]}` copies one key's mode and overrides |
 | `GET /api/connectors/{id}/profiles/{key}` | the engine's answer for that key on each function and item |
 | `PUT /api/connectors/{id}/new-keys` | `{"off": true}` makes new keys start off |
-| `DELETE /api/connectors/{id}/waiting/{key}` | forgets a setup's profile waiting for a key not made yet |
+| `GET /api/slots` | the permission sets waiting to be given to a key, each with its mode and overrides on the connectors still installed |
+| `POST /api/slots/{name}/claim` | `{"key": ...}` gives a key made already the set's profile on each of its connectors, then forgets the set |
+| `DELETE /api/slots/{name}` | discards a permission set |
+| `POST /api/agents`, `POST /api/oauth/requests/{id}` | also take `"slot": name`: the key made by hand, or by an app's consent, gets that set's permissions and the set is consumed |
 
 Each answers the result per name or per key, so a partial change says what was not changed.
+
+- Batches name at most 1000 functions, items or keys; a larger one is refused before anything is written.
+- Writes to one connector run one at a time, including install, removal and revoking a key; a request that stops waiting gives up its turn.
+- A key's profile is applied closed: the key is unbound, its overrides are written, and it is bound last. A failure halfway leaves it off rather than wider, and making the key again applies the whole profile.
 
 ## Headless
 

@@ -19,7 +19,7 @@ An approved call runs once. A repeated identical call in the same session attach
 |---|---|
 | Allow once | this call runs |
 | Allow for this session | this call and the same function for the rest of the session, labelled with how long ("Allow for up to 8 hours") |
-| Always allow | after the call runs, the function becomes "on" in the connector's default, and the calling key's override of it is cleared |
+| Always allow this app | the function is allowed for the calling key only: every other key keeps its former access as its own override, then the default rises to "on" ([details](permissions.md#always-allow-this-app)) |
 | Deny | the call is refused |
 
 ## Where you can answer
@@ -41,7 +41,7 @@ make notify
 `make notify` runs `cnctl notify --console http://127.0.0.1:<CONSOLE_PORT>`: it shows a desktop notification for each call waiting for you and opens a small approval page.
 
 - Chat surfaces accept clicks only from the owner id you configure, and keep call arguments out of third-party messages.
-- Elicitation lets the app ask you inside the chat. Turn it on only for apps you answer by hand: an app with hooks or scripts that answer prompts could approve its own calls. Destructive functions are never asked there, and Always allow is never offered there.
+- Elicitation lets the app ask you inside the chat. Turn it on only for apps you answer by hand: an app with hooks or scripts that answer prompts could approve its own calls. Destructive functions are never asked there, and Always allow this app is never offered there.
 
 Design and threat model: [approval surfaces](../self-hosted/approval-surfaces.md).
 

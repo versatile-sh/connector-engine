@@ -28,7 +28,7 @@ const reveal = (row: HTMLElement | null) => row?.scrollIntoView({ block: "neares
 
 const within = (target: EventTarget | null, ...elements: (HTMLElement | null)[]) => target instanceof Node && elements.some((element) => element?.contains(target));
 
-/** The one dropdown, controlled as a native select: the field at control height with the chosen option and a chevron, opening a list in raised ink under it, or over it near the bottom, or as a sheet from the bottom on a phone. The row under the keyboard or the pointer is paper at 10%, the chosen one has a check, and past eight options a filter tops the list. The keyboard is the select-only combobox's: the arrows, Home, End, typing a name, Enter or Space to choose, Escape to close; the list closes on a click or focus outside it and follows its field as the page scrolls. */
+/** The one dropdown, controlled as a native select: the field at control height with the chosen option and a chevron, opening a list in raised ink under it, or over it near the bottom, or as a sheet from the bottom on a phone. The row under the keyboard or the pointer is paper at 10%, the chosen one has a check, and past eight options a filter tops the list, focused at once only with a fine pointer so a phone's keyboard does not cover the list. The keyboard is the select-only combobox's: the arrows, Home, End, typing a name, Enter or Space to choose, Escape to close; the list closes on a click or focus outside it and follows its field as the page scrolls. */
 export function Select<T extends string>({ label, value, options, onChange, disabled = false, className = "" }: SelectProps<T>) {
   const t = useT();
   const id = useId();
@@ -51,7 +51,8 @@ export function Select<T extends string>({ label, value, options, onChange, disa
     list.showPopover();
     place(list, button);
     reveal(list.querySelector<HTMLElement>('[aria-selected="true"]'));
-    (search.current ?? button).focus();
+    const field = window.matchMedia("(pointer: fine)").matches ? search.current : null;
+    (field ?? button).focus();
   };
   const hide = () => {
     popup.current?.hidePopover();

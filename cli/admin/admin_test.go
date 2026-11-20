@@ -105,3 +105,13 @@ func TestEveryAliasNamesAnOperationOfTheTable(t *testing.T) {
 		seen[a.Group+" "+a.Verb] = true
 	}
 }
+
+func TestHelpAndFlagErrorsNeverPrintTheToken(t *testing.T) {
+	for _, args := range [][]string{{"-h"}, {"-bogus"}} {
+		var out, errOut bytes.Buffer
+		admin.Command(&out, &errOut, []string{"CNCTL_TOKEN=s3cret-operator-token"}).Run(context.Background(), args)
+		if all := out.String() + errOut.String(); strings.Contains(all, "s3cret-operator-token") || !strings.Contains(all, "$CNCTL_TOKEN") {
+			t.Fatalf("%v printed: %q", args, all)
+		}
+	}
+}

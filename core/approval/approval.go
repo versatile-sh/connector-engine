@@ -1,4 +1,4 @@
-// Package approval is the approval state machine of §8: transitions A1 to A14, timers, the denial brake and the lookup of a repeated call (§8.6).
+// Package approval is the approval state machine: transitions A1 to A14, timers, the denial brake and the lookup of a repeated call.
 package approval
 
 import (
@@ -8,7 +8,7 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Limits are the approval keys of §14.
+// Limits are the approval keys.
 type Limits struct {
 	Timeout          time.Duration
 	ExecuteWithin    time.Duration
@@ -20,7 +20,7 @@ type Limits struct {
 	NoteMax          int
 }
 
-// Defaults are the estimates of §14.
+// Defaults are the estimates.
 var Defaults = Limits{
 	Timeout: 600 * time.Second, ExecuteWithin: 60 * time.Second, ExecuteGrace: 10 * time.Second, ResultRetention: time.Hour,
 	MaxPending: 5, BrakeConsecutive: 3, BrakePerSession: 10, NoteMax: 500,
@@ -41,7 +41,7 @@ func enter(a port.Approval, to port.ApprovalState) port.Approval {
 	return a
 }
 
-// Open is A1: a pending record with its expiry; A2 refuses with no_approver or too_many_pending (§8.2).
+// Open is A1: a pending record with its expiry; A2 refuses with no_approver or too_many_pending.
 func Open(a port.Approval, pending int, l Limits, now time.Time) (port.Approval, error) {
 	switch {
 	case len(a.Approvers) == 0:
@@ -59,7 +59,7 @@ func Open(a port.Approval, pending int, l Limits, now time.Time) (port.Approval,
 	return a, nil
 }
 
-// Approvers resolves the approvers of a held call from stored facts: the person acted for when ask_requester, then the binding's (§8.1).
+// Approvers resolves the approvers of a held call from stored facts: the person acted for when ask_requester, then the binding's.
 func Approvers(b port.Binding, onBehalfOf port.PersonID) []string {
 	var out []string
 	if b.AskRequester && onBehalfOf != "" {
@@ -73,7 +73,7 @@ func Approvers(b port.Binding, onBehalfOf port.PersonID) []string {
 	return out
 }
 
-// Decide is A3, A4 or A5 on a pending, unexpired record by an allowed approver (§8.2); it reports whether the caller writes a session row (A4).
+// Decide is A3, A4 or A5 on a pending, unexpired record by an allowed approver; it reports whether the caller writes a session row (A4).
 func Decide(a port.Approval, by string, allowed bool, d port.Decision, note, channel string, l Limits, now time.Time) (port.Approval, bool, error) {
 	if err := transition(a, port.ApprovalPending); err != nil {
 		return a, false, err
@@ -103,7 +103,7 @@ func Decide(a port.Approval, by string, allowed bool, d port.Decision, note, cha
 	return a, false, port.Errorf(port.CodeInvalidArgument, "unknown decision %q", d)
 }
 
-// Brake counts a decision on the pause row of (session, agent, connector); it reports whether a denial fired the brake (§8.3).
+// Brake counts a decision on the pause row of (session, agent, connector); it reports whether a denial fired the brake.
 func Brake(p port.Pause, d port.Decision, l Limits, now, expires time.Time) (port.Pause, bool) {
 	if d != port.DecisionDeny {
 		p.Consecutive = 0
@@ -118,7 +118,7 @@ func Brake(p port.Pause, d port.Decision, l Limits, now, expires time.Time) (por
 	return p, true
 }
 
-// Clear is clearPause: the pause ends and the consecutive count resets (§8.3).
+// Clear is clearPause: the pause ends and the consecutive count resets.
 func Clear(p port.Pause) port.Pause {
 	p.Paused, p.Consecutive = false, 0
 	return p
@@ -144,7 +144,7 @@ func Cancel(a port.Approval, reason port.Code) (port.Approval, error) {
 	return enter(a, port.ApprovalCancelled), nil
 }
 
-// Start is A8 or A9 for an approved record: refused names the step of §7.1 that denied at the re-check, or a guard of A8
+// Start is A8 or A9 for an approved record: refused names the step that denied at the re-check, or a guard of A8
 // (definition_changed, credential_required, grant_exhausted); a decision older than execute-within is stale_approval.
 func Start(a port.Approval, refused port.Code, deadline time.Duration, l Limits, now time.Time) (port.Approval, error) {
 	if err := transition(a, port.ApprovalApproved); err != nil {
@@ -207,7 +207,7 @@ func Deliver(a port.Approval, now time.Time) (port.Approval, error) {
 	return a, nil
 }
 
-// Due names the worker transition a record waits for at now, if any (§8.3: no state without a timer and an owner).
+// Due names the worker transition a record waits for at now, if any.
 func Due(a port.Approval, l Limits, now time.Time) (port.WorkKind, bool) {
 	switch {
 	case a.State == port.ApprovalPending && !now.Before(a.ExpiresAt):
@@ -223,10 +223,10 @@ func Due(a port.Approval, l Limits, now time.Time) (port.WorkKind, bool) {
 	return "", false
 }
 
-// Rule is the rule of §8.6 that answered a repeated call.
+// Rule is the rule that answered a repeated call.
 type Rule int
 
-// Rules R1 to R4 of §8.6.
+// Rules R1 to R4.
 const (
 	Attach Rule = iota + 1
 	Answer
@@ -234,13 +234,13 @@ const (
 	NewCall
 )
 
-// Verdict is the answer of the lookup of §8.6 for one (session, call_hash).
+// Verdict is the answer of the lookup for one (session, call_hash).
 type Verdict struct {
 	Rule   Rule
 	Record port.Approval
 }
 
-// Lookup runs §8.6 on the records and the newest audit row of one (session, call_hash); the first rule that matches ends it.
+// Lookup applies R1 to R4 to the records and the newest audit row of one (session, call_hash); the first rule that matches ends it.
 // HoldAfterUnknown means the session row of step 14 is not applied to this call.
 func Lookup(records []port.Approval, latest *port.Call) Verdict {
 	for _, a := range records {

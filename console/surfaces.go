@@ -46,7 +46,10 @@ func (s *surfaces) markAlways(id string) {
 	s.always[id] = now
 }
 
-const presentTTL = 5 * time.Minute
+const (
+	presentTTL = 5 * time.Minute
+	unlockPoll = time.Second
+)
 
 func (s *surfaces) presented(key string) (presented, bool) {
 	s.mu.Lock()
@@ -207,9 +210,10 @@ func (c *Console) buildChannels(ctx context.Context) []surface.Channel {
 	return out
 }
 
-// RunNotifications runs the approval relay while a channel or a paired device is configured and rebuilds it when the owner changes either.
+// RunNotifications runs the approval relay while a channel or a paired device is configured and rebuilds it when the owner changes either or the console's secrets unlock.
 func (c *Console) RunNotifications(ctx context.Context) {
 	changed := c.surf.wakeChan()
+	unlocked := c.whenUnlocked(ctx)
 	for ctx.Err() == nil {
 		chans := c.buildChannels(ctx)
 		rctx, cancel := context.WithCancel(ctx)
@@ -230,10 +234,32 @@ func (c *Console) RunNotifications(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 		case <-changed:
+		case <-unlocked:
+			unlocked = nil
 		}
 		cancel()
 		<-done
 	}
+}
+
+func (c *Console) whenUnlocked(ctx context.Context) <-chan struct{} {
+	if c.Secrets == nil || !c.Secrets.Locked() {
+		return nil
+	}
+	out := make(chan struct{})
+	go func() {
+		tick := time.NewTicker(unlockPoll)
+		defer tick.Stop()
+		for c.Secrets.Locked() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+			}
+		}
+		close(out)
+	}()
+	return out
 }
 
 type desk struct{ c *Console }

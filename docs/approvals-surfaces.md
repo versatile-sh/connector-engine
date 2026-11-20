@@ -134,6 +134,7 @@ Messages name the connector, the function, the app and the expiry. They never in
 - The cursor is kept in the console state. On the very first start there is no cursor, and the relay does not replay history as notifications: a `requested` event is notified only when its approval is pending at that moment.
 - After a restart, the pending list is announced once. The relay remembers notified ids, so nothing is announced twice.
 - The relay runs only when at least one channel or paired device is configured.
+- Channel secrets are sealed by the console's `sealed.Box`. While the box is locked, before `make unlock` in the person profile, chat channels show an error. The relay rebuilds them as soon as the box unlocks.
 
 ### 4.4 Desktop popups (`cnctl notify`)
 

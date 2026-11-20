@@ -1,13 +1,14 @@
 import type { Agent } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { InlineConfirm } from "../ui/InlineConfirm";
+import { KeyConnectors } from "./KeyConnectors";
 import { Tag } from "../ui/Tag";
 import { button } from "../ui/styles";
 import type { RevokeEvent, RevokeState } from "./revoke";
 
 type KeyRowProps = { entry: Agent; flow: RevokeState; error?: string; dispatch(event: RevokeEvent): void; onConfirm(): void };
 
-/** One access key: its name and expiry, whether an app connected it through the browser sign-in (new until the owner has seen it), a visible Revoke, and in place of it the inline question that revokes the key for good. In a list narrower than 28rem the name takes its own line. */
+/** One access key: its name and expiry, whether an app connected it through the browser sign-in (new until the owner has seen it), its mode on each connector, a visible Revoke, and in place of it the inline question that revokes the key for good. In a list narrower than 28rem the name takes its own line. */
 export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps) {
   const t = useT();
   const locale = useLocale();
@@ -42,6 +43,7 @@ export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps)
           {t("keys.viaBrowser")}
         </p>
       ) : null}
+      <KeyConnectors agent={entry.name} />
       {asking ? (
         <InlineConfirm
           label={t("keys.revokeLabel", { name: entry.name })}

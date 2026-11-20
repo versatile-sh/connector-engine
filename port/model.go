@@ -110,12 +110,14 @@ const (
 // Item kinds: a function row whose name starts with one of these is a connector item, not a tool; * and class: never cover it.
 const (
 	ItemInstructions = "instructions:"
+	ItemPrompt       = "prompt:"
+	ItemResource     = "res:"
 )
 
 // InstructionsItem is the name of the item that pins a connector's server instructions.
 const InstructionsItem = ItemInstructions + "server"
 
-var itemKinds = []string{ItemInstructions}
+var itemKinds = []string{ItemInstructions, ItemPrompt, ItemResource}
 
 // ItemKind returns the item kind a function name starts with, or "" for a tool.
 func ItemKind(name string) string {

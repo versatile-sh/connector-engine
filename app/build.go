@@ -82,13 +82,15 @@ func (b builder) store(ctx context.Context) (port.Store, port.Outbox, func(), er
 	return s, s, s.Close, nil
 }
 
+var vaultHTTP = &http.Client{Timeout: 30 * time.Second}
+
 func (b builder) onePassword(ctx context.Context) (*secretslocal.Store, error) {
 	c := b.cfg.Secrets.OnePassword
 	token, err := resolveRef(b.lookup, c.TokenRef)
 	if err != nil {
 		return nil, fmt.Errorf("secrets.onePassword.tokenRef: %w", err)
 	}
-	return onepassword.Open(ctx, b.cfg.Secrets.Dir, onepassword.Config{ConnectURL: c.ConnectURL, Token: token, Vault: c.Vault, Item: c.Item, Field: c.Field}, http.DefaultClient)
+	return onepassword.Open(ctx, b.cfg.Secrets.Dir, onepassword.Config{ConnectURL: c.ConnectURL, Token: token, Vault: c.Vault, Item: c.Item, Field: c.Field}, vaultHTTP)
 }
 
 func (b builder) secrets(ctx context.Context) (port.SecretStore, func(), error) {

@@ -823,3 +823,13 @@ func TestTheToolSeparatorIsLearnedFromTheEngine(t *testing.T) {
 		t.Fatalf("a call named with the engine's separator: %+v", row)
 	}
 }
+
+func TestTheActivityRefusesAParameterItDoesNotTake(t *testing.T) {
+	r := newActivityRig(t)
+	for _, q := range []string{"?since=2026-11-20T00:00:00Z", "?limit=5"} {
+		if status, raw := r.b.send("GET", "/api/activity"+q, nil, nil); status != http.StatusBadRequest || !strings.Contains(string(raw), "from, to") {
+			t.Errorf("%s: %d %s", q, status, raw)
+		}
+	}
+	r.page("?from=" + time.Now().Add(-time.Hour).UTC().Format(time.RFC3339) + "&search=x")
+}

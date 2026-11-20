@@ -333,8 +333,15 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 	return p
 }
 
+var activityParams = []string{"from", "to", "connector", "agent", "search", "outcome"}
+
 func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, error) {
 	qv := r.URL.Query()
+	for name := range qv {
+		if !slices.Contains(activityParams, name) {
+			return activityFilter{}, invalid("unknown parameter %q: the activity takes %s", name, strings.Join(activityParams, ", "))
+		}
+	}
 	now := time.Now().UTC()
 	f := activityFilter{from: now.Add(-activityWindow), to: now, connector: qv.Get("connector"), agent: qv.Get("agent"), search: strings.ToLower(strings.TrimSpace(qv.Get("search"))), outcome: CallOutcome(qv.Get("outcome"))}
 	for name, into := range map[string]*time.Time{"from": &f.from, "to": &f.to} {

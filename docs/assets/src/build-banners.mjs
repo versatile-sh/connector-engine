@@ -89,12 +89,12 @@ const hero = () => {
     wordmark(136, 87),
     text(mono, "open source  ·  MIT", w - 72 - width(mono, "open source  ·  MIT", 14), 86, 14, MUTED),
     text(serif, "connector-engine", 68, 214, 112, PAPER),
-    runs([[serif, "The MCP gateway ", 46, PAPER], [italic, "you run", 46, LIME], [serif, ":", 46, PAPER]], 72, 284),
-    text(serif, "connectors, permissions and approvals for every AI app.", 72, 334, 34, MUTED),
+    runs([[serif, "Every MCP connector, ", 46, PAPER], [italic, "one gateway you control", 46, LIME], [serif, ".", 46, PAPER]], 72, 284),
+    text(serif, "You decide what each AI app may run, and see every call it makes.", 72, 334, 34, MUTED),
     `<path d="M72 364H${w - 72}" stroke="${LINE}" stroke-opacity="0.1"/>`,
     pills,
   ].join("");
-  return frame(w, h, "connector-engine: the MCP gateway you run. Connectors, permissions and approvals for every AI app.", body);
+  return frame(w, h, "connector-engine: every MCP connector, one gateway you control. You decide what each AI app may run, and see every call it makes.", body);
 };
 
 const section = (kicker, plain, accent) => {
@@ -108,6 +108,79 @@ const section = (kicker, plain, accent) => {
     runs([[serif, plain, 54, PAPER], [italic, accent, 54, LIME]], 134, 114),
   ].join("");
   return frame(w, h, label, body);
+};
+
+const diagram = () => {
+  reset();
+  const w = 1200;
+  const h = 570;
+  const top = 48;
+  const boxH = 330;
+  const side = 248;
+  const gap = 88;
+  const mid = 416;
+  const pad = 24;
+  const [apps, gw, conn] = [56, 56 + side + gap, 56 + side + gap + mid + gap];
+  const fit = (f, s, size, max) => {
+    if (width(f, s, size) > max) throw new Error(`diagram: "${s}" overflows its box`);
+    return s;
+  };
+  const box = (x, y, bw, bh) =>
+    `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="12" fill="#12161d" stroke="${LINE}" stroke-opacity="0.18"/>`;
+  const card = (x, bw, title, sub, rows) =>
+    [
+      box(x, top, bw, boxH),
+      text(serif, fit(serif, title, 32, bw - 2 * pad), x + pad, top + 52, 32, PAPER),
+      text(mono, fit(mono, sub, 16, bw - 2 * pad), x + pad, top + 80, 16, MUTED),
+      `<path d="M${x + pad} ${top + 104}H${x + bw - pad}" stroke="${LINE}" stroke-opacity="0.1"/>`,
+      ...rows.map(([s, fill], i) => text(mono, fit(mono, s, 18, bw - 2 * pad), x + pad, top + 146 + i * 38, 18, fill)),
+    ].join("");
+  const arrow = (x1, x2, y, color, label) =>
+    `<path d="M${x1 + 12} ${y}H${x2 - 14}" stroke="${color}" stroke-width="1.5"/><path d="M${x2 - 22} ${y - 5}L${x2 - 12} ${y}L${x2 - 22} ${y + 5}Z" fill="${color}"/>` +
+    text(mono, label, (x1 + x2) / 2 - width(mono, label, 16) / 2, y - 14, 16, color);
+  const modes = [
+    ["off", "hidden from the app"],
+    ["on", "runs, credential injected"],
+    ["ask", "waits for your approval"],
+  ]
+    .map(([m, d], i) => {
+      const y = top + 146 + i * 38;
+      return `<rect x="${gw + pad}" y="${y - 20}" width="56" height="28" rx="14" fill="none" stroke="${LINE}" stroke-opacity="0.25"/>${text(mono, m, gw + pad + 28 - width(mono, m, 16) / 2, y - 1, 16, PAPER)}${text(mono, fit(mono, d, 18, mid - 2 * pad - 72), gw + pad + 72, y, 18, PAPER)}`;
+    })
+    .join("");
+  let px = gw + pad;
+  const pills = ["approvals", "activity", "skills"]
+    .map((t) => {
+      const tw = width(mono, t, 16);
+      const p = `<rect x="${px}" y="${top + 268}" width="${r(tw + 28)}" height="32" rx="16" fill="none" stroke="${LINE}" stroke-opacity="0.18"/>${text(mono, t, px + 14, top + 289, 16, MUTED)}`;
+      px += tw + 38;
+      return p;
+    })
+    .join("");
+  const cy = top + boxH + 48;
+  const cx = gw + mid / 2;
+  const body = [
+    card(apps, side, "AI apps", "OAuth 2.1 sign-in", [["Claude Code", PAPER], ["Cursor", PAPER], ["Codex", PAPER], ["VS Code", PAPER], ["any MCP client", MUTED]]),
+    card(gw, mid, "connector-engine", "/mcp · per-function permissions", []),
+    modes,
+    `<path d="M${gw + pad} ${top + 250}H${gw + mid - pad}" stroke="${LINE}" stroke-opacity="0.1"/>`,
+    pills,
+    card(conn, side, "Connectors", "pinned by hash", [["remote MCP", PAPER], ["local MCP", PAPER], ["REST (OpenAPI)", PAPER], ["gRPC (reflection)", PAPER], ["import by URL", MUTED]]),
+    arrow(apps + side, gw, top + boxH / 2, MUTED, "MCP"),
+    arrow(gw + mid, conn, top + boxH / 2, LIME, "allowed"),
+    `<path d="M${cx} ${top + boxH + 8}V${cy - 14}" stroke="${MUTED}" stroke-width="1.5" stroke-dasharray="4 4"/><path d="M${cx - 5} ${cy - 18}L${cx} ${cy - 8}L${cx + 5} ${cy - 18}Z" fill="${MUTED}"/>`,
+    text(mono, "ask", cx + 14, top + boxH + 30, 16, MUTED),
+    box(gw, cy, mid, 96),
+    `<circle cx="${gw + pad + 5}" cy="${cy + 35}" r="5" fill="${LIME}"/>`,
+    text(serif, fit(serif, "Self-hosted console", 32, mid - 2 * pad - 22), gw + pad + 22, cy + 46, 32, PAPER),
+    text(mono, fit(mono, "set permissions · answer approvals", 16, mid - 2 * pad - 22), gw + pad + 22, cy + 76, 16, MUTED),
+  ].join("");
+  return frame(
+    w,
+    h,
+    "How a call flows. AI apps such as Claude Code, Cursor and Codex call connector-engine over MCP. The gateway checks each function's permission: off hides it, on runs it with the stored credential, ask waits for your approval in the self-hosted console. Allowed calls reach remote and local MCP servers, REST and gRPC connectors. The gateway also keeps approvals, activity and skills.",
+    body,
+  );
 };
 
 const SECTIONS = [
@@ -151,7 +224,8 @@ const SECTIONS = [
 ];
 
 writeFileSync(join(out, "banner-hero.svg"), hero());
+writeFileSync(join(out, "diagram-flow.svg"), diagram());
 for (const [slug, kicker, plain, accent] of SECTIONS) {
   writeFileSync(join(out, `section-${slug}.svg`), section(kicker, plain, accent));
 }
-console.log(`wrote banner-hero.svg and ${SECTIONS.length} section banners to ${out}`);
+console.log(`wrote banner-hero.svg, diagram-flow.svg and ${SECTIONS.length} section banners to ${out}`);

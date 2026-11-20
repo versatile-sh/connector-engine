@@ -1,6 +1,6 @@
 import type { MessageKey } from "./en";
 
-/** O dicionário em português do Brasil. */
+/** The Brazilian Portuguese dictionary. */
 export const ptBR: Record<MessageKey, string> = {
   "app.loading": "Carregando o console",
   "app.failed": "O console não conseguiu falar com o servidor.",
@@ -182,6 +182,8 @@ export const ptBR: Record<MessageKey, string> = {
   "keys.revokeLabel": "Revogar a chave {name}",
   "keys.revokeAsk": "Revogar {name}? Todo app que usa esta chave para na hora, e não dá para desfazer.",
   "keys.revokeConfirm": "Revogar chave",
+  "keys.newBadge": "nova",
+  "keys.viaBrowser": "conectada pelo login no navegador",
   "keys.revoking": "Revogando…",
   "keys.empty": "Nenhuma chave ainda. Qualquer cliente MCP (Claude Desktop, Claude Code, Cursor, ChatGPT, VS Code, seus próprios scripts) se conecta a {endpoint} com uma chave e vê todos os conectores com as permissões que você definiu.",
   "keys.created": "Chave de {name}",
@@ -197,11 +199,21 @@ export const ptBR: Record<MessageKey, string> = {
   "clients.note.cursorOAuth": "O Cursor mostra o servidor e pede confirmação; depois abre o navegador aqui para você permitir.",
   "clients.note.vscodeOAuth": "O VS Code mostra o servidor e pede confirmação; depois abre o navegador aqui para você permitir.",
   "clients.note.genericOAuth": "Qualquer cliente que segue a especificação de autorização do MCP conecta só com a URL. Para um que não segue, use uma chave de acesso abaixo.",
-  "consent.title": "Permitir que {client} acesse seus conectores?",
+  "consent.title": "Permitir que “{client}” acesse seus conectores?",
+  "consent.warning": "Só permita se foi você quem acabou de conectar este app.",
+  "consent.selfNamed": "O próprio app escolheu esse nome; ninguém o verificou.",
   "consent.body": "{client} vai ver os conectores instalados aqui, com as permissões que você definiu para cada função. Você pode revogar quando quiser em Conecte um app de IA.",
   "consent.returns": "Depois você volta para {target}",
   "consent.allow": "Permitir",
   "consent.deny": "Negar",
+  "consent.password": "Sua senha",
+  "consent.passwordHint": "A senha do dono, para confirmar que é você.",
+  "consent.wrongPassword": "Senha errada. Nada foi permitido.",
+  "consent.tooMany": "Senhas erradas demais. Tente de novo em um minuto.",
+  "consent.goesTo": "O acesso vai para",
+  "consent.to.loopback": "um app neste computador, porta {port}",
+  "consent.to.loopbackAnyPort": "um app neste computador",
+  "consent.to.scheme": "o app que abre links {scheme}:",
   "consent.done": "Pronto. Pode voltar para o {client}.",
   "consent.denied": "Negado. {client} não recebeu acesso.",
   "consent.expiredTitle": "Este pedido acabou",

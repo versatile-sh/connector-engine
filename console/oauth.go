@@ -22,7 +22,10 @@ const (
 	registrationsPerMin = 10
 	maxPendingAuth      = 256
 	maxClientName       = 64
+	consentFailsPerMin  = 5
 )
+
+var appSchemes = map[string]string{"cursor": "Cursor", "vscode": "VS Code"}
 
 var browserSchemes = []string{"https", "javascript", "data", "file", "blob", "about", "ftp", "ws", "wss", "mailto", "tel", "sms", "view-source", "chrome", "chrome-extension", "edge", "moz-extension", "intent", "filesystem", "jar", "vbscript", "resource"}
 
@@ -301,23 +304,84 @@ func redirectTarget(redirect string) string {
 	return u.Scheme + "://" + u.Host
 }
 
+// Destination is where a consent sends the browser back, in plain words: an app on this computer at a port, an app known by its scheme, or any app that opens a scheme.
+type Destination struct {
+	Kind   string `json:"kind"`
+	Port   string `json:"port,omitempty"`
+	App    string `json:"app,omitempty"`
+	Scheme string `json:"scheme,omitempty"`
+}
+
+// DestinationOf names where a registered redirect URI leads: kind loopback with its port, app with a known app's name, or scheme.
+func DestinationOf(redirect string) Destination {
+	u, err := url.Parse(redirect)
+	if err != nil {
+		return Destination{Kind: "scheme"}
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme == "http" && loopbackName(u.Hostname()) {
+		return Destination{Kind: "loopback", Port: u.Port()}
+	}
+	if app, ok := appSchemes[scheme]; ok {
+		return Destination{Kind: "app", App: app}
+	}
+	return Destination{Kind: "scheme", Scheme: scheme}
+}
+
 func (c *Console) consentInfo(w http.ResponseWriter, r *http.Request) {
 	req, ok := c.pendingRequest(r.PathValue("id"), false)
 	if !ok {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"client": req.client.Name, "redirect": redirectTarget(req.redirect)})
+	writeJSON(w, http.StatusOK, map[string]any{"client": req.client.Name, "redirect": redirectTarget(req.redirect), "destination": DestinationOf(req.redirect)})
+}
+
+func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
+	if password == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "type your password to allow the app", "code": "password_required"})
+		return false
+	}
+	c.loginMu.Lock()
+	defer c.loginMu.Unlock()
+	now := time.Now()
+	c.consentFails = slices.DeleteFunc(c.consentFails, func(t time.Time) bool { return now.Sub(t) > time.Minute })
+	if len(c.consentFails) >= consentFailsPerMin {
+		w.Header().Set("Retry-After", "60")
+		writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many wrong passwords, try again in a minute", "code": "slow_down"})
+		return false
+	}
+	ok, err := c.State.CheckLogin(c.State.OwnerName(), password)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "cannot read the account"})
+		return false
+	}
+	if !ok {
+		c.consentFails = append(c.consentFails, now)
+		time.Sleep(500 * time.Millisecond)
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "wrong password", "code": "wrong_password"})
+		return false
+	}
+	return true
 }
 
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		Approve bool `json:"approve"`
+		Approve  bool   `json:"approve"`
+		Password string `json:"password"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
-	req, ok := c.pendingRequest(r.PathValue("id"), true)
+	id := r.PathValue("id")
+	if _, ok := c.pendingRequest(id, false); !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
+		return
+	}
+	if in.Approve && !c.ownerConfirms(w, in.Password) {
+		return
+	}
+	req, ok := c.pendingRequest(id, true)
 	if !ok {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
 		return
@@ -330,6 +394,10 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	}
 	a, err := c.BindAgent(r.Context(), req.client.Name, c.MaxAgentTTL)
 	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	if err := c.State.MarkBrowserConnected(a.Name, time.Now()); err != nil {
 		c.fail(w, err)
 		return
 	}

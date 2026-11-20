@@ -107,7 +107,7 @@ export type Preview = {
 
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
 
-export type Agent = { name: string; expires_at: string };
+export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean };
 
 export type AgentToken = { agent: string; token: string; expires_at: string; mcp_url: string };
 
@@ -123,7 +123,7 @@ export type Approval = {
   expires_at: string;
 };
 
-export type ApiError = { status: number; message: string };
+export type ApiError = { status: number; message: string; code?: string | undefined };
 
 let csrfToken = "";
 
@@ -135,6 +135,9 @@ const isApiError = (value: unknown): value is ApiError =>
   typeof value === "object" && value !== null && "status" in value && "message" in value;
 
 export const errorText = (error: unknown) => (isApiError(error) ? error.message : String(error));
+
+/** The machine code the console put on a refusal, such as `wrong_password`, when it gave one. */
+export const errorCode = (error: unknown) => (isApiError(error) ? error.code : undefined);
 
 export async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
@@ -153,7 +156,8 @@ export async function api<T>(method: string, path: string, body?: unknown): Prom
       typeof data === "object" && data !== null && "error" in data && typeof data.error === "string"
         ? data.error
         : `${response.status} ${response.statusText}`;
-    const failure: ApiError = { status: response.status, message };
+    const code = typeof data === "object" && data !== null && "code" in data && typeof data.code === "string" ? data.code : undefined;
+    const failure: ApiError = { status: response.status, message, code };
     throw failure;
   }
   return data as T;

@@ -35,10 +35,13 @@ type Owner struct {
 	Iterations int    `json:"iterations"`
 }
 
-// Agent is an agent the owner connected, with the expiry of the last token minted for it.
+// Agent is an agent the owner connected, with the expiry of the last token minted for it and, for an app that connected itself through the browser sign-in, when it did and whether the owner has seen it since.
 type Agent struct {
-	Name      string    `json:"name"`
-	ExpiresAt time.Time `json:"expires_at"`
+	Name        string    `json:"name"`
+	ExpiresAt   time.Time `json:"expires_at"`
+	ViaBrowser  bool      `json:"via_browser,omitempty"`
+	ConnectedAt time.Time `json:"connected_at,omitzero"`
+	Seen        bool      `json:"seen,omitempty"`
 }
 
 // StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value.
@@ -164,6 +167,16 @@ func (s *State) CheckLogin(username, password string) (bool, error) {
 	return userOK && passOK, nil
 }
 
+// OwnerName returns the owner's username, or "" before the account exists.
+func (s *State) OwnerName() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data.Owner == nil {
+		return ""
+	}
+	return s.data.Owner.Username
+}
+
 // Sessions returns the stored sessions.
 func (s *State) Sessions() map[string]StoredSession {
 	s.mu.Lock()
@@ -194,15 +207,62 @@ func (s *State) Agents() []Agent {
 	return out
 }
 
-// PutAgent records an agent and the expiry of its newest token.
+// PutAgent records an agent and the expiry of its newest token, keeping how and when it was connected.
 func (s *State) PutAgent(a Agent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.data.Agents == nil {
 		s.data.Agents = map[string]Agent{}
 	}
+	if old, ok := s.data.Agents[a.Name]; ok {
+		a.ViaBrowser, a.ConnectedAt, a.Seen = old.ViaBrowser, old.ConnectedAt, old.Seen
+	}
 	s.data.Agents[a.Name] = a
 	return s.save()
+}
+
+// MarkBrowserConnected records that an app connected the agent through the browser sign-in at at, unseen by the owner so far.
+func (s *State) MarkBrowserConnected(name string, at time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	a, ok := s.data.Agents[name]
+	if !ok {
+		return fmt.Errorf("no agent is named %s", name)
+	}
+	old := a
+	a.ViaBrowser, a.ConnectedAt, a.Seen = true, at.UTC().Truncate(time.Second), false
+	s.data.Agents[name] = a
+	if err := s.save(); err != nil {
+		s.data.Agents[name] = old
+		return err
+	}
+	return nil
+}
+
+// SeeAgents records that the owner has seen every agent an app connected through the browser sign-in.
+func (s *State) SeeAgents() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var changed []string
+	for name, a := range s.data.Agents {
+		if a.ViaBrowser && !a.Seen {
+			a.Seen = true
+			s.data.Agents[name] = a
+			changed = append(changed, name)
+		}
+	}
+	if len(changed) == 0 {
+		return nil
+	}
+	if err := s.save(); err != nil {
+		for _, name := range changed {
+			a := s.data.Agents[name]
+			a.Seen = false
+			s.data.Agents[name] = a
+		}
+		return err
+	}
+	return nil
 }
 
 // RevokeAgent forgets the agent and refuses every token minted for it up to at; it reports false when no such agent was ever connected.

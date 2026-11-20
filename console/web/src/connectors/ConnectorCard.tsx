@@ -39,7 +39,7 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
             <Arrow />
           </span>
         </div>
-        <p className="mt-3 line-clamp-2 min-h-10 text-sm text-muted">{connector.description}</p>
+        <p className="mt-3 line-clamp-2 min-h-10 text-sm text-muted [overflow-wrap:anywhere]">{connector.description}</p>
         <div aria-hidden="true" className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-line">
           {(["on", "ask"] as const).map((access) =>
             counts[access] > 0 ? <span key={access} className={BAR[access]} style={{ width: `${(counts[access] / functions.length) * 100}%` }} /> : null,

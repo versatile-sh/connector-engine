@@ -1,5 +1,6 @@
 import { LOCALES } from "./i18n";
 import { useChooseLocale, useLocale, useT } from "./i18n/I18nProvider";
+import { TOUCH_ROW } from "./ui/styles";
 
 /** The console's language as three small mono choices; the pressed one is lit like the site's chips. */
 export function LanguageSwitch({ className = "" }: { className?: string }) {
@@ -15,7 +16,7 @@ export function LanguageSwitch({ className = "" }: { className?: string }) {
           lang={option.value}
           aria-pressed={locale === option.value}
           onClick={() => choose(option.value)}
-          className="h-full rounded-full px-2.5 text-muted transition-colors duration-200 hover:text-paper aria-pressed:bg-paper/10 aria-pressed:text-paper"
+          className={`relative h-full rounded-full px-2.5 text-muted transition-colors duration-200 hover:text-paper aria-pressed:bg-paper/10 aria-pressed:text-paper ${TOUCH_ROW}`}
         >
           {option.short}
         </button>

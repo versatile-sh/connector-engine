@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useReducer, useState, type FormEvent } from "react";
+import { useEffect, useReducer, useState, type FormEvent } from "react";
 import { api, errorText, type AgentToken } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { keysQuery } from "../queries";
@@ -28,7 +28,7 @@ function Created({ token }: { token: AgentToken }) {
           <Icon name="key" className="size-[1.1rem]" />
         </span>
         <div className="min-w-0">
-          <h2 id="created-title" className="text-lg leading-snug font-medium">
+          <h2 id="created-title" className="text-lg leading-snug font-medium [overflow-wrap:anywhere]">
             {t("keys.created", { name: token.agent })}
           </h2>
           <p className="text-sm text-muted">{t("keys.once")}</p>
@@ -57,6 +57,15 @@ export function AccessPage() {
       void queryClient.invalidateQueries({ queryKey: ["session"] });
     },
   });
+  const markSeen = useMutation({ mutationFn: () => api("POST", "/api/agents/seen") }).mutate;
+  const anyNew = keys.data?.agents.some((key) => key.new) ?? false;
+  const settled = keys.isSuccess && !keys.isFetching;
+  useEffect(
+    function tellServerNewKeysWereSeen() {
+      if (anyNew && settled) markSeen();
+    },
+    [anyNew, settled, markSeen],
+  );
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
   const revoke = useMutation({
     mutationFn: (agent: string) => api("DELETE", `/api/agents/${encodeURIComponent(agent)}`),
@@ -141,7 +150,7 @@ export function AccessPage() {
           ) : list.length === 0 ? (
             <p className="py-2 text-sm text-muted">{t("keys.empty", { endpoint })}</p>
           ) : (
-            <ul>
+            <ul className="@container">
               {list.map((key) => (
                 <KeyRow key={key.name} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
               ))}

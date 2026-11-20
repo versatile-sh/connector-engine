@@ -101,6 +101,12 @@ body {
   font-family: var(--font-sans);
   line-height: 1.6;
   min-height: 100dvh;
+  overflow-wrap: break-word;
+}
+
+@utility serif-room {
+  padding-block: 0.14em 0.1em;
+  margin-block: -0.14em -0.1em;
 }
 
 ::selection {

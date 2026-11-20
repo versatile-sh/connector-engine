@@ -1,6 +1,6 @@
 import type { MessageKey } from "./en";
 
-/** El diccionario en español. */
+/** The Spanish dictionary. */
 export const es: Record<MessageKey, string> = {
   "app.loading": "Cargando la consola",
   "app.failed": "La consola no pudo hablar con su servidor.",
@@ -182,6 +182,8 @@ export const es: Record<MessageKey, string> = {
   "keys.revokeLabel": "Revocar la clave {name}",
   "keys.revokeAsk": "¿Revocar {name}? Toda app que usa esta clave se detiene al instante, y no se puede deshacer.",
   "keys.revokeConfirm": "Revocar clave",
+  "keys.newBadge": "nueva",
+  "keys.viaBrowser": "conectada con el inicio de sesión del navegador",
   "keys.revoking": "Revocando…",
   "keys.empty": "Aún no hay claves. Cualquier cliente MCP (Claude Desktop, Claude Code, Cursor, ChatGPT, VS Code, tus propios scripts) se conecta a {endpoint} con una clave y ve todos los conectores con los permisos que definiste.",
   "keys.created": "Clave de {name}",
@@ -197,11 +199,21 @@ export const es: Record<MessageKey, string> = {
   "clients.note.cursorOAuth": "Cursor muestra el servidor y pide confirmación; luego abre tu navegador aquí para que la permitas.",
   "clients.note.vscodeOAuth": "VS Code muestra el servidor y pide confirmación; luego abre tu navegador aquí para que la permitas.",
   "clients.note.genericOAuth": "Cualquier cliente que sigue la especificación de autorización de MCP se conecta solo con la URL. Para uno que no la sigue, usa una clave de acceso abajo.",
-  "consent.title": "¿Permitir que {client} acceda a tus conectores?",
+  "consent.title": "¿Permitir que “{client}” acceda a tus conectores?",
+  "consent.warning": "Permite solo si acabas de conectar esta app tú mismo.",
+  "consent.selfNamed": "La propia app eligió su nombre; nadie lo ha verificado.",
   "consent.body": "{client} verá los conectores instalados aquí, con los permisos que definiste para cada función. Puedes revocarlo cuando quieras en Conecta una app de IA.",
   "consent.returns": "Luego vuelves a {target}",
   "consent.allow": "Permitir",
   "consent.deny": "Denegar",
+  "consent.password": "Tu contraseña",
+  "consent.passwordHint": "La contraseña del dueño, para confirmar que eres tú.",
+  "consent.wrongPassword": "Contraseña incorrecta. No se permitió nada.",
+  "consent.tooMany": "Demasiadas contraseñas incorrectas. Inténtalo de nuevo en un minuto.",
+  "consent.goesTo": "El acceso va a",
+  "consent.to.loopback": "una app en este equipo, puerto {port}",
+  "consent.to.loopbackAnyPort": "una app en este equipo",
+  "consent.to.scheme": "la app que abre los enlaces {scheme}:",
   "consent.done": "Listo. Puedes volver a {client}.",
   "consent.denied": "Denegado. {client} no recibió acceso.",
   "consent.expiredTitle": "Esta solicitud terminó",

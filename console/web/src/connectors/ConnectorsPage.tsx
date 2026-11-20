@@ -49,7 +49,7 @@ export function ConnectorsPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <PageTitle section={t("nav.connectors")} title={t("connectors.title")}>
             {connectors.isSuccess ? <Bubble tone={list.length > 0 ? "accent" : "neutral"}>{list.length}</Bubble> : null}
           </PageTitle>

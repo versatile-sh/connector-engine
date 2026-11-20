@@ -89,7 +89,7 @@ export const ptBR: Record<MessageKey, string> = {
   "connectors.needsSignIn": "falta entrar",
   "connectors.credentialSet": "credencial salva",
   "connectors.empty.title": "Nenhum conector ainda",
-  "connectors.empty.body": "Um conector é um servidor MCP que seus apps de IA alcançam por este gateway. Importe um e escolha, para cada função, se eles podem ler, gravar ou precisam pedir a você antes.",
+  "connectors.empty.body": "Um conector é um servidor MCP que seus apps de IA alcançam por este gateway. Importe um e deixe cada função desligada, ligada ou pedindo sua aprovação antes.",
 
   "access.off": "Desligada",
   "access.on": "Ligada",

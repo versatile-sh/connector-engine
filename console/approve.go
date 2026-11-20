@@ -1,8 +1,11 @@
 package console
 
 import (
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/agents-control/connector-engine/console/sealed"
 
 	"github.com/agents-control/connector-engine/surface"
 )
@@ -11,7 +14,7 @@ func (c *Console) approvalPage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if _, ok := c.Sessions.Get(r); !ok {
 		if _, _, err := c.checkLink(r.URL.Query().Get("t"), id); err != nil {
-			writeError(w, http.StatusUnauthorized, "sign in first")
+			refuseLink(w, err, "sign in first")
 			return
 		}
 	}
@@ -21,6 +24,14 @@ func (c *Console) approvalPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, v)
+}
+
+func refuseLink(w http.ResponseWriter, err error, refused string) {
+	if errors.Is(err, sealed.ErrLocked) {
+		writeJSON(w, http.StatusServiceUnavailable, apiError{Error: gatewayLocked, Code: "gateway_locked"})
+		return
+	}
+	writeError(w, http.StatusUnauthorized, refused)
 }
 
 func (c *Console) deviceName(id string) string {
@@ -48,8 +59,11 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 	channel, note := "console", "console"
 	if in.Token != "" {
 		device, nonce, err := c.checkLink(in.Token, id)
-		if err != nil || !c.surf.links.spend(nonce, time.Now().Add(24*time.Hour)) {
-			writeError(w, http.StatusUnauthorized, errBadToken.Error())
+		if err == nil && !c.surf.links.spend(nonce, time.Now().Add(24*time.Hour)) {
+			err = errBadToken
+		}
+		if err != nil {
+			refuseLink(w, err, errBadToken.Error())
 			return
 		}
 		channel, note = "desktop", "desktop:"+c.deviceName(device)

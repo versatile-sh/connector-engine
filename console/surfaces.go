@@ -211,6 +211,11 @@ func (c *Console) RunNotifications(ctx context.Context) {
 		unlocked = c.Secrets.Ready()
 	}
 	for ctx.Err() == nil {
+		if !c.Secrets.Locked() {
+			if _, err := c.linkKey(); err != nil {
+				c.logger().Warn("approval link key", "error", err)
+			}
+		}
 		chans := c.buildChannels(ctx)
 		rctx, cancel := context.WithCancel(ctx)
 		done := make(chan struct{})

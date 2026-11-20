@@ -2,10 +2,7 @@ package console
 
 import (
 	"crypto/pbkdf2"
-	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,13 +21,13 @@ const (
 	minPassword      = 10
 )
 
-// ErrNoOwner is returned by a login before the owner account exists.
+// ErrNoOwner is returned by a login before any user exists.
 var ErrNoOwner = errors.New("no owner account yet")
 
 // ErrOwnerExists is returned by a second setup.
 var ErrOwnerExists = errors.New("the owner account already exists")
 
-// Owner is the single local account: a username and a PBKDF2-SHA256 hash of the password.
+// Owner is the single account of a console from before multi-user, read once to migrate it to a User and never written again.
 type Owner struct {
 	Username   string `json:"username"`
 	Salt       string `json:"salt"`
@@ -49,14 +46,17 @@ type Agent struct {
 	SignedOutAt time.Time `json:"signed_out_at,omitzero"`
 }
 
-// StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value.
+// StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value, and the person it belongs to.
 type StoredSession struct {
+	Person  string    `json:"person,omitempty"`
 	CSRF    string    `json:"csrf"`
 	Expires time.Time `json:"expires"`
 }
 
 type stateFile struct {
 	Owner               *Owner                       `json:"owner,omitempty"`
+	Users               map[string]User              `json:"users,omitempty"`
+	LegacyPerson        string                       `json:"legacy_person,omitempty"`
 	Agents              map[string]Agent             `json:"agents,omitempty"`
 	Sessions            map[string]StoredSession     `json:"sessions,omitempty"`
 	Revoked             map[string]time.Time         `json:"revoked,omitempty"`
@@ -82,16 +82,20 @@ type Origin struct {
 	Digest       string `json:"digest,omitempty"`
 }
 
-// State is the console's file in its volume: the owner account, the connected agents and the revoked ones, written atomically with mode 0600.
+// State is the console's file in its volume: the users and their sessions, the connected agents and the revoked ones, written atomically with mode 0600.
 type State struct {
-	path string
-	mu   sync.Mutex
-	data stateFile
+	path   string
+	person string
+	mu     sync.Mutex
+	data   stateFile
 }
 
-// OpenState reads path, or starts empty when it does not exist.
-func OpenState(path string) (*State, error) {
-	s := &State{path: path}
+// OpenState reads path, or starts empty when it does not exist; person, owner when empty, is the first Owner's person id and the owner of a legacy account.
+func OpenState(path, person string) (*State, error) {
+	if person == "" {
+		person = defaultPerson
+	}
+	s := &State{path: path, person: person}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return s, nil
@@ -103,6 +107,7 @@ func OpenState(path string) (*State, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	migrateSlots(&s.data)
+	migrateUsers(&s.data, person)
 	return s, nil
 }
 
@@ -124,6 +129,9 @@ func (s *State) update(fn func(d *stateFile) error) error {
 		return nil
 	case err != nil:
 		return err
+	}
+	if len(s.data.Users) > 0 && owners(&next) == 0 {
+		return ErrLastOwner
 	}
 	if raw, err = json.MarshalIndent(next, "", "  "); err != nil {
 		return err
@@ -176,13 +184,6 @@ func writeAtomic(path string, raw []byte) error {
 	return d.Sync()
 }
 
-// HasOwner reports whether the owner account exists.
-func (s *State) HasOwner() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.data.Owner != nil
-}
-
 func hashPassword(password string, salt []byte, iterations int) ([]byte, error) {
 	return pbkdf2.Key(sha256.New, password, salt, iterations, pbkdf2KeyLen)
 }
@@ -194,104 +195,12 @@ func checkUsername(username string) error {
 	return nil
 }
 
-func newOwner(username, password string) (*Owner, error) {
-	if err := checkUsername(username); err != nil {
-		return nil, err
-	}
-	if len(password) < minPassword {
-		return nil, invalid("the password has at least %d characters", minPassword)
-	}
-	salt := make([]byte, 16)
-	rand.Read(salt)
-	hash, err := hashPassword(password, salt, pbkdf2Iterations)
-	if err != nil {
-		return nil, err
-	}
-	return &Owner{Username: username, Salt: base64.StdEncoding.EncodeToString(salt), Hash: base64.StdEncoding.EncodeToString(hash), Iterations: pbkdf2Iterations}, nil
-}
-
-// CreateOwner writes the owner account once; the password has at least ten characters.
-func (s *State) CreateOwner(username, password string) error {
-	o, err := newOwner(username, password)
-	if err != nil {
-		return err
-	}
-	return s.update(func(d *stateFile) error {
-		if d.Owner != nil {
-			return ErrOwnerExists
-		}
-		d.Owner = o
-		return nil
-	})
-}
-
-// SetPassword replaces the owner's password and ends every session except the one keyed keep; an empty keep ends them all.
-func (s *State) SetPassword(password, keep string) error {
-	return s.update(func(d *stateFile) error {
-		if d.Owner == nil {
-			return ErrNoOwner
-		}
-		o, err := newOwner(d.Owner.Username, password)
-		if err != nil {
-			return err
-		}
-		d.Owner = o
-		maps.DeleteFunc(d.Sessions, func(k string, _ StoredSession) bool { return k != keep })
-		return nil
-	})
-}
-
-// Rename changes the owner's username, which has 1 to 64 characters.
-func (s *State) Rename(username string) error {
-	if err := checkUsername(username); err != nil {
-		return err
-	}
-	return s.update(func(d *stateFile) error {
-		if d.Owner == nil {
-			return ErrNoOwner
-		}
-		d.Owner.Username = username
-		return nil
-	})
-}
-
-// CheckLogin reports whether username and password are the owner's, comparing in constant time.
-func (s *State) CheckLogin(username, password string) (bool, error) {
-	s.mu.Lock()
-	o := s.data.Owner
-	s.mu.Unlock()
-	if o == nil {
-		return false, ErrNoOwner
-	}
-	salt, err1 := base64.StdEncoding.DecodeString(o.Salt)
-	want, err2 := base64.StdEncoding.DecodeString(o.Hash)
-	if err := errors.Join(err1, err2); err != nil {
-		return false, err
-	}
-	got, err := hashPassword(password, salt, o.Iterations)
-	if err != nil {
-		return false, err
-	}
-	userOK := subtle.ConstantTimeCompare([]byte(username), []byte(o.Username)) == 1
-	passOK := subtle.ConstantTimeCompare(got, want) == 1
-	return userOK && passOK, nil
-}
-
-// OwnerName returns the owner's username, or "" before the account exists.
-func (s *State) OwnerName() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data.Owner == nil {
-		return ""
-	}
-	return s.data.Owner.Username
-}
-
-func (s *State) session(key string) (StoredSession, bool) {
+func (s *State) session(key string) (StoredSession, User, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	v, ok := s.data.Sessions[key]
-	return v, ok && time.Now().Before(v.Expires)
+	u, known := s.data.Users[v.Person]
+	return v, u, ok && known && time.Now().Before(v.Expires)
 }
 
 func (s *State) putSession(key string, v StoredSession) error {

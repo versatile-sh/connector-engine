@@ -20,7 +20,7 @@ type accountRig struct {
 
 func newAccountRig(t *testing.T) *accountRig {
 	t.Helper()
-	state, err := console.OpenState(t.TempDir() + "/state.json")
+	state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,5 +145,15 @@ func TestAHostPasswordResetEndsEverySession(t *testing.T) {
 	}
 	if _, status := r.signIn("me", "forgot it but now long"); status != http.StatusOK {
 		t.Errorf("the reset password does not sign in: %d", status)
+	}
+}
+
+func TestAnUnknownUsernameAndAWrongPasswordGetTheSameAnswer(t *testing.T) {
+	r := newAccountRig(t)
+	b := r.browser()
+	unknownStatus, unknown := b.send("POST", "/api/login", map[string]string{"username": "nobody", "password": "correct horse battery"}, nil)
+	wrongStatus, wrong := b.send("POST", "/api/login", map[string]string{"username": "me", "password": "not the password"}, nil)
+	if unknownStatus != http.StatusUnauthorized || unknownStatus != wrongStatus || string(unknown) != string(wrong) || !strings.Contains(string(wrong), "wrong username or password") {
+		t.Fatalf("unknown: %d %s; wrong: %d %s", unknownStatus, unknown, wrongStatus, wrong)
 	}
 }

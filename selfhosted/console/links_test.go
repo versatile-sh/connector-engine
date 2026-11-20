@@ -19,7 +19,7 @@ const legacyKey = "00112233445566778899aabbccddeeff00112233445566778899aabbccdde
 
 func linkConsole(t *testing.T, path string, box *sealed.Box) *Console {
 	t.Helper()
-	state, err := OpenState(path)
+	state, err := OpenState(path, "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

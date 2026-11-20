@@ -3,6 +3,7 @@ package backup_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -47,7 +48,8 @@ func TestATamperedOrCutBackupIsRefused(t *testing.T) {
 	raw := sealed(t)
 	flipped := bytes.Clone(raw)
 	flipped[len(flipped)-40] ^= 1
-	header := bytes.Replace(bytes.Clone(raw), []byte(`"format":1`), []byte(`"format":1 `), 1)
+	format := fmt.Appendf(nil, `"format":%d`, backup.Format)
+	header := bytes.Replace(bytes.Clone(raw), format, append(bytes.Clone(format), ' '), 1)
 	for name, b := range map[string][]byte{"a flipped byte": flipped, "cut": raw[:len(raw)-10], "an edited header": header} {
 		if _, _, err := backup.Open(bytes.NewReader(b), []byte("a long passphrase")); !errors.Is(err, backup.ErrTampered) {
 			t.Errorf("%s: %v", name, err)
@@ -59,7 +61,7 @@ func TestATamperedOrCutBackupIsRefused(t *testing.T) {
 }
 
 func TestABackupOfANewerFormatIsRefusedBeforeItsPassphrase(t *testing.T) {
-	newer := bytes.Replace(sealed(t), []byte(`"format":1`), []byte(`"format":2`), 1)
+	newer := bytes.Replace(sealed(t), fmt.Appendf(nil, `"format":%d`, backup.Format), fmt.Appendf(nil, `"format":%d`, backup.Format+1), 1)
 	if _, _, err := backup.Open(bytes.NewReader(newer), []byte("wrong")); !errors.Is(err, backup.ErrVersion) {
 		t.Fatalf("a newer format: %v", err)
 	}

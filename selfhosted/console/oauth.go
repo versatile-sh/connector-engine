@@ -378,7 +378,7 @@ func (c *Console) consentInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"client": req.client.Name, "redirect": redirectTarget(req.redirect), "destination": DestinationOf(req.redirect)})
 }
 
-func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
+func (c *Console) userConfirms(w http.ResponseWriter, r *http.Request, password string) bool {
 	if password == "" {
 		writeJSON(w, http.StatusBadRequest, apiError{Error: "type your password to allow the app", Code: "password_required"})
 		return false
@@ -391,7 +391,8 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
 		return false
 	}
-	ok, err := c.State.CheckLogin(c.State.OwnerName(), password)
+	u, _ := signedInUser(r.Context())
+	_, ok, err := c.State.CheckLogin(u.Username, password)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "cannot read the account")
 		return false
@@ -436,7 +437,7 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "this request expired or was already answered")
 		return
 	}
-	if in.Approve && !c.ownerConfirms(w, in.Password) {
+	if in.Approve && !c.userConfirms(w, r, in.Password) {
 		return
 	}
 	if _, ok := c.State.Slot(in.Slot); in.Approve && in.Slot != "" && !ok {

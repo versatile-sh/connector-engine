@@ -38,7 +38,7 @@ func (c *Console) exportBackup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, apiError{Error: "confirm that the file holds every credential of this install", Code: "confirm_required"})
 		return
 	}
-	if !c.verify(w, c.State.OwnerName(), in.Password) {
+	if !c.reauth(w, r, in.Password) {
 		return
 	}
 	body, name, err := c.ExportBackup(r.Context(), []byte(in.Passphrase))
@@ -105,7 +105,7 @@ func (c *Console) importUpload(w http.ResponseWriter, r *http.Request) {
 	case !isBackup(raw) && !signedIn:
 		writeError(w, http.StatusUnauthorized, "create the owner account first, then import a setup")
 		return
-	case isBackup(raw) && signedIn && !c.verify(w, c.State.OwnerName(), r.FormValue("password")):
+	case isBackup(raw) && signedIn && !c.reauth(w, r, r.FormValue("password")):
 		return
 	}
 	var opts SetupOptions

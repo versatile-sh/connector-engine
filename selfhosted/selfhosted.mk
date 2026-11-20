@@ -36,6 +36,7 @@ seed:
 notify: cnctl
 	$(CNCTL) notify --console http://127.0.0.1:$(CONSOLE_PORT)
 
+reset-password: export RESET_USER := $(if $(filter command line,$(origin USER)),$(USER))
 reset-password:
 	@$(ACCOUNT) reset-password
 

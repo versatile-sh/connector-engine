@@ -38,7 +38,7 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
               {test.isPending ? t("notify.channels.testing") : t("notify.channels.test")}
             </button>
             <button type="button" autoFocus={remove.returning(channel.id)} aria-label={t("notify.channels.removeLabel", { name: channel.label })} className={button({ variant: "danger", size: "xs" })} onClick={() => remove.ask(channel.id)}>
-              {t("notify.remove")}
+              {t("common.remove")}
             </button>
           </div>
         )}
@@ -51,7 +51,7 @@ export function ChannelRow({ channel, remove }: ChannelRowProps) {
         <InlineConfirm
           label={t("notify.channels.removeLabel", { name: channel.label })}
           question={t("notify.channels.removeAsk", { name: channel.label })}
-          confirm={t("notify.remove")}
+          confirm={t("common.remove")}
           working={t("notify.removing")}
           busy={remove.busy}
           error={remove.error}

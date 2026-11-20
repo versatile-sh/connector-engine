@@ -82,7 +82,7 @@ export function DeviceRow({ device, here, remove }: DeviceRowProps) {
               {t("notify.devices.rename")}
             </button>
             <button type="button" autoFocus={remove.returning(device.id)} aria-label={t("notify.devices.revokeLabel", { name: device.name })} className={button({ variant: "danger", size: "xs" })} onClick={() => remove.ask(device.id)}>
-              {t("notify.revoke")}
+              {t("common.revoke")}
             </button>
           </div>
         )}
@@ -91,7 +91,7 @@ export function DeviceRow({ device, here, remove }: DeviceRowProps) {
         <InlineConfirm
           label={t("notify.devices.revokeLabel", { name: device.name })}
           question={t("notify.devices.revokeAsk", { name: device.name })}
-          confirm={t("notify.revoke")}
+          confirm={t("common.revoke")}
           working={t("notify.revoking")}
           busy={remove.busy}
           error={remove.error}

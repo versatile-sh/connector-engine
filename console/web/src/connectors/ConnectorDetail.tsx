@@ -193,7 +193,7 @@ export function ConnectorDetail({ id }: { id: string }) {
           </a>
           <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
             <Icon name="trash" className="size-4" />
-            {t("detail.remove")}
+            {t("common.remove")}
           </button>
         </div>
       </header>

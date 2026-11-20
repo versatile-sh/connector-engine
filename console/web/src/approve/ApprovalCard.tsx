@@ -60,12 +60,12 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
         {approval.function}
       </code>
       <dl className="mt-5">
-        <Fact label={t("approve.app")}>
+        <Fact label={t("common.app")}>
           <span className="font-mono" translate="no">
             {approval.app}
           </span>
         </Fact>
-        <Fact label={t("approve.session")}>
+        <Fact label={t("common.session")}>
           <span className="font-mono" title={approval.session} translate="no">
             {approval.session.slice(0, 12)}
           </span>
@@ -88,7 +88,7 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
           className="mt-4 bubble border border-line-strong bg-ink-sunken"
           summary={
             <>
-              <span className="font-medium">{t("approve.arguments")}</span>
+              <span className="font-medium">{t("common.arguments")}</span>
               {summary.cut > 0 ? <span className={CAPTION}>{t("approve.cut", { count: summary.cut })}</span> : null}
             </>
           }

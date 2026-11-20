@@ -34,9 +34,30 @@ type row[V any] struct {
 type table[V any] struct {
 	rows   map[string]row[V]
 	access access
+	copy   func(V) (V, error)
 }
 
-func newTable[V any](a access) table[V] { return table[V]{rows: map[string]row[V]{}, access: a} }
+func newTable[V any](a access) table[V] {
+	return table[V]{rows: map[string]row[V]{}, access: a, copy: dup[V]}
+}
+
+func (tb table[V]) copying(fn func(V) V) table[V] {
+	tb.copy = func(v V) (V, error) { return fn(v), nil }
+	return tb
+}
+
+func copyGrant(g port.Grant) port.Grant {
+	if g.Listing != nil {
+		l := *g.Listing
+		g.Listing = &l
+	}
+	return g
+}
+
+func copyBinding(b port.Binding) port.Binding {
+	b.Approvers = slices.Clone(b.Approvers)
+	return b
+}
 
 func (tb table[V]) clone() table[V] {
 	tb.rows = maps.Clone(tb.rows)
@@ -117,7 +138,7 @@ func New() *Store {
 		versions: newTable[port.ListingVersion](sharedRows), offers: newTable[port.Offer](aboutTenantRows),
 		policies: newTable[port.CatalogPolicy](tenantRows), rules: newTable[port.CatalogRule](tenantRows),
 		connectors: newTable[port.Connector](tenantRows), functions: newTable[port.Function](tenantRows),
-		bindings: newTable[port.Binding](tenantRows), grants: newTable[port.Grant](tenantRows),
+		bindings: newTable[port.Binding](tenantRows).copying(copyBinding), grants: newTable[port.Grant](tenantRows).copying(copyGrant),
 		approvals: newTable[port.Approval](tenantRows), pauses: newTable[port.Pause](tenantRows),
 		tombstones: newTable[port.Tombstone](tenantRows), credentials: newTable[port.Credential](tenantRows),
 		overlays: newTable[port.Overlay](tenantRows), calls: newTable[port.Call](tenantRows), clients: newTable[port.ClientRegistration](tenantRows), syncs: newTable[port.SourceSync](sharedRows),

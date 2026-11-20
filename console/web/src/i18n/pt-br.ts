@@ -63,6 +63,9 @@ export const ptBR: Record<MessageKey, string> = {
   "hub.pill": "Hub",
   "hub.title": "Veja mais de 900 conectores prontos em {where}",
   "hub.body": "Escolha um e clique em Importar: ele abre aqui já preenchido.",
+  "footer.thesis": "Rode em qualquer lugar. Rode qualquer coisa.",
+  "footer.answer": "Seja versátil",
+  "footer.hub": "Hub de conectores",
 
   "paste.label": "URL do servidor MCP ou link de instalação",
   "paste.submit": "Ler",

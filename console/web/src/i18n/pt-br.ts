@@ -166,7 +166,6 @@ export const ptBR: Record<MessageKey, string> = {
 
   "keys.title": "*Conecte* um app de IA",
   "keys.intro": "Escolha seu app abaixo e conecte só com o endereço: o app abre este console no navegador e você permite. Todos os conectores aparecem com as permissões que você definiu.",
-  "keys.endpoint": "Endpoint",
   "keys.new": "Nova chave de acesso",
   "keys.name": "Nome",
   "keys.namePlaceholder": "claude-desktop, cursor, chatgpt…",

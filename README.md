@@ -23,6 +23,7 @@ This builds one image (engine, `cnctl`, console) and starts the `person` profile
 - Install links: `http://127.0.0.1:<port>/import?listing=<https URL of a listing in the Manifest format>` or `?mcp=<https MCP URL>` open a confirm screen (after sign-in) with the origin, title, icon, publisher and each function's proposed choice. Nothing is installed before the click.
 - First boot writes a random operator token and the Postgres passwords into the `secrets` volume. The console keeps the owner account (PBKDF2-SHA256) in the `console-data` volume.
 - The console is the OAuth 2.1 authorization server of the `person` profile only: `/.well-known/oauth-protected-resource[/mcp]` names it, `/.well-known/oauth-authorization-server` describes it, `/oauth/register` takes dynamic client registration (RFC 7591; loopback `http` redirects on any port and app schemes such as `cursor:` or `vscode:`, never `https`), and `/oauth/authorize` (PKCE S256 only) and `/oauth/token` (`authorization_code`, rotating `refresh_token`) do the rest. Allowing an app creates the access key named after it, so its grants, the key list and Revoke work as for any key. Access tokens are engine agent tokens living one hour; the console keeps registered clients and the SHA-256 of refresh tokens (90 days) in its state file.
+- Skills (`person` profile): a skill link `http://127.0.0.1:<port>/import?listing=<https URL of a skill catalog entry>` opens the same confirm screen, dispatched on `kind: skill`. It shows the licence, the source at its pinned commit, the file list with sizes and a warning when the skill carries scripts. Nothing is fetched beyond the entry until you confirm; then each file is fetched over public https, checked against its sha256 and its address pinned to `source.commit`, and refused for a branch name, `..`, an absolute path or a size over the limits (256 files, 1 MiB a file, 4 MiB a skill). The Skills tab sets each skill off, on or ask per access key; keys made later start off. AI apps see two tools, `skill_list` and `skill_load`, and a short index of their skills in the server instructions. The gateway serves skill files as text and never runs them. A skill without a redistributable licence is `metadata_only`: it is listed, and `skill_load` answers with its source instead of its files.
 - The `headless` profile is how a product embeds the engine: no console, tokens from an external OIDC/JWKS issuer (edit `deploy/profiles/headless/connector-engine.yaml`), the engine published on `127.0.0.1:8080` and `:8081`.
 - While `github.com/agents-control/plugkit` is private, `make up` vendors the modules with the host's `go` so the image builds without credentials.
 
@@ -35,8 +36,8 @@ This builds one image (engine, `cnctl`, console) and starts the `person` profile
 | `service/` | the use cases of §13.1 and the worker (approval timers, sweeps, re-list, fan-out) |
 | `gateway/` | the agent endpoint `/mcp`: list, call, `find`/`call`, `approval_status`, `approval_cancel` |
 | `server/` | the operation table and the HTTP, gRPC and management MCP surfaces built from it |
-| `runtime/` | `ConnectorRuntime` adapters: `remote` (MCP), `declarative` (REST), `grpc`, `memory` |
-| `source/` | `ListingSource` adapters: `files`, `openapi`, `reflection`, `bsr`, `registry`, `docker` |
+| `runtime/` | `ConnectorRuntime` adapters: `remote` (MCP), `declarative` (REST), `grpc`, `skill` (pinned skill files as text, no process), `memory` |
+| `source/` | `ListingSource` adapters: `files`, `openapi`, `reflection`, `bsr`, `registry`, `docker`, `skillcatalog` (https catalog entries, no URL built in) |
 | `store/` | `memory` and `postgres` (row-level security per tenant) |
 | `secrets/`, `auth/`, `credential/` | envelope encryption, token verification and the local issuer, the credential broker |
 | `filter/`, `index/`, `sink/`, `relay/` | result filter, tool index, event sinks, the outbox relay |
@@ -65,9 +66,11 @@ Every number is a key of `config/connector-engine.yaml`; the ports (store, secre
 cnctl admin <group> <verb> [path values] [--field value] [--json BODY]
 cnctl admin call <operationId> [path values] [--json BODY]
 cnctl tools list|search QUERY|call NAME [--args JSON] [--fields /a,/b] [--out FILE]
+cnctl skills export --to DIR [--skill NAME] [--prune]
 ```
 
 - `cnctl admin` is every operation of the table over HTTP. It reads `CNCTL_URL` and `CNCTL_TOKEN` (or `--url`, `--token`). Groups: `listings`, `sources`, `connectors`, `functions`, `bindings`, `grants`, `approvals`, `overlays`, `tenants`, `roles`, `groups`, `operations`, `adapters`, `events`; `call` reaches the rest.
+- `cnctl skills export` is an MCP client of `/mcp` too: it loads every skill granted to the agent with `skill_list` and `skill_load`, checks each file's sha256 and writes the exact bytes to `DIR/<skill>/` with mode 0644. Use `~/.claude/skills` (Claude Code) or `~/.agents/skills` (Codex, Cursor, VS Code, OpenCode, Gemini CLI). It records what it wrote in `DIR/.cnctl-skills.json`, never overwrites a file it did not write, never writes through a symlink, and with `--prune` removes only the files that manifest lists and this export did not write. Exported scripts get the trust of local skills, so it prints a warning when it writes one.
 - `cnctl tools` is an MCP client of `/mcp` for an agent. It reads `CN_ENDPOINT` (the `/mcp` address) and `CN_AGENT_TOKEN`, writes the full answer to `--out` (a temporary file when empty) and prints a short summary. A held call prints its `approval_id`; ask again with `tools call approval_status`.
 
 ## Tests

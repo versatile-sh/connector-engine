@@ -17,6 +17,7 @@ export const en = {
   "common.save": "Save",
   "common.opensNewTab": "(opens in a new tab)",
   "list.noMatch": "Nothing matches.",
+  "select.filter": "Type to filter",
   "list.showAll": "Show all ({count})",
   "common.credentials": "Credentials",
   "common.arguments": "Arguments",

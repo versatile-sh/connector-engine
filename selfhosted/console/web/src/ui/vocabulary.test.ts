@@ -29,6 +29,10 @@ describe("the console's design vocabulary", () => {
     assert.deepEqual(using(/\bfont-(display|bold|black|extrabold)\b/), []);
   });
 
+  test("draws every dropdown with Select, never the native select or datalist", () => {
+    assert.deepEqual(using(/<(select|datalist|option)\b/), []);
+  });
+
   test("uses no colour or effect class the stylesheet no longer defines", () => {
     assert.deepEqual(using(/\b(text|bg|border|fill|stroke|outline|ring|decoration|from|via|to)-amber(?![\w-])|\bbackdrop-(grid|beam|glow)\b|\bride-in\b/), []);
   });

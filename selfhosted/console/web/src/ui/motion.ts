@@ -22,7 +22,7 @@ export function irisAt(width: number, height: number, point?: { x: number; y: nu
 }
 
 /** A box on the screen, as `getBoundingClientRect` gives it. */
-type Box = { left: number; top: number; width: number; height: number };
+export type Box = { left: number; top: number; width: number; height: number };
 
 /** The transform that draws an element laid out at `to` over `from` instead, scaled about its centre: the first frame of a FLIP between the two boxes. */
 export function boxTransform(from: Box, to: Box): string {

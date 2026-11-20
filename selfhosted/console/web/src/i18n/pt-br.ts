@@ -454,6 +454,7 @@ export const ptBR: Record<MessageKey, string> = {
   "notify.elicit.off": "Pergunta só nos outros lugares",
   "notify.devices.title": "Pop-ups no computador",
   "notify.devices.intro": "Um pequeno ajudante no seu computador mostra uma notificação nativa para cada chamada retida; um clique abre a chamada aqui.",
+  "notify.devices.repair": "Nova chave para este computador",
   "notify.devices.pair": "Parear este computador",
   "notify.devices.pairing": "Pareando",
   "notify.devices.thisComputer": "este computador",

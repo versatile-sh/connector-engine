@@ -59,15 +59,10 @@ func splitSecrets(kind string, all map[string]string) (plain, secret map[string]
 	return plain, secret
 }
 
-func (c *Console) secrets() NotifierSecrets {
-	if c.Secrets != nil {
-		return c.Secrets
-	}
-	return StateSecrets{State: c.State}
-}
+func (c *Console) secrets() channelSecrets { return channelSecrets{state: c.State, box: c.Secrets} }
 
-func (c *Console) settingsOf(sc StoredChannel) (map[string]string, error) {
-	sec, err := c.secrets().Get(sc.ID)
+func (c *Console) settingsOf(ctx context.Context, sc StoredChannel) (map[string]string, error) {
+	sec, err := c.secrets().get(ctx, sc.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +128,10 @@ type DeviceView struct {
 	LastSeen  time.Time `json:"last_seen,omitzero"`
 }
 
-func (c *Console) channelView(sc StoredChannel) ChannelView {
+func (c *Console) channelView(ctx context.Context, sc StoredChannel) ChannelView {
 	v := ChannelView{ID: sc.ID, Kind: sc.Kind, Label: sc.Label, Interactive: interactiveKinds[sc.Kind], Owner: sc.Settings["owner_user_id"], CreatedAt: sc.CreatedAt}
 	if s := kinds[sc.Kind].secrets; len(s) > 0 {
-		sec, _ := c.secrets().Get(sc.ID)
+		sec, _ := c.secrets().get(ctx, sc.ID)
 		if secret := sec[s[0]]; len(secret) > 8 {
 			v.SecretHint = secret[len(secret)-4:]
 		}
@@ -169,12 +164,12 @@ func (c *Console) surfaceRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/notify/stream", c.notifyStream)
 }
 
-func (c *Console) listNotifications(w http.ResponseWriter, _ *http.Request) {
+func (c *Console) listNotifications(w http.ResponseWriter, r *http.Request) {
 	chans := c.State.Channels()
 	slices.SortFunc(chans, func(a, b StoredChannel) int { return a.CreatedAt.Compare(b.CreatedAt) })
 	views := make([]ChannelView, 0, len(chans))
 	for _, sc := range chans {
-		views = append(views, c.channelView(sc))
+		views = append(views, c.channelView(r.Context(), sc))
 	}
 	devices := []DeviceView{}
 	for _, d := range c.State.Devices() {
@@ -220,7 +215,7 @@ func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	plain, secret := splitSecrets(in.Kind, settings)
 	sc := StoredChannel{ID: randomID()[:12], Kind: in.Kind, Label: label, Settings: plain, CreatedAt: time.Now().UTC().Truncate(time.Second)}
-	if err := c.secrets().Put(sc.ID, secret); err != nil {
+	if err := c.secrets().put(r.Context(), sc.ID, secret); err != nil {
 		c.fail(w, err)
 		return
 	}
@@ -229,7 +224,7 @@ func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.surf.wake()
-	writeJSON(w, http.StatusCreated, c.channelView(sc))
+	writeJSON(w, http.StatusCreated, c.channelView(r.Context(), sc))
 }
 
 func (c *Console) storedChannel(id string) (StoredChannel, bool) {
@@ -244,7 +239,7 @@ func (c *Console) storedChannel(id string) (StoredChannel, bool) {
 func (c *Console) removeChannel(w http.ResponseWriter, r *http.Request) {
 	ok, err := c.State.DeleteChannel(r.PathValue("id"))
 	if err == nil {
-		err = c.secrets().Delete(r.PathValue("id"))
+		err = c.secrets().remove(r.PathValue("id"))
 	}
 	switch {
 	case err != nil:
@@ -263,7 +258,7 @@ func (c *Console) testChannel(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no such channel"})
 		return
 	}
-	settings, err := c.settingsOf(sc)
+	settings, err := c.settingsOf(r.Context(), sc)
 	if err != nil {
 		c.fail(w, err)
 		return

@@ -109,10 +109,7 @@ func (c *Console) callsIn(r *http.Request, body []byte) *inflight {
 		case p.Name == port.ToolFind, p.Name == port.ToolApprovalCancel, p.Name == port.ToolSkillList:
 			continue
 		case p.Name == port.ToolSkillLoad:
-			var s struct {
-				Skill string `json:"skill"`
-				Path  string `json:"path"`
-			}
+			var s port.SkillLoad
 			if json.Unmarshal(p.Arguments, &s) != nil || s.Skill == "" {
 				continue
 			}

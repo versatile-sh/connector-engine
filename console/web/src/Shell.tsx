@@ -14,14 +14,15 @@ import { Notice } from "./ui/Notice";
 import { ICON_BUTTON, PRESS, TOUCH, button } from "./ui/styles";
 import { useCopy } from "./ui/useCopy";
 
-/** The console's four sections and the paths each one owns. */
-export type Section = "connectors" | "skills" | "access" | "approvals";
+/** The console's sections and the paths each one owns. */
+export type Section = "connectors" | "skills" | "access" | "approvals" | "activity";
 
 const NAV: readonly { section: Section; href: string; label: MessageKey }[] = [
   { section: "connectors", href: "/", label: "nav.connectors" },
   { section: "skills", href: "/skills", label: "nav.skills" },
   { section: "access", href: "/access", label: "nav.access" },
   { section: "approvals", href: "/approvals", label: "nav.approvals" },
+  { section: "activity", href: "/activity", label: "nav.activity" },
 ];
 
 const OAUTH: Record<string, MessageKey> = {

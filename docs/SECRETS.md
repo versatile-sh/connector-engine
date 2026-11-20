@@ -62,10 +62,10 @@ Recovery: `make keychain-recovery` prints the unlock key once, for a password ma
 
 ## 1Password
 
-`builtin:onepassword` reads the unlock key once at start from one field of one 1Password item, through a [1Password Connect](https://developer.1password.com/docs/connect/) server you run (`GET /v1/vaults/{vault}/items/{item}`, bearer token). Then it is the same wrapped `secrets/local` store. Nothing else talks to 1Password and nothing is written back. It is opt-in and has no default.
+`builtin:onepassword` reads the unlock key once at start from one field of one 1Password item, through a [1Password Connect](https://developer.1password.com/docs/connect/) server you run (`GET /v1/vaults/{vault}/items/{item}`, bearer token, the item's `fields[].label` and `value`). The adapter is tested against a fake of that endpoint, not against a live Connect server. Then it is the same wrapped `secrets/local` store. Nothing else talks to 1Password and nothing is written back. It is opt-in and has no default.
 
 1. Deploy a Connect server reachable from the engine (for example in the same compose network). Create a Connect token that can read one vault.
-2. Create the item and its field with a fresh key: `op item create --vault <vault> --category password --title connector-engine-unlock "unlock[password]=$(openssl rand -hex 32)"`. Then note the vault id and the item id (`op item get connector-engine-unlock --format json`).
+2. In the 1Password app, add an item `connector-engine-unlock` with a password field labelled `unlock` that holds 64 hexadecimal characters (for example `openssl rand -hex 32`, pasted into the app rather than written into a shell command, where it would sit in argv and the history). Note the vault id and the item id (`op item get connector-engine-unlock --format json`).
 3. Put the Connect token in a file only the engine reads, then configure:
    ```yaml
    # connector-engine.yaml

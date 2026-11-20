@@ -3,6 +3,7 @@ package admin
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -125,7 +126,7 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 	global := flag.NewFlagSet("admin", flag.ContinueOnError)
 	global.SetOutput(c.err)
 	base := global.String("url", c.env("CNCTL_URL"), "base address of the engine")
-	token := global.String("token", c.env("CNCTL_TOKEN"), "bearer token")
+	token := global.String("token", "", "bearer token (from $CNCTL_TOKEN when empty)")
 	if err := global.Parse(args); err != nil {
 		return 2
 	}
@@ -156,7 +157,7 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 		fmt.Fprintln(c.err, "no engine address: set --url or CNCTL_URL")
 		return 2
 	}
-	req, err := c.request(ctx, op, positional, rest, strings.TrimRight(*base, "/"), *token)
+	req, err := c.request(ctx, op, positional, rest, strings.TrimRight(*base, "/"), cmp.Or(*token, c.env("CNCTL_TOKEN")))
 	if err != nil {
 		fmt.Fprintln(c.err, err)
 		return 2

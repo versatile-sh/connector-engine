@@ -147,15 +147,8 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 		arguments = json.RawMessage(`{}`)
 	}
 	res, err := in.session.CallTool(ctx, &mcp.CallToolParams{Name: function, Arguments: arguments})
-	var rpc *jsonrpc.Error
-	switch {
-	case err == nil:
-	case errors.As(err, &rpc):
-		return port.Result{}, port.Errorf(port.CodeInternal, "tools/call %s: %v", function, err)
-	case errors.Is(err, mcp.ErrConnectionClosed):
-		return port.Result{}, port.Errorf(port.CodeUnavailable, "tools/call %s: %v", function, err)
-	default:
-		return port.Result{}, outcome.Of(ctx, err, "tools/call %s: %v", function)
+	if err != nil {
+		return port.Result{}, failed(ctx, err, "tools/call", function)
 	}
 	out := port.Result{IsError: res.IsError}
 	if out.Content, err = json.Marshal(res.Content); err != nil {
@@ -167,6 +160,17 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 		}
 	}
 	return out, nil
+}
+
+func failed(ctx context.Context, err error, method, name string) error {
+	var rpc *jsonrpc.Error
+	switch {
+	case errors.As(err, &rpc):
+		return port.Errorf(port.CodeInternal, "%s %s: %v", method, name, err)
+	case errors.Is(err, mcp.ErrConnectionClosed):
+		return port.Errorf(port.CodeUnavailable, "%s %s: %v", method, name, err)
+	}
+	return outcome.Of(ctx, err, "%s %s: %v", method, name)
 }
 
 // Stop closes the session.

@@ -268,10 +268,14 @@ func (c *Console) CopyProfile(ctx context.Context, conn, from string, names []st
 }
 
 func (c *Console) applyProfile(ctx context.Context, conn string, a Agent, p Profile) error {
-	if p.Mode == ProfileOff {
-		return c.unbind(ctx, conn, a)
+	if err := c.unbind(ctx, conn, a); err != nil || p.Mode == ProfileOff {
+		return err
 	}
-	if err := c.follow(ctx, conn, a); err != nil {
+	rows, err := c.Engine.grants(ctx, port.ScopeAgent, a.Name, conn)
+	if err != nil {
+		return err
+	}
+	if err := c.Engine.deleteGrants(ctx, slices.DeleteFunc(rows, func(g port.Grant) bool { return !isOverride(g) })); err != nil {
 		return err
 	}
 	fns, err := c.Engine.functions(ctx, conn)
@@ -285,7 +289,7 @@ func (c *Console) applyProfile(ctx context.Context, conn string, a Agent, p Prof
 			}
 		}
 	}
-	return nil
+	return c.bind(ctx, conn, a)
 }
 
 func (c *Console) confirmOverrides(ctx context.Context, conn string, f port.Function) error {

@@ -329,3 +329,43 @@ func TestAConnectorWhoseProfilesFailIsReportedOnce(t *testing.T) {
 		t.Fatalf("result %+v", res)
 	}
 }
+
+func TestAProfileThatFailsHalfwayLeavesTheKeyOff(t *testing.T) {
+	src := profiledStack(t)
+	src.mint("alpha")
+	src.narrow("alpha", "lookup", console.AccessOff)
+	file := src.exportSetup()
+
+	t.Run("copying a profile", func(t *testing.T) {
+		p := profiledStack(t)
+		p.mint("beta")
+		gamma := p.mint("gamma")
+		p.narrow("beta", "lookup", console.AccessOff)
+		p.mode(console.ProfileOff, "gamma")
+		p.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: refuseOverrides{next: http.DefaultTransport}}
+		if codes := p.batch("POST", "/api/connectors/"+p.conn+"/profiles:copy", map[string]any{"from": "beta", "keys": []string{"gamma"}}); codes["gamma"] == "" {
+			t.Fatalf("copy: %v", codes)
+		}
+		p.c.Engine.HTTP = &http.Client{Timeout: time.Minute}
+		if pr := p.profile("gamma"); pr.Mode != console.ProfileOff || len(toolsOf(t, gamma)) != 0 {
+			t.Fatalf("gamma after a failed copy: %+v", pr)
+		}
+	})
+
+	t.Run("a key made again after a failure still takes its profile", func(t *testing.T) {
+		dst := profiled{stack: freshOwner(t, personRelays)}
+		dst.importSetup(file)
+		dst.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: refuseOverrides{next: http.DefaultTransport}}
+		if status, raw := dst.b.send("POST", "/api/agents", map[string]any{"name": "alpha"}, nil); status < 500 {
+			t.Fatalf("mint with overrides refused: %d %s", status, raw)
+		}
+		dst.c.Engine.HTTP = &http.Client{Timeout: time.Minute}
+		alpha := dst.mint("alpha")
+		if p := dst.profile("alpha"); p.Mode != console.ProfileCustom || p.Overrides["lookup"] != console.AccessOff {
+			t.Fatalf("alpha after the retry: %+v", p)
+		}
+		if got := toolsOf(t, alpha); !slices.Equal(got, []string{"file"}) {
+			t.Fatalf("alpha lists %v", got)
+		}
+	})
+}

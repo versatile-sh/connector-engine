@@ -149,11 +149,12 @@ func (c *Console) ExportSetup(ctx context.Context) ([]byte, string, error) {
 		return nil, "", err
 	}
 	s := Setup{APIVersion: setupAPIVersion, Kind: setupKind}
+	names := setNames(c.State.Agents())
 	for _, cs := range connectors {
 		o, _ := c.State.OriginOf(cs.ID)
 		sc := SetupConnector{Name: cs.Alias, Transport: cs.Transport, Local: o.Local, HeaderSecret: o.HeaderSecret, Functions: map[string]Access{}, Items: map[string]Access{}, NewKeysOff: cs.NewKeysOff}
 		for _, p := range cs.Profiles {
-			sc.Profiles = append(sc.Profiles, Profile{Agent: p.Agent, Mode: p.Mode, Overrides: p.Overrides})
+			sc.Profiles = append(sc.Profiles, Profile{Agent: names[p.Agent], Mode: p.Mode, Overrides: p.Overrides})
 		}
 		switch {
 		case o.Listing != "":
@@ -280,7 +281,7 @@ func (c *Console) markInstalled(ctx context.Context, s *Setup) error {
 	return nil
 }
 
-func (c *Console) inspectSetup(ctx context.Context, raw []byte) (BackupSummary, error) {
+func (c *Console) inspectSetup(ctx context.Context, raw []byte, probe bool) (BackupSummary, error) {
 	s, err := parseSetup(raw)
 	if err != nil {
 		return BackupSummary{}, err
@@ -289,7 +290,7 @@ func (c *Console) inspectSetup(ctx context.Context, raw []byte) (BackupSummary, 
 		return BackupSummary{}, err
 	}
 	for i, sc := range s.Connectors {
-		if sc.Exists || sc.Local {
+		if !probe || sc.Exists || sc.Local {
 			continue
 		}
 		p, err := c.buildPreview(ctx, importRequest{MCP: sc.MCP, Listing: sc.Listing, HeaderSecret: sc.HeaderSecret})
@@ -388,7 +389,7 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte, opts SetupOptions
 			res.Kept = append(res.Kept, sk.Name)
 			continue
 		}
-		if _, ok := add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest}); ok {
+		if _, ok := add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest, keysOff: !opts.ExistingKeys}); ok {
 			res.Added = append(res.Added, sk.Name)
 		}
 	}
@@ -430,6 +431,20 @@ func reviewSlots(connectors []SetupConnector) []SlotView {
 	out := []SlotView{}
 	for _, name := range slices.Sorted(maps.Keys(byName)) {
 		out = append(out, *byName[name])
+	}
+	return out
+}
+
+func setNames(agents []Agent) map[string]string {
+	slices.SortFunc(agents, func(a, b Agent) int { return strings.Compare(a.Name, b.Name) })
+	out, taken := map[string]string{}, map[string]KeySlot{}
+	for _, a := range agents {
+		base := a.Name
+		if a.ClientID != "" {
+			base = strings.TrimSuffix(strings.TrimSuffix(base, "-"+a.ClientID), "-"+a.ClientID[:min(8, len(a.ClientID))])
+		}
+		name := freeSlotName(taken, base)
+		taken[name], out[a.Name] = KeySlot{}, name
 	}
 	return out
 }

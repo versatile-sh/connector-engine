@@ -137,6 +137,9 @@ func (c *Console) importSkill(ctx context.Context, in importRequest, p Preview) 
 	if !access.Valid() {
 		return "", invalid("access is off, on or ask")
 	}
+	if in.keysOff {
+		access = AccessOff
+	}
 	if in.Digest != p.Skill.Digest {
 		return "", &statusError{status: http.StatusConflict, err: errors.New("the skill changed since the preview; review it again")}
 	}

@@ -86,7 +86,8 @@ func (c *Console) inspectUpload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	s, err := c.InspectBackup(r.Context(), raw, passphrase)
+	_, signedIn := c.Sessions.Get(r)
+	s, err := c.InspectBackup(r.Context(), raw, passphrase, signedIn)
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -165,7 +166,7 @@ func (c *Console) hostInspect(w http.ResponseWriter, r *http.Request) {
 	passphrase, file, err := splitHostBody(r)
 	var s BackupSummary
 	if err == nil {
-		s, err = c.InspectBackup(r.Context(), file, passphrase)
+		s, err = c.InspectBackup(r.Context(), file, passphrase, true)
 	}
 	if err != nil {
 		c.fail(w, err)

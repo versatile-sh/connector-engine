@@ -74,7 +74,13 @@ func TestASharedSetupHoldsNoSecret(t *testing.T) {
 	src, tok, query := seededSetup(t)
 	hidden := newToolServer(t, "hidden", "peek")
 	src.b.ok("POST", "/api/import", map[string]any{"mcp": hidden.URL + "/mcp/sk-ak-0123456789abcdefghij/sse?k=K-SECRET-8", "local": true}, nil)
+	if err := src.c.State.PutAgent(console.Agent{Name: "an-app-client-1", ClientID: "client-1", ViaBrowser: true, ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
 	out := src.exportSetup()
+	if !strings.Contains(string(out), "key: an-app\n") {
+		t.Errorf("the app's key is not named after the app:\n%s", out)
+	}
 	for _, secret := range []string{apiKey, tok.Token, "Q-SECRET-42", "K-SECRET-8", "sk-ak-0123456789", operatorToken, ownerPassword, "a console secret", "client-1", "chat_id", "my phone", "api_key="} {
 		if strings.Contains(string(out), secret) {
 			t.Errorf("the setup holds %q:\n%s", secret, out)
@@ -258,6 +264,23 @@ func TestASharedSetupCannotWidenWhatTheImporterHas(t *testing.T) {
 		}
 		if c := res.Capped["notes"]; len(c) != 1 || c["prompt:summarise"] != console.AccessOff {
 			t.Fatalf("capped %+v", res.Capped)
+		}
+	})
+
+	t.Run("keys made already start off on its skills unless the importer opts in", func(t *testing.T) {
+		src, _, _ := seededSetup(t)
+		withSkill := src.exportSetup()
+		for _, opt := range []bool{false, true} {
+			dst := freshOwner(t, personRelays)
+			var tok console.AgentToken
+			dst.b.ok("POST", "/api/agents", map[string]any{"name": "mine"}, &tok)
+			dst.importWith(withSkill, console.SetupOptions{ExistingKeys: opt})
+			want := map[bool]console.Access{false: console.AccessOff, true: console.AccessAsk}[opt]
+			for _, sk := range dst.view().Skills {
+				if i := slices.IndexFunc(sk.Access, func(k console.KeyAccess) bool { return k.Agent == "mine" }); i < 0 || sk.Access[i].Access != want {
+					t.Errorf("existing keys %v: mine on %s is %+v", opt, sk.Name, sk.Access)
+				}
+			}
 		}
 	})
 

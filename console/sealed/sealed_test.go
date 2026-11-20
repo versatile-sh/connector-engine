@@ -1,0 +1,48 @@
+package sealed_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"testing"
+
+	"github.com/agents-control/connector-engine/console/sealed"
+	"github.com/agents-control/connector-engine/port"
+	"github.com/agents-control/connector-engine/secrets/memory"
+)
+
+var ctx = context.Background()
+
+func TestALockedBoxNeitherSealsNorOpens(t *testing.T) {
+	var b sealed.Box
+	if !b.Locked() {
+		t.Fatal("a new box is locked")
+	}
+	if _, err := b.Seal(ctx, "token"); !errors.Is(err, sealed.ErrLocked) {
+		t.Fatalf("seal: %v", err)
+	}
+	if _, err := b.Open(ctx, port.Sealed{}); !errors.Is(err, sealed.ErrLocked) {
+		t.Fatalf("open: %v", err)
+	}
+}
+
+func TestAnUnlockedBoxRoundTripsThroughJSONWithoutPlaintext(t *testing.T) {
+	var b sealed.Box
+	b.Unlock(memory.New())
+	v, err := b.Seal(ctx, "xoxb-bot-token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(v)
+	if err != nil || bytes.Contains(raw, []byte("xoxb-bot-token")) {
+		t.Fatalf("the stored form holds no plaintext: %s %v", raw, err)
+	}
+	var back port.Sealed
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := b.Open(ctx, back); err != nil || got != "xoxb-bot-token" {
+		t.Fatalf("open: %q %v", got, err)
+	}
+}

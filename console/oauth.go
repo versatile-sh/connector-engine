@@ -500,7 +500,7 @@ func (c *Console) exchangeCode(w http.ResponseWriter, r *http.Request, f url.Val
 	case f.Get("resource") != "" && code.resource != "" && strings.TrimRight(f.Get("resource"), "/") != strings.TrimRight(code.resource, "/"):
 		oauthError(w, http.StatusBadRequest, "invalid_target", "resource differs from the authorization request")
 	default:
-		c.issue(w, r, "", RefreshGrant{ClientID: code.clientID, Agent: code.agent, Resource: firstOf(code.resource, f.Get("resource"))})
+		c.issue(w, r, "", RefreshGrant{ClientID: code.clientID, Agent: code.agent, Resource: firstOf(code.resource, f.Get("resource")), Family: randomID()})
 	}
 }
 
@@ -516,7 +516,14 @@ func (c *Console) refresh(w http.ResponseWriter, r *http.Request, f url.Values) 
 	g, ok := c.State.RefreshGrant(key)
 	a, known := c.State.Agent(g.Agent)
 	switch {
-	case !ok || g.ClientID != f.Get("client_id"):
+	case !ok:
+		if reused, _ := c.State.RevokeReusedRefresh(key); reused {
+			oauthError(w, http.StatusBadRequest, "invalid_grant", "this refresh token was already used, so every token of its sign-in was ended; connect the app again")
+			return
+		}
+		oauthError(w, http.StatusBadRequest, "invalid_grant", "the refresh token is unknown, expired or of another client")
+		return
+	case g.ClientID != f.Get("client_id"):
 		oauthError(w, http.StatusBadRequest, "invalid_grant", "the refresh token is unknown, expired or of another client")
 		return
 	case !known || c.State.Revoked(g.Agent, g.Issued.Unix()):
@@ -529,7 +536,7 @@ func (c *Console) refresh(w http.ResponseWriter, r *http.Request, f url.Values) 
 			return
 		}
 	}
-	c.issue(w, r, key, RefreshGrant{ClientID: g.ClientID, Agent: g.Agent, Resource: g.Resource})
+	c.issue(w, r, key, RefreshGrant{ClientID: g.ClientID, Agent: g.Agent, Resource: g.Resource, Family: firstOf(g.Family, key)})
 }
 
 func (c *Console) issue(w http.ResponseWriter, r *http.Request, oldRefresh string, g RefreshGrant) {

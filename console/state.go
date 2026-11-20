@@ -58,6 +58,7 @@ type stateFile struct {
 	OnboardingDismissed bool                     `json:"onboarding_dismissed,omitempty"`
 	Clients             map[string]OAuthClient   `json:"oauth_clients,omitempty"`
 	Refresh             map[string]RefreshGrant  `json:"oauth_refresh,omitempty"`
+	Spent               map[string]RefreshGrant  `json:"oauth_refresh_spent,omitempty"`
 	Notify              notifyState              `json:"notifications,omitzero"`
 }
 

@@ -1,9 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useReducer, useState, type FormEvent } from "react";
-import { api, errorText, type AgentToken } from "../api";
+import { useReducer, useState, type FormEvent } from "react";
+import { errorText, type AgentToken } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { mintKey, revokeKey } from "../mutations";
-import { keysQuery } from "../queries";
+import { keysPageQuery } from "../queries";
 import { Bubble } from "../ui/Bubble";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
@@ -46,19 +46,10 @@ function Created({ token }: { token: AgentToken }) {
 /** Connect an AI app: one endpoint for every MCP client, access keys made and revoked here, and for a new key the exact way into each app. */
 export function AccessPage() {
   const t = useT();
-  const keys = useQuery(keysQuery);
+  const keys = useQuery(keysPageQuery);
   const [name, setName] = useState("");
   const [days, setDays] = useState(30);
   const mint = useMutation(mintKey);
-  const markSeen = useMutation({ mutationFn: () => api("POST", "/api/agents/seen") }).mutate;
-  const anyNew = keys.data?.agents.some((key) => key.new) ?? false;
-  const settled = keys.isSuccess && !keys.isFetching;
-  useEffect(
-    function tellServerNewKeysWereSeen() {
-      if (anyNew && settled) markSeen();
-    },
-    [anyNew, settled, markSeen],
-  );
   const [flow, dispatch] = useReducer(revokeStep, { kind: "idle" });
   const revoke = useMutation(revokeKey);
   const onSubmit = (event: FormEvent) => {

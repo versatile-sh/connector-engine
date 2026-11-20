@@ -375,6 +375,7 @@ func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
 	r := newRig(t)
 	r.b.ok("POST", "/api/notifications/channels", map[string]any{"kind": "telegram", "settings": map[string]string{"token": "123456:ABCDEFGHIJKLMNOPQRST", "owner_user_id": "42"}}, nil)
 	within(t, r.fake.listened, 5*time.Second)
+	r.b.ok("POST", "/api/agents", map[string]any{"name": "Other"}, nil)
 	link := catalogBase + "pdf.yaml"
 	var pv console.Preview
 	r.b.ok("POST", "/api/preview", map[string]any{"listing": link}, &pv)
@@ -397,8 +398,8 @@ func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
 		t.Fatalf("skill_load after always: %+v %v", got.res, got.err)
 	}
 	r.eventually("the key turning on for the skill", func() bool { return r.allowed("agent", "claude-code", imported.Skill, "skill") })
-	if r.allowed("workspace", "default", imported.Skill, "skill") {
-		t.Fatal("always on a skill opened it to the whole workspace")
+	if r.allowed("agent", "other", imported.Skill, "skill") {
+		t.Fatal("always for one key turned the skill on for another key")
 	}
 
 }

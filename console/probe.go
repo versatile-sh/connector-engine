@@ -44,17 +44,16 @@ type ProbedTool struct {
 
 // Probed is what an MCP server said about itself and its tools.
 type Probed struct {
-	URL          string       `json:"url"`
-	Protocol     string       `json:"protocol"`
-	Name         string       `json:"name"`
-	Title        string       `json:"title,omitempty"`
-	Description  string       `json:"description,omitempty"`
-	Version      string       `json:"version,omitempty"`
-	WebsiteURL   string       `json:"website_url,omitempty"`
-	Icon         string       `json:"icon,omitempty"`
-	Instructions string       `json:"instructions,omitempty"`
-	Tools        []ProbedTool `json:"tools"`
-	Items        []Item       `json:"items"`
+	URL         string       `json:"url"`
+	Protocol    string       `json:"protocol"`
+	Name        string       `json:"name"`
+	Title       string       `json:"title,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Version     string       `json:"version,omitempty"`
+	WebsiteURL  string       `json:"website_url,omitempty"`
+	Icon        string       `json:"icon,omitempty"`
+	Tools       []ProbedTool `json:"tools"`
+	Items       []Item       `json:"items"`
 }
 
 // Propose pre-classifies a tool from its hints, which come from an untrusted server: only readOnlyHint true is on; anything else waits for the owner.
@@ -107,8 +106,9 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 	}
 	defer session.Close()
 	out := Probed{URL: u.String()}
+	var instructions string
 	if init := session.InitializeResult(); init != nil {
-		out.Protocol, out.Instructions = init.ProtocolVersion, init.Instructions
+		out.Protocol, instructions = init.ProtocolVersion, init.Instructions
 		if s := init.ServerInfo; s != nil {
 			out.Name, out.Title, out.Description, out.Version, out.WebsiteURL = s.Name, s.Title, s.Description, s.Version, s.WebsiteURL
 			out.Icon = pickIcon(s.Icons)
@@ -125,7 +125,7 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 		}
 		out.Tools = append(out.Tools, ProbedTool{Name: tool.Name, Title: title, Description: tool.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
 	}
-	if out.Items, err = probeItems(ctx, session, out.Instructions); err != nil {
+	if out.Items, err = probeItems(ctx, session, instructions); err != nil {
 		return out, unreachable(fmt.Errorf("%w on %s", err, u.Host))
 	}
 	if out.Icon == "" {

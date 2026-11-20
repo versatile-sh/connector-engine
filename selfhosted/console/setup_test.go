@@ -190,3 +190,26 @@ func TestASharedSetupCarriesEachKeyProfile(t *testing.T) {
 		t.Error("a key that is off lists the connector's tools")
 	}
 }
+
+func TestAWaitingProfileNeverStopsItsKeyBeingMade(t *testing.T) {
+	src := profiledStack(t)
+	src.mint("beta")
+	src.narrow("beta", "lookup", console.AccessAsk)
+	src.b.ok("PUT", "/api/connectors/"+src.conn+"/functions/lookup", map[string]string{"access": "off"}, nil)
+	file := src.exportSetup()
+
+	dst := profiled{stack: freshOwner(t, personRelays)}
+	if status, raw := dst.upload("/api/backup/import", file, ""); status != http.StatusOK {
+		t.Fatalf("import: %d %s", status, raw)
+	}
+	var conns struct{ Connectors []console.ConnectorSummary }
+	dst.b.ok("GET", "/api/connectors", nil, &conns)
+	dst.conn = conns.Connectors[0].ID
+	beta := dst.mint("beta")
+	if p := dst.profile("beta"); p.Mode != console.ProfileCustom || p.Overrides["lookup"] != console.AccessAsk {
+		t.Fatalf("beta keeps its dormant override: %+v", p)
+	}
+	if got := toolsOf(t, beta); !slices.Equal(got, []string{"file"}) {
+		t.Fatalf("beta lists %v", got)
+	}
+}

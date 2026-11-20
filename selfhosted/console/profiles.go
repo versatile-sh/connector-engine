@@ -149,15 +149,18 @@ func (c *Console) narrow(ctx context.Context, conn string, a Agent, name string,
 			return err
 		}
 	}
-	sel := port.SelectorOf(name)
 	if access != base {
-		return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a.Name, Agent: port.AgentID(a.Name), Connector: port.ConnectorID(conn), Selector: sel, Mode: access.mode(), DefinitionHash: f.DefinitionHash})
+		return c.writeOverride(ctx, conn, a.Name, f, access)
 	}
 	keyRows, err := c.Engine.grants(ctx, port.ScopeAgent, a.Name, conn)
 	if err != nil {
 		return err
 	}
-	return c.Engine.deleteGrants(ctx, slices.DeleteFunc(keyRows, func(g port.Grant) bool { return g.Selector != sel }))
+	return c.Engine.deleteGrants(ctx, slices.DeleteFunc(keyRows, func(g port.Grant) bool { return g.Selector != port.SelectorOf(name) }))
+}
+
+func (c *Console) writeOverride(ctx context.Context, conn, agent string, f port.Function, access Access) error {
+	return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: agent, Agent: port.AgentID(agent), Connector: port.ConnectorID(conn), Selector: port.SelectorOf(f.Name), Mode: access.mode(), DefinitionHash: f.DefinitionHash})
 }
 
 func (c *Console) applyProfile(ctx context.Context, conn string, a Agent, p Profile) error {
@@ -167,9 +170,15 @@ func (c *Console) applyProfile(ctx context.Context, conn string, a Agent, p Prof
 	if err := c.follow(ctx, conn, a); err != nil {
 		return err
 	}
-	for name, access := range p.Overrides {
-		if err := c.narrow(ctx, conn, a, name, access); err != nil {
-			return err
+	fns, err := c.Engine.functions(ctx, conn)
+	if err != nil {
+		return err
+	}
+	for _, f := range fns {
+		if access, ok := p.Overrides[f.Name]; ok && access.Valid() && access != AccessOn && f.State != port.FunctionRemoved {
+			if err := c.writeOverride(ctx, conn, a.Name, f, access); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

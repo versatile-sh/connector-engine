@@ -19,6 +19,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/app"
 	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/internal/atomicfile"
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/keychain"
 )
 
@@ -227,10 +228,7 @@ func export(c *command, out string, setup, yes bool) error {
 	if err := request(ctx, *c.data, http.MethodPost, path, body, &buf); err != nil {
 		return err
 	}
-	if err := os.WriteFile(out+".part", buf.Bytes(), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(out+".part", out); err != nil {
+	if err := atomicfile.Write(out, buf.Bytes()); err != nil {
 		return err
 	}
 	fmt.Fprintln(c.out, "wrote", out)

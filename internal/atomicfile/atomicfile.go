@@ -2,14 +2,19 @@
 package atomicfile
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 )
 
-// Write replaces path with b, mode 0600, so that a crash leaves either the old or the new content on disk.
+// Write replaces path with b, mode 0600, through a fresh temporary file that a planted symlink cannot redirect, so that a crash leaves either the old or the new content on disk.
 func Write(path string, b []byte) error {
 	tmp := path + ".tmp"
-	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err := os.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}

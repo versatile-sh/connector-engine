@@ -18,7 +18,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/console"
-	"github.com/versatile-sh/connector-engine/console/testmcp/notes"
+	"github.com/versatile-sh/connector-engine/internal/testmcp/notes"
 	"github.com/versatile-sh/connector-engine/port"
 )
 

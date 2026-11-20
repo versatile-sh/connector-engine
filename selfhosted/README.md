@@ -80,7 +80,7 @@ The binary name and the flags below are a stable interface: the installers and t
 | `export` | `--data DIR`, `--out FILE`, `--setup`, `--yes` | writes a full encrypted backup (`.cebak`, asks a passphrase twice) or, with `--setup`, a shareable setup without credentials; the default file is dated, in `$BACKUP_DIR` or `~/connector-engine-backups` |
 | `import FILE` | `--data DIR`, `--yes` | shows what the file holds, asks, then restores it; a full backup replaces everything and the process restarts the engine and the console on the restored data |
 | `reset-password` | `--data DIR` | sets a new console password and signs every console session out |
-| `uninstall` | `--data DIR`, `--keep-data` or `--purge`, `--yes`, `--no-keychain` | stops the install; `--purge` also deletes the data directory and the unlock key in the keychain, but only a real directory (not a symlink) whose entries are all part of an install; the binary itself is removed by its installer or by hand |
+| `uninstall` | `--data DIR`, `--keep-data` or `--purge`, `--yes`, `--no-keychain` | stops the install; `--purge` also deletes the data directory and the unlock key in the keychain, but only a real directory (not a symlink) whose entries are all part of an install (`.DS_Store` and `desktop.ini` aside); the binary itself is removed by its installer or by hand |
 
 `export`, `import` and `reset-password` reach the running process through its control socket, so the install must be up. Every command takes `--data`; the default comes from `$CN_DATA_DIR`, else the per-user data directory of the OS.
 

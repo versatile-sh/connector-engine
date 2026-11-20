@@ -95,7 +95,7 @@ func holdsInstall(root string) error {
 		return err
 	}
 	known := map[string]bool{}
-	for _, f := range []string{filepath.Dir(p.store), filepath.Dir(p.consoleState), p.control, p.operatorFile} {
+	for _, f := range []string{filepath.Dir(p.store), filepath.Dir(p.consoleState), p.control, p.operatorFile, ".DS_Store", "desktop.ini"} {
 		known[filepath.Base(f)] = true
 	}
 	for _, e := range entries {

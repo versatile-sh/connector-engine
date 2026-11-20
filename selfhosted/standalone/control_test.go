@@ -33,10 +33,10 @@ func TestTheControlSocketServesOnlyItsOwnUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Close()
 	if uid := <-accepted; uid != os.Geteuid() {
 		t.Fatalf("the peer runs as %d, want %d", uid, os.Geteuid())
 	}
+	c.Close()
 
 	other := peerListener{Listener: lis.(peerListener).Listener, uid: os.Geteuid() + 1}
 	go func() { _, _ = other.Accept() }()

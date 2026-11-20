@@ -1,0 +1,29 @@
+{
+  "name": "connector-console-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.108.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "@fontsource/noto-sans": "5.3.0",
+    "@fontsource/space-grotesk": "5.3.0",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "6.0.3",
+    "vite": "8.3.8"
+  }
+}

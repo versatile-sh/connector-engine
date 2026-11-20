@@ -2,3 +2,5 @@ bin/
 coverage/
 *.test
 .claude/
+vendor/
+deploy/.env

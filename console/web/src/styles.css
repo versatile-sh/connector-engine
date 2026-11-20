@@ -1,0 +1,288 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("@fontsource/space-grotesk/files/space-grotesk-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url("@fontsource/noto-sans/files/noto-sans-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("@fontsource/jetbrains-mono/files/jetbrains-mono-latin-700-normal.woff2") format("woff2");
+}
+
+@theme {
+  --font-sans: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-canvas: #0e1116;
+  --color-card: #151a22;
+  --color-sunken: #0a0d11;
+  --color-fg: #f5f5f2;
+  --color-muted: #9aa1ac;
+  --color-muted-light: #646c7a;
+  --color-accent: #c6f432;
+  --color-bubble: #c6f432;
+  --color-on-bubble: #0e1116;
+  --color-amber: #fbbf24;
+  --color-line: #25282c;
+  --color-line-strong: #383b40;
+  --color-ink: #0e1116;
+  --color-ink-raised: #1c222c;
+  --color-ink-lift: #252d39;
+  --color-lime-deep: #5e8c00;
+  --color-paper: #f5f5f2;
+
+  --radius-bubble: 1.25rem;
+  --radius-tail: 0.3rem;
+
+  --ease-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-glide: cubic-bezier(0.65, 0, 0.2, 1);
+}
+
+html {
+  overflow-x: clip;
+  background: var(--color-canvas);
+  color-scheme: dark;
+  scrollbar-color: var(--color-line-strong) var(--color-canvas);
+  scrollbar-width: thin;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+::selection {
+  background: var(--color-bubble);
+  color: var(--color-on-bubble);
+}
+
+@layer base {
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-fg) 55%, transparent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  input {
+    caret-color: var(--color-accent);
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+img,
+a,
+svg {
+  -webkit-user-drag: none;
+}
+
+.bubble,
+.bubble-sent {
+  border-radius: var(--radius-bubble);
+}
+
+.bubble {
+  border-bottom-left-radius: var(--radius-tail);
+}
+
+.bubble-sent {
+  border-bottom-right-radius: var(--radius-tail);
+}
+
+.bubble-word,
+.bubble-word-sent {
+  border-radius: 0.9em;
+}
+
+.bubble-word {
+  border-bottom-left-radius: 0.2em;
+}
+
+.bubble-word-sent {
+  border-bottom-right-radius: 0.2em;
+}
+
+.backdrop-grid {
+  background-image:
+    linear-gradient(to right, var(--color-line) 1px, transparent 1px), linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: center -1px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 20%, transparent 75%);
+}
+
+.backdrop-grid-ink {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-ink) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: -1px -1px;
+  mask-image: radial-gradient(ellipse 110% 85% at 0% 0%, #000 25%, transparent 80%);
+}
+
+.backdrop-glow {
+  background: radial-gradient(ellipse 70% 55% at 85% 0%, color-mix(in srgb, var(--color-paper) 45%, transparent), transparent 70%);
+}
+
+.backdrop-beam {
+  background: radial-gradient(ellipse 48% 62% at 50% 0%, color-mix(in srgb, var(--color-paper) 13%, transparent), transparent 72%);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.arrive {
+  animation: arrive 0.45s var(--ease-settle) both;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.swap-in {
+  animation: swap-in 0.45s var(--ease-settle) both;
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    translate: 0 0.75rem;
+  }
+}
+
+.ride-in {
+  animation: ride-in 0.7s var(--ease-glide) both;
+}
+
+@keyframes ride-in {
+  from {
+    opacity: 0;
+    translate: 3rem 0;
+  }
+}
+
+.sheet[open] {
+  animation: dialog-in 0.45s var(--ease-settle) both;
+}
+
+.sheet::backdrop {
+  animation: backdrop-in 0.3s ease-out both;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 1rem;
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (width < 48rem) {
+  .sheet {
+    border-radius: 0;
+  }
+}
+
+.pulse {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--color-ink-raised) 0%, var(--color-ink-lift) 50%, var(--color-ink-raised) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

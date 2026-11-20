@@ -1,12 +1,14 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/auth"
@@ -87,30 +89,59 @@ func (a *App) operatorHandler() (http.Handler, error) {
 }
 
 type tokenRequest struct {
-	port.Claims
-	TTL string `json:"ttl,omitempty"`
+	Subject    string           `json:"sub"`
+	Audience   []string         `json:"aud"`
+	Tenant     port.TenantID    `json:"tenant"`
+	Workspace  port.WorkspaceID `json:"workspace"`
+	Agent      port.AgentID     `json:"agent"`
+	AgentOwner port.PersonID    `json:"agent_owner"`
+	Session    port.SessionID   `json:"session"`
+	OnBehalfOf port.PersonID    `json:"on_behalf_of"`
+	Caller     port.Caller      `json:"caller"`
+	TTL        string           `json:"ttl"`
+}
+
+func (a *App) tokenClaims(r *http.Request) (port.Claims, error) {
+	bearer, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if _, err := a.operatorAuthn()(r.Context(), bearer); err != nil || a.operator == "" {
+		return port.Claims{}, port.Errorf(port.CodeUnauthenticated, "not the operator token")
+	}
+	var req tokenRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		return port.Claims{}, port.Errorf(port.CodeInvalidArgument, "the body names only sub, aud, tenant, workspace, agent, agent_owner, session, on_behalf_of, caller and ttl: %v", err)
+	}
+	ttl, err := time.ParseDuration(cmp.Or(req.TTL, "1h"))
+	if err != nil || ttl <= 0 || ttl > max(time.Hour, a.Config.Auth.AgentTokenMaxLifetime) {
+		return port.Claims{}, port.Errorf(port.CodeInvalidArgument, "ttl %q is not a duration up to auth.agentTokenMaxLifetime", req.TTL)
+	}
+	c := port.Claims{Subject: req.Subject, Audience: req.Audience, Tenant: req.Tenant, Workspace: req.Workspace, Agent: req.Agent, AgentOwner: req.AgentOwner,
+		Session: req.Session, OnBehalfOf: req.OnBehalfOf, Caller: req.Caller, ExpiresAt: a.Clock.Now().Add(ttl)}
+	switch {
+	case len(c.Audience) == 0 && c.Agent != "":
+		c.Audience = []string{a.Config.Audience()}
+	case len(c.Audience) == 0:
+		c.Audience = []string{a.Config.ManageAudience()}
+	}
+	for _, aud := range c.Audience {
+		if aud != a.Config.Audience() && aud != a.Config.ManageAudience() {
+			return port.Claims{}, port.Errorf(port.CodeInvalidArgument, "audience %q is not one of this engine's", aud)
+		}
+	}
+	return c, nil
 }
 
 func (a *App) localToken(w http.ResponseWriter, r *http.Request) {
-	var req tokenRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<16)
+	c, err := a.tokenClaims(r)
+	if port.IsCode(err, port.CodeUnauthenticated) {
+		http.Error(w, "the local issuer takes the operator token", http.StatusUnauthorized)
 		return
-	}
-	ttl, err := time.ParseDuration(req.TTL)
-	if req.TTL == "" {
-		ttl, err = time.Hour, nil
 	}
 	if err != nil {
-		http.Error(w, "bad ttl", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
-	}
-	c := req.Claims
-	c.ExpiresAt = a.Clock.Now().Add(ttl)
-	if len(c.Audience) == 0 && c.Agent != "" {
-		c.Audience = []string{a.Config.Audience()}
-	} else if len(c.Audience) == 0 {
-		c.Audience = []string{a.Config.ManageAudience()}
 	}
 	token, err := a.issuer.Issue(c)
 	if err != nil {

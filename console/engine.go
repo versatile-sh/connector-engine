@@ -102,7 +102,7 @@ func (e *Engine) Mint(ctx context.Context, claims map[string]any, ttl time.Durat
 	var out struct {
 		Token string `json:"token"`
 	}
-	if err := e.do(ctx, e.PublicURL, "", http.MethodPost, "/local/token", body, &out); err != nil {
+	if err := e.do(ctx, e.PublicURL, e.Operator, http.MethodPost, "/local/token", body, &out); err != nil {
 		return "", err
 	}
 	if out.Token == "" {

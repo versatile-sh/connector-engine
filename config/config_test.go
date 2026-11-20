@@ -110,8 +110,10 @@ func TestProductionRefusesWhatSection14Lists(t *testing.T) {
 		where string
 		ack   string
 	}{
-		"empty issuer list":  {func(c *config.Config) { c.Auth.Issuers = nil }, "auth.issuers", ""},
-		"local issuer":       {func(c *config.Config) { c.Auth.Issuers, c.Auth.LocalIssuer.Enabled = nil, true }, "auth.localIssuer.enabled", config.AckLocalIssuer},
+		"empty issuer list": {func(c *config.Config) { c.Auth.Issuers = nil }, "auth.issuers", ""},
+		"local issuer": {func(c *config.Config) {
+			c.Auth.Issuers, c.Auth.LocalIssuer.Enabled, c.Auth.Operator.TokenRef = nil, true, "env:CN_OPERATOR_TOKEN"
+		}, "auth.localIssuer.enabled", config.AckLocalIssuer},
 		"private egress":     {func(c *config.Config) { c.Runtime.AllowPrivateHosts = true }, "runtime.allowPrivateHosts", config.AckPrivateEgress},
 		"long agent tokens":  {func(c *config.Config) { c.Auth.AgentTokenMaxLifetime = 48 * time.Hour }, "auth.agentTokenMaxLifetime", config.AckLongLivedTokens},
 		"trusted proxy":      {func(c *config.Config) { c.Auth.TrustedProxy.Listen = ":8081" }, "auth.trustedProxy.listen", config.AckTrustedProxy},
@@ -154,7 +156,7 @@ func TestAdaptersFileFollowsTheDefaultsAndTheAcknowledgements(t *testing.T) {
 		t.Fatalf("gateway.skills = tools adds the skill runtime: %v", err)
 	}
 	local := []byte("apiVersion: acplug/v1\nkind: Adapters\nengine: connector-engine\nmode: dev\nports:\n  store: {use: memory}\n  secrets: {use: memory}\n  auth: {use: builtin:local}\n")
-	c.Auth.LocalIssuer.Enabled = true
+	c.Auth.LocalIssuer.Enabled, c.Auth.Operator.TokenRef = true, "env:CN_OPERATOR_TOKEN"
 	c.Auth.Issuers = nil
 	if _, err := c.LoadAdapters(local, nil); err != nil {
 		t.Fatalf("dev local issuer: %v", err)
@@ -220,5 +222,14 @@ func TestAnUnknownResultFilterLocaleIsRefused(t *testing.T) {
 	cfg.ResultFilter.Locales = []string{"br", "xx"}
 	if !has(cfg.Check(none), "resultFilter.locales", adapters.LevelError) {
 		t.Fatal("the unknown locale xx was accepted")
+	}
+}
+
+func TestTheLocalIssuerNeedsTheOperatorToken(t *testing.T) {
+	cfg := config.Default()
+	cfg.Mode = config.ModeDev
+	cfg.Auth.LocalIssuer.Enabled, cfg.Auth.Operator.TokenRef = true, ""
+	if !has(cfg.Check(none), "auth.localIssuer.enabled", adapters.LevelError) {
+		t.Fatal("a local issuer without the operator token was accepted")
 	}
 }

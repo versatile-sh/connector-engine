@@ -126,7 +126,7 @@ func (e *engine) call(method, url, token string, body any) (int, map[string]any)
 
 func (e *engine) token(claims map[string]any) string {
 	e.t.Helper()
-	code, out := e.call(http.MethodPost, e.http+"/local/token", "", claims)
+	code, out := e.call(http.MethodPost, e.http+"/local/token", "op-secret", claims)
 	if code != http.StatusOK {
 		e.t.Fatalf("token: %d", code)
 	}
@@ -213,7 +213,7 @@ func TestProductionRefusesToBootWithoutIssuersAndWithTheLocalIssuerUnacknowledge
 	if _, err := cfg.LoadAdapters([]byte(fmt.Sprintf(base, "")), nil); err == nil || !strings.Contains(err.Error(), "auth.issuers") {
 		t.Fatalf("an empty issuer list booted: %v", err)
 	}
-	cfg.Auth.LocalIssuer.Enabled = true
+	cfg.Auth.LocalIssuer.Enabled, cfg.Auth.Operator.TokenRef = true, "env:CN_OPERATOR_TOKEN"
 	local := base + "  auth: {use: builtin:local}\n"
 	if _, err := cfg.LoadAdapters([]byte(fmt.Sprintf(local, "")), nil); err == nil || !strings.Contains(err.Error(), config.AckLocalIssuer) {
 		t.Fatalf("an unacknowledged local issuer booted: %v", err)
@@ -360,5 +360,27 @@ func TestTheOnePasswordAdapterReadsItsTokenByReference(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(cfg.Secrets.Dir, "root.key.wrapped")); err != nil {
 		t.Fatalf("the root key rests wrapped: %v", err)
+	}
+}
+
+func TestTheLocalIssuerMintsOnlyForTheOperatorAndOnlyItsOwnClaims(t *testing.T) {
+	e := boot(t, devConfig(t), fmt.Sprintf(localAdapters, "", "memory", ""), map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
+	ok := map[string]any{"sub": "ana", "tenant": "t1"}
+	for name, c := range map[string]struct {
+		bearer string
+		body   map[string]any
+		want   int
+	}{
+		"no bearer":         {"", ok, http.StatusUnauthorized},
+		"a wrong bearer":    {"guess", ok, http.StatusUnauthorized},
+		"a chosen issuer":   {"op-secret", map[string]any{"sub": "ana", "tenant": "t1", "iss": "someone-else"}, http.StatusBadRequest},
+		"a backdated token": {"op-secret", map[string]any{"sub": "ana", "tenant": "t1", "iat": "2020-01-01T00:00:00Z"}, http.StatusBadRequest},
+		"a foreign aud":     {"op-secret", map[string]any{"sub": "ana", "tenant": "t1", "aud": []string{"https://elsewhere"}}, http.StatusBadRequest},
+		"a year-long ttl":   {"op-secret", map[string]any{"sub": "ana", "tenant": "t1", "ttl": "8760h"}, http.StatusBadRequest},
+		"the operator":      {"op-secret", ok, http.StatusOK},
+	} {
+		if code, out := e.call(http.MethodPost, e.http+"/local/token", c.bearer, c.body); code != c.want {
+			t.Errorf("%s: %d %v, want %d", name, code, out, c.want)
+		}
 	}
 }

@@ -92,6 +92,7 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 |---|---|
 | `CancelApproval` by a workspace admin authorized inside its store write: a hang on `store/memory`, a second pool connection inside a transaction on Postgres | authorized before the write; `store/memory` panics on a store call from inside a callback (`TestACallFromInsideACallbackPanicsInsteadOfDeadlocking`, `TestAWorkspaceAdminCancelsAnApprovalThatDoesNotNameThem`) |
 | The worker discarded sweep errors, and a panic in the worker, the relay or a gRPC handler ended the process | the worker logs each failed sweep and approved execution and counts it in `connector_worker_sweep_failures_total`; `internal/safe` turns a panic into an error in the worker, the relay and two gRPC interceptors, which answer `INTERNAL` (`TestRunLogsCountsAndSurvivesFailingAndPanickingSweeps`, `TestRunSurvivesASinkThatPanics`, `TestAPanickingHandlerAnswersInternalAndIsLogged`) |
+| A dropped upstream connection during `tools/call` was reported as failed, so a destructive call that ran but lost its answer could be retried | `runtime/remote` reports it as `outcome_unknown`, like every other answer lost after the send (`TestACancelledOrPostSendFailureIsOutcomeUnknown`), and the service drops that session (`TestAClosedConnectionLosesTheAnswerOfACallOnly`, `TestADroppedSessionIsRestartedAfterALostAnswer`). A read is not exempt: the engine reports any lost answer as unknown whatever the class |
 
 ## Known flake
 

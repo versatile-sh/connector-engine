@@ -436,3 +436,18 @@ func TestASpentUseLimitedRowRunsOneApprovedRecord(t *testing.T) {
 	spent := slices.Contains(codes, port.ReasonNoAgentGrant) || slices.Contains(codes, port.CodeGrantExhausted)
 	want(t, spent, true, "the other record is cancelled: the spent row no longer matches, or its reservation fails")
 }
+
+func TestADroppedSessionIsRestartedAfterALostAnswer(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.acceptAll()
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "first call")
+	starts := w.Runtime.Starts
+	w.Runtime.Handle("create_issue", func(json.RawMessage) (port.Result, error) {
+		return port.Result{}, port.Errorf(port.CodeOutcomeUnknown, "the connection closed before the answer")
+	})
+	want(t, w.call(x, "s__create_issue", `{}`).Code, service.CodeOutcomeUnknown, "a write that may have run")
+	want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "the next call")
+	want(t, w.Runtime.Starts, starts+1, "the session that lost the answer is not reused")
+}

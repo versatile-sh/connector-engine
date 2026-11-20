@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/netip"
 	"slices"
+	"strings"
 
 	"google.golang.org/grpc"
 
@@ -15,10 +16,11 @@ import (
 
 var carrierGrade = netip.MustParsePrefix("100.64.0.0/10")
 
-// Guard decides which hosts an adapter may dial; the zero value refuses every non-public address.
+// Guard decides which hosts an adapter may dial; the zero value refuses every non-public address, and a set LoopbackHost is dialled in place of a loopback host.
 type Guard struct {
 	AllowPrivate bool
 	Hosts        []string
+	LoopbackHost string
 }
 
 // Forbidden reports whether ip is loopback, link-local, private, unspecified, multicast, shared or a metadata address.
@@ -35,6 +37,20 @@ func listed(hosts []string, addr string) bool {
 	return slices.Contains(hosts, host) || slices.Contains(hosts, addr)
 }
 
+// IsLoopback reports whether host is localhost or a loopback address.
+func IsLoopback(host string) bool {
+	ip, err := netip.ParseAddr(strings.Trim(host, "[]"))
+	return strings.EqualFold(host, "localhost") || err == nil && ip.IsLoopback()
+}
+
+func (g Guard) target(addr string) string {
+	host, portNum, err := net.SplitHostPort(addr)
+	if g.LoopbackHost == "" || err != nil || !IsLoopback(host) {
+		return addr
+	}
+	return net.JoinHostPort(g.LoopbackHost, portNum)
+}
+
 // DialContext dials addr after resolving it and checking every address; a non-empty extra narrows the dial to the hosts it lists.
 func (g Guard) DialContext(extra ...string) func(ctx context.Context, network, addr string) (net.Conn, error) {
 	var d net.Dialer
@@ -42,6 +58,7 @@ func (g Guard) DialContext(extra ...string) func(ctx context.Context, network, a
 		if len(extra) > 0 && !listed(extra, addr) {
 			return nil, port.Errorf(port.CodePermissionDenied, "egress to %s is refused: it is not in egress.allow_hosts", addr)
 		}
+		addr = g.target(addr)
 		if g.AllowPrivate || listed(g.Hosts, addr) {
 			return d.DialContext(ctx, network, addr)
 		}

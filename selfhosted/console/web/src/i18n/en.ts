@@ -161,6 +161,7 @@ export const en = {
   "import.choose": "Choose what your AI apps may do",
   "import.chooseIntro": "The proposal follows each function's own hints. Change any of them now or later.",
   "import.localTick": "local server",
+  "import.hostLoopback": "Reaches your computer's localhost. On Linux the server must listen on all addresses, not only 127.0.0.1.",
   "import.untrusted": "This link came from outside the console. Nothing is installed until you confirm.",
   "import.linkEyebrow": "An install link from {host}",
   "import.install": "Install {count} functions",

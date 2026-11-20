@@ -24,6 +24,7 @@ secrets:
   unlockSocket: /run/connector-engine-unlock/unlock.sock
 runtime:
   allowPrivateHosts: true
+  loopbackHost: host.docker.internal
 retention:
   deliveredEvents: 168h
   idempotencyKeys: 168h

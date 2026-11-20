@@ -63,3 +63,35 @@ func TestTheGuardedTransportIgnoresAnEnvironmentProxy(t *testing.T) {
 		t.Fatal("an environment proxy would carry every connection past the guard")
 	}
 }
+
+func TestALoopbackHostIsDialledAsTheLoopbackHostAndKeepsItsHostHeader(t *testing.T) {
+	var gotHost string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotHost = r.Host
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+	_, port, _ := net.SplitHostPort(srv.Listener.Addr().String())
+	typed := "http://[::1]:" + port + "/mcp"
+	if res, err := (egress.Guard{AllowPrivate: true}).Client().Get(typed); err == nil {
+		res.Body.Close()
+		t.Skip("something answers on [::1] at the test server's port")
+	}
+	res, err := egress.Guard{AllowPrivate: true, LoopbackHost: "127.0.0.1"}.Client().Get(typed)
+	if err != nil {
+		t.Fatalf("the mapped dial failed: %v", err)
+	}
+	res.Body.Close()
+	if gotHost != "[::1]:"+port {
+		t.Fatalf("Host = %q, want the URL as typed", gotHost)
+	}
+}
+
+func TestIsLoopback(t *testing.T) {
+	for host, want := range map[string]bool{"localhost": true, "LOCALHOST": true, "127.0.0.1": true, "127.1.2.3": true, "::1": true, "[::1]": true,
+		"host.docker.internal": false, "10.0.0.1": false, "example.com": false, "": false} {
+		if got := egress.IsLoopback(host); got != want {
+			t.Errorf("IsLoopback(%q) = %v, want %v", host, got, want)
+		}
+	}
+}

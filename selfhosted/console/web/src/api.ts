@@ -125,6 +125,7 @@ export type Preview = {
   tools: ProbedTool[];
   items?: Item[] | null;
   warning?: string;
+  host_loopback?: boolean;
 };
 
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };

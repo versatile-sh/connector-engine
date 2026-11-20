@@ -163,6 +163,7 @@ export const ptBR: Record<MessageKey, string> = {
   "import.choose": "Escolha o que seus apps de IA podem fazer",
   "import.chooseIntro": "A proposta segue as dicas de cada função. Mude qualquer uma agora ou depois.",
   "import.localTick": "servidor local",
+  "import.hostLoopback": "Alcança o localhost do seu computador. No Linux, o servidor precisa escutar em todos os endereços, não só em 127.0.0.1.",
   "import.untrusted": "Este link veio de fora do console. Nada é instalado até você confirmar.",
   "import.linkEyebrow": "Um link de instalação de {host}",
   "import.install": "Instalar {count} funções",

@@ -3,6 +3,7 @@ import type { ApprovalChoice, ApprovalView } from "../api";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { Bubble } from "../ui/Bubble";
+import { Disclosure } from "../ui/Disclosure";
 import { Notice } from "../ui/Notice";
 import { CAPTION, SURFACE } from "../ui/styles";
 import { clock, secondsLeft, summarizeArguments } from "./choices";
@@ -83,13 +84,17 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
         </div>
       ) : null}
       {summary ? (
-        <details className="group mt-4 bubble border border-line-strong bg-ink-sunken">
-          <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-x-3 gap-y-0.5 px-4 py-2.5 text-sm font-medium select-none">
-            {t("approve.arguments")}
-            {summary.cut > 0 ? <span className={CAPTION}>{t("approve.cut", { count: summary.cut })}</span> : null}
-          </summary>
+        <Disclosure
+          className="mt-4 bubble border border-line-strong bg-ink-sunken"
+          summary={
+            <>
+              <span className="font-medium">{t("approve.arguments")}</span>
+              {summary.cut > 0 ? <span className={CAPTION}>{t("approve.cut", { count: summary.cut })}</span> : null}
+            </>
+          }
+        >
           <pre className="no-scrollbar max-h-80 overflow-auto border-t border-line px-4 py-3 font-mono text-[0.8125rem] leading-relaxed whitespace-pre-wrap text-paper [overflow-wrap:anywhere]">{summary.text}</pre>
-        </details>
+        </Disclosure>
       ) : null}
       <div className="mt-6">
         {open ? (

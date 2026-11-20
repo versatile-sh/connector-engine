@@ -19,6 +19,7 @@ const PATHS = {
   logout: "M14 4.5h5.5v15H14M10 8l-4 4 4 4M6 12h10",
   activity: "M3 12h4l2.5-6.5 5 13L17 12h4",
   expand: "M14 4.5h5.5V10M19.5 4.5l-6 6M10 19.5H4.5V14M4.5 19.5l6-6",
+  chevron: "M6.5 9.5l5.5 5.5 5.5-5.5",
 } as const;
 
 /** The name of one icon of the console's set. */

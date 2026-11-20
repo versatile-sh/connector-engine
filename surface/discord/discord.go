@@ -122,12 +122,16 @@ func card(p surface.Prompt) embed {
 	if fn == "" {
 		fn = p.Function
 	}
-	fields := []field{{Name: "App", Value: orDash(p.App), Inline: true}, {Name: "Kind", Value: orDash(p.Kind), Inline: true}}
+	fields := []field{{Name: "App", Value: orDash(markdown.Replace(p.App)), Inline: true}, {Name: "Kind", Value: orDash(markdown.Replace(p.Kind)), Inline: true}}
 	if !p.ExpiresAt.IsZero() {
 		fields = append(fields, field{Name: "Expires", Value: "<t:" + strconv.FormatInt(p.ExpiresAt.Unix(), 10) + ":R>", Inline: true})
 	}
-	return embed{Title: "Allow " + p.Connector + ": " + fn + "?", Description: "`" + p.Function + "`", Color: colorPending, Fields: fields, Footer: &footer{Text: "versatile.sh"}}
+	return embed{Title: "Allow " + markdown.Replace(p.Connector+": "+fn) + "?", Description: "`" + codeSpan.Replace(p.Function) + "`", Color: colorPending, Fields: fields, Footer: &footer{Text: "versatile.sh"}}
 }
+
+var markdown = strings.NewReplacer("\\", "\\\\", "*", "\\*", "_", "\\_", "~", "\\~", "`", "\\`", "|", "\\|", "[", "\\[", "]", "\\]", "(", "\\(", ")", "\\)", "<", "\\<", ">", "\\>", "#", "\\#", "@", "\\@", "\n", " ", "\r", " ")
+
+var codeSpan = strings.NewReplacer("`", "'", "\n", " ", "\r", " ")
 
 func orDash(s string) string {
 	if s == "" {

@@ -193,9 +193,13 @@ func join(captures []Capture, f engineFacts, sep string) []joined {
 	for i := range captures {
 		cp := &captures[i]
 		alias, fn, found := strings.Cut(cp.Tool, sep)
+		skill := cp.Skill
 		switch {
-		case cp.Skill != "":
-			alias, fn = cp.Skill, port.SkillFunction
+		case cp.Item == port.ItemPrompt && !found && names.ValidAlias(cp.Tool) == nil:
+			skill = cp.Tool
+			alias, fn = skill, port.SkillFunction
+		case skill != "":
+			alias, fn = skill, port.SkillFunction
 		case cp.Item == port.ItemResource:
 			var uri string
 			if alias, uri, found = names.SplitResourceURI(cp.Tool); found {
@@ -219,7 +223,7 @@ func join(captures []Capture, f engineFacts, sep string) []joined {
 		if call != nil {
 			used[call.ID] = true
 		}
-		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Skill: cp.Skill, Path: cp.Path, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
+		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Skill: skill, Path: cp.Path, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
 		if cp.Outcome != OutcomePending && !cp.Done.IsZero() {
 			ms := cp.Done.Sub(cp.At).Milliseconds()
 			row.DurationMS = &ms

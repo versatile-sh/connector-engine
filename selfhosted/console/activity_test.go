@@ -785,6 +785,22 @@ func TestASkillLoadIsShownByTheSkillName(t *testing.T) {
 	}
 }
 
+func TestASkillPromptIsOneRowNamedByTheSkill(t *testing.T) {
+	r := newActivityRig(t)
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"messages":[]}}`, func() {
+		now := time.Now().UTC()
+		r.engine.addCall(port.Call{ID: "p1", Agent: "claude-code", Session: "claude-code-s1", Connector: "c-pdf", Function: "skill", Class: port.ClassRead, State: port.CallFinished, StartedAt: now, FinishedAt: now})
+	}))
+	r.post(`{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"pdf"}}`)
+	p := r.until("", func(p console.ActivityPage) bool { return len(p.Calls) > 0 && p.Calls[0].Captured })
+	if c := only(t, p); c.Alias != "pdf" || c.Skill != "pdf" || c.Connector != "c-pdf" || c.Outcome != console.OutcomeOK {
+		t.Fatalf("the skill prompt: %+v", c)
+	}
+	if d := r.detail(p.Calls[0].ID); d.EngineCall != "p1" || d.Tool != "pdf" {
+		t.Fatalf("its detail: %+v", d)
+	}
+}
+
 func TestACallApprovedInsideTheHoldWindowIsOneRow(t *testing.T) {
 	rr := newRealRig(t, func(c *config.Config) { c.Approval.HoldWindow = 20 * time.Second })
 	done := make(chan error, 1)

@@ -22,7 +22,7 @@ func structured(v any) *mcp.CallToolResult {
 
 func toolError(code port.Code, detail string) *mcp.CallToolResult {
 	r := structured(map[string]any{"code": code, "detail": detail})
-	r.Content, r.IsError = text(string(code)+": "+detail), true
+	r.Content, r.IsError, r.Meta = text(string(code)+": "+detail), true, mcp.Meta{port.ErrorMeta: code}
 	return r
 }
 
@@ -62,7 +62,7 @@ func errorResult(out service.Outcome) *mcp.CallToolResult {
 		body["approval_id"] = out.Approval.ID
 	}
 	r := structured(body)
-	r.Content, r.IsError = text(string(out.Code)+": "+out.Detail), true
+	r.Content, r.IsError, r.Meta = text(string(out.Code)+": "+out.Detail), true, mcp.Meta{port.ErrorMeta: out.Code}
 	return r
 }
 

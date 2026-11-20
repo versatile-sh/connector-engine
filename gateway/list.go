@@ -54,7 +54,7 @@ func (g *Gateway) list(ctx context.Context, req *mcp.ListToolsRequest) (mcp.Resu
 func (g *Gateway) find(ctx context.Context, p port.Principal, raw json.RawMessage) (*mcp.CallToolResult, error) {
 	var a findArgs
 	if err := json.Unmarshal(raw, &a); err != nil || a.Query == "" {
-		return toolError("invalid_argument", "find takes a query"), nil
+		return toolError(port.CodeInvalidArgument, "find takes a query"), nil
 	}
 	fl, err := g.core.ListFunctions(ctx, p)
 	if err != nil {

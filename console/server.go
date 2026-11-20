@@ -82,6 +82,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("POST /api/preview", c.authed(c.preview))
 	mux.HandleFunc("POST /api/import", c.authed(c.doImport))
 	mux.HandleFunc("PUT /api/connectors/{id}/functions/{name}", c.authed(c.setAccess))
+	mux.HandleFunc("PUT /api/connectors/{id}/items", c.authed(c.setItemAccess))
 	mux.HandleFunc("DELETE /api/connectors/{id}", c.authed(c.removeConnector))
 	mux.HandleFunc("GET /api/skills", c.authed(c.listSkills))
 	mux.HandleFunc("PUT /api/skills/{id}/keys/{agent}", c.authed(c.setSkillAccess))
@@ -264,6 +265,7 @@ type Preview struct {
 	Protocol    string        `json:"protocol,omitempty"`
 	Auth        []string      `json:"auth,omitempty"`
 	Tools       []ProbedTool  `json:"tools"`
+	Items       []Item        `json:"items"`
 	Warning     string        `json:"warning,omitempty"`
 	Skill       *SkillPreview `json:"skill,omitempty"`
 	manifest    port.Manifest
@@ -283,7 +285,7 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		}
 		u, _ := url.Parse(p.URL)
 		return Preview{Kind: "mcp", URL: p.URL, Host: u.Host, Name: m.Name, Title: m.Title, Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name,
-			Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), manifest: m}, nil
+			Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), Items: p.Items, manifest: m}, nil
 	case in.Listing != "" && in.MCP == "":
 		src := strings.TrimSpace(in.Listing)
 		body, err := c.get()(ctx, src, maxListingBytes)
@@ -298,13 +300,13 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 			}
 			sp := c.skillPreview(e)
 			return Preview{Kind: "skill", URL: src, Host: u.Host, Name: e.ID, Title: firstOf(e.Title, e.Name), Description: e.Description, Publisher: skillcatalog.Publisher(e.Source.Repository, u.Host),
-				Version: e.Source.Commit, Tools: []ProbedTool{}, Skill: &sp, entry: e}, nil
+				Version: e.Source.Commit, Tools: []ProbedTool{}, Items: []Item{}, Skill: &sp, entry: e}, nil
 		}
 		m, err := manifestFrom(src, body)
 		if err != nil {
 			return Preview{}, err
 		}
-		pv := Preview{Kind: "listing", URL: src, Host: u.Host, Name: m.Name, Title: firstOf(m.Title, m.Name), Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name, Version: m.Version}
+		pv := Preview{Kind: "listing", URL: src, Host: u.Host, Name: m.Name, Title: firstOf(m.Title, m.Name), Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name, Version: m.Version, Items: []Item{}}
 		for _, a := range m.Auth {
 			pv.Auth = append(pv.Auth, string(a.Kind))
 		}
@@ -323,7 +325,7 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 			if err != nil {
 				pv.Warning = "the server could not be reached to list its functions: " + err.Error()
 			} else {
-				pv.Tools, pv.Protocol, pv.WebsiteURL = nonNil(p.Tools), p.Protocol, p.WebsiteURL
+				pv.Tools, pv.Items, pv.Protocol, pv.WebsiteURL = nonNil(p.Tools), p.Items, p.Protocol, p.WebsiteURL
 				if pv.Icon == "" {
 					pv.Icon = p.Icon
 				}
@@ -443,6 +445,12 @@ func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
 			choices[t.Name] = a
 		}
 	}
+	for _, it := range p.Items {
+		choices[it.Name] = it.Access
+		if a, ok := in.Choices[it.Name]; ok {
+			choices[it.Name] = a
+		}
+	}
 	id, err := c.Install(r.Context(), p.manifest, choices)
 	if err != nil {
 		c.fail(w, err)
@@ -459,6 +467,25 @@ func (c *Console) setAccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := c.SetAccess(r.Context(), r.PathValue("id"), r.PathValue("name"), in.Access); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) setItemAccess(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name   string `json:"name"`
+		Access Access `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if port.ItemKind(in.Name) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": in.Name + " is not a prompt, a resource or the server instructions"})
+		return
+	}
+	if err := c.SetAccess(r.Context(), r.PathValue("id"), in.Name, in.Access); err != nil {
 		c.fail(w, err)
 		return
 	}

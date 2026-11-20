@@ -272,6 +272,15 @@ func (s *Store) write(base string, root []byte) error {
 	return writeFile(filepath.Join(s.dir, s.name(base)), []byte(hex.EncodeToString(b)+"\n"))
 }
 
+// ParseUnlockKey decodes the 64 hexadecimal characters of an unlock key.
+func ParseUnlockKey(text string) ([]byte, error) {
+	key, err := hex.DecodeString(strings.TrimSpace(text))
+	if err != nil || len(key) != unlockBytes {
+		return nil, port.Errorf(port.CodeInvalidArgument, "the unlock key is %d hexadecimal characters", 2*unlockBytes)
+	}
+	return key, nil
+}
+
 func checkUnlock(unlock []byte) error {
 	if len(unlock) != unlockBytes {
 		return port.Errorf(port.CodeInvalidArgument, "the unlock key is %d bytes", unlockBytes)

@@ -7,12 +7,15 @@ import (
 	"time"
 
 	"github.com/agents-control/plugkit/discovery"
+
+	"github.com/agents-control/connector-engine/secrets/hostkey"
+	"github.com/agents-control/connector-engine/secrets/local"
 )
 
 // keyProtection reports the weakest way the engine's and the console's root keys rest: locked, plaintext or wrapped; empty when neither says.
 func (c *Console) keyProtection(ctx context.Context) string {
 	console := c.Secrets.Protection()
-	if console == "locked" || console == "plaintext" {
+	if console == hostkey.Locked || console == string(local.Plaintext) {
 		return console
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -23,7 +26,7 @@ func (c *Console) keyProtection(ctx context.Context) string {
 	}
 	for _, row := range doc.Adapters {
 		if row.Port == "secrets" && (row.Name == "localfile" || slices.Contains(row.Capabilities, "secrets.root_key_plaintext")) {
-			return "plaintext"
+			return string(local.Plaintext)
 		}
 	}
 	return console

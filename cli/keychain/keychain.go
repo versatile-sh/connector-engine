@@ -12,7 +12,8 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strings"
+
+	"github.com/agents-control/connector-engine/secrets/local"
 )
 
 // Service is the keychain service every unlock key is stored under; the account is the install's compose project.
@@ -88,10 +89,11 @@ func run(ctx context.Context, kc Keychain, verb, name string, stdin io.Reader) (
 		if err != nil && err != io.EOF {
 			return "", err
 		}
-		key := strings.ToLower(strings.TrimSpace(line))
-		if b, err := hex.DecodeString(key); err != nil || len(b) != 32 {
-			return "", errors.New("the unlock key is 64 hexadecimal characters")
+		b, err := local.ParseUnlockKey(line)
+		if err != nil {
+			return "", err
 		}
+		key := hex.EncodeToString(b)
 		switch old, err := kc.Get(ctx, name); {
 		case err == nil && old != key:
 			return "", errors.New("the keychain already holds another unlock key for this install; delete it first")

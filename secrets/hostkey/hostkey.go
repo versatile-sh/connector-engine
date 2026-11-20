@@ -3,7 +3,6 @@ package hostkey
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -134,8 +133,8 @@ func (s *Store) handle(req Request) Reply {
 	var key []byte
 	if req.Op == OpUnlock || req.Op == OpMigrate {
 		var err error
-		if key, err = hex.DecodeString(req.Key); err != nil || len(key) != 32 {
-			return s.reply(errors.New("the unlock key is 64 hexadecimal characters"))
+		if key, err = local.ParseUnlockKey(req.Key); err != nil {
+			return s.reply(err)
 		}
 	}
 	if s.Store == nil {

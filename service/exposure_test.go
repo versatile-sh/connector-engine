@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -59,5 +60,18 @@ func TestARelistRefreshesExposureOffTheCallPathAndWarnsWhenItEnds(t *testing.T) 
 			t.Fatal("event 13 is emitted when the exposure ends")
 		}
 		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func TestABatchedSearchAnswersLikeOneSearchPerConnector(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	w.allowAll("x")
+	sub := port.Subject{Tenant: tenant, Workspace: workspace, Agent: "x"}
+	qs := []port.SearchQuery{{Subject: sub, Connector: w.conn.ID}, {Subject: port.Subject{Tenant: tenant, Workspace: workspace, Agent: "y"}, Connector: w.conn.ID}, {Subject: sub, Connector: "missing"}}
+	batch := st.Ok(w.Auth.SearchBatch(w.Ctx, tenant, qs))
+	for i, q := range qs {
+		if one := st.Ok(w.Auth.Search(w.Ctx, q.Subject, q.Connector)); !reflect.DeepEqual(one, batch[i]) {
+			t.Fatalf("query %d: batch %v, one %v", i, batch[i], one)
+		}
 	}
 }

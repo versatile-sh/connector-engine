@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, errorText, type Access, type Connector } from "../api";
+import { hrefOf } from "../activity/activity";
 import { useT } from "../i18n/I18nProvider";
 import { connectorsQuery } from "../queries";
 import { navigate } from "../router";
@@ -190,10 +191,23 @@ export function ConnectorDetail({ id }: { id: string }) {
           {connector.publisher ? <p className="mt-1 text-sm text-muted">{t("import.by", { publisher: connector.publisher })}</p> : null}
           {connector.description ? <p className="mt-3 max-w-2xl text-muted">{connector.description}</p> : null}
         </div>
-        <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
-          <Icon name="trash" className="size-4" />
-          {t("detail.remove")}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <a
+            href={hrefOf({ range: "24h", connector: connector.id })}
+            className={button({ variant: "secondary", size: "sm" })}
+            onClick={(event) => {
+              event.preventDefault();
+              navigate(hrefOf({ range: "24h", connector: connector.id }));
+            }}
+          >
+            <Icon name="activity" className="size-4" />
+            {t("detail.activity")}
+          </a>
+          <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
+            <Icon name="trash" className="size-4" />
+            {t("detail.remove")}
+          </button>
+        </div>
       </header>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Functions connector={connector} />

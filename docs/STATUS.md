@@ -97,6 +97,7 @@ A real agent program, partly M14 and M15: `CN_CLAUDE=1 go test -run TestClaudeCo
 | `approval.Decide` did not check `expires_at`, so a decision between the timeout and the next sweep still approved the call | `Decide` refuses at or after `expires_at` with `approval_expired` (`TestAnExpiredRecordCannotBeDecidedBeforeTheWorkerExpiresIt`, `TestADecisionAfterTheTimeoutIsRefusedBeforeTheSweep`) |
 | The built-in filter hard-coded the Brazilian CPF and CNPJ | named locale pattern sets in `resultFilter.locales`, default `[br]` (`TestLocalePatternSetsAreChosenByName`, `TestAnUnknownResultFilterLocaleIsRefused`) |
 | `tools/list` read the bound connectors, then the definitions of the granted functions, in two store transactions with the authorizer's search between them | one read loads the connectors, their skill kind, functions and overlays; the search runs after it, so the modes are never older than the definitions they serve, and a function the search returns that the read did not see is skipped |
+| On shutdown the worker's approved executions got the cancelled context and were reported as outcome unknown | they run on a detached context that `server.shutdownGrace` after the stop is cancelled, and the worker waits for them (`TestShutdownLetsARunningApprovedExecutionFinishWithinTheGrace`) |
 
 ## Known flake
 

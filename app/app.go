@@ -146,7 +146,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		return err
 	}
 	a.metrics = telemetry.New(a.outbox, a.Clock.Now)
-	a.worker = worker.New(a.Service, store, a.Clock, worker.Config{Interval: a.Config.Approval.SweepInterval, Log: a.log, Failed: a.metrics.WorkerFailed})
+	a.worker = worker.New(a.Service, store, a.Clock, worker.Config{Interval: a.Config.Approval.SweepInterval, Grace: a.Config.Server.ShutdownGrace, Log: a.log, Failed: a.metrics.WorkerFailed})
 	a.env = &server.Env{Svc: a.Service, Adapters: a.document}
 	gcfg := gateway.DefaultConfig(a.Config.Audience())
 	gcfg.ViewTokens = a.Config.Apps.AppOnlyFunctions == "view_token"

@@ -7,7 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"maps"
+	"runtime"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,8 +105,9 @@ func (d data) clone() data {
 
 // Store is the in-memory port.Store and port.Outbox.
 type Store struct {
-	mu sync.RWMutex
-	d  data
+	mu     sync.RWMutex
+	d      data
+	inside sync.Map
 }
 
 // New returns an empty store.
@@ -128,6 +132,7 @@ func (s *Store) Read(ctx context.Context, scope port.Scope, fn func(port.Tx) err
 	if err := check(ctx, scope); err != nil {
 		return err
 	}
+	defer s.enter()()
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return fn(&tx{d: &s.d, scope: scope})
@@ -138,6 +143,7 @@ func (s *Store) Write(ctx context.Context, scope port.Scope, fn func(port.Tx) er
 	if err := check(ctx, scope); err != nil {
 		return err
 	}
+	defer s.enter()()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	work := s.d.clone()
@@ -150,6 +156,7 @@ func (s *Store) Write(ctx context.Context, scope port.Scope, fn func(port.Tx) er
 
 // Pending returns up to limit undelivered events in emit order; limit <= 0 means all.
 func (s *Store) Pending(_ context.Context, limit int) ([]port.Event, error) {
+	s.outside()
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var out []port.Event
@@ -170,6 +177,7 @@ func (s *Store) Pending(_ context.Context, limit int) ([]port.Event, error) {
 
 // MarkDelivered flags the events with the given ids; unknown ids are ignored.
 func (s *Store) MarkDelivered(_ context.Context, ids []string) error {
+	s.outside()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i := range s.d.events {
@@ -178,6 +186,27 @@ func (s *Store) MarkDelivered(_ context.Context, ids []string) error {
 		}
 	}
 	return nil
+}
+
+func (s *Store) outside() uint64 {
+	id := goroutine()
+	if _, in := s.inside.Load(id); in {
+		panic("memory store: called again from inside a Read or Write callback, which deadlocks here and takes a second connection inside a transaction on Postgres")
+	}
+	return id
+}
+
+func (s *Store) enter() func() {
+	id := s.outside()
+	s.inside.Store(id, struct{}{})
+	return func() { s.inside.Delete(id) }
+}
+
+func goroutine() uint64 {
+	var buf [64]byte
+	head, _, _ := strings.Cut(strings.TrimPrefix(string(buf[:runtime.Stack(buf[:], false)]), "goroutine "), " ")
+	id, _ := strconv.ParseUint(head, 10, 64)
+	return id
 }
 
 func check(ctx context.Context, scope port.Scope) error {

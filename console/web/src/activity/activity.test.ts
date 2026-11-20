@@ -1,18 +1,30 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { Connector, HourCount, Skill } from "../api.ts";
-import { apiQueryOf, approvalStateKey, barsOf, durationText, filterOf, hrefOf, kindOf, namedOf, prettyJSON, skillFile } from "./activity.ts";
+import { apiQueryOf, approvalStateKey, barsOf, callOf, durationText, filterOf, hrefOf, kindOf, lastWeek, namedOf, prettyJSON, skillFile } from "./activity.ts";
 
 const hour = (start: Date, counts: Partial<Omit<HourCount, "start">> = {}): HourCount => ({ start: start.toISOString(), ok: 0, error: 0, denied: 0, pending: 0, running: 0, ...counts });
 
 describe("filterOf", () => {
-  test("reads the range, connector, app and outcome of the query", () => {
-    assert.deepEqual(filterOf(new URLSearchParams("range=7d&connector=c1&agent=cursor&outcome=denied")), { range: "7d", connector: "c1", agent: "cursor", outcome: "denied" });
+  test("reads the range, connector, app, outcome and search of the query", () => {
+    assert.deepEqual(filterOf(new URLSearchParams("range=7d&connector=c1&agent=cursor&outcome=denied&search=send")), { range: "7d", connector: "c1", agent: "cursor", outcome: "denied", search: "send" });
   });
 
   describe("with values it does not know", () => {
     test("falls back to a day and drops the outcome", () => {
       assert.deepEqual(filterOf(new URLSearchParams("range=1y&outcome=maybe")), { range: "24h" });
+    });
+  });
+
+  describe("with two days", () => {
+    test("reads a custom period, earliest first", () => {
+      assert.deepEqual(filterOf(new URLSearchParams("from=2026-11-12&to=2026-11-03&range=7d")), { range: "custom", from: "2026-11-03", to: "2026-11-12" });
+    });
+  });
+
+  describe("with a day that does not exist", () => {
+    test("ignores the custom period", () => {
+      assert.deepEqual(filterOf(new URLSearchParams("from=2026-02-30&to=2026-03-02")), { range: "24h" });
     });
   });
 });
@@ -22,26 +34,64 @@ describe("hrefOf", () => {
     assert.equal(hrefOf({ range: "24h", connector: "c1" }), "/activity?connector=c1");
   });
 
-  test("is read back by filterOf", () => {
-    const filter = { range: "30d", agent: "claude-code", outcome: "error" } as const;
-    assert.deepEqual(filterOf(new URL(hrefOf(filter), "http://x").searchParams), filter);
+  for (const filter of [{ range: "30d", agent: "claude-code", outcome: "error" }, { range: "custom", from: "2026-11-01", to: "2026-11-07", connector: "c1", search: "list" }] as const) {
+    test(`is read back by filterOf over ${filter.range}`, () => {
+      assert.deepEqual(filterOf(new URL(hrefOf(filter), "http://x").searchParams), filter);
+    });
+  }
+
+  describe("with an open call", () => {
+    test("names it apart from the filter", () => {
+      const url = new URL(hrefOf({ range: "7d", outcome: "ok" }, "c-42"), "http://x");
+      assert.deepEqual([filterOf(url.searchParams), callOf(url.searchParams)], [{ range: "7d", outcome: "ok" }, "c-42"]);
+    });
+  });
+
+  describe("without a call", () => {
+    test("leaves none open", () => {
+      assert.equal(callOf(new URL(hrefOf({ range: "24h" }), "http://x").searchParams), undefined);
+    });
   });
 });
 
 describe("apiQueryOf", () => {
-  test("ends the range now and starts it the range's hours before", () => {
+  test("ends a preset now and starts it the range's hours before", () => {
     const now = new Date("2026-11-20T12:00:00Z");
-    const query = new URLSearchParams(apiQueryOf({ range: "7d", connector: "c1" }, now));
+    const query = new URLSearchParams(apiQueryOf({ range: "7d", connector: "c1", search: "send" }, now));
     assert.equal(query.get("to"), "2026-11-20T12:00:00.000Z");
     assert.equal(query.get("from"), "2026-11-13T12:00:00.000Z");
-    assert.equal(query.get("connector"), "c1");
+    assert.deepEqual([query.get("connector"), query.get("search")], ["c1", "send"]);
+  });
+
+  describe("over custom days", () => {
+    test("runs from the first's local midnight to the end of the last", () => {
+      const query = new URLSearchParams(apiQueryOf({ range: "custom", from: "2026-11-02", to: "2026-11-03" }, new Date(2026, 10, 20)));
+      assert.deepEqual([query.get("from"), query.get("to")], [new Date(2026, 10, 2).toISOString(), new Date(2026, 10, 4).toISOString()]);
+    });
+
+    test("ends now when the last day is today", () => {
+      const now = new Date(2026, 10, 20, 15, 30);
+      assert.equal(new URLSearchParams(apiQueryOf({ range: "custom", from: "2026-11-19", to: "2026-11-20" }, now)).get("to"), now.toISOString());
+    });
+
+    test("starts at most 30 days before its end", () => {
+      const now = new Date(2026, 10, 20, 15, 30);
+      const query = new URLSearchParams(apiQueryOf({ range: "custom", from: "2026-09-01", to: "2026-11-20" }, now));
+      assert.equal(query.get("from"), new Date(now.getTime() - 30 * 24 * 3_600_000).toISOString());
+    });
+  });
+});
+
+describe("lastWeek", () => {
+  test("is the last seven local days, today included", () => {
+    assert.deepEqual(lastWeek(new Date(2026, 10, 3, 9)), { range: "custom", from: "2026-10-28", to: "2026-11-03" });
   });
 });
 
 describe("barsOf", () => {
   describe("over a day", () => {
     test("keeps one bar per hour with errors, denials and waits apart", () => {
-      const bars = barsOf([hour(new Date(2026, 10, 20, 9), { ok: 2, error: 1 }), hour(new Date(2026, 10, 20, 10), { denied: 1, pending: 1, running: 2 })], "24h");
+      const bars = barsOf([hour(new Date(2026, 10, 20, 9), { ok: 2, error: 1 }), hour(new Date(2026, 10, 20, 10), { denied: 1, pending: 1, running: 2 })]);
       assert.equal(bars.length, 2);
       assert.deepEqual(
         bars.map(({ ok, failed, denied, waiting, total, unit }) => ({ ok, failed, denied, waiting, total, unit })),
@@ -55,8 +105,9 @@ describe("barsOf", () => {
 
   describe("over a week", () => {
     test("sums the hours of each local day into one bar", () => {
-      const hours = [hour(new Date(2026, 10, 19, 22), { ok: 1 }), hour(new Date(2026, 10, 19, 23), { ok: 2 }), hour(new Date(2026, 10, 20, 0), { error: 1 })];
-      const bars = barsOf(hours, "7d");
+      const start = new Date(2026, 10, 13, 22);
+      const hours = Array.from({ length: 24 * 7 }, (_, i) => hour(new Date(start.getTime() + i * 3_600_000), { ok: i < 2 ? i + 1 : 0, error: i === 2 ? 1 : 0 }));
+      const bars = barsOf(hours).slice(0, 2);
       assert.deepEqual(
         bars.map((bar) => [bar.total, bar.unit]),
         [

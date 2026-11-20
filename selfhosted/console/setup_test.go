@@ -148,3 +148,45 @@ func TestASharedSetupAddsToAnInstallWithoutChangingWhatIsThere(t *testing.T) {
 		t.Fatalf("after the setup: %v", got)
 	}
 }
+
+func TestASharedSetupCarriesEachKeyProfile(t *testing.T) {
+	src := profiledStack(t)
+	for _, name := range []string{"alpha", "beta", "gamma"} {
+		src.mint(name)
+	}
+	src.narrow("alpha", "lookup", console.AccessOff)
+	src.mode(console.ProfileOff, "beta")
+	src.b.ok("PUT", "/api/connectors/"+src.conn+"/new-keys", map[string]bool{"off": true}, nil)
+	file := src.exportSetup()
+	if !strings.Contains(string(file), "newKeysOff: true") || strings.Contains(string(file), "gamma") {
+		t.Fatalf("the setup:\n%s", file)
+	}
+
+	dst := profiled{stack: freshOwner(t, personRelays)}
+	beta := dst.mint("beta")
+	var res console.SetupResult
+	status, raw := dst.upload("/api/backup/import", file, "")
+	if err := json.Unmarshal(raw, &res); status != http.StatusOK || err != nil || len(res.Failed) != 0 {
+		t.Fatalf("import: %d %s", status, raw)
+	}
+	var conns struct{ Connectors []console.ConnectorSummary }
+	dst.b.ok("GET", "/api/connectors", nil, &conns)
+	dst.conn = conns.Connectors[0].ID
+	alpha, delta := dst.mint("alpha"), dst.mint("delta")
+	got := map[string]console.Profile{}
+	for _, p := range dst.summary().Profiles {
+		got[p.Agent] = p
+	}
+	if p := got["alpha"]; p.Mode != console.ProfileCustom || p.Overrides["lookup"] != console.AccessOff {
+		t.Errorf("alpha, made after the import: %+v", p)
+	}
+	if got["beta"].Mode != console.ProfileOff || got["delta"].Mode != console.ProfileOff || !dst.summary().NewKeysOff {
+		t.Errorf("beta, made before the import, and a new key: %+v", got)
+	}
+	if got := toolsOf(t, alpha); !slices.Equal(got, []string{"file"}) {
+		t.Errorf("alpha lists %v", got)
+	}
+	if len(toolsOf(t, beta)) != 0 || len(toolsOf(t, delta)) != 0 {
+		t.Error("a key that is off lists the connector's tools")
+	}
+}

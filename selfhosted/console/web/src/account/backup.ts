@@ -1,4 +1,4 @@
-import { errorCode, errorStatus, type BackupKind } from "../api";
+import { errorCode, errorStatus, type BackupKind, type Download } from "../api";
 import type { MessageKey } from "../i18n";
 
 /** A full backup older than this many days, or none at all, earns a nudge. */
@@ -49,3 +49,13 @@ export function passwordRefusal(error: unknown): MessageKey | undefined {
 
 /** Whether the console came back after a full import: ready, and past the grace in which the old process may still answer. */
 export const restarted = (ready: boolean, startedAt: number, now: number) => ready && now - startedAt >= RESTART_GRACE_MS;
+
+/** Hands a file the console answered to the browser as a download, under its own name or the fallback. */
+export function saveFile({ blob, name }: Download, fallback: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name ?? fallback;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}

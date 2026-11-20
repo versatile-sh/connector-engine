@@ -4,6 +4,7 @@ import { errorText } from "./api";
 import { Frame } from "./Frame";
 import { useT } from "./i18n/I18nProvider";
 import { signIn } from "./mutations";
+import { ImportDialog } from "./account/ImportDialog";
 import { Field } from "./ui/Field";
 import { Display } from "./ui/Display";
 import { Arrow } from "./ui/Icon";
@@ -72,6 +73,7 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const submit = useMutation(signIn);
+  const [restoring, setRestoring] = useState(false);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     submit.mutate({ mode, username, password });
@@ -103,10 +105,16 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
             {submit.isPending ? t("auth.working") : t(mode === "setup" ? "auth.setup.submit" : "auth.login.submit")}
             <Arrow />
           </button>
+          {mode === "setup" ? (
+            <button type="button" className={`${button({ variant: "secondary" })} mt-3 w-full`} onClick={() => setRestoring(true)}>
+              {t("auth.restore")}
+            </button>
+          ) : null}
           <p className="mt-6 border-t border-line pt-5 text-sm text-muted">{t("auth.local")}</p>
         </form>
         {waitingHost ? null : <Points endpoint={endpoint} />}
       </div>
+      {restoring ? <ImportDialog restoreOnly onClose={() => setRestoring(false)} /> : null}
     </Frame>
   );
 }

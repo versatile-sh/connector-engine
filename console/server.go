@@ -109,16 +109,7 @@ func (c *Console) Handler() http.Handler {
 	for _, m := range []string{"GET", "POST", "DELETE"} {
 		mux.Handle(m+" /mcp", agent)
 	}
-	for _, p := range []string{"/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"} {
-		mux.HandleFunc("GET "+p, c.protectedResource)
-		mux.HandleFunc("OPTIONS "+p, c.preflight)
-	}
-	mux.HandleFunc("GET /.well-known/oauth-authorization-server", c.authServerMetadata)
-	mux.HandleFunc("OPTIONS /.well-known/oauth-authorization-server", c.preflight)
-	mux.HandleFunc("POST /oauth/register", c.register)
-	mux.HandleFunc("OPTIONS /oauth/register", c.preflight)
-	mux.HandleFunc("POST /oauth/token", c.token)
-	mux.HandleFunc("OPTIONS /oauth/token", c.preflight)
+	c.appRoutes(mux)
 	mux.HandleFunc("GET /oauth/authorize", c.authorize)
 	mux.HandleFunc("GET /api/oauth/requests/{id}", c.authed(c.consentInfo))
 	mux.HandleFunc("POST /api/oauth/requests/{id}", c.authed(c.consent))

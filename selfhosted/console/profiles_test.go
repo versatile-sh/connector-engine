@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -376,5 +377,30 @@ func TestAKeyThatIsOffTakesNoOverride(t *testing.T) {
 	}
 	if pr := p.profile("beta"); pr.Mode != console.ProfileOff {
 		t.Fatalf("beta after the refused overrides: %+v", pr)
+	}
+}
+
+type countGrants struct {
+	next http.RoundTripper
+	n    *atomic.Int32
+}
+
+func (c countGrants) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == http.MethodGet && req.URL.Path == "/v1/grants" && req.URL.Query().Get("scope_kind") == "agent" {
+		c.n.Add(1)
+	}
+	return c.next.RoundTrip(req)
+}
+
+func TestTheConnectorListReadsKeyRowsOnce(t *testing.T) {
+	p := profiledStack(t)
+	p.mint("alpha")
+	p.b.ok("POST", "/api/import", map[string]any{"mcp": newToolServer(t, "maps", "route").URL + "/mcp", "local": true}, nil)
+	var n atomic.Int32
+	p.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: countGrants{next: http.DefaultTransport, n: &n}}
+	var conns struct{ Connectors []console.ConnectorSummary }
+	p.b.ok("GET", "/api/connectors", nil, &conns)
+	if len(conns.Connectors) != 2 || n.Load() != 1 {
+		t.Fatalf("%d connectors read the key rows %d times", len(conns.Connectors), n.Load())
 	}
 }

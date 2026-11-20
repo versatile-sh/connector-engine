@@ -55,15 +55,12 @@ func (c *Console) boundKeys(ctx context.Context, conn string) (map[string]bool, 
 	return out, err
 }
 
-func (c *Console) profiles(ctx context.Context, conn string) ([]Profile, error) {
+func (c *Console) profiles(ctx context.Context, conn string, agentRows []port.Grant) ([]Profile, error) {
 	bound, err := c.boundKeys(ctx, conn)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := c.Engine.grants(ctx, port.ScopeAgent, "", conn)
-	if err != nil {
-		return nil, err
-	}
+	rows := slices.DeleteFunc(slices.Clone(agentRows), func(g port.Grant) bool { return string(g.Connector) != conn })
 	out := []Profile{}
 	for _, a := range c.knownAgents() {
 		p := Profile{Agent: a.Name, Mode: ProfileOff, Expired: !a.ExpiresAt.After(time.Now())}

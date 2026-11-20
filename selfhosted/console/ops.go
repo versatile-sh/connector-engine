@@ -78,6 +78,10 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 	if err != nil {
 		return nil, err
 	}
+	agentRows, err := c.Engine.grants(ctx, port.ScopeAgent, "", "")
+	if err != nil {
+		return nil, err
+	}
 	out := make([]ConnectorSummary, 0, len(views))
 	for _, v := range views {
 		conn := v.Connector
@@ -118,7 +122,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 			title, desc := describe(f.Definition)
 			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f), State: string(f.State), Access: functionAccess(f, rows)})
 		}
-		if s.Profiles, err = c.profiles(ctx, string(conn.ID)); err != nil {
+		if s.Profiles, err = c.profiles(ctx, string(conn.ID), agentRows); err != nil {
 			return nil, err
 		}
 		s.NewKeysOff, s.Waiting = c.State.NewKeysOff(string(conn.ID)), c.State.PendingProfiles(string(conn.ID))

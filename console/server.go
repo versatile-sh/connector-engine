@@ -177,6 +177,7 @@ func (c *Console) session(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		out["csrf"] = csrf
 		out["onboarding_dismissed"] = c.State.OnboardingDismissed()
+		out["key_protection"] = c.keyProtection(r.Context())
 	}
 	writeJSON(w, http.StatusOK, out)
 }

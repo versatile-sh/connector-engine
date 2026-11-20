@@ -41,6 +41,7 @@ type Console struct {
 	loginMu       sync.Mutex
 	restoring     sync.Mutex
 	reconciling   sync.Mutex
+	keying        sync.Mutex
 	passwordFails minuteWindow
 	icons         iconCache
 	connects      connectStates

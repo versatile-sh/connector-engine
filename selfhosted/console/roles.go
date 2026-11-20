@@ -26,14 +26,14 @@ func (c *Console) managers() port.GroupID {
 	return port.GroupID(firstOf(c.ManagersGroup, defaultManagersGroup))
 }
 
-// ReconcileRoles writes, as the service person, the engine role rows and managers group members the console users should have and deletes those of console users, and of the gone persons, that they should not; rows of other persons stay, except the legacy owner row once no user is owner.
+// ReconcileRoles puts, as the service person, the users' engine roles and managers group members, and deletes those of users and gone persons that should not be there.
 func (c *Console) ReconcileRoles(ctx context.Context, gone ...string) error {
+	c.reconciling.Lock()
+	defer c.reconciling.Unlock()
 	return c.reconcileRoles(ctx, c.State.Users(), gone)
 }
 
 func (c *Console) reconcileRoles(ctx context.Context, users []User, gone []string) error {
-	c.reconciling.Lock()
-	defer c.reconciling.Unlock()
 	ctx = WithActor(ctx, c.Engine.service())
 	tenant := port.TenantID(c.Engine.Tenant)
 	managed := map[port.PersonID]bool{}
@@ -52,8 +52,12 @@ func (c *Console) reconcileRoles(ctx context.Context, users []User, gone []strin
 	if err != nil {
 		return err
 	}
+	delete(managed, port.PersonID(c.Engine.service()))
 	for _, r := range rows {
-		r.Tenant, r.Issuer = tenant, ""
+		if r.Issuer != "" {
+			continue
+		}
+		r.Tenant = tenant
 		stale := managed[r.Person] && !wantRows[r] || r == legacy && !managed[r.Person]
 		if !stale {
 			delete(wantRows, r)
@@ -92,11 +96,13 @@ func (c *Console) reconcileRoles(ctx context.Context, users []User, gone []strin
 	return nil
 }
 
-// SetUserRole changes the role of person in the order that fails closed: a raise writes the console state and then the engine rows, a lowering the engine rows and then the state; demoting the last Owner is refused before either.
+// SetUserRole changes the role of person failing closed: a raise writes state then engine, a lowering engine then state, and the last Owner stays.
 func (c *Console) SetUserRole(ctx context.Context, person string, role Role) error {
 	if _, err := ParseRole(string(role)); err != nil {
 		return err
 	}
+	c.reconciling.Lock()
+	defer c.reconciling.Unlock()
 	users := c.State.Users()
 	i := slices.IndexFunc(users, func(u User) bool { return u.Person == person })
 	switch {
@@ -108,7 +114,7 @@ func (c *Console) SetUserRole(ctx context.Context, person string, role Role) err
 		if err := c.State.SetRole(person, role); err != nil {
 			return err
 		}
-		return c.ReconcileRoles(ctx)
+		return c.reconcileRoles(ctx, c.State.Users(), nil)
 	}
 	if users[i].Role == RoleOwner && !slices.ContainsFunc(users, func(u User) bool { return u.Role == RoleOwner && u.Person != person }) {
 		return ErrLastOwner

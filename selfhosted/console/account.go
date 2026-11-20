@@ -52,7 +52,7 @@ func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 	default:
 		if err := c.ReconcileRoles(r.Context()); err != nil {
-			c.logger().Warn("the first owner's engine role waits for the next start", "error", err)
+			go c.untilReady(context.WithoutCancel(r.Context()), "roles", func(ctx context.Context) error { return c.ReconcileRoles(ctx) })
 		}
 		c.signIn(w, http.StatusCreated, u.Person)
 	}

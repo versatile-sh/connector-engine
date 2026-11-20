@@ -151,3 +151,16 @@ func TestAKeyKeepsItsOwnerAndAnOwnerlessKeyBelongsToTheLegacyPerson(t *testing.T
 		t.Fatalf("a key from before multi-user belongs to %q", d.Agents["old"].Owner)
 	}
 }
+
+func TestAProviderSignInCompletesAsThePersonWhoBeganIt(t *testing.T) {
+	c, rec := recordedConsole(t)
+	c.connects.add("s1", "https://issuer.test", "p-bob")
+	w := httptest.NewRecorder()
+	c.oauthCallback(w, httptest.NewRequest(http.MethodGet, "/oauth/callback?state=s1&code=c1", nil))
+	if loc := w.Header().Get("Location"); loc != "/?oauth=connected" {
+		t.Fatalf("the callback went to %q", loc)
+	}
+	if _, writes, _ := rec.seen(); !slices.Equal(writes, []string{"POST /v1/credentials:complete as p-bob"}) {
+		t.Fatalf("writes %v", writes)
+	}
+}

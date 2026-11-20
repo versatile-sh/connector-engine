@@ -251,11 +251,12 @@ func (s *State) PutAgent(a Agent) error {
 	})
 }
 
-// KeyOwner returns the person owning the access key name, or the legacy person for a key the console no longer knows.
-func (s *State) KeyOwner(name string) string {
+// KeyOwner returns the person owning the access key name, and false for a key the console does not know.
+func (s *State) KeyOwner(name string) (string, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return firstOf(s.data.Agents[name].Owner, s.data.LegacyPerson, s.person)
+	a, ok := s.data.Agents[name]
+	return a.Owner, ok && a.Owner != ""
 }
 
 // MarkBrowserConnected records that the OAuth client connected the agent through the browser sign-in at at, unseen by the owner so far.

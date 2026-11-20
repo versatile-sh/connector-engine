@@ -38,6 +38,9 @@ func Open(ctx context.Context, o Options) (*Console, func(), error) {
 	if err != nil || public.Host == "" || public.Port() == "" {
 		return nil, nil, invalid("the public URL %q is not an absolute URL with a port", o.PublicURL)
 	}
+	if firstOf(o.ServicePerson, defaultServicePerson) == firstOf(o.Person, defaultPerson) {
+		return nil, nil, invalid("the service person %q is also the first Owner's person", firstOf(o.Person, defaultPerson))
+	}
 	state, err := OpenState(o.StatePath, o.Person)
 	if err != nil {
 		return nil, nil, err
@@ -68,22 +71,23 @@ func unlockBox(ctx context.Context, box *sealed.Box, unlock func(context.Context
 }
 
 func (c *Console) prepareEngine(ctx context.Context) {
-	for _, step := range []struct {
-		name string
-		run  func(context.Context) error
-	}{{"tenant", c.Engine.EnsureTenant}, {"roles", func(ctx context.Context) error { return c.ReconcileRoles(ctx) }}} {
-		for {
-			err := step.run(ctx)
-			if err == nil {
-				c.logger().Info("engine ready", "step", step.name, "tenant", c.Engine.Tenant)
-				break
-			}
-			c.logger().Warn("waiting for the engine", "step", step.name, "error", err)
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(2 * time.Second):
-			}
+	if c.untilReady(ctx, "tenant", c.Engine.EnsureTenant) {
+		c.untilReady(ctx, "roles", func(ctx context.Context) error { return c.ReconcileRoles(ctx) })
+	}
+}
+
+func (c *Console) untilReady(ctx context.Context, step string, run func(context.Context) error) bool {
+	for {
+		err := run(ctx)
+		if err == nil {
+			c.logger().Info(step+" ready", "tenant", c.Engine.Tenant)
+			return true
+		}
+		c.logger().Warn("waiting for the engine", "step", step, "error", err)
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(2 * time.Second):
 		}
 	}
 }

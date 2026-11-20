@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/cookiejar"
+	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
@@ -197,4 +198,19 @@ func engineRoles(t *testing.T, s *stack, person string) []string {
 	}
 	slices.Sort(got)
 	return got
+}
+
+func TestASetupImportedFromTheHostActsAsAnOwner(t *testing.T) {
+	file := profiledStack(t).exportSetup()
+	dst := freshOwner(t, personRelays)
+	rec := httptest.NewRecorder()
+	dst.c.HostHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/import", strings.NewReader("\n"+string(file))))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("the host import answered %d %s", rec.Code, rec.Body)
+	}
+	var conns struct{ Connectors []console.ConnectorSummary }
+	dst.b.ok("GET", "/api/connectors", nil, &conns)
+	if len(conns.Connectors) != 1 {
+		t.Fatalf("connectors after the host import %+v", conns.Connectors)
+	}
 }

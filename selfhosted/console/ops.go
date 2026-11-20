@@ -478,7 +478,7 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, within each connector's new-key limits, and starts off on skills. A named permission set gives the key its profile on the set's connectors and is forgotten once the key is recorded. It records the agent, owned by the context's actor, until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide; a name another person's key has is refused before any engine write.
+// BindAgent renews the agent, owned by the context's actor, where it is bound, joins a new key to the connectors whose new keys start on within their limits, applies a named permission set and records it until ttl; another person's key name is refused before any engine write.
 func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration, slotName string) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
@@ -495,6 +495,8 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration,
 	if owner == "" {
 		return Agent{}, ErrNoActor
 	}
+	c.keying.Lock()
+	defer c.keying.Unlock()
 	if old, ok := c.State.Agent(name); ok && old.Owner != owner {
 		return Agent{}, ErrNameTaken
 	}
@@ -529,7 +531,10 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration,
 }
 
 func (c *Console) agentToken(ctx context.Context, name string, ttl time.Duration) (string, error) {
-	owner := c.State.KeyOwner(name)
+	owner, ok := c.State.KeyOwner(name)
+	if !ok {
+		return "", noKey(name)
+	}
 	return c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": owner, "agent_owner": owner}, ttl)
 }
 

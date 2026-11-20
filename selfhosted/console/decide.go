@@ -173,7 +173,7 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	return v, lost, nil
 }
 
-// allowAfterRun allows the approval's function or skill for the calling key only once its approved call has run, since replacing the row earlier would cancel that run, as the actor of ctx who chose it, and records a failure on the approval.
+// allowAfterRun allows the approval's function or skill for the calling key, as the actor who chose it, once the approved call has run, and records a failure on the approval.
 func (c *Console) allowAfterRun(ctx context.Context, v ApprovalView) {
 	ctx, cancel := context.WithTimeout(ctx, allowWait)
 	defer cancel()
@@ -249,7 +249,11 @@ func (c *Console) asKeyOwner(ctx context.Context, id string) (context.Context, e
 	if err != nil {
 		return ctx, err
 	}
-	return WithActor(ctx, c.State.KeyOwner(string(a.Agent))), nil
+	owner, ok := c.State.KeyOwner(string(a.Agent))
+	if !ok {
+		owner = string(a.OnBehalfOf)
+	}
+	return WithActor(ctx, owner), nil
 }
 
 // Outcome is the surface outcome of a decided, expired or cancelled approval view.

@@ -277,6 +277,21 @@ func (s *State) HostUser(username string) (User, error) {
 	return User{}, invalid("this console has several users: name one with USER=<username>")
 }
 
+// HostOwner returns the Owner a host request acts as: the first Owner while they still are one, else the Owner with the smallest person id.
+func (s *State) HostOwner() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	first := firstOf(s.data.LegacyPerson, s.person)
+	if s.data.Users[first].Role == RoleOwner {
+		return first
+	}
+	persons := slices.Sorted(maps.Keys(s.data.Users))
+	if i := slices.IndexFunc(persons, func(p string) bool { return s.data.Users[p].Role == RoleOwner }); i >= 0 {
+		return persons[i]
+	}
+	return ""
+}
+
 type userKey struct{}
 
 func withUser(ctx context.Context, u User) context.Context {

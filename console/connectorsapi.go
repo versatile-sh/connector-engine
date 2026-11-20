@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/agents-control/connector-engine/port"
@@ -111,6 +112,27 @@ type pendingOAuth struct {
 	expires time.Time
 }
 
+type connectStates struct {
+	mu sync.Mutex
+	m  map[string]pendingOAuth
+}
+
+func (cs *connectStates) add(state, issuer string) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	now := time.Now()
+	expire(cs.m, now, func(v pendingOAuth) time.Time { return v.expires })
+	put(&cs.m, state, pendingOAuth{issuer: issuer, expires: now.Add(oauthStateTTL)})
+}
+
+func (cs *connectStates) take(state string) (pendingOAuth, bool) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	v, ok := cs.m[state]
+	delete(cs.m, state)
+	return v, ok && time.Now().Before(v.expires)
+}
+
 func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		ClientID     string `json:"client_id"`
@@ -136,24 +158,17 @@ func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	c.oauthMu.Lock()
-	now := time.Now()
-	expire(c.oauth, now, func(v pendingOAuth) time.Time { return v.expires })
-	c.oauth[state] = pendingOAuth{issuer: issuer, expires: now.Add(oauthStateTTL)}
-	c.oauthMu.Unlock()
+	c.connects.add(state, issuer)
 	writeJSON(w, http.StatusOK, map[string]string{"url": to})
 }
 
 func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	qv := r.URL.Query()
 	state := qv.Get("state")
-	c.oauthMu.Lock()
-	pend, ok := c.oauth[state]
-	delete(c.oauth, state)
-	c.oauthMu.Unlock()
+	pend, ok := c.connects.take(state)
 	back := func(result string) { http.Redirect(w, r, "/?oauth="+url.QueryEscape(result), http.StatusSeeOther) }
 	switch {
-	case !ok || time.Now().After(pend.expires):
+	case !ok:
 		back("unknown_state")
 	case qv.Get("error") != "":
 		back("refused")

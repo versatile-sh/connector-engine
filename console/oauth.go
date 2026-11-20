@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 )
@@ -148,6 +149,14 @@ func cors(w http.ResponseWriter) {
 	h.Set("Cross-Origin-Resource-Policy", "cross-origin")
 }
 
+type authServer struct {
+	mu         sync.Mutex
+	pending    map[string]authRequest
+	codes      map[string]authCode
+	registered minuteWindow
+	refreshMu  sync.Mutex
+}
+
 type appRoute struct {
 	method, path string
 	serve        func(*Console, http.ResponseWriter, *http.Request)
@@ -204,13 +213,13 @@ func oauthError(w http.ResponseWriter, status int, code, detail string) {
 }
 
 func (c *Console) register(w http.ResponseWriter, r *http.Request) {
-	c.asMu.Lock()
+	c.as.mu.Lock()
 	now := time.Now()
-	limited := c.registered.full(now, registrationsPerMin)
+	limited := c.as.registered.full(now, registrationsPerMin)
 	if !limited {
-		c.registered.hit(now)
+		c.as.registered.hit(now)
 	}
-	c.asMu.Unlock()
+	c.as.mu.Unlock()
 	if limited {
 		w.Header().Set("Retry-After", "60")
 		oauthError(w, http.StatusTooManyRequests, "slow_down", "too many registrations, try again in a minute")
@@ -298,25 +307,25 @@ func (c *Console) authorize(w http.ResponseWriter, r *http.Request) {
 	}
 	id := randomID()
 	now := time.Now()
-	c.asMu.Lock()
-	expire(c.pending, now, func(v authRequest) time.Time { return v.expires })
-	for k := range c.pending {
-		if len(c.pending) < maxPendingAuth {
+	c.as.mu.Lock()
+	expire(c.as.pending, now, func(v authRequest) time.Time { return v.expires })
+	for k := range c.as.pending {
+		if len(c.as.pending) < maxPendingAuth {
 			break
 		}
-		delete(c.pending, k)
+		delete(c.as.pending, k)
 	}
-	c.pending[id] = authRequest{client: cl, redirect: redirect, state: qv.Get("state"), challenge: qv.Get("code_challenge"), resource: qv.Get("resource"), expires: now.Add(authRequestTTL)}
-	c.asMu.Unlock()
+	put(&c.as.pending, id, authRequest{client: cl, redirect: redirect, state: qv.Get("state"), challenge: qv.Get("code_challenge"), resource: qv.Get("resource"), expires: now.Add(authRequestTTL)})
+	c.as.mu.Unlock()
 	http.Redirect(w, r, "/connect?request="+id, http.StatusSeeOther)
 }
 
 func (c *Console) pendingRequest(id string, take bool) (authRequest, bool) {
-	c.asMu.Lock()
-	defer c.asMu.Unlock()
-	req, ok := c.pending[id]
+	c.as.mu.Lock()
+	defer c.as.mu.Unlock()
+	req, ok := c.as.pending[id]
 	if take {
-		delete(c.pending, id)
+		delete(c.as.pending, id)
 	}
 	return req, ok && time.Now().Before(req.expires)
 }
@@ -434,11 +443,11 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 	req.client.LastUsed = time.Now().UTC()
 	_ = c.State.PutOAuthClient(req.client)
 	code := randomID()
-	c.asMu.Lock()
+	c.as.mu.Lock()
 	now := time.Now()
-	expire(c.codes, now, func(v authCode) time.Time { return v.expires })
-	c.codes[code] = authCode{clientID: req.client.ID, redirect: req.redirect, challenge: req.challenge, resource: req.resource, agent: a.Name, expires: now.Add(authCodeTTL)}
-	c.asMu.Unlock()
+	expire(c.as.codes, now, func(v authCode) time.Time { return v.expires })
+	put(&c.as.codes, code, authCode{clientID: req.client.ID, redirect: req.redirect, challenge: req.challenge, resource: req.resource, agent: a.Name, expires: now.Add(authCodeTTL)})
+	c.as.mu.Unlock()
 	params["code"] = code
 	writeJSON(w, http.StatusOK, map[string]string{"redirect": withParams(req.redirect, params)})
 }
@@ -474,10 +483,10 @@ func (c *Console) token(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Console) exchangeCode(w http.ResponseWriter, r *http.Request, f url.Values) {
-	c.asMu.Lock()
-	code, ok := c.codes[f.Get("code")]
-	delete(c.codes, f.Get("code"))
-	c.asMu.Unlock()
+	c.as.mu.Lock()
+	code, ok := c.as.codes[f.Get("code")]
+	delete(c.as.codes, f.Get("code"))
+	c.as.mu.Unlock()
 	switch {
 	case !ok || time.Now().After(code.expires):
 		oauthError(w, http.StatusBadRequest, "invalid_grant", "the code is unknown, expired or already used")
@@ -500,8 +509,8 @@ func refreshKey(token string) string {
 }
 
 func (c *Console) refresh(w http.ResponseWriter, r *http.Request, f url.Values) {
-	c.refreshMu.Lock()
-	defer c.refreshMu.Unlock()
+	c.as.refreshMu.Lock()
+	defer c.as.refreshMu.Unlock()
 	key := refreshKey(f.Get("refresh_token"))
 	g, ok := c.State.RefreshGrant(key)
 	a, known := c.State.Agent(g.Agent)

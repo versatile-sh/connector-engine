@@ -35,25 +35,16 @@ type Console struct {
 	Secrets       *sealed.Box
 	NewChannel    ChannelFactory
 
-	loginMu sync.Mutex
-	iconMu  sync.Mutex
-	icons   map[string]icon
-	oauthMu sync.Mutex
-	oauth   map[string]pendingOAuth
-
-	asMu       sync.Mutex
-	pending    map[string]authRequest
-	codes      map[string]authCode
-	registered minuteWindow
-	refreshMu  sync.Mutex
-
+	loginMu      sync.Mutex
 	consentFails minuteWindow
+	icons        iconCache
+	connects     connectStates
+	as           authServer
 	surf         surfaces
 }
 
 // Handler returns every route behind the guard.
 func (c *Console) Handler() http.Handler {
-	c.icons, c.oauth, c.pending, c.codes = map[string]icon{}, map[string]pendingOAuth{}, map[string]authRequest{}, map[string]authCode{}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/session", c.session)
 	mux.HandleFunc("POST /api/setup", c.setup)

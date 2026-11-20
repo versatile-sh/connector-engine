@@ -191,12 +191,12 @@ func (c *Console) bindCall(ctx context.Context, first chan engineAnswer, agent, 
 }
 
 func (c *Console) correlate(ctx context.Context, agent, session, function string, start time.Time) string {
-	var list items[port.Approval]
-	if err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals"+q("state", string(port.ApprovalPending), "agent", agent, "session", session), nil, &list); err != nil {
+	pending, err := c.Engine.pendingApprovals(ctx, agent, session)
+	if err != nil {
 		return ""
 	}
 	var found []string
-	for _, a := range list.Items {
+	for _, a := range pending {
 		if (function == a.Function || strings.HasSuffix(function, "__"+a.Function)) && !a.CreatedAt.Before(start.Add(-bindSkew)) && !c.surf.el.isClaimed(string(a.ID)) {
 			found = append(found, string(a.ID))
 		}

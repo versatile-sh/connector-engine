@@ -33,7 +33,7 @@ func manifest() port.Manifest {
 func load(t *testing.T, r *skill.Runtime, h port.Handle, path string) (port.Result, skill.Loaded) {
 	t.Helper()
 	args, _ := json.Marshal(map[string]string{"path": path})
-	res, err := r.Call(context.Background(), h, "pdf", args, time.Time{})
+	res, err := r.Call(context.Background(), h, skill.Function, args, time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestTheSkillRuntime(t *testing.T) {
 	}
 	t.Run("lists one read-only function pinned to the folder digest", func(t *testing.T) {
 		defs, _, err := r.ListFunctions(ctx, h)
-		if err != nil || len(defs) != 1 || defs[0].Name != "pdf" {
+		if err != nil || len(defs) != 1 || defs[0].Name != skill.Function {
 			t.Fatalf("%v %+v", err, defs)
 		}
 		var d struct {

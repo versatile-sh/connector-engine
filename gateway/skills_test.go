@@ -12,6 +12,7 @@ import (
 
 	"github.com/agents-control/connector-engine/gateway"
 	"github.com/agents-control/connector-engine/port"
+	rtskill "github.com/agents-control/connector-engine/runtime/skill"
 	"github.com/agents-control/connector-engine/service"
 	st "github.com/agents-control/connector-engine/service/servicetest"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -52,14 +53,14 @@ func (w *world) installSkill(mode port.Mode, agents ...string) port.ConnectorID 
 	if len(fns) != 1 || fns[0].State != port.FunctionQuarantined {
 		w.t.Fatalf("a skill lands as one quarantined function: %+v", fns)
 	}
-	st.Ok(w.Svc.AcceptFunctions(w.Ctx, w.admin, conn.ID, map[string]port.Hash{"pdf": fns[0].DefinitionHash}))
+	st.Ok(w.Svc.AcceptFunctions(w.Ctx, w.admin, conn.ID, map[string]port.Hash{rtskill.Function: fns[0].DefinitionHash}))
 	st.Ok(w.Svc.SetConnectorLevel(w.Ctx, w.admin, conn.ID, port.LevelCustom))
-	st.Ok(w.Svc.ClassifyFunction(w.Ctx, w.admin, conn.ID, "pdf", port.ClassRead))
+	st.Ok(w.Svc.ClassifyFunction(w.Ctx, w.admin, conn.ID, rtskill.Function, port.ClassRead))
 	hash := fns[0].DefinitionHash
-	st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: conn.ID, Selector: "fn:pdf", Mode: port.ModeAllow, DefinitionHash: hash}))
+	st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function, Mode: port.ModeAllow, DefinitionHash: hash}))
 	for _, a := range agents {
 		st.Ok(w.Svc.PutBinding(w.Ctx, w.admin, port.Binding{Connector: conn.ID, Agent: port.AgentID(a), AskRequester: true}))
-		st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a, Agent: port.AgentID(a), Connector: conn.ID, Selector: "fn:pdf",
+		st.Ok(w.Svc.CreateGrant(w.Ctx, w.admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a, Agent: port.AgentID(a), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function,
 			Mode: mode, DefinitionHash: hash, ExpiresAt: st.Epoch.Add(30 * 24 * time.Hour)}))
 	}
 	return conn.ID
@@ -93,10 +94,10 @@ func TestSkillsThroughTheAgentEndpoint(t *testing.T) {
 				}
 			})
 			t.Run("refuses the skill's function through tools/call and call", func(t *testing.T) {
-				if res, err := callTool(cs, "pdf__pdf", map[string]any{}); err == nil && !res.IsError {
+				if res, err := callTool(cs, "pdf__skill", map[string]any{}); err == nil && !res.IsError {
 					t.Fatal("a skill ran as a tool")
 				}
-				if res, err := callTool(cs, "call", map[string]any{"name": "pdf__pdf"}); err == nil && !res.IsError {
+				if res, err := callTool(cs, "call", map[string]any{"name": "pdf__skill"}); err == nil && !res.IsError {
 					t.Fatal("a skill ran through call")
 				}
 			})
@@ -150,6 +151,21 @@ func TestASkillOnAskHoldsTheLoad(t *testing.T) {
 	raw, _ := json.Marshal(res.StructuredContent)
 	if err != nil || !strings.Contains(string(raw), "pending_approval") || !slices.Contains(names(t, cs), "approval_status") {
 		t.Fatalf("%v %s", err, raw)
+	}
+	id := port.ApprovalID(structuredOf(t, res)["approval_id"].(string))
+	st.Ok(w.Svc.DecideApproval(w.Ctx, w.alice, id, port.DecisionApproveForSession, "", "test"))
+	for range 2 {
+		if _, err := w.Worker.Sweep(w.Ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	status, err := callTool(cs, "approval_status", map[string]any{"approval_id": string(id)})
+	if err != nil || status.IsError || len(texts(status)) != 2 || texts(status)[1] != skillMD {
+		t.Fatalf("after approval: %v %v", err, texts(status))
+	}
+	again, err := callTool(cs, "skill_load", map[string]any{"skill": "pdf", "path": "scripts/fill.sh"})
+	if err != nil || again.IsError || len(texts(again)) != 2 || texts(again)[1] != script {
+		t.Fatalf("ask once lets the rest of the session load: %v %v", err, texts(again))
 	}
 }
 

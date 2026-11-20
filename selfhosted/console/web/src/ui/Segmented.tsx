@@ -2,7 +2,7 @@ import { TOUCH_ROW } from "./styles";
 
 type SegmentedProps<T extends string> = {
   label: string;
-  options: readonly { value: T; text: string; hint?: string; lang?: string }[];
+  options: readonly { value: T; text: string; hint?: string; lang?: string; disabled?: boolean }[];
   value: T | undefined;
   onChange(value: T): void;
   disabled?: boolean;
@@ -12,7 +12,7 @@ type SegmentedProps<T extends string> = {
 
 const SIZE = { sm: { frame: "h-8", button: "px-2 text-xs" }, md: { frame: "h-9", button: "px-4 text-sm" } } as const;
 
-/** A choice between a few things, in the chip language: one hairline pill whose chosen part is paper at 10%, the mark gliding to it; with no value, as when the things it sets differ, nothing is marked. */
+/** A choice between a few things, in the chip language: one hairline pill whose chosen part is paper at 10%, the mark gliding to it; with no value, as when the things it sets differ, nothing is marked. An option can be shown and not taken. */
 export function Segmented<T extends string>({ label, options, value, onChange, disabled = false, size = "md", className = "" }: SegmentedProps<T>) {
   const index = options.findIndex((option) => option.value === value);
   const at = Math.max(index, 0);
@@ -30,9 +30,9 @@ export function Segmented<T extends string>({ label, options, value, onChange, d
           title={option.hint}
           lang={option.lang}
           aria-pressed={value === option.value}
-          disabled={disabled}
+          disabled={disabled || option.disabled}
           onClick={() => option.value !== value && onChange(option.value)}
-          className={`relative z-10 h-full rounded-full font-medium whitespace-nowrap text-muted transition-colors duration-250 hover:text-paper aria-pressed:text-paper ${TOUCH_ROW} ${SIZE[size].button}`}
+          className={`relative z-10 h-full rounded-full font-medium whitespace-nowrap text-muted transition-colors duration-250 hover:text-paper disabled:cursor-not-allowed disabled:text-muted/50 aria-pressed:text-paper ${TOUCH_ROW} ${SIZE[size].button}`}
         >
           {option.text}
         </button>

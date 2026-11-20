@@ -1,5 +1,5 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, apiFile, setCsrf, type Access, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
+import { api, apiFile, setCsrf, type Access, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session } from "./api";
 import { accountQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
@@ -60,6 +60,24 @@ export const setFunctionAccess = mutationOptions({
 /** Sets one item of a connector to off, on or ask, by name in the body since names hold `/` and `:`. */
 export const setItemAccess = mutationOptions({
   mutationFn: ({ connector, name, access }: { connector: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "items")}`, { name, access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Sets the named access keys, or every key, to off, follow or custom on a connector, in one request that answers each key. */
+export const setProfileMode = mutationOptions({
+  mutationFn: ({ connector, mode, keys }: { connector: string; mode: ProfileMode; keys?: string[] }) => api<{ keys: KeyResult[] }>("PUT", `/api/connectors/${at(connector, "profiles")}`, keys ? { mode, keys } : { mode }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Narrows one function or item for one access key, or clears the narrowing with the connector's own access; the name goes in the body since item names hold `/` and `:`. */
+export const setProfileAccess = mutationOptions({
+  mutationFn: ({ connector, agent, name, access }: { connector: string; agent: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "profiles", agent)}`, { name, access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
+/** Makes the access keys made from now on start off on a connector, or follow it. */
+export const setNewKeysOff = mutationOptions({
+  mutationFn: ({ connector, off }: { connector: string; off: boolean }) => api("PUT", `/api/connectors/${at(connector, "new-keys")}`, { off }),
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });
 

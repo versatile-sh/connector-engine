@@ -28,3 +28,22 @@ func TestRedactHidesSecretsAndKeepsTheRest(t *testing.T) {
 		t.Error("broken JSON is not passed through")
 	}
 }
+
+func TestRedactLooksInsideStringsAndSessionKeys(t *testing.T) {
+	in := `{"text":"{\"password\":\"hunter2x\",\"q\":\"ok\"}","log":"sent \"password\": \"swordfish\" to x","session_id":"blockscout-abc","sid":"s9","nested":"[{\"api_key\":\"k9k9k9\"}]","session_count":3,` +
+		`"more":"set client_secret=abcd1234 and db_password: hunter22, \"token\": \"tok3n999\", Authorization: Basic dXNlcjpwYXNz, raw {\\\"password\\\":\\\"esc4ped1\\\"}"}`
+	got, ok := console.Redact([]byte(in))
+	if !ok {
+		t.Fatal("valid JSON did not redact")
+	}
+	for _, leaked := range []string{"hunter2x", "swordfish", "blockscout-abc", "s9", "k9k9k9", "abcd1234", "hunter22", "tok3n999", "dXNlcjpwYXNz", "esc4ped1"} {
+		if strings.Contains(got, leaked) {
+			t.Errorf("kept %s in %s", leaked, got)
+		}
+	}
+	for _, kept := range []string{`ok`, `"session_count":3`} {
+		if !strings.Contains(got, kept) {
+			t.Errorf("lost %s in %s", kept, got)
+		}
+	}
+}

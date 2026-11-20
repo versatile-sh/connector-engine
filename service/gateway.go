@@ -17,7 +17,7 @@ import (
 	"github.com/agents-control/connector-engine/service/internal/schemacheck"
 )
 
-// ServedFunction is one entry of tools/list: the stored definition under its exposed name, with an accepted overlay's text (§9, §10.2).
+// ServedFunction is one entry of tools/list: the stored definition under its exposed name, with an accepted overlay's text.
 type ServedFunction struct {
 	Name        string
 	Connector   port.ConnectorID
@@ -71,7 +71,7 @@ type Outcome struct {
 	Findings       map[string]int
 }
 
-// CallRequest is one tools/call, a skill load when Skill is set and Name is the skill's alias, or a prompt get or resource read when Item names its kind and Name its agent-facing name or URI, with the projection paths of §10.5.
+// CallRequest is one tools/call, a skill load when Skill is set and Name is the skill's alias, or a prompt get or resource read when Item names its kind and Name its agent-facing name or URI, with the projection paths.
 type CallRequest struct {
 	Name      string
 	Arguments json.RawMessage
@@ -214,7 +214,7 @@ func (s *Service) ListFunctions(ctx context.Context, p port.Principal) (Function
 	return s.functionsFor(ctx, sub)
 }
 
-// ListAgentFunctions is what an agent would be listed, for an agent configurer to read (§13.1 listAgentFunctions).
+// ListAgentFunctions is what an agent would be listed, for an agent configurer to read.
 func (s *Service) ListAgentFunctions(ctx context.Context, p port.Principal, sub port.Subject) (FunctionList, error) {
 	if err := s.authorize(ctx, p, authz.BindingWrite, s.tenantResource(p)); err != nil {
 		return FunctionList{}, err

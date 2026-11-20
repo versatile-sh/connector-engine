@@ -373,7 +373,7 @@ type OperationRequest struct {
 	ID port.OperationID `json:"id"`
 }
 
-// EventTypes is the event catalog of §12.
+// EventTypes is the event catalog.
 type EventTypes struct {
 	Types []EventType `json:"types"`
 }

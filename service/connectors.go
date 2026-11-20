@@ -58,7 +58,7 @@ func (s *Service) connectorOf(ctx context.Context, p port.Principal, id port.Con
 	return c, s.authorize(ctx, p, action, wsResource(p, c.Workspace))
 }
 
-// InstallConnector installs a visible, installable listing version in a workspace, captures its functions and writes the level (§5.4).
+// InstallConnector installs a visible, installable listing version in a workspace, captures its functions and writes the level.
 func (s *Service) InstallConnector(ctx context.Context, p port.Principal, in InstallInput) (ConnectorView, error) {
 	var out ConnectorView
 	tenant := p.Claims.Tenant
@@ -159,7 +159,7 @@ type UpdateResult struct {
 	TenantRowsUnmatched []string         `json:"tenant_rows_unmatched,omitempty"`
 }
 
-// UpdateConnector pins a newer listing version by an explicit act; changed and new functions are quarantined (§5.4, §9).
+// UpdateConnector pins a newer listing version by an explicit act; changed and new functions are quarantined.
 func (s *Service) UpdateConnector(ctx context.Context, p port.Principal, id port.ConnectorID, version string) (UpdateResult, error) {
 	c, err := s.connectorOf(ctx, p, id, authz.ConnectorManage)
 	if err != nil {
@@ -193,7 +193,7 @@ func (s *Service) UpdateConnector(ctx context.Context, p port.Principal, id port
 	return s.reconcile(ctx, c.Tenant, id, version, actor(p))
 }
 
-// Relist captures the connector's pinned version again and quarantines drift; concurrent re-lists of a connector share one run (§9).
+// Relist captures the connector's pinned version again and quarantines drift; concurrent re-lists of a connector share one run.
 func (s *Service) Relist(ctx context.Context, tenant port.TenantID, id port.ConnectorID) (UpdateResult, error) {
 	v, err, _ := s.flights.Do("relist|"+string(tenant)+"|"+string(id), func() (any, error) {
 		for attempt := 1; ; attempt++ {
@@ -434,7 +434,7 @@ func (s *Service) emitQuarantine(tx port.Tx, c port.Connector, f *port.Function,
 	return s.record(tx, c.Tenant, "system", string(c.ID), evFunctionQuarantined, ev)
 }
 
-// SetConnectorEnabled enables or disables a connector; disabling cancels its pending approvals (§7.1 step 1, A7).
+// SetConnectorEnabled enables or disables a connector; disabling cancels its pending approvals.
 func (s *Service) SetConnectorEnabled(ctx context.Context, p port.Principal, id port.ConnectorID, enabled bool) (port.Connector, error) {
 	c, err := s.connectorOf(ctx, p, id, authz.ConnectorManage)
 	if err != nil {
@@ -458,7 +458,7 @@ func (s *Service) SetConnectorEnabled(ctx context.Context, p port.Principal, id 
 	return c, err
 }
 
-// RemoveConnector revokes the bindings, grants and credentials of a connector and cancels its pending approvals; rows stay for audit (§5.4).
+// RemoveConnector revokes the bindings, grants and credentials of a connector and cancels its pending approvals; rows stay for audit.
 func (s *Service) RemoveConnector(ctx context.Context, p port.Principal, id port.ConnectorID) error {
 	c, err := s.connectorOf(ctx, p, id, authz.ConnectorManage)
 	if err != nil {
@@ -510,7 +510,7 @@ func (s *Service) RemoveConnector(ctx context.Context, p port.Principal, id port
 	return err
 }
 
-// SetConnectorLevel replaces the level rows of the workspace layer of a connector (§6.4 G3) and returns the rows it wrote.
+// SetConnectorLevel replaces the level rows of the workspace layer of a connector and returns the rows it wrote.
 func (s *Service) SetConnectorLevel(ctx context.Context, p port.Principal, id port.ConnectorID, level port.Level) ([]port.Grant, error) {
 	c, err := s.connectorOf(ctx, p, id, authz.GrantWorkspace)
 	if err != nil {
@@ -545,7 +545,7 @@ func (s *Service) applyLevel(tx port.Tx, layer []port.Grant, base port.Grant, le
 	return nil
 }
 
-// GetConnector returns a connector with its functions; a person who may not see its listing gets not found (§5.5).
+// GetConnector returns a connector with its functions; a person who may not see its listing gets not found.
 func (s *Service) GetConnector(ctx context.Context, p port.Principal, id port.ConnectorID) (ConnectorView, error) {
 	var out ConnectorView
 	vs, err := s.ListConnectors(ctx, p, "")

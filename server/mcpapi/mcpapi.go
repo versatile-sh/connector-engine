@@ -1,4 +1,4 @@
-// Package mcpapi serves the management MCP surface (§13.2): the reading operations of the table, and a mutation only when named.
+// Package mcpapi serves the management MCP surface: the reading operations of the table, and a mutation only when named.
 package mcpapi
 
 import (
@@ -24,7 +24,7 @@ type Options struct {
 	Version   string
 }
 
-// Offered lists the operations the surface exposes for the mutations named: every reading one, then the named ones (§13.2 P3, P4).
+// Offered lists the operations the surface exposes for the mutations named: every reading one, then the named ones.
 func Offered(mutations []string) ([]server.Operation, error) {
 	var out []server.Operation
 	for _, o := range server.Operations() {

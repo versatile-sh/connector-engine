@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// Code is a stable English error or reason code shared by every surface (§13.1).
+// Code is a stable English error or reason code shared by every surface.
 type Code string
 
 // Generic codes of every surface.
@@ -21,7 +21,7 @@ const (
 	CodeUnknownTool      Code = "unknown_tool"
 )
 
-// Reasons a step of §7.1 refuses a call.
+// Reasons a step refuses a call.
 const (
 	ReasonNoConnector        Code = "no_connector"
 	ReasonConnectorDisabled  Code = "connector_disabled"
@@ -45,7 +45,7 @@ const (
 	ReasonExternalDeny       Code = "external_deny"
 )
 
-// Reasons that change a mode and refuse nothing (§13.1).
+// Reasons that change a mode and refuse nothing.
 const (
 	NoteCappedByCatalogCeiling Code = "capped_by_catalog_ceiling"
 	NoteCappedByDestructiveMax Code = "capped_by_destructive_max"
@@ -54,7 +54,7 @@ const (
 	NoteExternalNarrowed       Code = "external_narrowed"
 )
 
-// Other codes of §13.1 and of the approval table.
+// Other codes and of the approval table.
 const (
 	CodeNoApprover            Code = "no_approver"
 	CodeTooManyPending        Code = "too_many_pending"

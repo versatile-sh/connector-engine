@@ -101,7 +101,7 @@ func TestTheConsoleImportsSetsAndServesConnectorItems(t *testing.T) {
 	b.ok("POST", "/api/preview", map[string]any{"mcp": up.URL, "local": true}, &pv)
 	want := map[string]console.Access{port.InstructionsItem: "on", "prompt:summarize": "off", "prompt:daily": "off", "res:file:///README.md": "on", "res:notes://{id}": "on"}
 	if got := itemsOf(pv.Items); !maps.Equal(got, want) {
-		t.Fatalf("SK-1 pre-fill: %v", got)
+		t.Fatalf("pre-fill: %v", got)
 	}
 	for _, it := range pv.Items {
 		if it.Name == port.InstructionsItem && it.Preview != notes.Instructions || it.Name == "prompt:summarize" && !strings.Contains(it.Preview, "- topic (required)") {

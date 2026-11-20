@@ -1,6 +1,8 @@
 # Status against the specification
 
-Specification: `adaptable-research-engine/studies/connector-engine/03-engine.md` at `d3adb54`. "Run" means a test of `e2e/` executes it against the built `connector-engine` and `cnctl` binaries, on a throwaway `postgres:16-alpine` and live upstreams on loopback (`scripts/e2e.sh`, 20 cases, about 18 s with `-race`). "Built" means code exists and is covered by unit or integration tests with fakes, fixtures or in-process servers only. "Not built" means nothing exists, or only a configuration key.
+> Internal build notes, kept for history. Section numbers (`§n`) and decision ids (`OD-n`, `SK-n`) refer to the project's original design specification, which is not published. The code and its tests are the source of truth.
+
+"Run" means a test of `e2e/` executes it against the built `connector-engine` and `cnctl` binaries, on a throwaway `postgres:16-alpine` and live upstreams on loopback (`scripts/e2e.sh`, 20 cases, about 18 s with `-race`). "Built" means code exists and is covered by unit or integration tests with fakes, fixtures or in-process servers only. "Not built" means nothing exists, or only a configuration key.
 
 The e2e suite drives the public surfaces only: `cnctl admin` over HTTP as the operator (operator listener) and as tenant admins and approvers (person tokens), and the agent through the go-sdk MCP client and `cnctl tools` on `/mcp`. Upstreams: an MCP server on the go-sdk (read, write, destructive, unclassified and a customer tool with an output schema; a second one whose tools change between runs), a REST API imported from an OpenAPI file, a gRPC server with reflection, and listing files.
 

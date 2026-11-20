@@ -105,7 +105,7 @@ The user documentation lives in [`docs/`](docs/README.md), one page per task.
 - Start each page with its section banner, then a two-line intro.
 - Show a command and the output it prints. Copy the output from a real run; never invent a flag.
 - Keep one fact in one page and link to it from the others.
-- A new page needs a banner: add a line to `SECTIONS` in `docs/assets/src/build-banners.mjs`, then run `npm ci && npm run build` in `docs/assets/src`. The banners are outlined paths and load no font.
+- A new page needs a banner: add a line to `SECTIONS` in `docs/assets/src/build-banners.mjs`, then run `npm ci && npm run build` in `docs/assets/src`. The banners and the README flow diagram (`diagram-flow.svg`) are outlined paths and load no font.
 - CI checks the docs (`.github/workflows/docs.yml`): relative links and anchors with lychee, then `scripts/check-docs.sh` for the `make` targets and scripts the docs name and the banner sizes.
 
 ## Repository layout

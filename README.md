@@ -76,21 +76,11 @@ Cursor and VS Code have one-click links on the console's **Access** page. Claude
 
 ![How it works](docs/assets/section-readme-how.svg)
 
-```mermaid
-flowchart LR
-    apps["AI apps<br/>Claude, Codex, Cursor, VS Code"] -->|MCP| gw["connector-engine<br/>/mcp"]
-    gw --> policy{"off / on / ask"}
-    policy -->|on| run["call the tool server<br/>credential injected"]
-    policy -->|ask| you["you approve<br/>console, desktop, chat"]
-    you -->|allow| run
-    policy -->|off| unknown["answers like an unknown tool"]
-    run --> servers["MCP, REST and gRPC servers"]
-    gw -.->|CloudEvents| events["audit and your webhooks"]
-```
+![How a call flows. AI apps such as Claude Code, Cursor and Codex call connector-engine over MCP. The gateway checks each function's permission: off hides it, on runs it with the stored credential, ask waits for your approval in the self-hosted console. Allowed calls reach remote and local MCP servers, REST and gRPC connectors. The gateway also keeps approvals, activity and skills.](docs/assets/diagram-flow.svg)
 
 1. An AI app lists and calls tools on one endpoint, `/mcp`.
-2. The engine checks the app's permission for that function: off, on, or ask.
-3. Allowed calls reach the tool server with the stored credential. Each decision and call is recorded and published as an event.
+2. The engine checks the app's permission for that function: off, on, or ask. Off answers like an unknown tool; ask waits for you to approve in the console, a desktop popup or chat.
+3. Allowed calls reach the connector, a remote or local MCP server, REST or gRPC, with the stored credential. Each decision and call is recorded and published as an event.
 
 <a id="features"></a>
 

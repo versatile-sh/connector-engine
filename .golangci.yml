@@ -1,0 +1,96 @@
+version: "2"
+
+run:
+  timeout: 10m
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - gosec
+    - revive
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - os.Remove
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G115
+        - G204
+        - G301
+        - G304
+        - G306
+    staticcheck:
+      checks:
+        - all
+        - -QF*
+        - -ST1000
+        - -ST1003
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+        - name: package-comments
+  exclusions:
+    generated: strict
+    paths:
+      - vendor
+      - console/web
+      - selfhosted/console/web
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+      - path: (^|/)e2e/
+        linters:
+          - errcheck
+          - gosec
+      - path: (^|/)console/guard\.go
+        linters:
+          - gosec
+        text: G124
+      - path: (^|/)console/(fetch|server)\.go
+        linters:
+          - gosec
+        text: G70[34]
+      - path: (^|/)console/decide\.go
+        linters:
+          - gosec
+        text: G118
+      - path: (^|/)server/lists\.go
+        linters:
+          - revive
+        text: comment on exported type \w+ should be of the form
+      - linters:
+          - errcheck
+        text: Error return value of `[\w.]+\.(Close|Stop|Serve)` is not checked
+      - path: (^|/)server/gen/
+        linters:
+          - gosec
+        text: G703
+      - path: (^|/)source/docker/docker\.go
+        linters:
+          - gosec
+        text: G122
+      - path: core/approval/model_test\.go
+        linters:
+          - ineffassign
+
+formatters:
+  enable:
+    - gofmt
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

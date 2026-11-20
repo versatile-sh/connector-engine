@@ -143,7 +143,7 @@ func (r *Runtime) Handle(function string, fn func(json.RawMessage) (port.Result,
 	r.handlers[function] = fn
 }
 
-// Calls returns the number of calls to a function.
+// CallsTo returns the number of calls to a function.
 func (r *Runtime) CallsTo(function string) int {
 	r.mu.Lock()
 	defer r.mu.Unlock()

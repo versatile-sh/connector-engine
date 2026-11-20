@@ -80,6 +80,39 @@ Each item is off, on or ask like a function, and quarantined on change. The engi
 - Arguments are recorded by default; result excerpts (4 KB) only when turned on. Likely secrets (token, password, secret, authorization, API key, bearer and key-shaped values) are replaced before anything is written.
 - "Delete all activity" removes the files and hides older engine call records from the page.
 
+## Account
+
+- **Account** changes the username and the password. A password change asks for the current one, needs at least 10 characters, signs out every other session and keeps this one. Wrong current passwords are rate-limited like the login: 5 a minute.
+- Forgot the password? `make reset-password` on the machine that runs the console asks for a new one twice, without echo. It reaches the console through a socket that only `docker compose exec` can open, so access to this machine is the authority. The password travels on stdin, never in argv or the environment. Every session is signed out.
+
+## Backups
+
+Account → **Export** offers two files.
+
+| Mode | File | Holds | For |
+|---|---|---|---|
+| Full backup, with credentials | `connector-engine-backup-<UTC time>.cebak` | everything: the engine's rows and keys, the console's state, keys and activity | moving or restoring your own install |
+| Shareable setup, without credentials | `connector-engine-setup-<UTC time>.setup.yaml` | each connector's source and choices, the skills with their catalog address, pinned digest and default access, the kinds of notification channel | handing your setup to a friend or a teammate |
+
+A **full backup** holds every credential of the install: provider sign-ins and API keys, the access keys and the root keys, the account and its activity. The console asks you to confirm that, and asks for your password and for a passphrase, twice. `make export` prints the same warning and asks y/N (`YES=1` skips the question). It writes to `~/connector-engine-backups/` and keeps the 7 newest.
+
+**Keep the passphrase safe.** Nobody can recover it, the maintainers included. Without it the file opens for nobody. With it the file opens for anyone. Store the file like a password manager export, and never share it.
+
+The file is plain bytes: a header line, then AES-256-GCM ciphertext.
+- The header carries the format version, the Argon2id parameters (3 passes, 64 MiB, 4 lanes), a 16-byte salt, the nonce, and a check value that tells a wrong passphrase from a damaged file.
+- The header is authenticated as additional data.
+- Inside is a tar archive with a manifest (format, engine build, time, counts, the SHA-256 of every file), the engine's snapshot from its operator listener (`GET /v1/snapshot`), the console's state without sessions, its key store, and its activity files.
+
+Account → **Import**, or **Restore from a backup** on the first-run screen, or `make import FILE=...`, reads either kind of file and tells them apart by their first bytes.
+- A **full backup** is checked first: the passphrase, the integrity, every checksum and the version. A file from a newer format is refused. Next you see what it holds (connectors, skills, keys) and confirm that it replaces this install's data.
+  - The restore is all or nothing. The console stages its keys and activity, then the engine replaces its rows in one transaction and its keys. Only when the engine succeeds does the console put its own files in place. Any failure on the way leaves the install as it was.
+  - The root keys are written in this machine's form: under the person profile they are wrapped again with this machine's keychain key.
+  - The engine and the console then restart on the restored keys. Run `make unlock` to finish (`make import` does it for you), and the console page moves on by itself. Sign in with the password of the restored account.
+  - Importing the same backup again gives the same result.
+- A **setup** shows what it would add, then adds each connector and skill through the normal import: the server is probed, functions are pinned, and a skill whose digest changed is refused. An entry that is already installed keeps its choices, and nothing is deleted. Afterwards, sign in to each added connector.
+
+A setup never holds credentials, tokens, API keys, OAuth clients, access keys, root keys, account data, activity or device pairings. A query parameter whose name looks like a secret (token, key, secret, password, auth, signature, session, code, credential), the user name and password of an address, and the fragment are removed. The file lists each removal under `stripped`. A skill imported before the console recorded catalog addresses is left out and listed there too.
+
 ## Keys and state
 
 | Item | Where |

@@ -23,6 +23,8 @@ The console's **Access** page has one-click links for Cursor and VS Code, and th
 
 Only the console port is published, on `127.0.0.1`. Stop the stack with `make down`.
 
+> **Your data lives in Docker volumes.** `docker compose down -v`, `docker system prune --volumes` and `docker volume prune -a` delete them, and with them every connector, credential, access key and the root keys. Nothing can bring them back. Export a backup first: **Account → Export** in the console, or `make export`. See [Backups](selfhosted/docs/console.md#backups).
+
 ## Profiles
 
 | Profile | For | What runs | Start |
@@ -39,6 +41,8 @@ The headless binaries (`cmd/connector-engine`, `cmd/cnctl`) contain no self-host
 | `make up` / `make down` / `make logs` | start, stop, follow the stack |
 | `make unlock` | deliver the unlock key from the host keychain after a restart ([secrets](selfhosted/docs/SECRETS.md)) |
 | `make notify` | desktop popups for calls waiting for approval |
+| `make export` / `make import FILE=...` | write an encrypted full backup to `~/connector-engine-backups/`, or restore one; `MODE=setup` exports a shareable setup without credentials ([backups](selfhosted/docs/console.md#backups)) |
+| `make reset-password` | set a new console password from this machine when it is forgotten |
 | `make test` | Go tests, web typecheck, layering check, `adapters check` of both profiles |
 | `make check` | scripted end-to-end check of the `person` stack |
 

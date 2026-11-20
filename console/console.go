@@ -35,13 +35,13 @@ type Console struct {
 	Secrets       *sealed.Box
 	NewChannel    ChannelFactory
 
-	loginMu      sync.Mutex
-	consentFails minuteWindow
-	icons        iconCache
-	connects     connectStates
-	as           authServer
-	surf         surfaces
-	sep          separatorCache
+	loginMu       sync.Mutex
+	passwordFails minuteWindow
+	icons         iconCache
+	connects      connectStates
+	as            authServer
+	surf          surfaces
+	sep           separatorCache
 }
 
 // Handler returns every route behind the guard.

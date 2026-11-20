@@ -1,0 +1,170 @@
+package console
+
+import (
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/agents-control/connector-engine/port"
+)
+
+func (c *Console) listConnectors(w http.ResponseWriter, r *http.Request) {
+	list, err := c.Connectors(r.Context())
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"connectors": list})
+}
+
+func (c *Console) listSkills(w http.ResponseWriter, r *http.Request) {
+	list, err := c.Skills(r.Context())
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"skills": nonNil(list)})
+}
+
+func (c *Console) setSkillAccess(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Access Access `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.SetSkillAccess(r.Context(), r.PathValue("id"), r.PathValue("agent"), in.Access); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) setAccess(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Access Access `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.SetAccess(r.Context(), r.PathValue("id"), r.PathValue("name"), in.Access); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) setItemAccess(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name   string `json:"name"`
+		Access Access `json:"access"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if port.ItemKind(in.Name) == "" {
+		writeError(w, http.StatusBadRequest, in.Name+" is not a prompt, a resource or the server instructions")
+		return
+	}
+	if err := c.SetAccess(r.Context(), r.PathValue("id"), in.Name, in.Access); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) removeConnector(w http.ResponseWriter, r *http.Request) {
+	if err := c.Remove(r.Context(), r.PathValue("id")); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) setHeaders(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Headers map[string]string `json:"headers"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	for k, v := range in.Headers {
+		if k == "" || strings.ContainsAny(k, " :\r\n") || strings.ContainsAny(v, "\r\n") {
+			writeError(w, http.StatusBadRequest, "a header name has no spaces or colons and a value has no line breaks")
+			return
+		}
+	}
+	if len(in.Headers) == 0 {
+		writeError(w, http.StatusBadRequest, "give at least one header")
+		return
+	}
+	if err := c.SetHeaderSecret(r.Context(), r.PathValue("id"), in.Headers); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type pendingOAuth struct {
+	issuer  string
+	expires time.Time
+}
+
+func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	conn := r.PathValue("id")
+	issuer, err := c.OAuthIssuer(r.Context(), conn)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	if in.ClientID != "" {
+		if err := c.SetOAuthClient(r.Context(), issuer, in.ClientID, in.ClientSecret); err != nil {
+			c.fail(w, err)
+			return
+		}
+	}
+	state, to, err := c.BeginOAuth(r.Context(), conn)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	c.oauthMu.Lock()
+	now := time.Now()
+	expire(c.oauth, now, func(v pendingOAuth) time.Time { return v.expires })
+	c.oauth[state] = pendingOAuth{issuer: issuer, expires: now.Add(oauthStateTTL)}
+	c.oauthMu.Unlock()
+	writeJSON(w, http.StatusOK, map[string]string{"url": to})
+}
+
+func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
+	qv := r.URL.Query()
+	state := qv.Get("state")
+	c.oauthMu.Lock()
+	pend, ok := c.oauth[state]
+	delete(c.oauth, state)
+	c.oauthMu.Unlock()
+	back := func(result string) { http.Redirect(w, r, "/?oauth="+url.QueryEscape(result), http.StatusSeeOther) }
+	switch {
+	case !ok || time.Now().After(pend.expires):
+		back("unknown_state")
+	case qv.Get("error") != "":
+		back("refused")
+	case qv.Has("iss") && strings.TrimRight(qv.Get("iss"), "/") != strings.TrimRight(pend.issuer, "/"):
+		back("issuer_mismatch")
+	default:
+		if err := c.CompleteOAuth(r.Context(), state, qv.Get("code")); err != nil {
+			c.logger().Warn("oauth completion failed", "error", err)
+			back("failed")
+			return
+		}
+		back("connected")
+	}
+}

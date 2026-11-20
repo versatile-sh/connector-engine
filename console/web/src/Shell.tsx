@@ -11,7 +11,7 @@ import { approvalsQuery } from "./queries";
 import { navigate, useLocation } from "./router";
 import { Icon } from "./ui/Icon";
 import { Notice } from "./ui/Notice";
-import { ICON_BUTTON, PRESS, button } from "./ui/styles";
+import { ICON_BUTTON, PRESS, TOUCH, button } from "./ui/styles";
 import { useCopy } from "./ui/useCopy";
 
 /** The console's four sections and the paths each one owns. */
@@ -32,7 +32,7 @@ const OAUTH: Record<string, MessageKey> = {
   failed: "oauth.failed",
 };
 
-const NAV_LINK = `inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm text-muted hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${PRESS}`;
+const NAV_LINK = `relative inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm text-muted hover:text-paper aria-[current=page]:bg-paper/8 aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
 
 function Endpoint({ url }: { url: string }) {
   const t = useT();
@@ -90,7 +90,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           <a
             href="/"
             aria-label={t("app.home")}
-            className="shrink-0"
+            className={`relative shrink-0 ${TOUCH}`}
             onClick={(event) => {
               event.preventDefault();
               navigate("/");
@@ -110,7 +110,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
             </button>
           </div>
         </div>
-        <nav aria-label={t("nav.label")} className="no-scrollbar mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
+        <nav aria-label={t("nav.label")} className="no-scrollbar mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-4 py-1 lg:hidden">
           <NavLinks section={section} waiting={waiting} />
         </nav>
       </header>

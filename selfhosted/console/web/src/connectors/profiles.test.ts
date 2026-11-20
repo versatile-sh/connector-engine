@@ -51,6 +51,12 @@ describe("overrideCount", () => {
   test("is zero for a key that follows", () => {
     assert.equal(overrideCount({ agent: "alpha", mode: "follow" }), 0);
   });
+
+  describe("for a custom set without overrides", () => {
+    test("is zero", () => {
+      assert.equal(overrideCount({ mode: "custom" }), 0);
+    });
+  });
 });
 
 describe("keysWithOverrides", () => {

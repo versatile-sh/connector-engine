@@ -1,4 +1,8 @@
 import type { Access, Profile, ProfileMode } from "../api";
+import type { Translate } from "../i18n";
+
+/** A profile as a key, a permission set or a setup holds it: a mode and, when custom, the overrides. */
+export type ModeOf = { mode: ProfileMode; overrides?: Record<string, Access> };
 
 const RANK: Record<Access, number> = { off: 0, ask: 1, on: 2 };
 
@@ -14,7 +18,10 @@ export const profileAccess = (profile: Profile, name: string, base: Access): { a
 };
 
 /** How many functions and items a profile narrows. */
-export const overrideCount = (profile: Profile) => (profile.mode === "custom" ? Object.keys(profile.overrides).length : 0);
+export const overrideCount = (profile: ModeOf) => (profile.mode === "custom" ? Object.keys(profile.overrides ?? {}).length : 0);
+
+/** A profile's mode as a short tag: off, the default, or custom with how many rows it narrows. */
+export const modeText = (profile: ModeOf, t: Translate) => (profile.mode === "custom" ? t("keys.modeCustom", { count: overrideCount(profile) }) : t(`profile.mode.${profile.mode}`));
 
 /** How many of these keys would lose overrides if set to off or the default. */
 export const keysWithOverrides = (profiles: readonly Profile[]) => profiles.filter((profile) => overrideCount(profile) > 0).length;

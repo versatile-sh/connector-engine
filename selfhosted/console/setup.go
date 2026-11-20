@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"maps"
 	"net/url"
 	"regexp"
 	"slices"
@@ -24,7 +25,7 @@ const (
 
 var tokenLike = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// Setup is a shareable install: the connectors and skills to add with their choices, the access keys' profiles by key name, and the kinds of notification channel, never a secret.
+// Setup is a shareable install: the connectors and skills to add with their choices, each access key's profiles as a permission set named after the key, and the kinds of notification channel, never a secret; a review also lists the sets an import would make.
 type Setup struct {
 	APIVersion    string           `yaml:"apiVersion" json:"api_version"`
 	Kind          string           `yaml:"kind" json:"kind"`
@@ -32,9 +33,10 @@ type Setup struct {
 	Skills        []SetupSkill     `yaml:"skills,omitempty" json:"skills"`
 	Notifications []string         `yaml:"notifications,omitempty" json:"notifications"`
 	Stripped      []string         `yaml:"stripped,omitempty" json:"stripped"`
+	Slots         []SlotView       `yaml:"-" json:"slots,omitempty"`
 }
 
-// SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off, and the profiles of the keys that do not follow it.
+// SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off and each access key's profile there, and in a review whether it is installed and the proposal of each choice this console would lower.
 type SetupConnector struct {
 	Name         string            `yaml:"name" json:"name"`
 	MCP          string            `yaml:"mcp,omitempty" json:"mcp,omitempty"`
@@ -47,7 +49,30 @@ type SetupConnector struct {
 	NewKeysOff   bool              `yaml:"newKeysOff,omitempty" json:"new_keys_off,omitempty"`
 	Profiles     []Profile         `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	Exists       bool              `yaml:"-" json:"exists"`
+	Above        map[string]Access `yaml:"-" json:"above,omitempty"`
 }
+
+// SetupOptions is what the owner chose in a setup's review: what becomes of each permission set by name, and whether the keys made already get the connectors it adds; the zero value keeps every set and leaves those keys off.
+type SetupOptions struct {
+	Slots        map[string]SlotChoice `json:"slots,omitempty"`
+	ExistingKeys bool                  `json:"existing_keys,omitempty"`
+}
+
+// SlotChoice is the review's answer for one permission set: keep it to give to a key later, apply it to a key made already, or discard it.
+type SlotChoice struct {
+	Action SlotAction `json:"action"`
+	Key    string     `json:"key,omitempty"`
+}
+
+// SlotAction is what a setup's import does with one permission set.
+type SlotAction string
+
+// The answers a review gives for a permission set.
+const (
+	SlotKeep    SlotAction = "keep"
+	SlotApply   SlotAction = "apply"
+	SlotDiscard SlotAction = "discard"
+)
 
 // SetupSkill is one skill of a setup: its catalog address, the digest it is pinned to and its default access.
 type SetupSkill struct {
@@ -58,12 +83,14 @@ type SetupSkill struct {
 	Exists  bool   `yaml:"-" json:"exists"`
 }
 
-// SetupResult is what an import of a setup did: the entries it added, the ones it kept because they were installed, and the ones that failed with why.
+// SetupResult is what an import of a setup did: the entries it added, the ones it kept because they were installed, the ones that failed with why, the permission sets it kept to give to keys later, and by connector the choices it lowered to this console's proposal.
 type SetupResult struct {
-	Added   []string          `json:"added"`
-	Kept    []string          `json:"kept"`
-	Failed  map[string]string `json:"failed"`
-	SignIns []string          `json:"sign_ins"`
+	Added   []string                     `json:"added"`
+	Kept    []string                     `json:"kept"`
+	Failed  map[string]string            `json:"failed"`
+	SignIns []string                     `json:"sign_ins"`
+	Slots   []string                     `json:"slots"`
+	Capped  map[string]map[string]Access `json:"capped"`
 }
 
 func setupName(at time.Time) string {
@@ -122,13 +149,12 @@ func (c *Console) ExportSetup(ctx context.Context) ([]byte, string, error) {
 		return nil, "", err
 	}
 	s := Setup{APIVersion: setupAPIVersion, Kind: setupKind}
+	names := setNames(c.State.Agents())
 	for _, cs := range connectors {
 		o, _ := c.State.OriginOf(cs.ID)
 		sc := SetupConnector{Name: cs.Alias, Transport: cs.Transport, Local: o.Local, HeaderSecret: o.HeaderSecret, Functions: map[string]Access{}, Items: map[string]Access{}, NewKeysOff: cs.NewKeysOff}
 		for _, p := range cs.Profiles {
-			if p.Mode != ProfileFollow {
-				sc.Profiles = append(sc.Profiles, p)
-			}
+			sc.Profiles = append(sc.Profiles, Profile{Agent: names[p.Agent], Mode: p.Mode, Overrides: p.Overrides})
 		}
 		switch {
 		case o.Listing != "":
@@ -195,8 +221,8 @@ func parseSetup(raw []byte) (Setup, error) {
 			}
 		}
 		for _, p := range sc.Profiles {
-			if Slug(p.Agent) == "" || p.Mode != ProfileOff && p.Mode != ProfileCustom {
-				return Setup{}, invalid("connector %s, key %q: a profile names a key and is off or custom", sc.Name, p.Agent)
+			if Slug(p.Agent) == "" || !slices.Contains([]ProfileMode{ProfileOff, ProfileFollow, ProfileCustom}, p.Mode) {
+				return Setup{}, invalid("connector %s, key %q: a profile names a key and is off, follow or custom", sc.Name, p.Agent)
 			}
 			for name, a := range p.Overrides {
 				if !validChoice(name, a) {
@@ -255,7 +281,7 @@ func (c *Console) markInstalled(ctx context.Context, s *Setup) error {
 	return nil
 }
 
-func (c *Console) inspectSetup(ctx context.Context, raw []byte) (BackupSummary, error) {
+func (c *Console) inspectSetup(ctx context.Context, raw []byte, probe bool) (BackupSummary, error) {
 	s, err := parseSetup(raw)
 	if err != nil {
 		return BackupSummary{}, err
@@ -263,48 +289,107 @@ func (c *Console) inspectSetup(ctx context.Context, raw []byte) (BackupSummary, 
 	if err := c.markInstalled(ctx, &s); err != nil {
 		return BackupSummary{}, err
 	}
+	for i, sc := range s.Connectors {
+		if !probe || sc.Exists || sc.Local {
+			continue
+		}
+		p, err := c.buildPreview(ctx, importRequest{MCP: sc.MCP, Listing: sc.Listing, HeaderSecret: sc.HeaderSecret})
+		if err != nil {
+			continue
+		}
+		s.Connectors[i].Above = lowered(mergeChoices(sc), proposedChoices(p))
+	}
+	s.Slots = reviewSlots(s.Connectors)
 	return BackupSummary{Kind: "setup", Counts: map[string]int{"connectors": len(s.Connectors), "skills": len(s.Skills)}, Setup: &s}, nil
 }
 
-// ImportSetup adds what a setup holds through the console's own import, so pinning and the probe still apply; an entry already installed keeps its choices, and a profile for a key not made yet waits for a key of that name.
-func (c *Console) ImportSetup(ctx context.Context, raw []byte) (SetupResult, error) {
+func (c *Console) checkOptions(o SetupOptions) error {
+	for name, ch := range o.Slots {
+		switch ch.Action {
+		case SlotKeep, SlotDiscard:
+		case SlotApply:
+			if _, err := agentNamed(c.knownAgents(), ch.Key); err != nil {
+				return err
+			}
+		default:
+			return invalid("permission set %s: the answer is keep, apply or discard", name)
+		}
+	}
+	return nil
+}
+
+// ImportSetup adds what a setup holds through the console's own import, so pinning and the probe still apply, with each choice capped at what this console proposes and the keys made already left off its connectors unless the options opt in; an entry already installed keeps its choices, and each key's profiles on the connectors it added become a permission set the options keep, apply to a key made already or discard, never bound by name.
+func (c *Console) ImportSetup(ctx context.Context, raw []byte, opts SetupOptions) (SetupResult, error) {
 	s, err := parseSetup(raw)
 	if err != nil {
+		return SetupResult{}, err
+	}
+	if err := c.checkOptions(opts); err != nil {
 		return SetupResult{}, err
 	}
 	if err := c.markInstalled(ctx, &s); err != nil {
 		return SetupResult{}, err
 	}
-	res := SetupResult{Added: []string{}, Kept: []string{}, Failed: map[string]string{}, SignIns: []string{}}
+	res := SetupResult{Added: []string{}, Kept: []string{}, Failed: map[string]string{}, SignIns: []string{}, Slots: []string{}, Capped: map[string]map[string]Access{}}
 	add := func(name string, in importRequest) (string, bool) {
-		id, _, err := c.importOne(ctx, in)
+		id, p, err := c.importOne(ctx, in)
 		if err != nil {
 			res.Failed[name] = err.Error()
 		}
+		if low := lowered(in.Choices, proposedChoices(p)); in.capped && len(low) > 0 {
+			res.Capped[name] = low
+		}
 		return id, err == nil
 	}
+	slots := map[string]KeySlot{}
 	for _, sc := range s.Connectors {
 		if sc.Exists {
 			res.Kept = append(res.Kept, sc.Name)
 			continue
 		}
-		id, ok := add(sc.Name, importRequest{MCP: sc.MCP, Listing: sc.Listing, Local: sc.Local, HeaderSecret: sc.HeaderSecret, Choices: mergeChoices(sc)})
+		id, ok := add(sc.Name, importRequest{MCP: sc.MCP, Listing: sc.Listing, Local: sc.Local, HeaderSecret: sc.HeaderSecret, Choices: mergeChoices(sc), capped: true, keysOff: !opts.ExistingKeys})
 		if !ok {
 			continue
 		}
 		res.SignIns = append(res.SignIns, sc.Name)
-		if err := c.adoptProfiles(ctx, id, sc); err != nil {
-			res.Failed[sc.Name] = "installed without its access key profiles: " + err.Error()
+		if err := c.State.SetNewKeysOff(id, sc.NewKeysOff); err != nil {
+			res.Failed[sc.Name] = "installed without its new-key default: " + err.Error()
 			continue
 		}
 		res.Added = append(res.Added, sc.Name)
+		for _, p := range sc.Profiles {
+			name := Slug(p.Agent)
+			slot := slots[name]
+			slot.Name = name
+			put(&slot.Profiles, id, Profile{Mode: p.Mode, Overrides: p.Overrides})
+			slots[name] = slot
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(slots)) {
+		ch := opts.Slots[name]
+		switch {
+		case ch.Action == SlotDiscard:
+			continue
+		case ch.Action == SlotApply:
+			err := c.applySlot(ctx, slots[name], ch.Key)
+			if err == nil {
+				continue
+			}
+			res.Failed["permission set "+name] = fmt.Sprintf("not applied to %s, kept to apply again: %v", ch.Key, err)
+		}
+		kept, err := c.State.PutSlot(slots[name])
+		if err != nil {
+			res.Failed["permission set "+name] = "not kept: " + err.Error()
+			continue
+		}
+		res.Slots = append(res.Slots, kept)
 	}
 	for _, sk := range s.Skills {
 		if sk.Exists {
 			res.Kept = append(res.Kept, sk.Name)
 			continue
 		}
-		if _, ok := add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest}); ok {
+		if _, ok := add(sk.Name, importRequest{Listing: sk.Listing, Access: sk.Access, Digest: sk.Digest, keysOff: !opts.ExistingKeys}); ok {
 			res.Added = append(res.Added, sk.Name)
 		}
 	}
@@ -316,27 +401,50 @@ func validChoice(name string, a Access) bool {
 	return a.Valid() && (!item || validFor(kind, a))
 }
 
-func (c *Console) adoptProfiles(ctx context.Context, conn string, sc SetupConnector) error {
-	defer c.lockConnector(conn)()
-	if err := c.State.SetNewKeysOff(conn, sc.NewKeysOff); err != nil {
+func (c *Console) applySlot(ctx context.Context, slot KeySlot, key string) error {
+	a, err := agentNamed(c.knownAgents(), key)
+	if err != nil {
 		return err
 	}
-	agents := c.State.Agents()
-	for _, p := range sc.Profiles {
-		p.Agent = Slug(p.Agent)
-		i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == p.Agent })
-		if i < 0 && sc.NewKeysOff {
-			continue
-		}
-		if i < 0 {
-			if err := c.State.PutPendingProfile(conn, p); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := c.applyProfile(ctx, conn, agents[i], p); err != nil {
-			return fmt.Errorf("key %s: %w", p.Agent, err)
+	for conn, p := range slot.Profiles {
+		if err := c.claimOn(ctx, conn, a, p); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func reviewSlots(connectors []SetupConnector) []SlotView {
+	byName := map[string]*SlotView{}
+	for _, sc := range connectors {
+		if sc.Exists {
+			continue
+		}
+		for _, p := range sc.Profiles {
+			name := Slug(p.Agent)
+			if byName[name] == nil {
+				byName[name] = &SlotView{Name: name}
+			}
+			byName[name].Connectors = append(byName[name].Connectors, SlotProfile{Slot: name, Connector: sc.Name, Alias: sc.Name, Mode: p.Mode, Overrides: p.Overrides})
+		}
+	}
+	out := []SlotView{}
+	for _, name := range slices.Sorted(maps.Keys(byName)) {
+		out = append(out, *byName[name])
+	}
+	return out
+}
+
+func setNames(agents []Agent) map[string]string {
+	slices.SortFunc(agents, func(a, b Agent) int { return strings.Compare(a.Name, b.Name) })
+	out, taken := map[string]string{}, map[string]KeySlot{}
+	for _, a := range agents {
+		base := a.Name
+		if a.ClientID != "" {
+			base = strings.TrimSuffix(strings.TrimSuffix(base, "-"+a.ClientID), "-"+a.ClientID[:min(8, len(a.ClientID))])
+		}
+		name := freeSlotName(taken, base)
+		taken[name], out[a.Name] = KeySlot{}, name
+	}
+	return out
 }

@@ -56,19 +56,21 @@ type StoredSession struct {
 }
 
 type stateFile struct {
-	Owner               *Owner                   `json:"owner,omitempty"`
-	Agents              map[string]Agent         `json:"agents,omitempty"`
-	Sessions            map[string]StoredSession `json:"sessions,omitempty"`
-	Revoked             map[string]time.Time     `json:"revoked,omitempty"`
-	OnboardingDismissed bool                     `json:"onboarding_dismissed,omitempty"`
-	Clients             map[string]OAuthClient   `json:"oauth_clients,omitempty"`
-	Refresh             map[string]RefreshGrant  `json:"oauth_refresh,omitempty"`
-	Spent               map[string]RefreshGrant  `json:"oauth_refresh_spent,omitempty"`
-	Notify              notifyState              `json:"notifications,omitzero"`
-	LastExport          time.Time                `json:"last_export,omitzero"`
-	Origins             map[string]Origin        `json:"origins,omitempty"`
-	NewKeysOff          map[string]bool          `json:"new_keys_off,omitempty"`
-	Pending             map[string][]Profile     `json:"pending_profiles,omitempty"`
+	Owner               *Owner                       `json:"owner,omitempty"`
+	Agents              map[string]Agent             `json:"agents,omitempty"`
+	Sessions            map[string]StoredSession     `json:"sessions,omitempty"`
+	Revoked             map[string]time.Time         `json:"revoked,omitempty"`
+	OnboardingDismissed bool                         `json:"onboarding_dismissed,omitempty"`
+	Clients             map[string]OAuthClient       `json:"oauth_clients,omitempty"`
+	Refresh             map[string]RefreshGrant      `json:"oauth_refresh,omitempty"`
+	Spent               map[string]RefreshGrant      `json:"oauth_refresh_spent,omitempty"`
+	Notify              notifyState                  `json:"notifications,omitzero"`
+	LastExport          time.Time                    `json:"last_export,omitzero"`
+	Origins             map[string]Origin            `json:"origins,omitempty"`
+	NewKeysOff          map[string]bool              `json:"new_keys_off,omitempty"`
+	Pending             map[string][]Profile         `json:"pending_profiles,omitempty"`
+	NewKeyLimits        map[string]map[string]Access `json:"new_key_limits,omitempty"`
+	Slots               map[string]KeySlot           `json:"key_slots,omitempty"`
 }
 
 // Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
@@ -100,6 +102,7 @@ func OpenState(path string) (*State, error) {
 	if err := json.Unmarshal(raw, &s.data); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
+	migrateSlots(&s.data)
 	return s, nil
 }
 
@@ -428,7 +431,7 @@ func (s *State) OriginOf(id string) (Origin, bool) {
 	return o, ok
 }
 
-// SetNewKeysOff records whether access keys made from now on start off on the connector instead of following its choices; starting off drops the connector's waiting profiles that are not off.
+// SetNewKeysOff records whether access keys made from now on start off on the connector instead of following its choices.
 func (s *State) SetNewKeysOff(conn string, off bool) error {
 	return s.update(func(d *stateFile) error {
 		if !off {
@@ -436,11 +439,6 @@ func (s *State) SetNewKeysOff(conn string, off bool) error {
 			return nil
 		}
 		put(&d.NewKeysOff, conn, true)
-		if rest := slices.DeleteFunc(d.Pending[conn], func(p Profile) bool { return p.Mode != ProfileOff }); len(rest) > 0 {
-			d.Pending[conn] = rest
-		} else {
-			delete(d.Pending, conn)
-		}
 		return nil
 	})
 }
@@ -452,70 +450,54 @@ func (s *State) NewKeysOff(conn string) bool {
 	return s.data.NewKeysOff[conn]
 }
 
-// PutPendingProfile keeps a setup's profile for an access key not made yet, to apply on the connector when a key of that name is made.
-func (s *State) PutPendingProfile(conn string, p Profile) error {
-	return s.update(func(d *stateFile) error {
-		rest := slices.DeleteFunc(slices.Clone(d.Pending[conn]), func(q Profile) bool { return q.Agent == p.Agent })
-		put(&d.Pending, conn, append(rest, p))
-		return nil
-	})
-}
-
-// PendingProfiles returns the setup's profiles waiting on the connector for access keys not made yet.
-func (s *State) PendingProfiles(conn string) []Profile {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return slices.Clone(s.data.Pending[conn])
-}
-
-// PendingProfile returns the setup's profile waiting on the connector for an access key of this name.
-func (s *State) PendingProfile(conn, agent string) (Profile, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	i := slices.IndexFunc(s.data.Pending[conn], func(p Profile) bool { return p.Agent == agent })
-	if i < 0 {
-		return Profile{}, false
-	}
-	return s.data.Pending[conn][i], true
-}
-
-// DropPendingProfiles forgets every profile waiting for an access key of this name, once the key is made.
-func (s *State) DropPendingProfiles(agent string) error {
-	return s.dropPending(func(_ string, p Profile) bool { return p.Agent == agent })
-}
-
-// DropPendingProfile forgets the profile waiting on the connector for an access key of this name.
-func (s *State) DropPendingProfile(conn, agent string) error {
-	return s.dropPending(func(c string, p Profile) bool { return c == conn && p.Agent == agent })
-}
-
-func (s *State) dropPending(drop func(conn string, p Profile) bool) error {
-	return s.update(func(d *stateFile) error {
-		changed := false
-		for conn, list := range d.Pending {
-			rest := slices.DeleteFunc(slices.Clone(list), func(p Profile) bool { return drop(conn, p) })
-			switch {
-			case len(rest) == len(list):
-				continue
-			case len(rest) == 0:
-				delete(d.Pending, conn)
-			default:
-				d.Pending[conn] = rest
-			}
-			changed = true
-		}
-		if !changed {
-			return errUnchanged
-		}
-		return nil
-	})
-}
-
-// ForgetConnector drops the new-key default and the waiting profiles of a removed connector.
+// ForgetConnector drops the new-key default and the new-key limits of a removed connector and its profile from every permission set, and a set left empty.
 func (s *State) ForgetConnector(conn string) error {
 	return s.update(func(d *stateFile) error {
 		delete(d.NewKeysOff, conn)
-		delete(d.Pending, conn)
+		delete(d.NewKeyLimits, conn)
+		for name, slot := range d.Slots {
+			delete(slot.Profiles, conn)
+			if len(slot.Profiles) == 0 {
+				delete(d.Slots, name)
+			}
+		}
+		return nil
+	})
+}
+
+// LimitNewKeys records that access keys made from now on get at most a on the connector's function or item, kept from an always allow given to one key.
+func (s *State) LimitNewKeys(conn, name string, a Access) error {
+	return s.update(func(d *stateFile) error {
+		limits := maps.Clone(d.NewKeyLimits[conn])
+		put(&limits, name, a)
+		put(&d.NewKeyLimits, conn, limits)
+		return nil
+	})
+}
+
+// NewKeyLimits returns the most access keys made from now on get on the connector's functions and items, by name.
+func (s *State) NewKeyLimits(conn string) map[string]Access {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return maps.Clone(s.data.NewKeyLimits[conn])
+}
+
+// LiftNewKeyLimits forgets the new-key limits of the named functions and items once the owner sets their choice again.
+func (s *State) LiftNewKeyLimits(conn string, names []string) error {
+	return s.update(func(d *stateFile) error {
+		limits := d.NewKeyLimits[conn]
+		if !slices.ContainsFunc(names, func(n string) bool { _, ok := limits[n]; return ok }) {
+			return errUnchanged
+		}
+		limits = maps.Clone(limits)
+		for _, n := range names {
+			delete(limits, n)
+		}
+		if len(limits) == 0 {
+			delete(d.NewKeyLimits, conn)
+		} else {
+			d.NewKeyLimits[conn] = limits
+		}
 		return nil
 	})
 }

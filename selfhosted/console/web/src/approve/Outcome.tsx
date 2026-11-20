@@ -10,7 +10,7 @@ const STATE: Record<string, MessageKey> = { approved: "approve.state.approved", 
 
 type OutcomeProps = { approval: ApprovalView; first: boolean };
 
-/** How a held call ended, calmly: the answer, who gave it, through what and when, and what the app does next. `first` is false when someone else had answered before. */
+/** How a held call ended, calmly: the answer, who gave it, through what and when, a failed always allow, and what the app does next. `first` is false when someone else had answered before. */
 export function Outcome({ approval, first }: OutcomeProps) {
   const t = useT();
   const locale = useLocale();
@@ -29,6 +29,7 @@ export function Outcome({ approval, first }: OutcomeProps) {
         {!first ? <p className="text-sm text-amber-400">{t("approve.first")}</p> : null}
         <p className="text-lg leading-snug font-medium">{key ? t(key) : approval.state}</p>
         {decided ? <p className="mt-0.5 font-mono text-xs text-muted [overflow-wrap:anywhere]">{decided}</p> : null}
+        {approval.always_error ? <p className="mt-2 text-sm text-pretty text-amber-400">{t("approve.alwaysFailed", { error: approval.always_error })}</p> : null}
         {approved || ended || approval.state === "denied" ? (
           <p className="mt-2 text-sm text-pretty text-muted">{t(approved ? "approve.resumes" : ended ? "approve.ended" : "approve.refused", { app: approval.app })}</p>
         ) : null}

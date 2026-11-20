@@ -35,11 +35,12 @@ func (c *Console) mintAgent(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Name     string `json:"name"`
 		TTLHours int    `json:"ttl_hours"`
+		Slot     string `json:"slot"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
-	tok, err := c.MintAgent(r.Context(), in.Name, time.Duration(in.TTLHours)*time.Hour)
+	tok, err := c.MintAgent(r.Context(), in.Name, time.Duration(in.TTLHours)*time.Hour, in.Slot)
 	if err != nil {
 		c.fail(w, err)
 		return

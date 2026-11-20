@@ -5,7 +5,7 @@ export const es: Record<MessageKey, string> = {
   "app.loading": "Cargando la consola",
   "app.failed": "La consola no pudo hablar con su servidor.",
   "app.skip": "Saltar al contenido",
-  "app.home": "~/versatile.sh gateway de conectores, volver al inicio",
+  "app.home": "versatile.sh gateway de conectores, volver al inicio",
 
   "brand.label": "gateway de conectores",
   "lang.label": "Idioma",

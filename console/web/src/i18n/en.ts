@@ -3,7 +3,7 @@ export const en = {
   "app.loading": "Loading the console",
   "app.failed": "The console could not reach its server.",
   "app.skip": "Skip to content",
-  "app.home": "~/versatile.sh connector gateway, back to the start",
+  "app.home": "versatile.sh connector gateway, back to the start",
 
   "brand.label": "connector gateway",
   "lang.label": "Language",

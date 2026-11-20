@@ -605,4 +605,5 @@ export const es: Record<MessageKey, string> = {
   "restored.title": "Restaurado",
   "restored.body": "Ejecuta make unlock en este equipo para terminar. Esta página sigue sola cuando la consola esté lista.",
   "restored.waiting": "Esperando a que la consola se reinicie",
+  "backup.import.passwordHint": "Restaurar sobre esta instalación pide la contraseña de tu cuenta.",
 };

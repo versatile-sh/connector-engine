@@ -603,6 +603,7 @@ export const en = {
   "restored.title": "Restored",
   "restored.body": "Run make unlock on this computer to finish. This page moves on by itself once the console is ready.",
   "restored.waiting": "Waiting for the console to restart",
+  "backup.import.passwordHint": "Restoring over this install takes your account password.",
 } as const;
 
 /** Every key the console can ask for. */

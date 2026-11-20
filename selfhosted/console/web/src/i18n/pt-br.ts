@@ -605,4 +605,5 @@ export const ptBR: Record<MessageKey, string> = {
   "restored.title": "Restaurado",
   "restored.body": "Rode make unlock neste computador para concluir. Esta página segue sozinha quando o console estiver pronto.",
   "restored.waiting": "Esperando o console reiniciar",
+  "backup.import.passwordHint": "Restaurar sobre esta instalação pede a senha da sua conta.",
 };

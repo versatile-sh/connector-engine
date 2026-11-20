@@ -73,7 +73,7 @@ func (c *Console) fail(w http.ResponseWriter, err error) {
 	case codeStatus[port.CodeOf(err)] != 0:
 		writeError(w, codeStatus[port.CodeOf(err)], err.Error())
 	default:
-		c.Log.Error("console request failed", "error", err)
+		c.logger().Error("console request failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "the console could not do this; its log has the cause")
 	}
 }

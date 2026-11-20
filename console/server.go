@@ -537,7 +537,7 @@ func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		back("issuer_mismatch")
 	default:
 		if err := c.CompleteOAuth(r.Context(), state, qv.Get("code")); err != nil {
-			c.Log.Warn("oauth completion failed", "error", err)
+			c.logger().Warn("oauth completion failed", "error", err)
 			back("failed")
 			return
 		}

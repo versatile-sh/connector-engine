@@ -7,7 +7,7 @@ status=0
 fail() { echo "check-docs: $*" >&2; status=1; }
 
 docs=(README.md ARCHITECTURE.md CONTRIBUTING.md SECURITY.md selfhosted/README.md)
-while IFS= read -r f; do docs+=("$f"); done < <(find docs -name '*.md' -not -path 'docs/internal/*' -not -path '*/node_modules/*' | sort)
+while IFS= read -r f; do docs+=("$f"); done < <(find docs -name '*.md' -not -path '*/node_modules/*' | sort)
 
 targets="$(grep -hoE '^[a-zA-Z][a-zA-Z0-9_-]*:' Makefile selfhosted/selfhosted.mk | tr -d ':' | sort -u)"
 for f in "${docs[@]}"; do

@@ -1,4 +1,3 @@
-import { Logotype } from "./Brand";
 import { hubURL } from "./hub";
 import { useLocale, useT } from "./i18n/I18nProvider";
 import { QUIET_LINK } from "./ui/styles";
@@ -77,7 +76,6 @@ export function Footer() {
       </div>
       <div className="bg-ink-sunken">
         <div className="mx-auto w-full max-w-6xl px-5 pt-10 sm:px-8">
-          <Logotype className="text-lg" />
           <FooterWordmark />
         </div>
       </div>

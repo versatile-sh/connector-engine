@@ -89,7 +89,6 @@ export function AccessPage() {
       <header className="mb-8">
         <PageTitle section={t("nav.access")} title={t("keys.title")} />
         <p className="mt-3 max-w-2xl text-muted">{t("keys.intro")}</p>
-        {endpoint ? <CopyBox label={t("keys.endpoint")} text={endpoint} tone="card" className="mt-5 max-w-xl" /> : null}
       </header>
       {endpoint ? (
         <section aria-label={t("clients.title")} className={`${SURFACE} mb-10 p-5`}>

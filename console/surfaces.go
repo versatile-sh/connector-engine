@@ -38,11 +38,7 @@ func (s *surfaces) markAlways(id string) {
 		s.always = map[string]time.Time{}
 	}
 	now := time.Now()
-	for k, v := range s.always {
-		if now.Sub(v) > time.Hour {
-			delete(s.always, k)
-		}
-	}
+	expire(s.always, now, func(v time.Time) time.Time { return v.Add(time.Hour) })
 	s.always[id] = now
 }
 

@@ -65,10 +65,10 @@ type Console struct {
 	asMu       sync.Mutex
 	pending    map[string]authRequest
 	codes      map[string]authCode
-	registered []time.Time
+	registered minuteWindow
 	refreshMu  sync.Mutex
 
-	consentFails []time.Time
+	consentFails minuteWindow
 	surf         surfaces
 }
 
@@ -514,11 +514,7 @@ func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	c.oauthMu.Lock()
 	now := time.Now()
-	for k, v := range c.oauth {
-		if now.After(v.expires) {
-			delete(c.oauth, k)
-		}
-	}
+	expire(c.oauth, now, func(v pendingOAuth) time.Time { return v.expires })
 	c.oauth[state] = pendingOAuth{issuer: issuer, expires: now.Add(oauthStateTTL)}
 	c.oauthMu.Unlock()
 	writeJSON(w, http.StatusOK, map[string]string{"url": to})

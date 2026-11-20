@@ -1,0 +1,57 @@
+![Approvals and notifications](../assets/section-approvals.svg)
+
+# Approvals and notifications
+
+A function set to **ask** holds the call until a person decides. This page shows where you can answer and what each answer does.
+
+## What the app sees
+
+1. The gateway holds the call for up to `approval.holdWindow` (20 s).
+2. Answered in time: the call runs and the app gets its result in the same request.
+3. Not answered: the app gets `pending_approval` with an id. It polls `approval_status`, or drops the call with `approval_cancel`.
+4. An unanswered approval expires after `approval.timeout` (10 min).
+
+An approved call runs once. A repeated identical call in the same session attaches to the open approval instead of opening a new one.
+
+## The answers
+
+| Answer | Effect |
+|---|---|
+| Allow once | this call runs |
+| Allow for this session | this call and the same function for the rest of the session, labelled with how long ("Allow for up to 8 hours") |
+| Always allow | after the call runs, the function becomes "on" in the connector's default, and the calling key's override of it is cleared |
+| Deny | the call is refused |
+
+## Where you can answer
+
+| Surface | Set up |
+|---|---|
+| the console's **Approvals** page | nothing to set up |
+| a desktop popup | run `make notify` on the machine |
+| Discord, Slack or Telegram, with buttons | **Notifications** in the console |
+| a webhook (ntfy, Discord or Slack incoming webhooks), with an "Open in console" link | **Notifications** in the console |
+| the AI app itself (MCP elicitation) | turned on per app in **Notifications**; off by default |
+
+Nothing is sent until you add a surface.
+
+```sh
+make notify
+```
+
+`make notify` runs `cnctl notify --console http://127.0.0.1:<CONSOLE_PORT>`: it shows a desktop notification for each call waiting for you and opens a small approval page.
+
+- Chat surfaces accept clicks only from the owner id you configure, and keep call arguments out of third-party messages.
+- Elicitation lets the app ask you inside the chat. Turn it on only for apps you answer by hand: an app with hooks or scripts that answer prompts could approve its own calls. Destructive functions are never asked there, and Always allow is never offered there.
+
+Design and threat model: [approval surfaces](../self-hosted/approval-surfaces.md).
+
+## Headless
+
+Your product decides approvals through the operator API and the `connector.approval.*` events:
+
+```sh
+cnctl admin approvals list
+cnctl admin approvals decide <id> --decision approve      # or approve_for_session, deny
+```
+
+See [events](../reference/events.md) and [cnctl](../reference/cnctl.md).

@@ -150,7 +150,7 @@ The console cannot reach the host's notification service. The host helper connec
 
 ### 4.5 MCP elicitation in the `/mcp` proxy (`console/elicit.go`)
 
-It is off by default. The owner turns it on per app (access key or OAuth app) in Notifications. When it is off for the calling app, `/mcp` is today's `ReverseProxy`, unchanged behind `gateMCP` and `refuseRevoked`. The one exception is `initialize`: its body is read, without being changed, so the proxy remembers whether the session can elicit. That way the owner can turn an app on after it has connected.
+It is off by default. The owner turns it on per app (access key or OAuth app) in Notifications. When it is off for the calling app, `/mcp` is today's `ReverseProxy`, unchanged behind `gateMCP` and `refuseRevoked`. The one exception is a session-era `initialize`, a POST with no `Mcp-Session-Id` and no 2026-07-28 protocol header. Its body is read without being changed, so the proxy remembers whether the session can elicit, and the owner can turn an app on after it has connected. Requests of the 2026-07-28 era from an app that is off, and bodies over 4 MiB, are never read.
 
 For a `tools/call` from an app that is turned on and that declared the `elicitation` form capability:
 
@@ -213,5 +213,9 @@ Assets: the owner's decisions, the gateway, the bot tokens and webhook URLs, and
 
 - Message references are kept in memory. After a console restart, the old chat messages are not edited when their approvals settle, and a click on them answers "expired, open the console".
 - A held call is marked delivered (A14) when the console receives the engine's answer, not when the client does. A client that drops in that window loses the answer. Retrying the identical call returns it again while `resultRetention` lasts.
+- Adding or removing a channel or a device rebuilds the relay. Pending approvals are then announced again, so the channels that already had them get a second message, and the first one is no longer edited.
+- "Always allow" removes the function's "ask" row. `DeleteGrant` then cancels the other pending approvals of that function, which their surfaces show as cancelled.
+- "Allow once" on a skill covers one `skill_load` call. Loading another file of the same skill is a new call and asks again. "Allow for this session" covers them all.
+- The older console route `POST /api/approvals/{id}` (`approve: true`) now approves for the session, because "Ask" is `ask_once` and #11 made that route approve such records for the session. The UI no longer calls it.
 - MCP URL-mode elicitation is not used, and Cursor's form-mode bugs are not worked around.
 - Claude Code, VS Code, Cursor and Codex were not driven against a real console. The tests use the go-sdk client.

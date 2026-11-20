@@ -1,15 +1,15 @@
 import type { CallOutcome } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { Bubble } from "../ui/Bubble";
+import { Tag } from "../ui/Tag";
 
-const TONE = { ok: "outline", error: "amber", denied: "neutral", pending: "accent", running: "neutral" } as const;
+const TONE = { ok: "muted", error: "amber", denied: "muted", pending: "lime", running: "muted" } as const;
 
-/** What a call came to, as a small bubble: lime when it answered, amber when it failed, filled when it waits for the owner. */
-export function OutcomeBubble({ outcome, title }: { outcome: CallOutcome; title?: string | undefined }) {
+/** What a call came to, as a small mono tag: quiet when it answered, amber with a dot when it failed, lime with a dot while it waits for the owner. */
+export function OutcomeTag({ outcome, title }: { outcome: CallOutcome; title?: string | undefined }) {
   const t = useT();
   return (
-    <Bubble tone={TONE[outcome]} {...(title ? { title } : {})}>
+    <Tag tone={TONE[outcome]} dot={outcome === "error" || outcome === "pending"} title={title}>
       {t(`outcome.${outcome}`)}
-    </Bubble>
+    </Tag>
   );
 }

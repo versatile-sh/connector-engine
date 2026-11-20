@@ -9,15 +9,15 @@ import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { CAPTION, SKELETON } from "../ui/styles";
 import { approvalStateKey, durationText, kindOf, prettyJSON, skillFile, timeOf, type Named } from "./activity";
-import { OutcomeBubble } from "./OutcomeBubble";
+import { OutcomeTag } from "./OutcomeTag";
 
-const PRE = "mt-2 max-h-80 overflow-auto rounded-lg border border-line bg-ink-sunken p-3.5 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-paper focus-visible:outline-2 focus-visible:outline-paper/55";
+const PRE = "mt-2 max-h-80 overflow-auto rounded-xl border border-line bg-ink-sunken p-4 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-paper";
 
 function Captured({ id, title, kept, text, cut, off, none }: { id: string; title: string; kept: boolean; text: string | undefined; cut: boolean | undefined; off: string; none: string }) {
   const t = useT();
   return (
     <section aria-labelledby={id} className="mt-6">
-      <h3 id={id} className="text-sm font-semibold">
+      <h3 id={id} className="text-sm font-medium">
         {title}
       </h3>
       {!kept ? (
@@ -89,7 +89,7 @@ export function CallDetail({ id, named, onClose }: { id: string; named: Readonly
           <div className="mb-5 flex items-center gap-3">
             <ConnectorIcon src={connector?.icon} title={title} size="sm" />
             <p className="min-w-0 flex-1 truncate font-medium">{title}</p>
-            <OutcomeBubble outcome={call.outcome} title={call.code} />
+            <OutcomeTag outcome={call.outcome} title={call.code} />
           </div>
           <Facts call={call} connector={title} />
           {call.captured ? (

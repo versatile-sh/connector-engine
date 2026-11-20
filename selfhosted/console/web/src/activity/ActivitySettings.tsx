@@ -6,7 +6,7 @@ import { deleteActivity, saveRecording, type Recording } from "../mutations";
 import { activitySettingsQuery } from "../queries";
 import { Icon } from "../ui/Icon";
 import { Sheet } from "../ui/Sheet";
-import { CAPTION, SKELETON, SURFACE, button } from "../ui/styles";
+import { CAPTION, SKELETON, SURFACE, TITLE, button } from "../ui/styles";
 import { Switch } from "../ui/Switch";
 
 function DeleteAll({ onClose }: { onClose(): void }) {
@@ -15,7 +15,7 @@ function DeleteAll({ onClose }: { onClose(): void }) {
   return (
     <Sheet title={t("activity.settings.deleteTitle")} closeLabel={t("common.close")} onClose={onClose}>
       <p className="text-muted">{t("activity.settings.deleteBody")}</p>
-      <p role="alert" className="mt-3 min-h-5 text-sm text-amber">
+      <p role="alert" className="mt-3 min-h-5 text-sm text-amber-400">
         {remove.isError ? errorText(remove.error) : ""}
       </p>
       <div className="mt-4 flex justify-end gap-2">
@@ -40,7 +40,7 @@ export function ActivitySettings() {
   const current: Recording | undefined = save.isPending ? save.variables : settings.data;
   return (
     <section aria-labelledby="activity-settings" className={`${SURFACE} p-5`}>
-      <h2 id="activity-settings" className="text-lg leading-snug font-medium">
+      <h2 id="activity-settings" className={TITLE}>
         {t("activity.settings.title")}
       </h2>
       {current ? (
@@ -54,13 +54,13 @@ export function ActivitySettings() {
           <p className={CAPTION}>{t("activity.settings.retention", { days: settings.data?.retention_days ?? 30 })}</p>
         </div>
       ) : settings.isError ? (
-        <p role="alert" className="mt-3 text-sm text-amber">
+        <p role="alert" className="mt-3 text-sm text-amber-400">
           {errorText(settings.error)}
         </p>
       ) : (
         <div aria-hidden="true" className={`${SKELETON} mt-4 h-28`} />
       )}
-      <p role="alert" className="mt-2 text-sm text-amber empty:hidden">
+      <p role="alert" className="mt-2 text-sm text-amber-400 empty:hidden">
         {save.isError ? errorText(save.error) : ""}
       </p>
       <button type="button" className={`${button({ variant: "danger", size: "sm" })} mt-4`} onClick={() => setDeleting(true)}>

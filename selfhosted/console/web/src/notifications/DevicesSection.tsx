@@ -6,7 +6,7 @@ import { pairDevice, revokeDevice } from "../mutations";
 import { CopyBox } from "../ui/CopyBox";
 import { Icon } from "../ui/Icon";
 import { LongList } from "../ui/LongList";
-import { HAIRLINE, button } from "../ui/styles";
+import { HAIRLINE, WELL, button } from "../ui/styles";
 import { browserFacts, deviceName, pairedHere, rememberPairedHere } from "./device";
 import { DeviceRow } from "./DeviceRow";
 import { Section } from "./Section";
@@ -15,13 +15,13 @@ import { useRemove } from "./useRemove";
 function Paired({ paired, onDone }: { paired: PairedDevice; onDone(): void }) {
   const t = useT();
   return (
-    <div className="arrive bubble-sent relative mb-5 overflow-hidden border border-lime/50 bg-ink-sunken p-4">
+    <div className={`${WELL} arrive relative mb-5 overflow-hidden p-4 sm:p-5`}>
       <span aria-hidden="true" className={HAIRLINE} />
       <p className="font-medium [overflow-wrap:anywhere]">{t("notify.devices.paired", { name: paired.device.name })}</p>
       <p className="mt-0.5 text-sm text-muted">{t("notify.devices.once")}</p>
       <CopyBox label={t("notify.devices.command")} text={paired.command} className="mt-3" />
       <CopyBox label={t("notify.devices.key")} text={paired.key} className="mt-3" />
-      <p className="mt-3 text-[0.8125rem] leading-snug text-muted">{t("notify.devices.host")}</p>
+      <p className="mt-3 text-[0.8125rem] leading-snug text-pretty text-muted">{t("notify.devices.host")}</p>
       <button type="button" className={`${button({ variant: "secondary", size: "xs" })} mt-3`} onClick={onDone}>
         {t("notify.devices.done")}
       </button>
@@ -43,13 +43,13 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
       title={t("notify.devices.title")}
       intro={t("notify.devices.intro")}
       action={
-        <button type="button" disabled={pair.isPending} className={button({ variant: "accent", size: "sm" })} onClick={onPair}>
+        <button type="button" disabled={pair.isPending} className={button({ variant: "primary", size: "sm" })} onClick={onPair}>
           <Icon name="plus" className="size-4" />
           {pair.isPending ? t("notify.devices.pairing") : t("notify.devices.pair")}
         </button>
       }
     >
-      <p role="alert" className="mb-4 text-sm text-amber empty:hidden">
+      <p role="alert" className="mb-4 text-sm text-amber-400 empty:hidden">
         {pair.isError ? errorText(pair.error) : ""}
       </p>
       {pair.data ? <Paired key={pair.data.key} paired={pair.data} onDone={() => pair.reset()} /> : null}
@@ -58,7 +58,7 @@ export function DevicesSection({ devices }: { devices: DeviceView[] }) {
       ) : (
         <LongList rows={devices} textOf={(device) => device.name} label={t("notify.devices.filter")}>
           {(shown) => (
-            <ul>
+            <ul className={WELL}>
               {shown.map((device) => (
                 <DeviceRow key={device.id} device={device} here={device.id === here} remove={remove} />
               ))}

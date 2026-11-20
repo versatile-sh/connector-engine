@@ -15,10 +15,11 @@ export function NotificationsPage() {
   const data = useQuery(notificationsQuery);
   return (
     <section aria-labelledby="page-title">
-      <header className="mb-8">
-        <PageTitle section={t("nav.notifications")} title={t("notify.title")} />
-        <p className="mt-3 max-w-2xl text-muted">{t("notify.intro")}</p>
-        <p className="mt-2 max-w-2xl text-sm text-muted">{t("notify.privacy")}</p>
+      <header className="mb-10">
+        <PageTitle section={t("nav.notifications")} title={t("notify.title")}>
+          <p>{t("notify.intro")}</p>
+          <p className="mt-2 text-sm">{t("notify.privacy")}</p>
+        </PageTitle>
       </header>
       {data.isError ? <Notice>{errorText(data.error)}</Notice> : null}
       {data.isPending ? (

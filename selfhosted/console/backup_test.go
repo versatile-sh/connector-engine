@@ -151,12 +151,18 @@ func (s *stack) upload(path string, file []byte, pass string) (int, []byte) {
 
 func (s *stack) uploadAs(path string, file []byte, pass, password string) (int, []byte) {
 	s.t.Helper()
+	return s.uploadForm(path, file, map[string]string{"passphrase": pass, "password": password})
+}
+
+func (s *stack) uploadForm(path string, file []byte, fields map[string]string) (int, []byte) {
+	s.t.Helper()
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	fw, _ := mw.CreateFormFile("file", "backup")
 	_, _ = fw.Write(file)
-	_ = mw.WriteField("passphrase", pass)
-	_ = mw.WriteField("password", password)
+	for k, v := range fields {
+		_ = mw.WriteField(k, v)
+	}
 	_ = mw.Close()
 	req, _ := http.NewRequest("POST", s.base+path, &body)
 	req.Header.Set("Content-Type", mw.FormDataContentType())

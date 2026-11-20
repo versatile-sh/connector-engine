@@ -128,14 +128,6 @@ func (c *Console) profileEffects(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"effects": effects})
 }
 
-func (c *Console) dropWaiting(w http.ResponseWriter, r *http.Request) {
-	if err := c.DropWaitingProfile(r.Context(), r.PathValue("id"), r.PathValue("agent")); err != nil {
-		c.fail(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
 func (c *Console) setNewKeys(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Off bool `json:"off"`

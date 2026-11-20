@@ -23,7 +23,7 @@ type FunctionView struct {
 	Access      Access     `json:"access"`
 }
 
-// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far and the profiles a setup left waiting for keys not made yet.
+// ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far and the permission sets that hold a profile for it.
 type ConnectorSummary struct {
 	ID          string         `json:"id"`
 	Alias       string         `json:"alias"`
@@ -42,7 +42,7 @@ type ConnectorSummary struct {
 	Functions   []FunctionView `json:"functions"`
 	Items       []Item         `json:"items"`
 	Profiles    []Profile      `json:"profiles"`
-	Waiting     []Profile      `json:"waiting,omitempty"`
+	Slots       []SlotProfile  `json:"slots"`
 	NewKeysOff  bool           `json:"new_keys_off,omitempty"`
 }
 
@@ -125,7 +125,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		if s.Profiles, err = c.profiles(ctx, string(conn.ID), agentRows); err != nil {
 			return nil, err
 		}
-		s.NewKeysOff, s.Waiting = c.State.NewKeysOff(string(conn.ID)), c.State.PendingProfiles(string(conn.ID))
+		s.NewKeysOff, s.Slots = c.State.NewKeysOff(string(conn.ID)), c.slotsOn(string(conn.ID), conn.Alias)
 		if creds, err := c.Engine.credentials(ctx, string(conn.ID)); err == nil {
 			for _, cr := range creds {
 				s.Credentials = append(s.Credentials, string(cr.Kind)+":"+string(cr.Status))
@@ -471,11 +471,15 @@ type AgentToken struct {
 	MCPURL    string    `json:"mcp_url"`
 }
 
-// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, takes a setup's waiting profile within the connector's new-key limits, and starts off on skills. It records the agent until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide.
-func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration) (Agent, error) {
+// BindAgent renews the agent where it is bound and keeps it off elsewhere; a new key follows every connector except those whose new keys start off, within each connector's new-key limits, and starts off on skills. A named permission set gives the key its profile on the set's connectors and is forgotten once the key is recorded. It records the agent until ttl from now, at most the console's longest, and with a connector installed it also finishes the first-run guide.
+func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration, slotName string) (Agent, error) {
 	name = Slug(name)
 	if name == "" {
 		return Agent{}, invalid("the agent name has letters or digits")
+	}
+	slot, ok := c.State.Slot(slotName)
+	if slotName != "" && !ok {
+		return Agent{}, noSlot(slotName)
 	}
 	if ttl <= 0 || ttl > c.MaxAgentTTL {
 		ttl = c.MaxAgentTTL
@@ -487,14 +491,19 @@ func (c *Console) BindAgent(ctx context.Context, name string, ttl time.Duration)
 	}
 	known := slices.ContainsFunc(c.State.Agents(), func(k Agent) bool { return k.Name == name })
 	for _, conn := range live {
-		if err := c.join(ctx, conn, a, known); err != nil {
+		if p, ok := slot.Profiles[string(conn.ID)]; ok {
+			err = c.claimOn(ctx, string(conn.ID), a, p)
+		} else {
+			err = c.join(ctx, conn, a, known)
+		}
+		if err != nil {
 			return Agent{}, err
 		}
 	}
 	if err := c.State.PutAgent(a); err != nil {
 		return Agent{}, err
 	}
-	if err := c.State.DropPendingProfiles(name); err != nil {
+	if err := c.State.DropSlot(slotName); err != nil {
 		return Agent{}, err
 	}
 	if len(live) > 0 {
@@ -509,9 +518,9 @@ func (c *Console) agentToken(ctx context.Context, name string, ttl time.Duration
 	return c.Engine.Mint(ctx, map[string]any{"sub": name, "tenant": c.Engine.Tenant, "workspace": c.Engine.Workspace, "agent": name, "session": name + "-" + randomID()[:8], "on_behalf_of": c.Engine.Person}, ttl)
 }
 
-// MintAgent binds the agent as BindAgent does and mints its token, living until the key expires.
-func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration) (AgentToken, error) {
-	a, err := c.BindAgent(ctx, name, ttl)
+// MintAgent binds the agent as BindAgent does, with the named permission set when one is named, and mints its token, living until the key expires.
+func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration, slot string) (AgentToken, error) {
+	a, err := c.BindAgent(ctx, name, ttl, slot)
 	if err != nil {
 		return AgentToken{}, err
 	}

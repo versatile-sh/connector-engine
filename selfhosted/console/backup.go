@@ -197,6 +197,7 @@ func decodeState(raw []byte) (stateFile, error) {
 	if err == nil && d.Owner == nil {
 		err = errors.New("it has no owner account")
 	}
+	migrateSlots(&d)
 	return d, err
 }
 

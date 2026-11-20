@@ -18,6 +18,7 @@ const (
 	CodeRevisionMismatch Code = "revision_mismatch"
 	CodeUnavailable      Code = "unavailable"
 	CodeInternal         Code = "internal"
+	CodeUnknownTool      Code = "unknown_tool"
 )
 
 // Reasons a step of §7.1 refuses a call.

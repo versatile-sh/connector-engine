@@ -13,7 +13,6 @@ import (
 
 	"github.com/agents-control/connector-engine/gateway"
 	"github.com/agents-control/connector-engine/port"
-	rtskill "github.com/agents-control/connector-engine/runtime/skill"
 	"github.com/agents-control/connector-engine/service"
 	st "github.com/agents-control/connector-engine/service/servicetest"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -58,14 +57,14 @@ func installSkill(t *testing.T, e *st.Env, admin port.Principal, m port.Manifest
 	if len(fns) != 1 || fns[0].State != port.FunctionQuarantined {
 		t.Fatalf("a skill lands as one quarantined function: %+v", fns)
 	}
-	st.Ok(e.Svc.AcceptFunctions(e.Ctx, admin, conn.ID, map[string]port.Hash{rtskill.Function: fns[0].DefinitionHash}))
+	st.Ok(e.Svc.AcceptFunctions(e.Ctx, admin, conn.ID, map[string]port.Hash{port.SkillFunction: fns[0].DefinitionHash}))
 	st.Ok(e.Svc.SetConnectorLevel(e.Ctx, admin, conn.ID, port.LevelCustom))
-	st.Ok(e.Svc.ClassifyFunction(e.Ctx, admin, conn.ID, rtskill.Function, port.ClassRead))
+	st.Ok(e.Svc.ClassifyFunction(e.Ctx, admin, conn.ID, port.SkillFunction, port.ClassRead))
 	hash := fns[0].DefinitionHash
-	st.Ok(e.Svc.CreateGrant(e.Ctx, admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function, Mode: port.ModeAllow, DefinitionHash: hash}))
+	st.Ok(e.Svc.CreateGrant(e.Ctx, admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: conn.ID, Selector: port.SelectorFunction + port.SkillFunction, Mode: port.ModeAllow, DefinitionHash: hash}))
 	for _, a := range agents {
 		st.Ok(e.Svc.PutBinding(e.Ctx, admin, port.Binding{Connector: conn.ID, Agent: port.AgentID(a), AskRequester: true}))
-		st.Ok(e.Svc.CreateGrant(e.Ctx, admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a, Agent: port.AgentID(a), Connector: conn.ID, Selector: port.SelectorFunction + rtskill.Function,
+		st.Ok(e.Svc.CreateGrant(e.Ctx, admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: a, Agent: port.AgentID(a), Connector: conn.ID, Selector: port.SelectorFunction + port.SkillFunction,
 			Mode: mode, DefinitionHash: hash, ExpiresAt: e.Clock.Now().Add(30 * 24 * time.Hour)}))
 	}
 	return conn.ID

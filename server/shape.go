@@ -33,7 +33,7 @@ func Fields(t reflect.Type) []Field {
 			if name == "" {
 				name = f.Name
 			}
-			out = append(out, Field{name, f.Type, []int{i}, strings.Contains(opts, "omitempty")})
+			out = append(out, Field{name, f.Type, []int{i}, strings.Contains(opts, "omitempty") || strings.Contains(opts, "omitzero")})
 		}
 	}
 	return out

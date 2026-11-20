@@ -84,15 +84,23 @@ export const activityCallQuery = (id: string) =>
 /** What the console keeps of each call. */
 export const activitySettingsQuery = queryOptions({ queryKey: ["activity-settings"], queryFn: () => api<ActivitySettings>("GET", "/api/activity/settings") });
 
-/** One held call for the /approve page, read with the session or the page's link token; it polls only while the call waits and has not expired. */
+/** How long after an approval is decided the console may still be writing an "always allow", as the console's own wait. */
+export const ALWAYS_WAIT_MS = 3 * 60_000;
+
+/** Whether the /approve page reads a held call again: while it waits and has not expired, and while an allowed call's "always allow" may still be written and has not failed. */
+export function approvalPolls(data: ApprovalView | undefined, now: number): boolean {
+  if (!data) return false;
+  if (data.state === "pending") return Date.parse(data.expires_at) > now;
+  const allowed = ["approved", "executing", "executed"].includes(data.state);
+  return allowed && !data.always_error && data.decided_at !== undefined && now - Date.parse(data.decided_at) < ALWAYS_WAIT_MS;
+}
+
+/** One held call for the /approve page, read with the session or the page's link token; it polls as `approvalPolls` says. */
 export const approvalQuery = (id: string, token: string | null) =>
   queryOptions({
     queryKey: ["approval", id],
     queryFn: () => api<ApprovalView>("GET", `/api/approvals/${encodeURIComponent(id)}${token ? `?t=${encodeURIComponent(token)}` : ""}`),
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      return data?.state === "pending" && Date.parse(data.expires_at) > Date.now() ? 5_000 : false;
-    },
+    refetchInterval: (query) => (approvalPolls(query.state.data, Date.now()) ? 5_000 : false),
     refetchOnWindowFocus: false,
   });
 

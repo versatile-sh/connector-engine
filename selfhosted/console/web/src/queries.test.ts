@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, test } from "node:test";
 import { QueryClient } from "@tanstack/react-query";
-import { keysPageQuery } from "./queries.ts";
+import type { ApprovalView } from "./api.ts";
+import { ALWAYS_WAIT_MS, approvalPolls, keysPageQuery } from "./queries.ts";
 
 const realFetch = globalThis.fetch;
 
@@ -43,5 +44,32 @@ describe("keysPageQuery", () => {
       await new QueryClient().fetchQuery(keysPageQuery);
       assert.deepEqual(calls, ["GET /api/agents"]);
     });
+  });
+});
+
+describe("approvalPolls", () => {
+  const now = Date.parse("2026-11-20T12:00:00Z");
+  const at = (ms: number) => new Date(now + ms).toISOString();
+  const approval = (over: Partial<ApprovalView>) => ({ state: "pending", expires_at: at(60_000), ...over }) as ApprovalView;
+
+  test("polls a call that waits until it expires", () => {
+    assert.deepEqual([approvalPolls(approval({}), now), approvalPolls(approval({ expires_at: at(-1) }), now)], [true, false]);
+  });
+
+  describe("with an allowed call", () => {
+    test("polls while an always allow may still be written", () => {
+      assert.equal(approvalPolls(approval({ state: "executed", decided_at: at(-1_000) }), now), true);
+    });
+
+    test("stops once that time is over or the write failed", () => {
+      assert.deepEqual(
+        [approvalPolls(approval({ state: "executed", decided_at: at(-ALWAYS_WAIT_MS) }), now), approvalPolls(approval({ state: "approved", decided_at: at(-1_000), always_error: "refused" }), now)],
+        [false, false],
+      );
+    });
+  });
+
+  test("stops for a denied call", () => {
+    assert.equal(approvalPolls(approval({ state: "denied", decided_at: at(-1_000) }), now), false);
   });
 });

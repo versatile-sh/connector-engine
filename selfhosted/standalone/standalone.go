@@ -20,6 +20,8 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
 )
 
+const drainGrace = 10 * time.Second
+
 // Options configure an install: its data directory, the console port on 127.0.0.1 (0 picks one), the OS keychain (nil keeps plaintext root keys), the build and the log.
 type Options struct {
 	Data     string
@@ -162,7 +164,10 @@ func (in *Install) serveConsole(gen context.Context, restart context.CancelFunc,
 	in.ready(nil)
 	<-gen.Done()
 	in.host.Store(nil)
-	shut, cancel := context.WithTimeout(context.Background(), time.Minute)
+	shut, cancel := context.WithTimeout(context.Background(), drainGrace)
 	defer cancel()
-	return srv.Shutdown(shut)
+	if srv.Shutdown(shut) != nil {
+		_ = srv.Close()
+	}
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -64,6 +65,13 @@ func prepare(root string) (paths, error) {
 	for _, d := range []string{p.root, filepath.Dir(p.store), filepath.Dir(p.consoleState)} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			return p, err
+		}
+		info, err := os.Stat(d)
+		if err != nil {
+			return p, err
+		}
+		if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
+			return p, fmt.Errorf("%s is open to other users; run chmod 700 on it", d)
 		}
 	}
 	token, err := operatorToken(p.operatorFile)

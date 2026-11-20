@@ -48,7 +48,13 @@ func newCommand(name string, args []string, stdin io.Reader, stdout, stderr io.W
 	if err := c.fs.Parse(args); err != nil {
 		return 2
 	}
-	err := run(c)
+	abs, err := filepath.Abs(*c.data)
+	if err != nil {
+		fmt.Fprintln(stderr, name+":", err)
+		return 2
+	}
+	*c.data = abs
+	err = run(c)
 	var u usage
 	switch {
 	case errors.As(err, &u):
@@ -165,14 +171,14 @@ func stop(c *command, report bool) error {
 		return nil
 	}
 	_ = request(ctx, *c.data, http.MethodPost, "/stop", nil, io.Discard)
-	for range 300 {
+	for range 900 {
 		if _, ok := running(ctx, *c.data); !ok {
 			fmt.Fprintln(c.out, "stopped")
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return errors.New("the install did not stop within 30s")
+	return errors.New("the install did not stop within 90s")
 }
 
 func status(c *command) error {
@@ -296,6 +302,9 @@ func resetPassword(c *command) error {
 func uninstall(c *command, keep, purge, yes, noKeychain bool) error {
 	if keep == purge {
 		return usage("usage: connector-engine-selfhosted uninstall [--data DIR] --keep-data | --purge [--yes]")
+	}
+	if _, err := os.Stat(layout(*c.data).operatorFile); purge && err != nil {
+		return fmt.Errorf("%s holds no install (no operator-token): nothing is deleted", *c.data)
 	}
 	if purge {
 		c.io.say("This deletes " + *c.data + " and the unlock key of this install: every connector, credential, access key and the account. Export a backup first if you may need any of it.\n")

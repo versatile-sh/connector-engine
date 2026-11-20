@@ -25,7 +25,7 @@ const passphrase = "a passphrase long enough"
 func dockerInstall(t *testing.T, dsn string) (string, *console.Console) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	p, err := prepare(t.TempDir())
+	p, err := prepare(shortDir(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,8 +89,10 @@ func TestImportsTheBackupOfADockerInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := filepath.Join(t.TempDir(), "data")
+	data := shortDir(t)
 	in := start(t, data, fakeKeychain{})
+	release := holdSession(t, in.URL+"/mcp", seed(t, in.URL))
+	defer release()
 	if code, out := run(t, "import", passphrase+"\n", "--data", data, "--yes", backup); code != 0 {
 		t.Fatalf("import: %d %s", code, out)
 	}
@@ -102,4 +104,9 @@ func TestImportsTheBackupOfADockerInstall(t *testing.T) {
 		t.Fatalf("the key of the Docker install after the import: %v", err)
 	}
 	newBrowser(t, in.URL).signIn("/api/login")
+	select {
+	case <-in.done:
+		t.Fatalf("the import with an attached agent ended the install: %v", in.err)
+	default:
+	}
 }

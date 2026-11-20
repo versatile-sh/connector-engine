@@ -134,6 +134,26 @@ func callSearch(t *testing.T, endpoint, token string) error {
 	return nil
 }
 
+func shortDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "ce")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	return filepath.Join(dir, "data")
+}
+
+func holdSession(t *testing.T, endpoint, token string) func() {
+	t.Helper()
+	client := mcp.NewClient(&mcp.Implementation{Name: "attached", Version: "1"}, nil)
+	cs, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: endpoint, HTTPClient: &http.Client{Transport: bearer(token)}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return func() { _ = cs.Close() }
+}
+
 func seed(t *testing.T, base string) string {
 	t.Helper()
 	b := newBrowser(t, base)
@@ -145,7 +165,7 @@ func seed(t *testing.T, base string) string {
 }
 
 func TestUpServesAnAgentAndKeepsItsDataAcrossARestart(t *testing.T) {
-	data, kc := filepath.Join(t.TempDir(), "data"), fakeKeychain{}
+	data, kc := shortDir(t), fakeKeychain{}
 	took := time.Now()
 	in := start(t, data, kc)
 	t.Logf("first start in %v", time.Since(took))
@@ -156,8 +176,15 @@ func TestUpServesAnAgentAndKeepsItsDataAcrossARestart(t *testing.T) {
 	if err := callSearch(t, in.URL+"/mcp", token); err != nil {
 		t.Fatal(err)
 	}
+	release := holdSession(t, in.URL+"/mcp", token)
+	defer release()
+	took = time.Now()
 	if err := in.Stop(); err != nil {
 		t.Fatal(err)
+	}
+	t.Logf("stop with an attached agent in %v", time.Since(took))
+	if took := time.Since(took); took > drainGrace+5*time.Second {
+		t.Fatalf("an attached agent held the stop for %v", took)
 	}
 	if info, err := os.Stat(data); err != nil || info.Mode().Perm() != 0o700 {
 		t.Fatalf("the data directory is %v, %v", info.Mode(), err)
@@ -187,7 +214,7 @@ func run(t *testing.T, name string, stdin string, args ...string) (int, string) 
 }
 
 func TestCommandsDriveARunningInstall(t *testing.T) {
-	data := filepath.Join(t.TempDir(), "data")
+	data := shortDir(t)
 	if code, out := run(t, "status", "", "--data", data); code != 3 || !strings.Contains(out, "no install runs") {
 		t.Fatalf("status before up: %d %s", code, out)
 	}
@@ -220,11 +247,27 @@ func TestCommandsDriveARunningInstall(t *testing.T) {
 	if err := in.Wait(); err != nil {
 		t.Fatalf("the install stopped with %v", err)
 	}
-	if code, out := run(t, "uninstall", "", "--data", data, "--purge", "--yes", "--no-keychain"); code != 0 {
+	if code, out := run(t, "uninstall", "", "--data", t.TempDir(), "--purge", "--yes", "--no-keychain"); code != 1 || !strings.Contains(out, "holds no install") {
+		t.Fatalf("uninstall --purge of a directory without an install: %d %s", code, out)
+	}
+	if code, out := run(t, "uninstall", "", "--data", data+string(filepath.Separator), "--purge", "--yes", "--no-keychain"); code != 0 {
 		t.Fatalf("uninstall --purge: %d %s", code, out)
 	}
 	if _, err := os.Stat(data); !os.IsNotExist(err) {
 		t.Fatalf("the data directory survived the purge: %v", err)
+	}
+}
+
+func TestStartRefusesADataDirectoryOpenToOthers(t *testing.T) {
+	data := shortDir(t)
+	if err := os.MkdirAll(data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Start(context.Background(), Options{Data: data, Log: quiet()}); runtime.GOOS != "windows" && (err == nil || !strings.Contains(err.Error(), "chmod 700")) {
+		t.Fatalf("a 0755 data directory: %v", err)
 	}
 }
 

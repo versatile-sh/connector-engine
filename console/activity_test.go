@@ -61,7 +61,15 @@ func (f *fakeEngine) handler() http.Handler {
 		_ = json.NewEncoder(w).Encode(map[string]string{"token": "person"})
 	})
 	mux.HandleFunc("GET /v1/connectors", func(w http.ResponseWriter, _ *http.Request) {
-		items(w, []map[string]any{{"connector": port.Connector{ID: "c-notes", Alias: "notes"}}, {"connector": port.Connector{ID: "c-mail", Alias: "mail"}}})
+		items(w, []map[string]any{{"connector": port.Connector{ID: "c-notes", Alias: "notes"}}, {"connector": port.Connector{ID: "c-mail", Alias: "mail"}},
+			{"connector": port.Connector{ID: "c-pdf", Alias: "pdf", Listing: port.VersionRef{Listing: port.ListingRef{Name: "pdf"}, Version: "1"}}}})
+	})
+	mux.HandleFunc("GET /v1/listings/version", func(w http.ResponseWriter, r *http.Request) {
+		m := port.Manifest{Name: r.URL.Query().Get("name")}
+		if m.Name == "pdf" {
+			m.Kind = port.KindSkill
+		}
+		_ = json.NewEncoder(w).Encode(port.ListingVersion{Manifest: m})
 	})
 	mux.HandleFunc("GET /v1/calls", func(w http.ResponseWriter, _ *http.Request) {
 		f.mu.Lock()
@@ -701,5 +709,38 @@ func TestARequestOverTheCaptureLimitPassesUnchangedAndUnrecorded(t *testing.T) {
 	}
 	if p := r.page(""); len(p.Calls) != 0 {
 		t.Fatalf("an over-limit request was recorded: %+v", p.Calls)
+	}
+}
+
+func TestASkillLoadIsShownByTheSkillName(t *testing.T) {
+	r := newActivityRig(t)
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[],"structuredContent":{"skills":[]}}}`, nil))
+	r.post(toolCall(1, "skill_list", `{}`))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"# fields"}]}}`, func() {
+		now := time.Now().UTC()
+		r.engine.addCall(port.Call{ID: "s1", Agent: "claude-code", Session: "claude-code-s1", Connector: "c-pdf", Function: "skill", Class: port.ClassRead, State: port.CallFinished, StartedAt: now, FinishedAt: now})
+	}))
+	r.post(toolCall(2, "skill_load", `{"skill":"pdf","path":"reference/fields.md"}`))
+	r.engine.addCall(port.Call{ID: "s2", Agent: "cursor", Session: "s9", Connector: "c-pdf", Function: "skill", State: port.CallFinished, StartedAt: time.Now().UTC()})
+	p := r.rows("", 2)
+	byID := map[string]console.ActivityCall{}
+	for _, c := range p.Calls {
+		byID[c.ID] = c
+	}
+	engineOnly := byID["e-s2"]
+	if engineOnly.Skill != "pdf" || engineOnly.Connector != "c-pdf" {
+		t.Fatalf("an engine row of a skill: %+v", p.Calls)
+	}
+	delete(byID, "e-s2")
+	for _, c := range byID {
+		if c.Skill != "pdf" || c.Path != "reference/fields.md" || c.Connector != "c-pdf" || c.Outcome != console.OutcomeOK || !c.Captured {
+			t.Fatalf("the skill load: %+v", c)
+		}
+		if d := r.detail(c.ID); d.EngineCall != "s1" || d.Tool != "skill_load" {
+			t.Fatalf("its detail: %+v", d)
+		}
+	}
+	if len(p.Connectors) != 1 || !p.Connectors[0].Skill || p.Connectors[0].Total != 2 {
+		t.Fatalf("per connector: %+v", p.Connectors)
 	}
 }

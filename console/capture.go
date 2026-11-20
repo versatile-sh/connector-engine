@@ -100,8 +100,17 @@ func (c *Console) callsIn(r *http.Request, body []byte) *inflight {
 		}
 		cp := &Capture{ID: newCaptureID(now), At: now, Agent: claims.Agent, Session: claims.Session, MCPSession: r.Header.Get("Mcp-Session-Id"), RPCID: m.ID, Tool: p.Name}
 		switch p.Name {
-		case "find", "approval_cancel":
+		case "find", "approval_cancel", "skill_list":
 			continue
+		case "skill_load":
+			var s struct {
+				Skill string `json:"skill"`
+				Path  string `json:"path"`
+			}
+			if json.Unmarshal(p.Arguments, &s) != nil || s.Skill == "" {
+				continue
+			}
+			cp.Skill, cp.Path = s.Skill, s.Path
 		case "call":
 			var inner toolCall
 			if json.Unmarshal(p.Arguments, &inner) != nil || inner.Name == "" {

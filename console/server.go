@@ -51,6 +51,7 @@ type Console struct {
 	MaxAgentTTL   time.Duration
 	Log           *slog.Logger
 	Fetch         skillcatalog.Get
+	Activity      *Activity
 
 	loginMu sync.Mutex
 	iconMu  sync.Mutex
@@ -94,7 +95,7 @@ func (c *Console) Handler() http.Handler {
 	mux.HandleFunc("GET /api/approvals", c.authed(c.listApprovals))
 	mux.HandleFunc("POST /api/approvals/{id}", c.authed(c.decide))
 	mux.HandleFunc("GET /api/icon", c.authed(c.icon))
-	agent := c.gateMCP(c.refuseRevoked(c.agentProxy()))
+	agent := c.gateMCP(c.refuseRevoked(c.capture(c.agentProxy())))
 	for _, m := range []string{"GET", "POST", "DELETE"} {
 		mux.Handle(m+" /mcp", agent)
 	}
@@ -685,30 +686,33 @@ func (c *Console) icon(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(ic.body)
 }
 
-// bearerClaims reads the agent and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse.
-func bearerClaims(header string) (agent string, iat int64, ok bool) {
+type tokenClaims struct {
+	Agent    string  `json:"agent"`
+	Session  string  `json:"session"`
+	IssuedAt float64 `json:"iat"`
+}
+
+// bearerClaims reads the agent, session and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse or to label a call it answered.
+func bearerClaims(header string) (tokenClaims, bool) {
 	scheme, raw, found := strings.Cut(header, " ")
 	parts := strings.Split(strings.TrimSpace(raw), ".")
 	if !found || !strings.EqualFold(scheme, "Bearer") || len(parts) != 3 {
-		return "", 0, false
+		return tokenClaims{}, false
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return "", 0, false
+		return tokenClaims{}, false
 	}
-	var claims struct {
-		Agent    string  `json:"agent"`
-		IssuedAt float64 `json:"iat"`
-	}
+	var claims tokenClaims
 	if json.Unmarshal(payload, &claims) != nil || claims.Agent == "" {
-		return "", 0, false
+		return tokenClaims{}, false
 	}
-	return claims.Agent, int64(claims.IssuedAt), true
+	return claims, true
 }
 
 func (c *Console) refuseRevoked(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if agent, iat, ok := bearerClaims(r.Header.Get("Authorization")); ok && c.State.Revoked(agent, iat) {
+		if claims, ok := bearerClaims(r.Header.Get("Authorization")); ok && c.State.Revoked(claims.Agent, int64(claims.IssuedAt)) {
 			w.Header().Set("WWW-Authenticate", c.challengeValue(c.origin(r), `error="invalid_token", error_description="the access key was revoked"`))
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "the access key was revoked"})
 			return
@@ -745,6 +749,9 @@ func (c *Console) agentProxy() http.Handler {
 			resp.Header.Del("Set-Cookie")
 			if resp.StatusCode == http.StatusUnauthorized {
 				resp.Header.Set("WWW-Authenticate", c.challengeValue(c.base(resp.Request.Header.Get("X-Forwarded-Host")), `error="invalid_token"`))
+			}
+			if calls, ok := resp.Request.Context().Value(captureKey{}).(*inflight); ok {
+				calls.wrap(resp)
 			}
 			return nil
 		},

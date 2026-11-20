@@ -309,6 +309,8 @@ export const es: Record<MessageKey, string> = {
   "skills.remove": "Quitar",
   "skills.removeAsk": "¿Quitar {name}? Tus apps de IA dejan de verla al momento.",
   "skills.removeConfirm": "Quitar skill",
+  "skills.maximize": "Maximizar {name}",
+  "skills.minimize": "Minimizar {name}",
   "import.skillChoose": "Revisa la skill",
   "import.skillChooseIntro": "Qué trae, de dónde viene y quién puede cargarla.",
   "import.skillKeys": "Para tus {count} claves de acceso",

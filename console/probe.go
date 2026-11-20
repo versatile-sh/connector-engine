@@ -85,6 +85,18 @@ func Propose(a *mcp.ToolAnnotations) (readOnly, destructive bool, proposed Acces
 	return false, destructive, AccessAsk
 }
 
+func probedTool(name, title, description string, hints *mcp.ToolAnnotations) ProbedTool {
+	ro, de, prop := Propose(hints)
+	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop}
+}
+
+func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
+	if a == nil {
+		return nil
+	}
+	return &mcp.ToolAnnotations{ReadOnlyHint: a.ReadOnlyHint != nil && *a.ReadOnlyHint, DestructiveHint: a.DestructiveHint}
+}
+
 // KindOf names what a tool does by its hints: read, destructive (the MCP default when not read-only) or write.
 func KindOf(readOnly, destructive bool) port.Class {
 	switch {
@@ -138,12 +150,11 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 		if err != nil {
 			return out, unreachable(fmt.Errorf("tools/list on %s: %w", u.Host, err))
 		}
-		ro, de, prop := Propose(tool.Annotations)
 		title := tool.Title
 		if title == "" && tool.Annotations != nil {
 			title = tool.Annotations.Title
 		}
-		out.Tools = append(out.Tools, ProbedTool{Name: tool.Name, Title: title, Description: tool.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
+		out.Tools = append(out.Tools, probedTool(tool.Name, title, tool.Description, tool.Annotations))
 	}
 	if out.Items, err = probeItems(ctx, session, instructions); err != nil {
 		return out, unreachable(fmt.Errorf("%w on %s", err, u.Host))

@@ -46,17 +46,7 @@ type Preview struct {
 func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, error) {
 	switch {
 	case in.MCP != "" && in.Listing == "":
-		p, err := Probe(ctx, strings.TrimSpace(in.MCP), Reach{Local: in.Local})
-		if err != nil {
-			return Preview{}, err
-		}
-		m, err := ManifestFor(p, in.HeaderSecret)
-		if err != nil {
-			return Preview{}, err
-		}
-		u, _ := url.Parse(p.URL)
-		return Preview{Kind: "mcp", URL: p.URL, Host: u.Host, Name: m.Name, Title: m.Title, Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name,
-			Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), Items: p.Items, manifest: m}, nil
+		return previewMCP(ctx, strings.TrimSpace(in.MCP), in)
 	case in.Listing != "" && in.MCP == "":
 		src := strings.TrimSpace(in.Listing)
 		body, err := c.get()(ctx, src, maxListingBytes)
@@ -65,49 +55,60 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		}
 		u, _ := url.Parse(src)
 		if skillcatalog.Kind(body) == string(port.KindSkill) {
-			e, err := skillcatalog.Parse(body)
-			if err != nil {
-				return Preview{}, err
-			}
-			sp := c.skillPreview(e)
-			return Preview{Kind: "skill", URL: src, Host: u.Host, Name: e.ID, Title: firstOf(e.Title, e.Name), Description: e.Description, Publisher: skillcatalog.Publisher(e.Source.Repository, u.Host),
-				Version: e.Source.Commit, Tools: []ProbedTool{}, Items: []Item{}, Skill: &sp, entry: e}, nil
+			return c.previewSkill(src, u.Host, body)
 		}
-		m, err := manifestFrom(src, body)
-		if err != nil {
-			return Preview{}, err
-		}
-		pv := Preview{Kind: "listing", URL: src, Host: u.Host, Name: m.Name, Title: firstOf(m.Title, m.Name), Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name, Version: m.Version, Items: []Item{}}
-		for _, a := range m.Auth {
-			pv.Auth = append(pv.Auth, string(a.Kind))
-		}
-		for _, f := range m.Functions {
-			ro := f.Annotations != nil && f.Annotations.ReadOnlyHint != nil && *f.Annotations.ReadOnlyHint
-			de := !ro && (f.Annotations == nil || f.Annotations.DestructiveHint == nil || *f.Annotations.DestructiveHint)
-			prop := AccessAsk
-			if ro {
-				prop = AccessOn
-			}
-			pv.Tools = append(pv.Tools, ProbedTool{Name: f.Name, Title: f.Title, Description: f.Description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop})
-		}
-		if m.Remote != nil {
-			pv.RemoteURL = m.Remote.URL
-			p, err := Probe(ctx, m.Remote.URL, Reach{})
-			if err != nil {
-				pv.Warning = "the server could not be reached to list its functions: " + err.Error()
-			} else {
-				pv.Tools, pv.Items, pv.Protocol, pv.WebsiteURL = nonNil(p.Tools), p.Items, p.Protocol, p.WebsiteURL
-				if pv.Icon == "" {
-					pv.Icon = p.Icon
-				}
-			}
-		}
-		m.Icon = pv.Icon
-		pv.Tools = nonNil(pv.Tools)
-		pv.manifest = m
-		return pv, nil
+		return previewListing(ctx, src, u.Host, body)
 	}
 	return Preview{}, invalid("give exactly one of mcp or listing")
+}
+
+func previewMCP(ctx context.Context, raw string, in importRequest) (Preview, error) {
+	p, err := Probe(ctx, raw, Reach{Local: in.Local})
+	if err != nil {
+		return Preview{}, err
+	}
+	m, err := ManifestFor(p, in.HeaderSecret)
+	if err != nil {
+		return Preview{}, err
+	}
+	u, _ := url.Parse(p.URL)
+	return Preview{Kind: "mcp", URL: p.URL, Host: u.Host, Name: m.Name, Title: m.Title, Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name,
+		Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), Items: p.Items, manifest: m}, nil
+}
+
+func (c *Console) previewSkill(src, host string, body []byte) (Preview, error) {
+	e, err := skillcatalog.Parse(body)
+	if err != nil {
+		return Preview{}, err
+	}
+	sp := c.skillPreview(e)
+	return Preview{Kind: "skill", URL: src, Host: host, Name: e.ID, Title: firstOf(e.Title, e.Name), Description: e.Description, Publisher: skillcatalog.Publisher(e.Source.Repository, host),
+		Version: e.Source.Commit, Tools: []ProbedTool{}, Items: []Item{}, Skill: &sp, entry: e}, nil
+}
+
+func previewListing(ctx context.Context, src, host string, body []byte) (Preview, error) {
+	m, err := manifestFrom(src, body)
+	if err != nil {
+		return Preview{}, err
+	}
+	pv := Preview{Kind: "listing", URL: src, Host: host, Name: m.Name, Title: firstOf(m.Title, m.Name), Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name, Version: m.Version, Tools: []ProbedTool{}, Items: []Item{}}
+	for _, a := range m.Auth {
+		pv.Auth = append(pv.Auth, string(a.Kind))
+	}
+	for _, f := range m.Functions {
+		pv.Tools = append(pv.Tools, probedTool(f.Name, f.Title, f.Description, hintsOf(f.Annotations)))
+	}
+	if m.Remote != nil {
+		pv.RemoteURL = m.Remote.URL
+		if p, err := Probe(ctx, m.Remote.URL, Reach{}); err != nil {
+			pv.Warning = "the server could not be reached to list its functions: " + err.Error()
+		} else {
+			pv.Tools, pv.Items, pv.Protocol, pv.WebsiteURL, pv.Icon = nonNil(p.Tools), p.Items, p.Protocol, p.WebsiteURL, firstOf(pv.Icon, p.Icon)
+		}
+	}
+	m.Icon = pv.Icon
+	pv.manifest = m
+	return pv, nil
 }
 
 func (c *Console) get() skillcatalog.Get {

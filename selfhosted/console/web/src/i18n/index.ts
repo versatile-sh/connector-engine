@@ -44,8 +44,9 @@ const PLACEHOLDER = /\{(\w+)\}/g;
 export function format(text: string, params: Params | undefined, rules: Intl.PluralRules): string {
   return text
     .replace(PLURAL, (whole, name: string, body: string) => {
-      const value = params?.[name];
-      if (typeof value !== "number") return whole;
+      const given = params?.[name];
+      const value = Number(given);
+      if (given === undefined || given === "" || !Number.isFinite(value)) return whole;
       const branches = new Map([...body.matchAll(BRANCH)].map(([, selector, branch]) => [selector, branch]));
       const branch = branches.get(`=${value}`) ?? branches.get(rules.select(value)) ?? branches.get("other");
       return branch === undefined ? whole : branch.replaceAll("#", String(value));

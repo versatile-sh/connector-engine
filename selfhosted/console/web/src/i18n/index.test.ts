@@ -22,7 +22,11 @@ describe("format", () => {
     });
 
     test("follows the locale's rule", () => {
-      assert.equal(format("{count, plural, one {# chave} other {# chaves}}", { count: 0 }, pt), "0 chave");
+      assert.deepEqual([format("{count, plural, one {one} other {other}}", { count: 0 }, pt), format("{count, plural, one {one} other {other}}", { count: 0 }, en)], ["one", "other"]);
+    });
+
+    test("reads a number given as text", () => {
+      assert.equal(format(FUNCTIONS, { count: "1" }, en), "1 function");
     });
 
     test("falls back to other when the rule's branch is missing", () => {

@@ -1,16 +1,20 @@
 import { useState, type FormEvent } from "react";
 import type { ActivityData, CallOutcome } from "../api";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
-import { useT } from "../i18n/I18nProvider";
+import type { Locale } from "../i18n";
+import { useLocale, useT } from "../i18n/I18nProvider";
 import { Icon } from "../ui/Icon";
 import { SearchBox } from "../ui/SearchBox";
 import { Select, type SelectOption } from "../ui/Select";
-import { CHIP, CONTROL, SURFACE, button } from "../ui/styles";
-import { dayOf, isNarrowed, lastWeek, periodOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
+import { CHIP, SURFACE, button } from "../ui/styles";
+import { dayOf, daysBetween, isNarrowed, keptSince, lastWeek, periodOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
 
 const FILTER_OUTCOMES: readonly CallOutcome[] = ["ok", "error", "denied", "pending"];
 
-const KEPT_DAYS = 30;
+const dayText = (day: string, locale: Locale) => {
+  const [year = 0, month = 1, date = 1] = day.split("-").map(Number);
+  return new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short" }).format(new Date(year, month - 1, date));
+};
 
 function Choice<T extends string>({ label, all, value, options, onChange }: { label: string; all: string; value: T | undefined; options: readonly SelectOption<T>[]; onChange(value: T | undefined): void }) {
   return <Select<T | ""> label={label} value={value ?? ""} options={[{ value: "", text: all }, ...options]} onChange={(next) => onChange(next === "" ? undefined : next)} className="max-w-48" />;
@@ -50,13 +54,15 @@ function Search({ value, onSearch }: { value: string | undefined; onSearch(searc
 
 type FilterRowProps = { filter: ActivityFilter; data: ActivityData | undefined; named: ReadonlyMap<string, Named>; onChange(filter: ActivityFilter): void };
 
-/** The page's filters in one wrapping row in a card of its own, as wide as the page's columns: the range as chips or custom days, the connector, the access key and the outcome as selects that filter past eight options, the connector turning into a chip with its icon once chosen, a search by function name, and Clear filters while anything narrows the page. */
+/** The page's filters in one wrapping row in a card of its own, as wide as the page's columns: the range as chips or custom days picked from the kept ones with two `Select`s, the connector, the access key and the outcome as selects that filter past eight options, the connector turning into a chip with its icon once chosen, a search by function name, and Clear filters while anything narrows the page. */
 export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
   const t = useT();
+  const locale = useLocale();
   const now = new Date();
   const titleOf = (id: string) => named.get(id)?.title ?? data?.connectors.find((count) => count.connector === id)?.alias ?? id;
   const connectors = (data?.connectors ?? []).flatMap((count) => (count.connector ? [{ value: count.connector, text: titleOf(count.connector), icon: <ConnectorIcon src={named.get(count.connector)?.icon} title={titleOf(count.connector)} size="xs" /> }] : []));
   const period = (next: ActivityPeriod) => onChange({ ...filter, ...next });
+  const dayOption = (day: string) => ({ value: day, text: dayText(day, locale) });
   return (
     <div role="group" aria-label={t("activity.filters")} className={`${SURFACE} mb-6 flex flex-wrap items-center gap-2 p-3 sm:p-4`}>
       <div role="group" aria-label={t("activity.range")} className="flex flex-wrap gap-2">
@@ -68,11 +74,11 @@ export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
       </div>
       {filter.range === "custom" ? (
         <span className="swap-in flex items-center gap-1.5">
-          <input type="date" aria-label={t("activity.from")} required min={dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - KEPT_DAYS))} max={filter.to} value={filter.from} onChange={(event) => event.target.value && period({ ...filter, from: event.target.value })} className={CONTROL} />
+          <Select<string> label={t("activity.from")} value={filter.from} options={daysBetween(keptSince(now), filter.to).map(dayOption)} onChange={(from) => period({ ...filter, from })} className="w-40" />
           <span aria-hidden="true" className="text-muted">
             –
           </span>
-          <input type="date" aria-label={t("activity.to")} required min={filter.from} max={dayOf(now)} value={filter.to} onChange={(event) => event.target.value && period({ ...filter, to: event.target.value })} className={CONTROL} />
+          <Select<string> label={t("activity.to")} value={filter.to} options={daysBetween(filter.from, dayOf(now)).map(dayOption)} onChange={(to) => period({ ...filter, to })} className="w-40" />
         </span>
       ) : null}
       {filter.connector ? (

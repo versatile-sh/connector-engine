@@ -1,6 +1,7 @@
 package console
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -135,4 +136,11 @@ func (c *Console) logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (c *Console) ready(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	_, err := c.Engine.send(ctx, c.Engine.PublicURL, "", http.MethodGet, "/readyz", nil, 1<<10)
+	writeJSON(w, http.StatusOK, map[string]bool{"ready": err == nil && !c.Secrets.Locked()})
 }

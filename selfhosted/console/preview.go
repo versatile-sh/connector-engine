@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -121,30 +122,22 @@ func (c *Console) get() skillcatalog.Get {
 	}
 }
 
-func (c *Console) importSkill(w http.ResponseWriter, r *http.Request, in importRequest, p Preview) {
+func (c *Console) importSkill(ctx context.Context, in importRequest, p Preview) (string, error) {
 	access := in.Access
 	if access == "" {
 		access = AccessOn
 	}
 	if !access.Valid() {
-		writeError(w, http.StatusBadRequest, "access is off, on or ask")
-		return
+		return "", invalid("access is off, on or ask")
 	}
 	if in.Digest != p.Skill.Digest {
-		writeError(w, http.StatusConflict, "the skill changed since the preview; review it again")
-		return
+		return "", &statusError{status: http.StatusConflict, err: errors.New("the skill changed since the preview; review it again")}
 	}
-	m, err := skillcatalog.Manifest(r.Context(), c.get(), p.URL, p.entry)
+	m, err := skillcatalog.Manifest(ctx, c.get(), p.URL, p.entry)
 	if err != nil {
-		c.fail(w, err)
-		return
+		return "", err
 	}
-	id, err := c.InstallSkill(r.Context(), m, access)
-	if err != nil {
-		c.fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]string{"skill": id})
+	return c.InstallSkill(ctx, m, access)
 }
 
 func (c *Console) preview(w http.ResponseWriter, r *http.Request) {
@@ -165,38 +158,48 @@ func (c *Console) doImport(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
+	id, kind, err := c.importOne(r.Context(), in)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	if kind != "skill" {
+		kind = "connector"
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{kind: id})
+}
+
+func (c *Console) importOne(ctx context.Context, in importRequest) (string, string, error) {
 	for name, a := range in.Choices {
 		if !a.Valid() {
-			writeError(w, http.StatusBadRequest, "function "+name+": access is off, on or ask")
-			return
+			return "", "", invalid("function %s: access is off, on or ask", name)
 		}
 	}
-	p, err := c.buildPreview(r.Context(), in)
+	p, err := c.buildPreview(ctx, in)
 	if err != nil {
-		c.fail(w, err)
-		return
+		return "", "", err
 	}
+	var id string
 	if p.Kind == "skill" {
-		c.importSkill(w, r, in, p)
-		return
-	}
-	choices := map[string]Access{}
-	for _, t := range p.Tools {
-		choices[t.Name] = t.Proposed
-		if a, ok := in.Choices[t.Name]; ok {
-			choices[t.Name] = a
+		id, err = c.importSkill(ctx, in, p)
+	} else {
+		choices := map[string]Access{}
+		for _, t := range p.Tools {
+			choices[t.Name] = t.Proposed
 		}
-	}
-	for _, it := range p.Items {
-		choices[it.Name] = it.Access
-		if a, ok := in.Choices[it.Name]; ok {
-			choices[it.Name] = a
+		for _, it := range p.Items {
+			choices[it.Name] = it.Access
 		}
+		for name, a := range in.Choices {
+			if _, ok := choices[name]; ok {
+				choices[name] = a
+			}
+		}
+		id, err = c.Install(ctx, p.manifest, choices)
 	}
-	id, err := c.Install(r.Context(), p.manifest, choices)
 	if err != nil {
-		c.fail(w, err)
-		return
+		return "", "", err
 	}
-	writeJSON(w, http.StatusCreated, map[string]string{"connector": id})
+	o := Origin{MCP: strings.TrimSpace(in.MCP), Listing: strings.TrimSpace(in.Listing), Local: in.Local, HeaderSecret: in.HeaderSecret, Digest: in.Digest}
+	return id, p.Kind, c.State.PutOrigin(id, o)
 }

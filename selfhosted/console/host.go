@@ -12,6 +12,9 @@ const maxHostSecret = 4 << 10
 func (c *Console) HostHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /password", c.resetPassword)
+	mux.HandleFunc("POST /export", c.hostExport)
+	mux.HandleFunc("POST /inspect", c.hostInspect)
+	mux.HandleFunc("POST /import", c.hostImport)
 	return mux
 }
 

@@ -51,9 +51,10 @@ type stateFile struct {
 	Owner    *Owner                   `json:"owner,omitempty"`
 	Agents   map[string]Agent         `json:"agents,omitempty"`
 	Sessions map[string]StoredSession `json:"sessions,omitempty"`
+	Revoked  map[string]time.Time     `json:"revoked,omitempty"`
 }
 
-// State is the console's file in its volume: the owner account and the connected agents, written atomically with mode 0600.
+// State is the console's file in its volume: the owner account, the connected agents and the revoked ones, written atomically with mode 0600.
 type State struct {
 	path string
 	mu   sync.Mutex
@@ -199,4 +200,40 @@ func (s *State) PutAgent(a Agent) error {
 	}
 	s.data.Agents[a.Name] = a
 	return s.save()
+}
+
+// RevokeAgent forgets the agent and refuses every token minted for it up to at; it reports false when no such agent was ever connected.
+func (s *State) RevokeAgent(name string, at time.Time) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	agent, known := s.data.Agents[name]
+	before, revoked := s.data.Revoked[name]
+	if !known && !revoked {
+		return false, nil
+	}
+	if s.data.Revoked == nil {
+		s.data.Revoked = map[string]time.Time{}
+	}
+	delete(s.data.Agents, name)
+	s.data.Revoked[name] = at.UTC()
+	if err := s.save(); err != nil {
+		if known {
+			s.data.Agents[name] = agent
+		}
+		if revoked {
+			s.data.Revoked[name] = before
+		} else {
+			delete(s.data.Revoked, name)
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// Revoked reports whether a token of agent issued at iat (Unix seconds) was minted before the agent was revoked.
+func (s *State) Revoked(agent string, iat int64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	at, ok := s.data.Revoked[agent]
+	return ok && iat <= at.Unix()
 }

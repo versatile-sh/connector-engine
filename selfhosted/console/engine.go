@@ -54,19 +54,30 @@ func (e *Engine) client() *http.Client {
 }
 
 func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, out any) error {
-	var body io.Reader
+	var body []byte
 	if in != nil {
-		raw, err := json.Marshal(in)
-		if err != nil {
+		var err error
+		if body, err = json.Marshal(in); err != nil {
 			return err
 		}
-		body = bytes.NewReader(raw)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(base, "/")+path, body)
-	if err != nil {
+	raw, err := e.send(ctx, base, bearer, method, path, body, 8<<20)
+	if err != nil || out == nil || len(raw) == 0 {
 		return err
 	}
-	if in != nil {
+	return json.Unmarshal(raw, out)
+}
+
+func (e *Engine) send(ctx context.Context, base, bearer, method, path string, body []byte, limit int64) ([]byte, error) {
+	var in io.Reader
+	if body != nil {
+		in = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(base, "/")+path, in)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if bearer != "" {
@@ -74,12 +85,12 @@ func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, 
 	}
 	resp, err := e.client().Do(req)
 	if err != nil {
-		return unreachable(fmt.Errorf("engine unreachable: %w", err))
+		return nil, unreachable(fmt.Errorf("engine unreachable: %w", err))
 	}
 	defer resp.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, limit))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if resp.StatusCode >= 300 {
 		ee := &EngineError{Status: resp.StatusCode}
@@ -87,12 +98,9 @@ func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, 
 			ee.Detail = strings.TrimSpace(string(raw))
 		}
 		ee.Status = resp.StatusCode
-		return ee
+		return nil, ee
 	}
-	if out == nil || len(raw) == 0 {
-		return nil
-	}
-	return json.Unmarshal(raw, out)
+	return raw, nil
 }
 
 // Mint asks the local issuer for a token with these claims, living ttl.
@@ -144,4 +152,15 @@ func (e *Engine) Call(ctx context.Context, method, path string, in, out any) err
 // EnsureTenant creates the local tenant through the operator listener; creating an existing tenant is accepted.
 func (e *Engine) EnsureTenant(ctx context.Context) error {
 	return e.do(ctx, e.OperatorURL, e.Operator, http.MethodPut, "/v1/tenants/"+e.Tenant, nil, nil)
+}
+
+// Snapshot returns the engine's snapshot, its rows and its keys in plaintext, as the operator listener serves it.
+func (e *Engine) Snapshot(ctx context.Context) ([]byte, error) {
+	return e.send(ctx, e.OperatorURL, e.Operator, http.MethodGet, "/v1/snapshot", nil, maxBackupBytes)
+}
+
+// Restore replaces the engine's rows and keys with a snapshot; the engine then stops so that it starts again on them.
+func (e *Engine) Restore(ctx context.Context, snapshot []byte) error {
+	_, err := e.send(ctx, e.OperatorURL, e.Operator, http.MethodPut, "/v1/snapshot", snapshot, 1<<16)
+	return err
 }

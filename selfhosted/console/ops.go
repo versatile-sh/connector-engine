@@ -36,6 +36,7 @@ type ConnectorSummary struct {
 	Icon        string         `json:"icon,omitempty"`
 	Publisher   string         `json:"publisher,omitempty"`
 	RemoteURL   string         `json:"remote_url,omitempty"`
+	Transport   string         `json:"transport,omitempty"`
 	Auth        []string       `json:"auth,omitempty"`
 	Credentials []string       `json:"credentials,omitempty"`
 	Functions   []FunctionView `json:"functions"`
@@ -87,7 +88,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 			}
 			s.Title, s.Description, s.Icon, s.Publisher = firstOf(m.Title, m.Name), m.Description, m.Icon, m.Publisher.Name
 			if m.Remote != nil {
-				s.RemoteURL = m.Remote.URL
+				s.RemoteURL, s.Transport = m.Remote.URL, m.Remote.Transport
 			}
 			for _, a := range m.Auth {
 				s.Auth = append(s.Auth, string(a.Kind))

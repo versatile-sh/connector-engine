@@ -64,6 +64,16 @@ type stateFile struct {
 	Spent               map[string]RefreshGrant  `json:"oauth_refresh_spent,omitempty"`
 	Notify              notifyState              `json:"notifications,omitzero"`
 	LastExport          time.Time                `json:"last_export,omitzero"`
+	Origins             map[string]Origin        `json:"origins,omitempty"`
+}
+
+// Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
+type Origin struct {
+	MCP          string `json:"mcp,omitempty"`
+	Listing      string `json:"listing,omitempty"`
+	Local        bool   `json:"local,omitempty"`
+	HeaderSecret bool   `json:"header_secret,omitempty"`
+	Digest       string `json:"digest,omitempty"`
 }
 
 // State is the console's file in its volume: the owner account, the connected agents and the revoked ones, written atomically with mode 0600.
@@ -396,4 +406,20 @@ func (s *State) MarkExported(at time.Time) error {
 		d.LastExport = at.UTC().Truncate(time.Second)
 		return nil
 	})
+}
+
+// PutOrigin records where the connector or skill id was imported from.
+func (s *State) PutOrigin(id string, o Origin) error {
+	return s.update(func(d *stateFile) error {
+		put(&d.Origins, id, o)
+		return nil
+	})
+}
+
+// OriginOf returns where the connector or skill id was imported from, if the console recorded it.
+func (s *State) OriginOf(id string) (Origin, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	o, ok := s.data.Origins[id]
+	return o, ok
 }

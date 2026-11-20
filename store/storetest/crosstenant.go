@@ -24,8 +24,9 @@ func crossTenantMatrix(e *env) {
 		_, err1 := tx.PutConnector(connector("ta", "c1"), port.AnyRevision)
 		_, err2 := tx.PutCredential(cred, port.AnyRevision)
 		_, err3 := tx.Emit(port.Event{Type: "x", Tenant: "ta", Time: t0})
+		_, err5 := tx.Emit(port.Event{Type: "y", Tenant: "ta", Time: t0})
 		_, err4 := tx.MarkInbox("m1", t0)
-		return errors.Join(err1, err2, err3, err4,
+		return errors.Join(err1, err2, err3, err4, err5,
 			tx.PutListing(port.Listing{Ref: private, Source: port.PrivateSource, Publisher: "ta", Status: port.ListingActive}),
 			tx.PutFunction(port.Function{Tenant: "ta", Connector: "c1", Name: "f", DefinitionHash: "h", State: port.FunctionActive}),
 			tx.PutBinding(port.Binding{Tenant: "ta", Workspace: "w", Connector: "c1", Agent: "x", AgentOwner: "u1", CredentialPolicy: port.CredentialPerUser}),
@@ -35,6 +36,7 @@ func crossTenantMatrix(e *env) {
 			tx.PutTombstone(port.Tombstone{Tenant: "ta", Kind: port.TombstoneSession, Subject: "s1", At: t0, ExpiresAt: t0.Add(time.Hour)}),
 			tx.PutOverlay(port.Overlay{Tenant: "ta", Connector: "c1", Function: "f", Version: 1, State: port.OverlayActive}),
 			tx.CreateCall(call),
+			tx.CreateCall(port.Call{ID: "k0", Tenant: "ta", Agent: "x", Session: "s0", Connector: "c1", State: port.CallFinished, StartedAt: t0, FinishedAt: t0}),
 			tx.PutClient(port.ClientRegistration{Tenant: "ta", Issuer: "https://idp", ClientID: "a"}),
 			tx.PutExposure(port.Exposure{Tenant: "ta", Agent: "x", Exposed: true}),
 			tx.PutOperation(port.Operation{ID: "o1", Tenant: "ta", Kind: "installConnector", CreatedAt: t0}),
@@ -43,6 +45,15 @@ func crossTenantMatrix(e *env) {
 			tx.PutRole(role), tx.PutMember(member),
 			tx.Audit(port.AuditRow{At: t0, Tenant: "ta", Actor: "u1", Action: "x", Subject: "s1"}))
 	}))
+	e.must(e.write(inst, func(tx port.Tx) error {
+		_, err := tx.Emit(port.Event{Type: "inst-event", Time: t0})
+		return errors.Join(err, tx.PutOperation(port.Operation{ID: "inst-o2", Kind: "removeTenant", CreatedAt: t0}),
+			tx.PutFanOut(port.FanOut{ID: "inst-f1", Kind: "status", CreatedAt: t0}),
+			tx.Audit(port.AuditRow{At: t0, Actor: "inst-actor", Action: "x", Subject: "s1"}))
+	}))
+	events, err := e.o.Pending(ctx, 0)
+	e.must(err)
+	e.must(e.o.MarkDelivered(ctx, []string{events[0].ID}))
 	before, due := e.everything(snapper)
 	var seen []any
 	e.must(e.read(scopeB, func(tx port.Tx) error {
@@ -77,14 +88,19 @@ func crossTenantMatrix(e *env) {
 		look(tx.ListMembers(port.MemberFilter{}))
 		look(tx.ListAudit(""))
 		look(tx.EventsAfter(port.SourceOf("ta"), 0, 0))
-		look(tx.SeenInbox("m1"))
+		if seen, err := tx.SeenInbox("m1"); seen || err != nil {
+			e.t.Fatalf("tenant tb sees the inbox of ta: %v %v", seen, err)
+		}
+		look(tx.GetOperation("inst-o2"))
+		look(tx.ListFanOuts())
+		look(tx.EventsAfter(port.SourceOf(port.Installation), 0, 0))
 		look(tx.DueWork(t0.Add(48*time.Hour), 0))
 		return nil
 	}))
 	raw, err := json.Marshal(seen)
 	e.must(err)
-	if bytes.Contains(raw, []byte(`"ta"`)) {
-		e.t.Fatalf("tenant tb reads rows of tenant ta: %s", raw)
+	if bytes.Contains(raw, []byte(`"ta"`)) || bytes.Contains(raw, []byte("inst-")) {
+		e.t.Fatalf("tenant tb reads rows of tenant ta or of the installation: %s", raw)
 	}
 	for _, attack := range []func(port.Tx) error{
 		func(tx port.Tx) error { _, err := tx.PutConnector(connector("tb", "c1"), port.AnyRevision); return err },
@@ -120,6 +136,9 @@ func crossTenantMatrix(e *env) {
 		},
 		func(tx port.Tx) error { return tx.PutExposure(port.Exposure{Tenant: "ta", Agent: "x"}) },
 		func(tx port.Tx) error { return tx.PutOperation(port.Operation{ID: "o1", Tenant: "tb", Kind: "x"}) },
+		func(tx port.Tx) error { return tx.PutOperation(port.Operation{ID: "inst-o2", Tenant: "tb", Kind: "x"}) },
+		func(tx port.Tx) error { return tx.PutFanOut(port.FanOut{ID: "inst-f1", Kind: "x"}) },
+		func(tx port.Tx) error { _, err := tx.Emit(port.Event{Type: "x", Time: t0}); return err },
 		func(tx port.Tx) error { return tx.PutPolicy(port.CatalogPolicy{Tenant: "ta", Workspace: "w"}) },
 		func(tx port.Tx) error { return tx.PutRule(port.CatalogRule{ID: "r1", Tenant: "tb"}) },
 		func(tx port.Tx) error { return tx.DeleteRule("r1") },

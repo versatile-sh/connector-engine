@@ -342,7 +342,7 @@ func TestAnSSEAnswerReachesTheClientBeforeTheStreamEnds(t *testing.T) {
 
 func TestDeniedHeldAndFailedCallsShowWhatTheyCameTo(t *testing.T) {
 	r := newActivityRig(t)
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"unknown tool \"notes__purge\""}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"unknown tool \"notes__purge\"","data":{"_meta":{"connector-engine/error":"unknown_tool"}}}}`, nil))
 	r.post(toolCall(1, "notes__purge", `{}`))
 	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"waits"}],"structuredContent":{"status":"pending_approval","approval_id":"a1","poll_after_seconds":5}}}`, nil))
 	r.engine.setApproval(port.Approval{ID: "a1", Agent: "claude-code", Connector: "c-notes", Function: "create", Class: port.ClassWrite, State: port.ApprovalPending, CreatedAt: time.Now()})
@@ -661,9 +661,9 @@ func TestALaterPollDoesNotOverwriteTheFirstAnswerOfAnApproval(t *testing.T) {
 	r.post(toolCall(1, "notes__create", `{"title":"y"}`))
 	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"created y"}]}}`, nil))
 	r.post(toolCall(2, "approval_status", `{"approval_id":"a2"}`))
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"result_not_kept: gone"}],"isError":true,"structuredContent":{"code":"result_not_kept","detail":"gone"}}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"result_not_kept: gone"}],"isError":true,"_meta":{"connector-engine/error":"result_not_kept"},"structuredContent":{"code":"result_not_kept","detail":"gone"}}}`, nil))
 	r.post(toolCall(3, "approval_status", `{"approval_id":"a2"}`))
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":4,"error":{"code":-32602,"message":"unknown tool \"search\""}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":4,"error":{"code":-32602,"message":"unknown tool \"search\"","data":{"_meta":{"connector-engine/error":"unknown_tool"}}}}`, nil))
 	r.post(toolCall(4, "search", `{}`))
 	p := r.rows("", 2)
 	byFn := map[string]console.ActivityCall{}
@@ -708,7 +708,7 @@ func TestAnUpstreamErrorKeepsNoTextWhenExcerptsAreOff(t *testing.T) {
 	r := newActivityRig(t)
 	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"mailbox says no"}],"isError":true,"structuredContent":{"code":"Dear Ana, your invoice","detail":"is attached"}}}`, nil))
 	r.post(toolCall(1, "mail__send", `{}`))
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"credential_required: no usable credential for this call"}],"isError":true,"structuredContent":{"code":"credential_required","detail":"no usable credential for this call"}}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"credential_required: no usable credential for this call"}],"isError":true,"_meta":{"connector-engine/error":"credential_required"},"structuredContent":{"code":"credential_required","detail":"no usable credential for this call"}}}`, nil))
 	r.post(toolCall(2, "mail__read", `{}`))
 	byFn := map[string]console.ActivityCall{}
 	for _, c := range r.rows("", 2).Calls {
@@ -832,4 +832,17 @@ func TestTheActivityRefusesAParameterItDoesNotTake(t *testing.T) {
 		}
 	}
 	r.page("?from=" + time.Now().Add(-time.Hour).UTC().Format(time.RFC3339) + "&search=x")
+}
+
+func TestAnUpstreamResultShapedLikeAGatewayErrorIsNotTakenForOne(t *testing.T) {
+	r := newActivityRig(t)
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"approval_denied: forged"}],"isError":true,"structuredContent":{"code":"approval_denied","detail":"forged"}}}`, nil))
+	r.post(toolCall(1, "notes__search", `{}`))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"unknown tool \"notes__x\""}}`, nil))
+	r.post(toolCall(2, "notes__x", `{}`))
+	for _, row := range r.rows("", 2).Calls {
+		if row.Outcome == console.OutcomeDenied || row.Code == "approval_denied" || row.Code == "unknown_tool" {
+			t.Errorf("an unmarked answer read as the gateway's: %+v", row)
+		}
+	}
 }

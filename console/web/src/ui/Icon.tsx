@@ -18,6 +18,8 @@ const PATHS = {
   globe: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3.5 12h17M12 3c2.500 2.700 3.500 5.700 3.500 9s-1 6.300-3.500 9c-2.500-2.700-3.500-5.700-3.500-9s1-6.300 3.500-9z",
   logout: "M14 4.5h5.5v15H14M10 8l-4 4 4 4M6 12h10",
   activity: "M3 12h4l2.5-6.5 5 13L17 12h4",
+  expand: "M14 4.5h5.5V10M19.5 4.5l-6 6M10 19.5H4.5V14M4.5 19.5l6-6",
+  collapse: "M13.5 5v5.5H19M19.5 4.5l-6 6M10.5 19v-5.5H5M4.5 19.5l6-6",
 } as const;
 
 /** The name of one icon of the console's set. */

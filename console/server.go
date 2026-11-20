@@ -55,6 +55,7 @@ type Console struct {
 	Activity      *Activity
 	Secrets       *sealed.Box
 	NewChannel    ChannelFactory
+	Secrets       NotifierSecrets
 
 	loginMu sync.Mutex
 	iconMu  sync.Mutex

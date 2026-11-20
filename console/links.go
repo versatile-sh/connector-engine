@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,7 +66,7 @@ func (c *Console) checkLink(token, approval string) (device string, nonce string
 	if err != nil {
 		return "", "", err
 	}
-	if len(f) != 2 || f[0] != approval || c.surf.spent(nonce) {
+	if len(f) != 2 || f[0] != approval || c.surf.spent(nonce) || !slices.ContainsFunc(c.State.Devices(), func(d Device) bool { return d.ID == f[1] }) {
 		return "", "", errBadToken
 	}
 	return f[1], nonce, nil

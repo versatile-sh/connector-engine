@@ -19,6 +19,7 @@ import (
 
 	"github.com/agents-control/connector-engine/config"
 	"github.com/agents-control/connector-engine/console"
+	"github.com/agents-control/connector-engine/port"
 	"github.com/agents-control/connector-engine/surface"
 )
 
@@ -30,6 +31,7 @@ type fakeChannel struct {
 	click    surface.ClickFunc
 	once     sync.Once
 	listened chan struct{}
+	settings map[string]string
 }
 
 func (f *fakeChannel) Kind() string { return f.kind }
@@ -80,6 +82,7 @@ type rig struct {
 	conn console.ConnectorSummary
 	tok  console.AgentToken
 	fake *fakeChannel
+	eng  *console.Engine
 }
 
 func newRig(t *testing.T) *rig {
@@ -102,7 +105,12 @@ func newRig(t *testing.T) *rig {
 	fake := &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
 		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour,
-		NewChannel: func(string, map[string]string) (surface.Channel, error) { return fake, nil }, Fetch: (&fixtureCatalog{t: t}).get}
+		NewChannel: func(_ string, s map[string]string) (surface.Channel, error) {
+			fake.mu.Lock()
+			fake.settings = s
+			fake.mu.Unlock()
+			return fake, nil
+		}, Fetch: (&fixtureCatalog{t: t}).get}
 	srv := &httptest.Server{Listener: lis, Config: &http.Server{Handler: c.Handler()}}
 	srv.Start()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -110,7 +118,7 @@ func newRig(t *testing.T) *rig {
 	go func() { c.RunNotifications(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done; srv.Close() })
 	jar, _ := cookiejar.New(nil)
-	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake}
+	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake, eng: eng}
 	var setup struct{ CSRF string }
 	r.b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
 	r.b.csrf = setup.CSRF
@@ -152,15 +160,25 @@ func (r *rig) call(cs *mcp.ClientSession, function string, args map[string]any) 
 	return out
 }
 
-func (r *rig) access(function string) console.Access {
-	var list struct{ Connectors []console.ConnectorSummary }
-	r.b.ok("GET", "/api/connectors", nil, &list)
-	for _, f := range list.Connectors[0].Functions {
-		if f.Name == function {
-			return f.Access
-		}
+func (r *rig) allowed(scopeKind, scopeID, connector, function string) bool {
+	var rows struct{ Items []port.Grant }
+	if err := r.eng.Call(context.Background(), "GET", "/v1/grants?scope_kind="+scopeKind+"&scope_id="+scopeID+"&connector="+connector, nil, &rows); err != nil {
+		r.t.Fatal(err)
 	}
-	return ""
+	return slices.ContainsFunc(rows.Items, func(g port.Grant) bool {
+		return g.Selector == port.SelectorFunction+function && g.Mode == port.ModeAllow
+	})
+}
+
+func (r *rig) eventually(what string, ok func() bool) {
+	r.t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for !ok() {
+		if time.Now().After(deadline) {
+			r.t.Fatalf("%s did not happen", what)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 func (r *rig) approveFirstPending() {
@@ -194,6 +212,12 @@ func TestAChatButtonDecidesAHeldCallAndTheCallResumes(t *testing.T) {
 		t.Fatalf("channel view %+v", view)
 	}
 	within(t, r.fake.listened, 5*time.Second)
+	r.fake.mu.Lock()
+	got := r.fake.settings
+	r.fake.mu.Unlock()
+	if got["token"] != token || got["owner_user_id"] != "42" {
+		t.Fatalf("the channel was built without its secret: %v", got)
+	}
 	cs := r.connect("", nil)
 
 	t.Run("allow once", func(t *testing.T) {
@@ -228,9 +252,7 @@ func TestAChatButtonDecidesAHeldCallAndTheCallResumes(t *testing.T) {
 			t.Fatalf("always %+v %v", o, err)
 		}
 		ran(t, within(t, pending, 8*time.Second), "create")
-		if a := r.access("create"); a != console.AccessOn {
-			t.Fatalf("access after always: %s", a)
-		}
+		r.eventually("create turning on", func() bool { return r.allowed("workspace", "default", r.conn.ID, "create") })
 		ran(t, within(t, r.call(cs, "create", map[string]any{"title": "third"}), 5*time.Second), "create")
 		within(t, r.fake.settled, 5*time.Second)
 	})
@@ -319,6 +341,20 @@ func TestADesktopLinkDecidesOnceWithoutASession(t *testing.T) {
 	if ev := within(t, events, 5*time.Second); ev.Type != "settled" || ev.Outcome.Channel != "desktop" {
 		t.Fatalf("settled %+v", ev)
 	}
+
+	t.Run("a revoked device's link no longer decides", func(t *testing.T) {
+		pending := r.call(cs, "create", map[string]any{"title": "after revoke"})
+		ev := within(t, events, 8*time.Second)
+		link, _ := url.Parse(ev.Link)
+		var devices struct{ Devices []console.DeviceView }
+		r.b.ok("GET", "/api/notifications", nil, &devices)
+		r.b.ok("DELETE", "/api/notifications/devices/"+devices.Devices[0].ID, nil, nil)
+		if status, _ := anon.send("POST", "/api/approvals/"+ev.Approval+"/decide", map[string]any{"choice": "once", "token": link.Query().Get("t")}, nil); status != http.StatusUnauthorized {
+			t.Fatalf("a revoked device decided: %d", status)
+		}
+		r.approveFirstPending()
+		ran(t, within(t, pending, 8*time.Second), "create")
+	})
 }
 
 func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
@@ -328,7 +364,8 @@ func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
 	link := catalogBase + "pdf.yaml"
 	var pv console.Preview
 	r.b.ok("POST", "/api/preview", map[string]any{"listing": link}, &pv)
-	r.b.ok("POST", "/api/import", map[string]any{"listing": link, "digest": pv.Skill.Digest, "access": "ask"}, nil)
+	var imported struct{ Skill string }
+	r.b.ok("POST", "/api/import", map[string]any{"listing": link, "digest": pv.Skill.Digest, "access": "ask"}, &imported)
 	cs := r.connect("", nil)
 	out := make(chan callResult, 1)
 	go func() {
@@ -345,11 +382,6 @@ func TestASkillApprovalNamesTheSkillAndAlwaysTurnsTheKeyOn(t *testing.T) {
 	if got := within(t, out, 8*time.Second); got.err != nil || got.res.IsError {
 		t.Fatalf("skill_load after always: %+v %v", got.res, got.err)
 	}
-	var skills struct{ Skills []console.SkillSummary }
-	r.b.ok("GET", "/api/skills", nil, &skills)
-	for _, k := range skills.Skills[0].Access {
-		if k.Agent == "claude-code" && k.Access != console.AccessOn {
-			t.Fatalf("the key's access after always: %s", k.Access)
-		}
-	}
+	r.eventually("the key turning on for the skill", func() bool { return r.allowed("agent", "claude-code", imported.Skill, "skill") })
+
 }

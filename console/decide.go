@@ -11,6 +11,11 @@ import (
 	"github.com/agents-control/connector-engine/surface"
 )
 
+const (
+	allowWait = 3 * time.Minute
+	allowPoll = 250 * time.Millisecond
+)
+
 // ConnectorRef is how an approval view names its connector.
 type ConnectorRef struct {
 	ID    string `json:"id"`
@@ -63,6 +68,40 @@ func (c *Console) connectorRef(ctx context.Context, conn port.ConnectorID) (Conn
 	return ref, m, nil
 }
 
+func (c *Console) record(ctx context.Context, id string) (port.Approval, error) {
+	var d approvalDetail
+	err := c.Engine.Call(ctx, http.MethodGet, "/v1/approvals/"+esc(id), nil, &d)
+	return d.Approval, err
+}
+
+type presented struct {
+	connector ConnectorRef
+	skill     bool
+	kind      port.Class
+	title     string
+	at        time.Time
+}
+
+func (c *Console) present(ctx context.Context, a port.Approval) (presented, error) {
+	key := string(a.Connector) + "/" + a.Function + "/" + string(a.DefinitionHash)
+	if pr, ok := c.surf.presented(key); ok {
+		return pr, nil
+	}
+	ref, m, err := c.connectorRef(ctx, a.Connector)
+	if err != nil {
+		return presented{}, err
+	}
+	pr := presented{connector: ref, at: time.Now()}
+	if m.Kind == port.KindSkill {
+		pr.skill, pr.kind, pr.title = true, port.ClassRead, firstOf(m.Title, ref.Alias)
+	} else if f, err := c.function(ctx, string(a.Connector), a.Function); err == nil {
+		pr.kind = Nature(f)
+		pr.title, _ = describe(f.Definition)
+	}
+	c.surf.present(key, pr)
+	return pr, nil
+}
+
 // Approval reads one approval with its connector, its function's nature and the choices still open.
 func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error) {
 	var d approvalDetail
@@ -79,18 +118,19 @@ func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error)
 	if json.Valid(d.Arguments) {
 		v.Arguments = d.Arguments
 	}
-	ref, m, err := c.connectorRef(ctx, a.Connector)
+	pr, err := c.present(ctx, a)
 	if err != nil {
 		return ApprovalView{}, err
 	}
-	v.Connector = ref
-	if m.Kind == port.KindSkill {
-		v.Skill, v.Kind, v.Function, v.FunctionTitle = true, port.ClassRead, ref.Alias, firstOf(m.Title, ref.Alias)
-		v.Connector.Title = "Skill"
-	} else if f, err := c.function(ctx, string(a.Connector), a.Function); err == nil {
-		v.Kind = Nature(f)
-		v.FunctionTitle, _ = describe(f.Definition)
+	v.Connector, v.Skill = pr.connector, pr.skill
+	if pr.kind != "" {
+		v.Kind = pr.kind
 	}
+	if pr.skill {
+		v.Function = pr.connector.Alias
+		v.Connector.Title = "Skill"
+	}
+	v.FunctionTitle = pr.title
 	if a.State == port.ApprovalPending {
 		v.Choices = append(v.Choices, surface.ChoiceOnce)
 		if a.Mode == port.ModeAskOnce {
@@ -125,18 +165,37 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	lost := out.State == port.ApprovalPending || out.Channel != channel || out.DecisionNote != note
 	if choice == surface.ChoiceAlways && !lost {
 		c.surf.markAlways(id)
-		set := func() error { return c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn) }
-		if v.Skill {
-			set = func() error { return c.SetSkillAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), AccessOn) }
-		}
-		if err := set(); err != nil {
-			return v, false, err
-		}
+		go c.allowAfterRun(v)
 	}
 	if after, err := c.Approval(ctx, id); err == nil {
 		v = after
 	}
 	return v, lost, nil
+}
+
+// allowAfterRun turns the approval's function or skill on once its approved call has run, since replacing the row earlier would cancel that run.
+func (c *Console) allowAfterRun(v ApprovalView) {
+	ctx, cancel := context.WithTimeout(context.Background(), allowWait)
+	defer cancel()
+	for failures := 0; ctx.Err() == nil && failures < 20; {
+		a, err := c.record(ctx, v.ID)
+		if err != nil {
+			failures++
+		} else if a.State != port.ApprovalApproved && a.State != port.ApprovalExecuting {
+			break
+		}
+		select {
+		case <-ctx.Done():
+		case <-time.After(allowPoll):
+		}
+	}
+	err := c.SetAccess(ctx, string(v.approval.Connector), v.approval.Function, AccessOn)
+	if v.Skill {
+		err = c.SetSkillAccess(ctx, string(v.approval.Connector), string(v.approval.Agent), AccessOn)
+	}
+	if err != nil {
+		c.logger().Warn("always allow", "approval", v.ID, "error", err)
+	}
 }
 
 // Outcome is the surface outcome of a decided, expired or cancelled approval view.

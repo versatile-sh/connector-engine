@@ -143,6 +143,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	gcfg.ViewTokens = a.Config.Apps.AppOnlyFunctions == "view_token"
 	gcfg.ResourceMetadataURL = a.Config.ResourceMetadataURL()
 	gcfg.HoldWindow, gcfg.Logger, gcfg.Skills = a.Config.Approval.HoldWindow, a.log, a.Config.Gateway.Skills == "tools"
+	gcfg.Instructions = a.Config.Gateway.RelayInstructions == "pinned"
 	gcfg.ThresholdTokens, gcfg.ThresholdFunctions, gcfg.SearchResultMax = a.Config.Search.ThresholdTokens, a.Config.Search.ThresholdFunctions, a.Config.Search.ResultMax
 	a.metrics = telemetry.New(a.outbox, a.Clock.Now)
 	agent, err := gateway.New(a.metrics.Core(a.Service), a.Verifier, a.Index, gcfg)

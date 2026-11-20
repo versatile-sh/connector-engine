@@ -231,7 +231,7 @@ func Definition(name, description, extra string) (port.RawDefinition, port.Hash)
 		body += "," + extra
 	}
 	raw := json.RawMessage(body + "}")
-	h, _ := pinning.DefinitionHash(raw)
+	h, _ := pinning.DefinitionHash(name, raw)
 	return port.RawDefinition{Name: name, Raw: raw}, h
 }
 

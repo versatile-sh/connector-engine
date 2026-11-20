@@ -8,19 +8,23 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
-// Specificity ranks a selector: 2 for fn:, 1 for class:, 0 for * (§7.1 M2).
+// Specificity ranks a selector: 2 for fn: and an exact item, 1 for class: and an item kind's wildcard, 0 for * (§7.1 M2).
 func Specificity(selector string) int {
+	kind := port.ItemKind(selector)
 	switch {
-	case strings.HasPrefix(selector, port.SelectorFunction):
+	case strings.HasPrefix(selector, port.SelectorFunction), kind != "" && selector != kind+port.SelectorAll:
 		return 2
-	case strings.HasPrefix(selector, port.SelectorClass):
+	case strings.HasPrefix(selector, port.SelectorClass), kind != "":
 		return 1
 	}
 	return 0
 }
 
-// Covers reports whether a selector covers the function by name, by effective class or as * (§7.1 M1).
+// Covers reports whether a selector covers the function by name, by effective class or as *; an item is covered only by its name or its kind's wildcard (§7.1 M1).
 func Covers(selector string, f port.Function) bool {
+	if kind := port.ItemKind(f.Name); kind != "" {
+		return selector == f.Name || selector == kind+port.SelectorAll
+	}
 	return selector == port.SelectorAll || selector == port.SelectorClass+string(f.Class.Effective()) || selector == port.SelectorFunction+f.Name
 }
 
@@ -34,7 +38,7 @@ type Policy struct {
 func Validate(g port.Grant, p Policy) error {
 	refuse := func(why string) error { return port.Errorf(port.CodeRowRefused, "%s", why) }
 	sel := g.Selector
-	if sel != port.SelectorAll && !validClass(sel) && !(strings.HasPrefix(sel, port.SelectorFunction) && len(sel) > len(port.SelectorFunction)) {
+	if kind := port.ItemKind(sel); sel != port.SelectorAll && !validClass(sel) && !(strings.HasPrefix(sel, port.SelectorFunction) && len(sel) > len(port.SelectorFunction)) && !(kind != "" && len(sel) > len(kind)) {
 		return refuse("unknown selector " + sel)
 	}
 	if g.Mode.Rank() < 0 && g.Mode != port.ModeInherit {
@@ -187,7 +191,7 @@ func SessionRow(a port.Approval, now, tokenExp time.Time, max time.Duration) por
 	}
 	return port.Grant{
 		Tenant: a.Tenant, ScopeKind: port.ScopeSession, ScopeID: string(a.Session), Agent: a.Agent, Connector: a.Connector,
-		Selector: port.SelectorFunction + a.Function, Mode: port.ModeAllow, DefinitionHash: a.DefinitionHash,
+		Selector: port.SelectorOf(a.Function), Mode: port.ModeAllow, DefinitionHash: a.DefinitionHash,
 		ExpiresAt: exp, CreatedBy: a.DecidedBy, CreatedAt: now, Origin: port.OriginApproval,
 	}
 }
@@ -205,7 +209,7 @@ func Capped(g port.Grant, fns []port.Function) []string {
 
 // Confirm moves an fn: row to the function's current hash; a tenant row is never stale and has nothing to confirm (§9).
 func Confirm(g port.Grant, f port.Function) (port.Grant, error) {
-	if g.ScopeKind == port.ScopeTenant || g.Selector != port.SelectorFunction+f.Name {
+	if g.ScopeKind == port.ScopeTenant || g.Selector != port.SelectorOf(f.Name) {
 		return g, port.Errorf(port.CodeInvalidArgument, "only an fn: row below the tenant on %s is confirmed", f.Name)
 	}
 	g.DefinitionHash = f.DefinitionHash

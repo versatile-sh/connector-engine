@@ -177,7 +177,6 @@ func TestAdaptersFileFollowsTheDefaultsAndTheAcknowledgements(t *testing.T) {
 
 func TestKeysThisBuildDoesNotActOnAcceptOnlyTheirDefault(t *testing.T) {
 	for where, edit := range map[string]func(*config.Config){
-		"gateway.relayInstructions":     func(c *config.Config) { c.Gateway.RelayInstructions = "pinned" },
 		"gateway.denyAs":                func(c *config.Config) { c.Gateway.DenyAs = "error" },
 		"audit.arguments":               func(c *config.Config) { c.Audit.Arguments = "redacted" },
 		"audit.hashChain":               func(c *config.Config) { c.Audit.HashChain = true },
@@ -195,5 +194,20 @@ func TestKeysThisBuildDoesNotActOnAcceptOnlyTheirDefault(t *testing.T) {
 		if !has(cfg.Check(none), where, adapters.LevelError) {
 			t.Errorf("%s: a value this build ignores is accepted", where)
 		}
+	}
+}
+
+func TestOnlyThePersonProfileRelaysServerGuidance(t *testing.T) {
+	for profile, want := range map[string]bool{"headless": false, "person": true} {
+		c, err := config.Load("../deploy/profiles/" + profile + "/connector-engine.yaml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := c.Service().RelayInstructions; got != want {
+			t.Errorf("%s: relays instructions %v, want %v", profile, got, want)
+		}
+	}
+	if config.Default().Service().RelayInstructions {
+		t.Error("the engine default relays instructions")
 	}
 }

@@ -99,6 +99,30 @@ describe("mutations", () => {
       });
     });
 
+    describe("with the owner's password", () => {
+      test("sends it in the form", async () => {
+        let sent: FormData | undefined;
+        globalThis.fetch = async (_input, init) => {
+          sent = init?.body instanceof FormData ? init.body : undefined;
+          return new Response(JSON.stringify({ kind: "full", counts: {}, replaces: true }), { status: 200 });
+        };
+        await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "p", password: "secret" });
+        assert.equal(sent?.get("password"), "secret");
+      });
+    });
+
+    describe("without a password", () => {
+      test("sends no password field", async () => {
+        let sent: FormData | undefined;
+        globalThis.fetch = async (_input, init) => {
+          sent = init?.body instanceof FormData ? init.body : undefined;
+          return new Response(JSON.stringify({ kind: "full", counts: {}, replaces: false }), { status: 200 });
+        };
+        await staleAfter(mutations.importBackup, { file: new Blob(["x"]), passphrase: "p" });
+        assert.equal(sent?.has("password"), false);
+      });
+    });
+
     describe("with a full backup", () => {
       test("makes nothing stale", async () => {
         globalThis.fetch = async () => new Response(JSON.stringify({ kind: "full", counts: {}, replaces: true }), { status: 200 });

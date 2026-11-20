@@ -8,7 +8,7 @@ import { Field } from "../ui/Field";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { button } from "../ui/styles";
-import { backupKindOf } from "./backup";
+import { backupKindOf, passwordRefusal } from "./backup";
 import { BackupSummaryView } from "./BackupSummaryView";
 import { NameList } from "./NameList";
 
@@ -38,6 +38,7 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
   const t = useT();
   const [file, setFile] = useState<File>();
   const [passphrase, setPassphrase] = useState("");
+  const [password, setPassword] = useState("");
   const [step, setStep] = useState<Step>({ kind: "pick" });
   const inspect = useMutation(inspectBackup);
   const run = useMutation(importBackup);
@@ -47,8 +48,11 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
     event.preventDefault();
     if (upload) inspect.mutate(upload, { onSuccess: (summary) => setStep({ kind: "review", summary }) });
   };
-  const onImport = () => {
-    if (upload) run.mutate(upload, { onSuccess: (outcome) => (outcome.kind === "full" ? navigate("/restored") : setStep({ kind: "done", result: outcome.result })) });
+  const asksPassword = !restoreOnly && step.kind === "review" && step.summary.kind === "full";
+  const refusal = run.isError ? passwordRefusal(run.error) : undefined;
+  const onImport = (event: FormEvent) => {
+    event.preventDefault();
+    if (upload) run.mutate(asksPassword ? { ...upload, password } : upload, { onSuccess: (outcome) => (outcome.kind === "full" ? navigate("/restored") : setStep({ kind: "done", result: outcome.result })) });
   };
   const replaces = step.kind === "review" && step.summary.kind === "full" && step.summary.replaces;
   return (
@@ -77,24 +81,42 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
           </button>
         </form>
       ) : step.kind === "review" ? (
-        <div className="swap-in">
+        <form onSubmit={onImport} className="swap-in">
           <BackupSummaryView summary={step.summary} />
           {replaces ? <Notice live={false} className="mt-5">{t("backup.replaces")}</Notice> : null}
+          {asksPassword ? (
+            <Field
+              label={t("backup.full.password")}
+              hint={t("backup.import.passwordHint")}
+              error={refusal ? t(refusal) : undefined}
+              className="mt-5"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          ) : null}
           <p role="alert" className="mt-3 text-sm text-amber-400 empty:hidden">
-            {run.isError ? errorText(run.error) : ""}
+            {run.isError && !refusal ? errorText(run.error) : ""}
           </p>
           <div className="mt-4 flex flex-wrap justify-end gap-2">
-            <button type="button" disabled={run.isPending} className={button({ variant: "quiet", size: "sm" })} onClick={() => {
+            <button
+              type="button"
+              disabled={run.isPending}
+              className={button({ variant: "quiet", size: "sm" })}
+              onClick={() => {
                 setFile(undefined);
                 setStep({ kind: "pick" });
-              }}>
+              }}
+            >
               {t("backup.back")}
             </button>
-            <button type="button" disabled={run.isPending} className={button({ variant: replaces ? "danger" : "primary", size: "sm" })} onClick={onImport}>
+            <button type="submit" disabled={run.isPending} className={button({ variant: replaces ? "danger" : "primary", size: "sm" })}>
               {run.isPending ? t("backup.importing") : t(step.summary.kind === "setup" ? "backup.importSetup" : replaces ? "backup.replace" : "backup.restore")}
             </button>
           </div>
-        </div>
+        </form>
       ) : (
         <SetupDone result={step.result} onClose={onClose} />
       )}

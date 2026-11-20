@@ -200,13 +200,14 @@ export const exportBackup = mutationOptions({
   onSuccess: (_file, _request, _onMutate, { client }) => invalidate(client, accountQuery.queryKey),
 });
 
-/** A backup file and its passphrase, empty for a setup, as a form. */
-export type BackupUpload = { file: Blob; passphrase: string };
+/** A backup file and its passphrase, empty for a setup, as a form; a signed-in full import adds the owner's password. */
+export type BackupUpload = { file: Blob; passphrase: string; password?: string };
 
-const formOf = ({ file, passphrase }: BackupUpload) => {
+const formOf = ({ file, passphrase, password }: BackupUpload) => {
   const form = new FormData();
   form.append("file", file);
   form.append("passphrase", passphrase);
+  if (password !== undefined) form.append("password", password);
   return form;
 };
 

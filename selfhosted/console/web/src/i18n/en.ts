@@ -251,6 +251,8 @@ export const en = {
   "clients.pick": "Pick the app you use to see the exact line to paste, key included.",
   "clients.code": "Your own code",
   "clients.generic": "Generic",
+  "clients.more": "More apps",
+  "clients.fewer": "Fewer apps",
   "clients.ai": "Paste in your AI",
   "clients.kind.terminal": "terminal",
   "clients.kind.config": "config file",

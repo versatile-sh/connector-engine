@@ -253,6 +253,8 @@ export const ptBR: Record<MessageKey, string> = {
   "clients.pick": "Escolha o app que você usa para ver a linha exata a colar, com a chave já incluída.",
   "clients.code": "Seu próprio código",
   "clients.generic": "Genérico",
+  "clients.more": "Mais apps",
+  "clients.fewer": "Menos apps",
   "clients.ai": "Cole na sua IA",
   "clients.kind.terminal": "terminal",
   "clients.kind.config": "arquivo de config",

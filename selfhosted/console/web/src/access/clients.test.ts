@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { guides, oauthGuides } from "./clients.ts";
+import { byUse, COMMON_APPS, guides, oauthGuides } from "./clients.ts";
 
 const url = "http://127.0.0.1:7465/mcp";
 const key = "k3y";
@@ -114,5 +114,30 @@ describe("the app table", () => {
     test("is a terminal step by OAuth and a file with a key", () => {
       assert.deepEqual([oauth.find((g) => g.id === "codex")?.kind, guide("codex").kind], ["clients.kind.terminal", "clients.kind.config"]);
     });
+  });
+});
+
+describe("byUse", () => {
+  const { common, more } = byUse(oauthGuides(url, (message) => message));
+
+  test("puts the common apps first, in their order", () => {
+    assert.deepEqual(
+      common.map((g) => g.id),
+      COMMON_APPS,
+    );
+  });
+
+  test("keeps every other app behind them, in its own order", () => {
+    assert.deepEqual(
+      more.map((g) => g.id),
+      ["opencode", "antigravity", "pi", "gemini", "omp", "generic"],
+    );
+  });
+
+  test("skips a common app a list lacks", () => {
+    assert.deepEqual(
+      byUse(all.filter((g) => g.id !== "cursor")).common.map((g) => g.id),
+      ["claude-code", "codex", "vscode", "claude-desktop"],
+    );
   });
 });

@@ -61,7 +61,7 @@ When a panel shows one of several views, its `Tabs` are the panel's first row, o
 - **Containers align with containers.** Card edge meets card edge and top meets top, never a card beside a line of text. Put a section's heading, counts and filter inside its card, so two columns start with two cards.
 - **One grid per page**, with the same gutters everywhere: `gap-6` between cards, `gap-10` between columns.
 - **Proximity and common region** (Gestalt): what belongs together sits in one card; what does not, in another.
-- **Hick**: few choices at once; a view shows at most three primary actions, and the rest go into one overflow menu (`Select` with a placeholder).
+- **Hick**: few choices at once; a view shows at most three primary actions, and the rest go into one overflow menu (`Select` with a placeholder). A picker of many shows the few most people take first and the others behind one More card that opens them in place (the app picker: Claude Code, Codex, Cursor, VS Code and Claude Desktop, then More apps).
 - **Miller**: chunk long sets (a filter past six rows, counts in the heading, a select-all over what the filter shows).
 - **Fitts**: the primary action is large and close to what it acts on.
 - **Doherty**: feedback in under 400 ms; a pending control shows it at once.

@@ -253,6 +253,8 @@ export const es: Record<MessageKey, string> = {
   "clients.pick": "Elige la app que usas para ver la línea exacta que pegar, con la clave incluida.",
   "clients.code": "Tu propio código",
   "clients.generic": "Genérico",
+  "clients.more": "Más apps",
+  "clients.fewer": "Menos apps",
   "clients.ai": "Pégalo en tu IA",
   "clients.kind.terminal": "terminal",
   "clients.kind.config": "archivo de config",

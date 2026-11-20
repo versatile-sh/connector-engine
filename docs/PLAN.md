@@ -53,7 +53,7 @@ Decisions taken after the study, recorded here until the study's `02-options.md`
 | `source/files`, `source/registry`, `source/docker`, `source/bsr`, `source/reflection`, `source/openapi`, `source/memory` | `ListingSource` adapters (§3.1, OD-45) |
 | `runtime/skill`, `source/skillcatalog`, `cli/skills` | skills, added after the build waves: the skill kind served as pinned text, https catalog entries, and the host-side export (`docs/STATUS.md`, "Skills") |
 | `store/memory`, `store/postgres` | `Store` with audit and outbox rows in one transaction; Postgres with forced row-level security per tenant; one conformance suite |
-| `secrets/local`, `secrets/memory` | `SecretStore`: envelope encryption, a key-encryption key per tenant, `Destroy` for crypto-shredding (§4.4) |
+| `secrets/local`, `secrets/hostkey`, `secrets/memory` | `SecretStore`: envelope encryption, a key-encryption key per tenant, `Destroy` for crypto-shredding (§4.4); `hostkey` wraps the root under an unlock key from the host keychain (`docs/SECRETS.md`) |
 | `auth/jwks`, `auth/local` | `PrincipalVerifier`: JWKS of configured issuers; local issuer for the quickstart (acknowledged opt-in) |
 | `credential/` | `CredentialInjector` and the broker for API keys and pre-registered OAuth with refresh (§11) |
 | `filter/builtin` | `ResultFilter`: regex and secret patterns, pt-BR CPF and CNPJ included |

@@ -4,16 +4,15 @@ import { navigate } from "../router";
 import { Bubble } from "../ui/Bubble";
 import { Arrow } from "../ui/Icon";
 import { LIT_EDGE } from "../ui/styles";
+import { AccessBar } from "./AccessBar";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { accessCounts, authState, serverHost } from "./summary";
-
-const BAR = { on: "bg-paper", ask: "bg-lime" } as const;
 
 /** One installed connector as a card that opens it: who it is, how its functions are set, and what it still needs. */
 export function ConnectorCard({ connector }: { connector: Connector }) {
   const t = useT();
   const functions = connector.functions ?? [];
-  const counts = accessCounts(connector);
+  const counts = accessCounts(functions);
   const auth = authState(connector);
   const changed = functions.filter((fn) => fn.state === "quarantined").length;
   const href = `/connectors/${encodeURIComponent(connector.id)}`;
@@ -40,11 +39,7 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
           </span>
         </div>
         <p className="mt-3 line-clamp-2 min-h-10 text-sm text-muted [overflow-wrap:anywhere]">{connector.description}</p>
-        <div aria-hidden="true" className="mt-4 flex h-1.5 overflow-hidden rounded-full bg-line">
-          {(["on", "ask"] as const).map((access) =>
-            counts[access] > 0 ? <span key={access} className={BAR[access]} style={{ width: `${(counts[access] / functions.length) * 100}%` }} /> : null,
-          )}
-        </div>
+        <AccessBar counts={counts} className="mt-4" />
         <div className="mt-3 flex flex-wrap gap-1.5">
           <Bubble>{t("connectors.functions", { count: functions.length })}</Bubble>
           {counts.on > 0 ? <Bubble>{t("access.count.on", { count: counts.on })}</Bubble> : null}

@@ -50,7 +50,7 @@ function Functions({ connector }: { connector: Connector }) {
   const functions = connector.functions ?? [];
   const needle = filter.trim().toLowerCase();
   const shown = functions.filter((fn) => `${fn.name} ${fn.title ?? ""} ${fn.description ?? ""}`.toLowerCase().includes(needle));
-  const counts = accessCounts(connector);
+  const counts = accessCounts(functions);
   return (
     <section aria-labelledby="functions-title" className={`${SURFACE} min-w-0 p-5 sm:p-6`}>
       <div className="flex flex-wrap items-center justify-between gap-3">

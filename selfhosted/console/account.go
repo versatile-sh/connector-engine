@@ -10,7 +10,7 @@ import (
 
 func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		csrf, ok := c.Sessions.Get(r)
+		u, csrf, ok := c.Sessions.Current(r)
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "sign in first")
 			return
@@ -19,7 +19,7 @@ func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 			writeError(w, http.StatusForbidden, "missing or wrong CSRF token")
 			return
 		}
-		next(w, r)
+		next(w, r.WithContext(withUser(r.Context(), u)))
 	}
 }
 
@@ -44,19 +44,19 @@ func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	err := c.State.CreateOwner(strings.TrimSpace(in.Username), in.Password)
+	u, err := c.State.CreateFirstOwner(strings.TrimSpace(in.Username), in.Password)
 	switch {
 	case errors.Is(err, ErrOwnerExists):
 		writeError(w, http.StatusConflict, err.Error())
 	case err != nil:
 		c.fail(w, err)
 	default:
-		c.signIn(w, http.StatusCreated)
+		c.signIn(w, http.StatusCreated, u.Person)
 	}
 }
 
-func (c *Console) signIn(w http.ResponseWriter, status int) {
-	csrf, err := c.Sessions.Start(w)
+func (c *Console) signIn(w http.ResponseWriter, status int, person string) {
+	csrf, err := c.Sessions.Start(w, person)
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -66,21 +66,24 @@ func (c *Console) signIn(w http.ResponseWriter, status int) {
 
 func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 	var in credentials
-	if readJSON(w, r, &in) && c.verify(w, strings.TrimSpace(in.Username), in.Password) {
-		c.signIn(w, http.StatusOK)
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if u, ok := c.verify(w, strings.TrimSpace(in.Username), in.Password); ok {
+		c.signIn(w, http.StatusOK, u.Person)
 	}
 }
 
-func (c *Console) verify(w http.ResponseWriter, username, password string) bool {
+func (c *Console) verify(w http.ResponseWriter, username, password string) (User, bool) {
 	c.loginMu.Lock()
 	now := time.Now()
 	if c.passwordFails.full(now, passwordFailsPerMin) {
 		c.loginMu.Unlock()
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
-		return false
+		return User{}, false
 	}
-	ok, err := c.State.CheckLogin(username, password)
+	u, ok, err := c.State.CheckLogin(username, password)
 	if !ok && err == nil {
 		c.passwordFails.hit(now)
 		time.Sleep(500 * time.Millisecond)
@@ -94,14 +97,21 @@ func (c *Console) verify(w http.ResponseWriter, username, password string) bool 
 	case !ok:
 		writeError(w, http.StatusUnauthorized, "wrong username or password")
 	}
-	return ok && err == nil
+	return u, ok && err == nil
 }
 
-func (c *Console) account(w http.ResponseWriter, _ *http.Request) {
+func (c *Console) reauth(w http.ResponseWriter, r *http.Request, password string) bool {
+	u, _ := signedInUser(r.Context())
+	_, ok := c.verify(w, u.Username, password)
+	return ok
+}
+
+func (c *Console) account(w http.ResponseWriter, r *http.Request) {
+	u, _ := signedInUser(r.Context())
 	writeJSON(w, http.StatusOK, struct {
 		Username   string    `json:"username"`
 		LastExport time.Time `json:"last_export,omitzero"`
-	}{c.State.OwnerName(), c.State.LastExport()})
+	}{u.Username, c.State.LastExport()})
 }
 
 func (c *Console) changePassword(w http.ResponseWriter, r *http.Request) {
@@ -109,10 +119,11 @@ func (c *Console) changePassword(w http.ResponseWriter, r *http.Request) {
 		Current  string `json:"current"`
 		Password string `json:"password"`
 	}
-	if !readJSON(w, r, &in) || !c.verify(w, c.State.OwnerName(), in.Current) {
+	if !readJSON(w, r, &in) || !c.reauth(w, r, in.Current) {
 		return
 	}
-	if err := c.State.SetPassword(in.Password, c.Sessions.Key(r)); err != nil {
+	u, _ := signedInUser(r.Context())
+	if err := c.State.SetPassword(u.Person, in.Password, c.Sessions.Key(r)); err != nil {
 		c.fail(w, err)
 		return
 	}
@@ -126,7 +137,8 @@ func (c *Console) rename(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	if err := c.State.Rename(strings.TrimSpace(in.Username)); err != nil {
+	u, _ := signedInUser(r.Context())
+	if err := c.State.Rename(u.Person, strings.TrimSpace(in.Username)); err != nil {
 		c.fail(w, err)
 		return
 	}

@@ -1,6 +1,9 @@
 package config_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"os"
 	"reflect"
 	"testing"
@@ -52,5 +55,28 @@ func TestAConfigThatDoesNotOptInDefaultsToTheLocalFileAndStillNeedsTheAcknowledg
 	}
 	if !has(findings(t, cfg, "builtin:localfile"), "port secrets", adapters.LevelError) {
 		t.Fatal("localfile without plaintext_root_key is refused in production")
+	}
+}
+
+func TestTheHeadlessDefaultsStayByteIdentical(t *testing.T) {
+	raw, err := json.Marshal(config.Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][]byte{"config.Default()": raw}
+	for _, name := range []string{"adapters.yaml", "connector-engine.yaml"} {
+		if got[name], err = os.ReadFile("../deploy/profiles/headless/" + name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := map[string]string{
+		"config.Default()":      "299a64166eec422ed0bb163add22f00af9b9918f326abcd934498c88f7b018f5",
+		"adapters.yaml":         "69b75fde582e2b044f6afa1bb6cb28f6154d3e64b97b65d3a8cf289229bee2db",
+		"connector-engine.yaml": "b5932040f3f2190587b219b81f615d3127f13cb4de3f891093c2a9718701ca72",
+	}
+	for name, b := range got {
+		if sum := sha256.Sum256(b); hex.EncodeToString(sum[:]) != want[name] {
+			t.Errorf("%s changed: sha256 %x", name, sum)
+		}
 	}
 }

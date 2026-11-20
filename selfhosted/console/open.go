@@ -36,7 +36,7 @@ func Open(ctx context.Context, o Options) (*Console, func(), error) {
 	if err != nil || public.Host == "" || public.Port() == "" {
 		return nil, nil, invalid("the public URL %q is not an absolute URL with a port", o.PublicURL)
 	}
-	state, err := OpenState(o.StatePath)
+	state, err := OpenState(o.StatePath, o.Person)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -19,7 +19,7 @@ func previewConsole(t *testing.T, c *console.Console) *browser {
 	if err != nil {
 		t.Fatal(err)
 	}
-	state, err := console.OpenState(t.TempDir() + "/state.json")
+	state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
 	if err != nil {
 		t.Fatal(err)
 	}

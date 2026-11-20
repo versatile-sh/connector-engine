@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: selfhosted/scripts/account.sh reset-password|export [--yes]|import FILE [--yes], with COMPOSE and UNLOCK set by make; MODE=setup exports a shareable setup"
+usage="usage: selfhosted/scripts/account.sh reset-password (RESET_USER names the user)|export [--yes]|import FILE [--yes], with COMPOSE and UNLOCK set by make; MODE=setup exports a shareable setup"
 op="${1:?$usage}"
 shift
 read -r -a compose <<<"${COMPOSE:?$usage}"
@@ -114,8 +114,8 @@ import_file() {
 case "$op" in
   reset-password)
     password="$(ask_twice "New console password (at least 10 characters)")"
-    printf '%s' "$password" | host POST /password
-    echo "password changed; every console session is signed out"
+    { if [ -n "${RESET_USER:-}" ]; then printf '%s\n' "$RESET_USER"; fi; printf '%s' "$password"; } | host POST /password
+    echo "password changed; every console session of that user is signed out"
     echo "access keys and apps signed in through the browser still work: revoke them on the Access page if you suspect a compromise"
     ;;
   export) export_backup ;;

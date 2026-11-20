@@ -30,7 +30,7 @@ func TestAnAgentRequestToAnEngineThatIsDownGets503WithAJSONRPCError(t *testing.T
 	claims := base64.RawURLEncoding.EncodeToString([]byte(`{"agent":"a","session":"s","iat":1}`))
 	for name, box := range map[string]*sealed.Box{"locked": {}, "not answering": open} {
 		t.Run(name, func(t *testing.T) {
-			state, err := console.OpenState(t.TempDir() + "/state.json")
+			state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
 			if err != nil {
 				t.Fatal(err)
 			}

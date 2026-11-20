@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net"
@@ -106,7 +107,7 @@ func openStack(t *testing.T, dir string, store *storememory.Store, tweaks ...fun
 	}
 	base := "http://" + lis.Addr().String()
 	public, operator, done := durableEngine(t, "http://console.test", dir, store, tweaks...)
-	state, err := console.OpenState(filepath.Join(dir, "state.json"))
+	state, err := console.OpenState(filepath.Join(dir, "state.json"), "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +326,7 @@ func TestAFullBackupMovesEverythingToAFreshInstall(t *testing.T) {
 	}
 
 	dst := openStack(t, t.TempDir(), storememory.New())
-	for name, f := range map[string][]byte{"a wrong passphrase": nil, "a damaged file": append(bytes.Clone(file[:len(file)-1]), file[len(file)-1]^1), "a newer format": bytes.Replace(file, []byte(`"format":1`), []byte(`"format":9`), 1)} {
+	for name, f := range map[string][]byte{"a wrong passphrase": nil, "a damaged file": append(bytes.Clone(file[:len(file)-1]), file[len(file)-1]^1), "a newer format": bytes.Replace(file, fmt.Appendf(nil, `"format":%d`, backup.Format), []byte(`"format":9`), 1)} {
 		pass := passphrase
 		if f == nil {
 			f, pass = file, "another passphrase entirely"
@@ -438,4 +439,39 @@ func dirNames(t *testing.T, dir string) []string {
 		out = append(out, e.Name())
 	}
 	return out
+}
+
+func TestABackupFromBeforeMultiUserRestoresItsOwner(t *testing.T) {
+	src, tok, _ := seeded(t)
+	m, files, err := backup.Open(bytes.NewReader(src.export()), []byte(passphrase))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var st map[string]json.RawMessage
+	if err := json.Unmarshal(files["console/state.json"], &st); err != nil {
+		t.Fatal(err)
+	}
+	var users map[string]struct {
+		Username   string `json:"username"`
+		Salt       string `json:"salt"`
+		Hash       string `json:"hash"`
+		Iterations int    `json:"iterations"`
+	}
+	if err := json.Unmarshal(st["users"], &users); err != nil || len(users) != 1 {
+		t.Fatalf("users %s: %v", st["users"], err)
+	}
+	st["owner"], _ = json.Marshal(users["owner"])
+	delete(st, "users")
+	files["console/state.json"], _ = json.Marshal(st)
+	var old bytes.Buffer
+	if err := backup.Seal(&old, []byte(passphrase), m, files); err != nil {
+		t.Fatal(err)
+	}
+	moved := openStack(t, t.TempDir(), storememory.New()).restoreAndRestart(old.Bytes())
+	var account struct{ Username string }
+	moved.b.ok("GET", "/api/account", nil, &account)
+	if u, ok := moved.c.State.User("owner"); !ok || u.Role != console.RoleOwner || account.Username != "me" {
+		t.Fatalf("the restored owner: %+v %v, signed in as %q", u, ok, account.Username)
+	}
+	callLookup(t, moved.base+"/mcp", tok.Token, false)
 }

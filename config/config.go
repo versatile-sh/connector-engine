@@ -56,6 +56,7 @@ type Server struct {
 	PublicURL      string        `yaml:"publicURL"`
 	MaxBodyBytes   int64         `yaml:"maxBodyBytes"`
 	ShutdownGrace  time.Duration `yaml:"shutdownGrace"`
+	Snapshot       bool          `yaml:"snapshot"`
 }
 
 // Issuer is a token issuer and where its public keys are published.

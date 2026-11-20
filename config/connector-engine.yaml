@@ -6,6 +6,7 @@ server:
   publicURL: ""
   maxBodyBytes: 1048576
   shutdownGrace: 15s
+  snapshot: false
 auth:
   issuers: []
   audience: ""

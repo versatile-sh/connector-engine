@@ -57,21 +57,11 @@ type Store struct {
 
 // Open listens on socket and returns once the store in dir is open: at once for a plaintext root, after the host delivers the unlock key or the plaintext choice otherwise.
 func Open(ctx context.Context, dir, socket string, log *slog.Logger) (*Store, error) {
-	if err := os.MkdirAll(filepath.Dir(socket), 0o700); err != nil {
-		return nil, err
-	}
-	if info, err := os.Lstat(socket); err == nil && info.Mode()&os.ModeSocket != 0 {
-		_ = os.Remove(socket)
-	}
-	lis, err := net.Listen("unix", socket)
+	lis, err := Listen(socket)
 	if err != nil {
 		return nil, err
 	}
 	s := &Store{dir: dir, lis: lis, ready: make(chan struct{}), done: make(chan struct{})}
-	if err := os.Chmod(socket, 0o600); err != nil {
-		lis.Close()
-		return nil, err
-	}
 	if local.FormOf(dir) == local.Plaintext {
 		st, err := local.Open(dir)
 		if err != nil {
@@ -90,6 +80,23 @@ func Open(ctx context.Context, dir, socket string, log *slog.Logger) (*Store, er
 		s.Close()
 		return nil, ctx.Err()
 	}
+}
+
+// Listen opens the unix socket at path with mode 0600 in a 0700 directory, replacing a stale socket left by a crash.
+func Listen(path string) (net.Listener, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return nil, err
+	}
+	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSocket != 0 {
+		_ = os.Remove(path)
+	}
+	lis, err := net.Listen("unix", path)
+	if err == nil {
+		if err = os.Chmod(path, 0o600); err != nil {
+			lis.Close()
+		}
+	}
+	return lis, err
 }
 
 // Close stops the unlock socket.

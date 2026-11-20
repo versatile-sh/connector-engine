@@ -83,6 +83,7 @@ func (a *App) operatorHandler() (http.Handler, error) {
 		return nil, err
 	}
 	mux.Handle("/v1/", api)
+	a.snapshotRoutes(mux)
 	mux.Handle("GET /metrics", a.metrics.Handler())
 	a.probes(mux)
 	return mux, nil
@@ -217,7 +218,7 @@ func (a *App) Listen() (l Listeners, err error) {
 	return l, nil
 }
 
-// Run serves until ctx ends, then stops listeners within server.shutdownGrace; the worker, the relay and the source sync run beside them.
+// Run serves until ctx ends or a snapshot is restored, then stops listeners within server.shutdownGrace; the worker, the relay and the source sync run beside them.
 func (a *App) Run(ctx context.Context, l Listeners) error {
 	g, ctx := errgroup.WithContext(ctx)
 	if l.HTTP != nil {
@@ -265,5 +266,16 @@ func (a *App) Run(ctx context.Context, l Listeners) error {
 	if len(a.sources) > 0 {
 		g.Go(func() error { a.syncSources(ctx); return nil })
 	}
-	return g.Wait()
+	g.Go(func() error {
+		select {
+		case <-a.restored:
+			return errRestored
+		case <-ctx.Done():
+			return nil
+		}
+	})
+	if err := g.Wait(); !errors.Is(err, errRestored) {
+		return err
+	}
+	return nil
 }

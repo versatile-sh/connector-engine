@@ -42,4 +42,19 @@ A third-party adapter works the same way: one package with a `Register(r *app.Re
 
 ## Run
 
-From the repository root, as before: `make up`, `make unlock`, `make notify`, `make check`. The compose project stays `connector-engine`, so the volumes of an existing install are reused. `deploy/compose.yaml` is included through Compose `include`, which needs Docker Compose 2.20 or newer.
+From the repository root, as before: `make up`, `make unlock`, `make notify`, `make check`, and `make export`, `make import FILE=...`, `make reset-password` for [backups and the account](docs/console.md#backups). The compose project stays `connector-engine`, so the volumes of an existing install are reused. `deploy/compose.yaml` is included through Compose `include`, which needs Docker Compose 2.20 or newer.
+
+## Data and backups
+
+Everything an install knows lives in four Docker volumes of the project:
+
+| Volume | Holds |
+|---|---|
+| `pgdata` | the engine's database: connectors, grants, skills, sealed credentials, audit |
+| `engine-data` | the engine's key store: the wrapped root key, the key ring and the local issuer's signing keys |
+| `console-data` | the owner account, access keys and agents, OAuth clients, the console's sealed secrets and key store, activity, settings |
+| `secrets` | what `init` writes once per install: the operator token and the Postgres passwords |
+
+`docker compose down -v`, `docker system prune --volumes` and `docker volume prune -a` delete these volumes. That loses everything, and the keychain cannot bring it back, because the keychain holds only the key that unwraps the root keys. Export a backup before you run any of them.
+
+A full backup (`make export`, or Account → Export) is one encrypted file. It holds a consistent snapshot of the engine's database, both key stores with their root keys in plaintext, and the console's state and activity. It opens on a new machine without the old keychain, and the import wraps the root keys again with the new machine's keychain. The `secrets` volume is not in it: a new install writes its own. The format is in [docs/console.md](docs/console.md#backups).

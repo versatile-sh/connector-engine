@@ -60,7 +60,7 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		if skillcatalog.Kind(body) == string(port.KindSkill) {
 			return c.previewSkill(src, u.Host, body)
 		}
-		return previewListing(ctx, src, u.Host, body)
+		return c.previewListing(ctx, src, u.Host, body)
 	}
 	return Preview{}, invalid("give exactly one of mcp or listing")
 }
@@ -89,7 +89,7 @@ func (c *Console) previewSkill(src, host string, body []byte) (Preview, error) {
 		Version: e.Source.Commit, Tools: []ProbedTool{}, Items: []Item{}, Skill: &sp, entry: e}, nil
 }
 
-func previewListing(ctx context.Context, src, host string, body []byte) (Preview, error) {
+func (c *Console) previewListing(ctx context.Context, src, host string, body []byte) (Preview, error) {
 	m, err := manifestFrom(src, body)
 	if err != nil {
 		return Preview{}, err
@@ -102,7 +102,7 @@ func previewListing(ctx context.Context, src, host string, body []byte) (Preview
 		pv.Tools = append(pv.Tools, probedTool(f.Name, f.Title, f.Description, hintsOf(f.Annotations)))
 	}
 	if m.Remote != nil {
-		if u, err := url.Parse(m.Remote.URL); err == nil && egress.IsLoopback(u.Hostname()) {
+		if u, err := url.Parse(m.Remote.URL); err == nil && (egress.IsLoopback(u.Hostname()) || c.LoopbackHost != "" && strings.EqualFold(u.Hostname(), c.LoopbackHost)) {
 			return Preview{}, invalid("the listing's server is on this computer; import it by its URL and tick \"local server\"")
 		}
 		pv.RemoteURL = m.Remote.URL

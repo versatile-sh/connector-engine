@@ -98,13 +98,15 @@ func (c *Console) importUpload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !isBackup(raw) {
-		if _, signedIn := c.Sessions.Get(r); !signedIn {
-			writeError(w, http.StatusUnauthorized, "create the owner account first, then import a setup")
-			return
-		}
+	_, signedIn := c.Sessions.Get(r)
+	switch {
+	case !isBackup(raw) && !signedIn:
+		writeError(w, http.StatusUnauthorized, "create the owner account first, then import a setup")
+		return
+	case isBackup(raw) && signedIn && !c.verify(w, c.State.OwnerName(), r.FormValue("password")):
+		return
 	}
-	out, err := c.importFile(r.Context(), raw, passphrase)
+	out, err := c.importFile(r.Context(), raw, passphrase, !signedIn)
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -112,9 +114,9 @@ func (c *Console) importUpload(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-func (c *Console) importFile(ctx context.Context, raw, passphrase []byte) (any, error) {
+func (c *Console) importFile(ctx context.Context, raw, passphrase []byte, firstRun bool) (any, error) {
 	if isBackup(raw) {
-		return c.RestoreBackup(ctx, raw, passphrase)
+		return c.RestoreBackup(ctx, raw, passphrase, firstRun)
 	}
 	return c.ImportSetup(ctx, raw)
 }
@@ -168,7 +170,7 @@ func (c *Console) hostImport(w http.ResponseWriter, r *http.Request) {
 	passphrase, file, err := splitHostBody(r)
 	var out any
 	if err == nil {
-		out, err = c.importFile(r.Context(), file, passphrase)
+		out, err = c.importFile(r.Context(), file, passphrase, false)
 	}
 	if err != nil {
 		c.fail(w, err)

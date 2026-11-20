@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/versatile-sh/connector-engine/secrets/local"
 	"github.com/versatile-sh/connector-engine/selfhosted/backup"
@@ -39,8 +40,11 @@ func backupName(at time.Time) string {
 }
 
 func checkPassphrase(p []byte) error {
-	if len(p) < minPassphrase {
+	switch {
+	case utf8.RuneCount(p) < minPassphrase:
 		return invalid("the passphrase has at least %d characters", minPassphrase)
+	case bytes.ContainsAny(p, "\r\n"):
+		return invalid("the passphrase is one line")
 	}
 	return nil
 }
@@ -134,8 +138,13 @@ func (c *Console) InspectBackup(ctx context.Context, raw, passphrase []byte) (Ba
 
 func isBackup(raw []byte) bool { return bytes.HasPrefix(raw, []byte("CEBAK\n")) }
 
-// RestoreBackup replaces the engine and the console with a full backup, all or nothing, then asks the process to restart so both start on the restored keys.
-func (c *Console) RestoreBackup(ctx context.Context, raw, passphrase []byte) (BackupSummary, error) {
+// RestoreBackup replaces the engine and the console with a full backup, one restore at a time, then asks the process to restart so both start on the restored keys; firstRun refuses once an owner exists.
+func (c *Console) RestoreBackup(ctx context.Context, raw, passphrase []byte, firstRun bool) (BackupSummary, error) {
+	c.restoring.Lock()
+	defer c.restoring.Unlock()
+	if firstRun && c.State.HasOwner() {
+		return BackupSummary{}, ErrOwnerExists
+	}
 	summary, files, err := c.openBackup(raw, passphrase)
 	if err != nil {
 		return BackupSummary{}, err
@@ -173,7 +182,7 @@ func (c *Console) RestoreBackup(ctx context.Context, raw, passphrase []byte) (Ba
 			return BackupSummary{}, err
 		}
 	}
-	if err := c.State.replace(state); err != nil {
+	if err := c.State.replace(state, firstRun); err != nil {
 		return BackupSummary{}, err
 	}
 	if c.Restart != nil {
@@ -199,8 +208,11 @@ func (s *State) backup() ([]byte, error) {
 	return json.Marshal(d)
 }
 
-func (s *State) replace(d stateFile) error {
+func (s *State) replace(d stateFile, firstRun bool) error {
 	return s.update(func(next *stateFile) error {
+		if firstRun && next.Owner != nil {
+			return ErrOwnerExists
+		}
 		d.Sessions = nil
 		*next = d
 		return nil

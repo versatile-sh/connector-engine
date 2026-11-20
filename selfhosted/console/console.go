@@ -37,6 +37,7 @@ type Console struct {
 	Restart       func()
 
 	loginMu       sync.Mutex
+	restoring     sync.Mutex
 	passwordFails minuteWindow
 	icons         iconCache
 	connects      connectStates

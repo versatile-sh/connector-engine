@@ -326,8 +326,13 @@ func (c *Console) openToWorkspace(ctx context.Context, target string) error {
 	return nil
 }
 
-// Remove uninstalls a connector.
+// Remove uninstalls a connector; with a key made, the first-run guide was finished and stays so.
 func (c *Console) Remove(ctx context.Context, conn string) error {
+	if len(c.State.Agents()) > 0 {
+		if err := c.State.DismissOnboarding(); err != nil {
+			return err
+		}
+	}
 	return c.Engine.Call(ctx, http.MethodDelete, "/v1/connectors/"+esc(conn), nil, nil)
 }
 
@@ -350,7 +355,7 @@ func (c *Console) bind(ctx context.Context, conn string, a Agent) error {
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/grants", g, nil)
 }
 
-// RevokeAgent refuses every token minted so far for the agent, then unbinds it from every connector and deletes the grants scoped to it.
+// RevokeAgent refuses every token minted so far for the agent, then unbinds it from every connector and deletes the grants scoped to it; a key and a connector existed, so the first-run guide stays finished.
 func (c *Console) RevokeAgent(ctx context.Context, name string) error {
 	ok, err := c.State.RevokeAgent(name, time.Now())
 	if err != nil {
@@ -366,6 +371,9 @@ func (c *Console) RevokeAgent(ctx context.Context, name string) error {
 	for _, v := range list.Items {
 		if !v.Connector.RemovedAt.IsZero() {
 			continue
+		}
+		if err := c.State.DismissOnboarding(); err != nil {
+			return err
 		}
 		if err := c.Engine.Call(ctx, http.MethodDelete, "/v1/connectors/"+esc(string(v.Connector.ID))+"/bindings/"+esc(name), nil, nil); err != nil && !IsCode(err, "not_found") {
 			return err

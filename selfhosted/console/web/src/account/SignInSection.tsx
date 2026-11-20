@@ -19,7 +19,7 @@ function UsernameForm({ username }: { username: string }) {
     rename.mutate(name.trim());
   };
   return (
-    <form onSubmit={onSubmit} aria-label={t("account.username")}>
+    <form onSubmit={onSubmit} aria-label={t("account.username")} className="flex flex-col">
       <Field
         label={t("account.username")}
         hint={rename.isSuccess ? t("account.renamed") : t("account.usernameHint")}
@@ -33,7 +33,7 @@ function UsernameForm({ username }: { username: string }) {
           rename.reset();
         }}
       />
-      <button type="submit" disabled={rename.isPending || name.trim() === username} className={button({ variant: "secondary", size: "sm" })}>
+      <button type="submit" disabled={rename.isPending || name.trim() === username} className={`${button({ variant: "secondary", size: "sm" })} mt-auto self-start`}>
         {rename.isPending ? t("account.saving") : t("account.rename")}
       </button>
     </form>
@@ -63,7 +63,7 @@ function PasswordForm() {
     );
   };
   return (
-    <form onSubmit={onSubmit} aria-label={t("account.changePassword")}>
+    <form onSubmit={onSubmit} aria-label={t("account.changePassword")} className="flex flex-col">
       <Field label={t("account.current")} type="password" autoComplete="current-password" required value={current} error={refusal ? t(refusal) : undefined} onChange={(event) => setCurrent(event.target.value)} />
       <SecretPair
         label={t("account.newPassword")}
@@ -83,14 +83,14 @@ function PasswordForm() {
           <Notice tone="lime">{t("account.changed")}</Notice>
         </div>
       ) : null}
-      <button type="submit" disabled={change.isPending} className={button({ variant: "secondary", size: "sm" })}>
+      <button type="submit" disabled={change.isPending} className={`${button({ variant: "secondary", size: "sm" })} mt-auto self-start`}>
         {change.isPending ? t("account.saving") : t("account.changePassword")}
       </button>
     </form>
   );
 }
 
-/** How the owner signs in: the name, changed in place, and the password, changed with the current one; changing it signs every other session out. */
+/** How the owner signs in: the name, changed in place, and the password, changed with the current one, side by side on a wide card with their buttons on one line; changing the password signs every other session out. */
 export function SignInSection({ username }: { username: string }) {
   const t = useT();
   return (

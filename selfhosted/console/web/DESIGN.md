@@ -54,6 +54,8 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 
 A section page is a `PageTitle`, then one `PANEL` (or a few `SURFACE`s for pages of settings), the way the site's directory is. Cards in a panel use container queries (`@container` with `@xl:`/`@4xl:` columns), so the same card works in a panel, a dialog or a narrow column.
 
+A page of settings (Account, Notifications) is a column of `SURFACE` cards, one concern each: an icon, a title, one line of what it does and at most one action beside the title, then its body. A card whose list grows (paired computers, channels, apps) takes the full width, and forms side by side in one card end with their buttons on one line.
+
 When a panel shows one of several views, its `Tabs` are the panel's first row, over all of its columns, and the views swap under them. A connector's page is the model: the profile tabs, then the profile's column of cards on the left and, on the right, the cards every profile shares (the credential and the connector's facts), each saying so in its line. Switching a tab changes the data in the cards and never mounts them again, so a filter, a list's length and the scroll stay; only what belongs to one view (its bar, its pending write, its picked rows) is held per view.
 
 ## Layout principles

@@ -160,11 +160,11 @@ func (s *Service) grantAuth(ctx context.Context, p port.Principal, g port.Grant)
 	return s.authorize(ctx, p, authz.GrantAgent, authz.Agent(tenant, string(c.Workspace), g.ScopeID))
 }
 
-// CreateGrant writes a settings row under the rules G1 to G10; a session row is never written here.
+// CreateGrant writes a settings row that the grant rules accept; a session row is never written here.
 func (s *Service) CreateGrant(ctx context.Context, p port.Principal, g port.Grant) (GrantResult, error) {
 	out := GrantResult{Grant: g}
 	if g.ScopeKind == port.ScopeSession {
-		return out, port.Errorf(port.CodeRowRefused, "a session row is written by an approval only (G5)")
+		return out, port.Errorf(port.CodeRowRefused, "a session row is written by an approval only")
 	}
 	g.Tenant, g.Origin, g.Uses = p.Claims.Tenant, port.OriginSettings, 0
 	if g.ScopeKind == port.ScopeTenant && g.ScopeID == "" {

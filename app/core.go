@@ -8,6 +8,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 
+	"github.com/versatile-sh/connector-engine/config"
 	filterbuiltin "github.com/versatile-sh/connector-engine/filter/builtin"
 	"github.com/versatile-sh/connector-engine/index/lexical"
 	"github.com/versatile-sh/connector-engine/port"
@@ -46,14 +47,14 @@ func Core() *Registry {
 	Register(r, Stores, Adapter{Name: "postgres", Capabilities: []string{"store.transactional_outbox", "store.row_level_security"},
 		Settings: map[string]adapters.ConfigKind{"databaseUrlRef": adapters.ConfigRef}}, openPostgres)
 
-	Register(r, Secrets, Adapter{Name: memory, Capabilities: []string{"secrets.volatile"}}, func(context.Context, Env) (port.SecretStore, func(), error) {
+	Register(r, Secrets, Adapter{Name: memory, Capabilities: []string{"secrets.volatile"}, Check: plaintextRootKey(memory)}, func(context.Context, Env) (port.SecretStore, func(), error) {
 		return secretsmemory.New(), nil, nil
 	})
-	Register(r, Secrets, Adapter{Name: "localfile", Capabilities: envelope}, func(_ context.Context, env Env) (port.SecretStore, func(), error) {
+	Register(r, Secrets, Adapter{Name: "localfile", Capabilities: envelope, Check: plaintextRootKey("localfile")}, func(_ context.Context, env Env) (port.SecretStore, func(), error) {
 		s, err := secretslocal.Open(env.Config.Secrets.Dir)
 		return s, nil, err
 	})
-	Register(r, Secrets, Adapter{Name: "onepassword", Capabilities: append(envelope[:2:2], "secrets.root_key_wrapped")}, openOnePassword)
+	Register(r, Secrets, Adapter{Name: "onepassword", Capabilities: append(envelope[:2:2], "secrets.root_key_wrapped"), Check: checkOnePassword}, openOnePassword)
 
 	Register(r, Runtimes, Adapter{Name: memory}, func(context.Context, Env) (port.ConnectorRuntime, func(), error) {
 		return rtmemory.New(), nil, nil
@@ -126,6 +127,22 @@ func openPostgres(ctx context.Context, env Env) (port.Store, func(), error) {
 }
 
 var vaultHTTP = &http.Client{Timeout: 30 * time.Second}
+
+func plaintextRootKey(name string) func(config.Config, func(string) bool) config.Findings {
+	return func(c config.Config, acknowledged func(string) bool) config.Findings {
+		if acknowledged(config.AckPlaintextRootKey) {
+			return nil
+		}
+		return config.Findings{{Level: c.RefusalLevel(), Where: "port secrets", Message: name + " keeps the root key in plaintext; acknowledge " + config.AckPlaintextRootKey + " to run with it"}}
+	}
+}
+
+func checkOnePassword(c config.Config, _ func(string) bool) config.Findings {
+	if op := c.Secrets.OnePassword; op.ConnectURL == "" || op.TokenRef == "" || op.Vault == "" || op.Item == "" || op.Field == "" {
+		return config.Findings{{Level: config.LevelError, Where: "secrets.onePassword", Message: "the onepassword adapter needs connectUrl, tokenRef, vault, item and field"}}
+	}
+	return nil
+}
 
 func openOnePassword(ctx context.Context, env Env) (port.SecretStore, func(), error) {
 	c := env.Config.Secrets.OnePassword

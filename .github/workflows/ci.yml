@@ -30,24 +30,36 @@ jobs:
       - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
         with:
           go-version-file: go.mod
+      - name: No tracked file over 1 MB
+        run: |
+          big="$(git ls-files -z | xargs -0 -r stat -c '%s %n' -- | awk '$1 > 1048576')"
+          if [ -n "$big" ]; then echo "tracked files over 1 MB:" >&2; echo "$big" >&2; exit 1; fi
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race -short ./...
+        env:
+          CN_REQUIRE_PG: "1"
       - name: Layering check
-        run: |
-          if [ -f scripts/check-layering.sh ]; then
-            bash scripts/check-layering.sh
-          else
-            echo "scripts/check-layering.sh not present, skipped"
-          fi
+        run: bash scripts/check-layering.sh
       - name: Adapters check
         run: |
           go run ./cmd/connector-engine --config deploy/profiles/headless/connector-engine.yaml --adapters deploy/profiles/headless/adapters.yaml adapters check
-          if [ -d selfhosted/deploy/profiles/person ]; then
-            go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check
-          else
-            go run ./cmd/connector-engine --config deploy/profiles/person/connector-engine.yaml --adapters deploy/profiles/person/adapters.yaml adapters check
-          fi
+          go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
+        with:
+          go-version-file: go.mod
+      - run: go test -count=1 -timeout 25m ./e2e
+        env:
+          CN_REQUIRE_PG: "1"
 
   lint:
     name: golangci-lint
@@ -68,33 +80,23 @@ jobs:
     name: Console web
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: selfhosted/console/web
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Locate the web app
-        id: dir
-        run: |
-          for d in selfhosted/console/web console/web; do
-            if [ -f "$d/package.json" ]; then echo "path=$d" >> "$GITHUB_OUTPUT"; exit 0; fi
-          done
-          echo "no console web app found" >&2
-          exit 1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: "26"
           cache: npm
-          cache-dependency-path: ${{ steps.dir.outputs.path }}/package-lock.json
+          cache-dependency-path: selfhosted/console/web/package-lock.json
       - run: npm ci --no-audit --no-fund
-        working-directory: ${{ steps.dir.outputs.path }}
       - run: npm run lint
-        working-directory: ${{ steps.dir.outputs.path }}
       - run: npm run typecheck
-        working-directory: ${{ steps.dir.outputs.path }}
       - run: npm test
-        working-directory: ${{ steps.dir.outputs.path }}
       - run: npm run build
-        working-directory: ${{ steps.dir.outputs.path }}
 
   sweeps:
     name: Exhaustive sweeps

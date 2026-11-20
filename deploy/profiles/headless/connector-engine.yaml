@@ -11,5 +11,4 @@ auth:
 bootstrap:
   roles: []
 secrets:
-  adapter: localfile
   dir: /var/lib/connector-engine/secrets

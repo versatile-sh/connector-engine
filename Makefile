@@ -4,9 +4,12 @@ PROFILE  ?= person
 COMPOSE_FILE := $(if $(filter headless,$(PROFILE)),deploy/compose.yaml,selfhosted/deploy/compose.yaml)
 COMPOSE  ?= docker compose -f $(COMPOSE_FILE) -p $(PROJECT)
 IMAGE    ?= connector-engine:local
+HEADLESS_IMAGE ?= connector-engine-headless:local
 export CN_IMAGE := $(IMAGE)
+export CN_HEADLESS_IMAGE := $(HEADLESS_IMAGE)
+RUN_IMAGE := $(if $(filter headless,$(PROFILE)),$(HEADLESS_IMAGE),$(IMAGE))
 ARGS     ?= --help
--include deploy/.env
+-include $(dir $(COMPOSE_FILE)).env
 CONSOLE_PORT ?= 7465
 export CONSOLE_PORT
 ENGINE   := $(if $(filter headless,$(PROFILE)),engine-headless,engine)
@@ -28,12 +31,12 @@ ps:
 	$(COMPOSE) --profile $(PROFILE) ps
 
 cli:
-	docker run --rm -i --network host -e CN_ENDPOINT=$(or $(CN_ENDPOINT),http://127.0.0.1:$(CONSOLE_PORT)/mcp) -e CN_AGENT_TOKEN --entrypoint /usr/local/bin/cnctl $(IMAGE) $(ARGS)
+	docker run --rm -i --network host -e CN_ENDPOINT=$(or $(CN_ENDPOINT),http://127.0.0.1:$(CONSOLE_PORT)/mcp) -e CN_AGENT_TOKEN --entrypoint /usr/local/bin/cnctl $(RUN_IMAGE) $(ARGS)
 
 admin:
 	docker run --rm -i --network $(PROJECT)_default -e CNCTL_URL=http://$(ENGINE):8081 \
 		-e CNCTL_TOKEN="$$($(COMPOSE) --profile $(PROFILE) exec -T postgres cat /run/connector-engine/operator-token)" \
-		--entrypoint /usr/local/bin/cnctl $(IMAGE) admin $(ARGS)
+		--entrypoint /usr/local/bin/cnctl $(RUN_IMAGE) admin $(ARGS)
 
 build: vendor
 	$(COMPOSE) --profile $(PROFILE) build

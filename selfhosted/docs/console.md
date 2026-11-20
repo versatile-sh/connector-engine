@@ -4,7 +4,7 @@ The console is the local web app of the `person` profile. It talks to the engine
 
 ## Port and host
 
-- `CONSOLE_PORT` is the only port setting. Put it in `deploy/.env` to keep it.
+- `CONSOLE_PORT` is the only port setting. Put it in `selfhosted/deploy/.env` to keep it.
 - It sets the published port, the Host allowlist (`127.0.0.1`, `localhost` and `[::1]` at that port) and the OAuth redirect `http://127.0.0.1:<port>/oauth/callback`.
 - Outside Docker:
 

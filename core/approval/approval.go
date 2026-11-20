@@ -1,4 +1,4 @@
-// Package approval is the approval state machine: transitions A1 to A14, timers, the denial brake and the lookup of a repeated call.
+// Package approval is the approval state machine: its transitions, timers, the denial brake and the lookup of a repeated call.
 package approval
 
 import (
@@ -41,7 +41,7 @@ func enter(a port.Approval, to port.ApprovalState) port.Approval {
 	return a
 }
 
-// Open is A1: a pending record with its expiry; A2 refuses with no_approver or too_many_pending.
+// Open holds a call as a pending record with its expiry, refusing with no_approver or too_many_pending.
 func Open(a port.Approval, pending int, l Limits, now time.Time) (port.Approval, error) {
 	switch {
 	case len(a.Approvers) == 0:
@@ -73,7 +73,7 @@ func Approvers(b port.Binding, onBehalfOf port.PersonID) []string {
 	return out
 }
 
-// Decide is A3, A4 or A5 on a pending, unexpired record by an allowed approver; it reports whether the caller writes a session row (A4).
+// Decide records approve, approve for the session or deny on a pending, unexpired record by an allowed approver; it reports whether the caller writes a session row.
 func Decide(a port.Approval, by string, allowed bool, d port.Decision, note, channel string, l Limits, now time.Time) (port.Approval, bool, error) {
 	if err := transition(a, port.ApprovalPending); err != nil {
 		return a, false, err
@@ -124,7 +124,7 @@ func Clear(p port.Pause) port.Pause {
 	return p
 }
 
-// Expire is A6, by the worker once expires_at passed.
+// Expire moves a pending record to expired, by the worker once expires_at passed.
 func Expire(a port.Approval, now time.Time) (port.Approval, error) {
 	if err := transition(a, port.ApprovalPending); err != nil {
 		return a, err
@@ -135,7 +135,7 @@ func Expire(a port.Approval, now time.Time) (port.Approval, error) {
 	return enter(a, port.ApprovalExpired), nil
 }
 
-// Cancel is A7 for a pending record, with the reason of its cause.
+// Cancel moves a pending record to cancelled, with the reason of its cause.
 func Cancel(a port.Approval, reason port.Code) (port.Approval, error) {
 	if err := transition(a, port.ApprovalPending); err != nil {
 		return a, err
@@ -144,8 +144,7 @@ func Cancel(a port.Approval, reason port.Code) (port.Approval, error) {
 	return enter(a, port.ApprovalCancelled), nil
 }
 
-// Start is A8 or A9 for an approved record: refused names the step that denied at the re-check, or a guard of A8
-// (definition_changed, credential_required, grant_exhausted); a decision older than execute-within is stale_approval.
+// Start moves an approved record to executing, or cancels it with refused (the re-check step or guard that denied) or stale_approval past execute-within.
 func Start(a port.Approval, refused port.Code, deadline time.Duration, l Limits, now time.Time) (port.Approval, error) {
 	if err := transition(a, port.ApprovalApproved); err != nil {
 		return a, err
@@ -161,7 +160,7 @@ func Start(a port.Approval, refused port.Code, deadline time.Duration, l Limits,
 	return a, nil
 }
 
-// Finish is A10 (a result, a tool error included) or A11 (not sent, or a protocol error): the result is kept for retention.
+// Finish moves an executing record to executed (a result, a tool error included) or failed (not sent, or a protocol error), keeping the result for retention.
 func Finish(a port.Approval, result *port.Sealed, failed bool, l Limits, now time.Time) (port.Approval, error) {
 	if err := transition(a, port.ApprovalExecuting); err != nil {
 		return a, err
@@ -174,7 +173,7 @@ func Finish(a port.Approval, result *port.Sealed, failed bool, l Limits, now tim
 	return a, nil
 }
 
-// Unknown is A12: the call deadline plus grace passed with no answer; never retried, never forwarded again.
+// Unknown moves an executing record to outcome_unknown once the call deadline plus grace passed with no answer; it is never retried or forwarded again.
 func Unknown(a port.Approval, l Limits, now time.Time) (port.Approval, error) {
 	if err := transition(a, port.ApprovalExecuting); err != nil {
 		return a, err
@@ -186,7 +185,7 @@ func Unknown(a port.Approval, l Limits, now time.Time) (port.Approval, error) {
 	return a, nil
 }
 
-// Retain is A13: the stored result and the sealed arguments are destroyed once retention ends.
+// Retain destroys the stored result and the sealed arguments of a finished record once retention ends.
 func Retain(a port.Approval, now time.Time) (port.Approval, error) {
 	if err := transition(a, port.ApprovalExecuted, port.ApprovalFailed, port.ApprovalOutcomeUnknown); err != nil {
 		return a, err
@@ -198,7 +197,7 @@ func Retain(a port.Approval, now time.Time) (port.Approval, error) {
 	return a, nil
 }
 
-// Deliver is A14: set after the answer of a terminal record was written into a response to its agent.
+// Deliver marks a terminal record delivered once its answer was written into a response to its agent.
 func Deliver(a port.Approval, now time.Time) (port.Approval, error) {
 	if !a.State.Terminal() || !a.DeliveredAt.IsZero() {
 		return a, port.Errorf(port.CodeInvalidTransition, "approval %s is %s and delivered at %s", a.ID, a.State, a.DeliveredAt)
@@ -226,7 +225,7 @@ func Due(a port.Approval, l Limits, now time.Time) (port.WorkKind, bool) {
 // Rule is the rule that answered a repeated call.
 type Rule int
 
-// Rules R1 to R4.
+// The rules of Lookup, in the order it tries them.
 const (
 	Attach Rule = iota + 1
 	Answer
@@ -240,8 +239,7 @@ type Verdict struct {
 	Record port.Approval
 }
 
-// Lookup applies R1 to R4 to the records and the newest audit row of one (session, call_hash); the first rule that matches ends it.
-// HoldAfterUnknown means the session row of step 14 is not applied to this call.
+// Lookup picks the rule for a repeat of one (session, call_hash) from its records and newest audit row; HoldAfterUnknown skips the session row.
 func Lookup(records []port.Approval, latest *port.Call) Verdict {
 	for _, a := range records {
 		if a.State.Open() {

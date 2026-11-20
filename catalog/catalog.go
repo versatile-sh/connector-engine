@@ -79,7 +79,7 @@ const SchemaID = "https://agents-control.dev/connector-engine/events/v1/"
 // UsageRoles maps the engine's principal kinds to the neutral actor roles of x-usage.
 var UsageRoles = map[string]string{"agent": "agent", "user": "user"}
 
-// Schema reflects the JSON Schema of one type, with x-usage where the type counts usage (R2).
+// Schema reflects the JSON Schema of one type, with x-usage where the type counts usage.
 func Schema(t Type) (json.RawMessage, error) {
 	r := &jsonschema.Reflector{DoNotReference: true, ExpandedStruct: true}
 	s := r.Reflect(t.Payload)

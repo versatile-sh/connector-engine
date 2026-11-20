@@ -11,7 +11,7 @@ Every secret the engine keeps (credentials, held call arguments, results, client
 | `builtin:onepassword` (`secrets/onepassword`) | `root.key.wrapped`, under an unlock key read at start from a 1Password item through a 1Password Connect server | opt-in by config, any profile, headless included |
 | `memory` | in the process only | tests and dev |
 
-`hostkey` is `secrets/local` with the root file wrapped; the key ring, the rotation files (`root.key.next`, `root.key.next.wrapped`) and the crash recovery are the same code. Selecting it is opt-in (`secrets.adapter: hostkey`, `secrets.unlockSocket`, `ports.secrets.use: builtin:hostkey`); the engine binary never needs it, and the `headless` selection is pinned by `config/profiles_test.go`.
+`hostkey` is `secrets/local` with the root file wrapped; the key ring, the rotation files (`root.key.next`, `root.key.next.wrapped`) and the crash recovery are the same code. Selecting it is opt-in (`ports.secrets.use: builtin:hostkey` and `secrets.unlockSocket`); the engine binary never needs it, and the `headless` selection is pinned by `config/profiles_test.go`.
 
 The console seals its own secrets (notifier tokens) through `selfhosted/console/sealed`, a `port.SecretStore` under key scope `selfhosted/console`, with the same adapter: `hostkey` in the `person` profile (`CONSOLE_UNLOCK_SOCKET`), `secrets/local` otherwise. Owner passwords, session cookies and refresh tokens stay hashes.
 
@@ -72,7 +72,6 @@ Recovery: `make keychain-recovery` prints the unlock key once, for a password ma
    ```yaml
    # connector-engine.yaml
    secrets:
-     adapter: onepassword
      dir: /var/lib/connector-engine/secrets
      onePassword: {connectUrl: "http://op-connect:8080", tokenRef: "file:/run/connector-engine/op-connect-token", vault: <vault id>, item: <item id>, field: unlock}
    # adapters.yaml

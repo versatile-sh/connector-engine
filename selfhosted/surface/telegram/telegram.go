@@ -24,7 +24,7 @@ const (
 
 var _ surface.Channel = (*Channel)(nil)
 
-// Config holds the bot token, the owner's numeric user id, the API base and an optional HTTP client without a timeout.
+// Config holds the bot token, the owner's numeric user id, the API base and an optional HTTP client whose timeout outlasts the long poll.
 type Config struct {
 	Token       string
 	OwnerUserID string
@@ -60,7 +60,7 @@ func New(cfg Config) (*Channel, error) {
 	}
 	hc := cfg.HTTP
 	if hc == nil {
-		hc = &http.Client{}
+		hc = &http.Client{Timeout: (pollSeconds + 10) * time.Second}
 	}
 	return &Channel{token: cfg.Token, owner: owner, base: base, http: hc, poll: pollSeconds}, nil
 }

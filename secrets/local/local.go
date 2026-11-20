@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/versatile-sh/connector-engine/internal/atomicfile"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/secrets/internal/ring"
 )
@@ -163,7 +164,7 @@ func (s *Store) switchTo(unlock []byte) error {
 		return err
 	}
 	s.unlock = unlock
-	return syncDir(s.dir)
+	return atomicfile.SyncDir(s.dir)
 }
 
 func (s *Store) verify(root []byte) error {
@@ -196,12 +197,12 @@ func (s *Store) save(st ring.State, newRoot []byte) error {
 		return err
 	}
 	if newRoot == nil {
-		return writeFile(filepath.Join(s.dir, stateFile), b)
+		return atomicfile.Write(filepath.Join(s.dir, stateFile), b)
 	}
 	if err := s.write(nextFile, newRoot); err != nil {
 		return err
 	}
-	if err := writeFile(filepath.Join(s.dir, stateFile), b); err != nil {
+	if err := atomicfile.Write(filepath.Join(s.dir, stateFile), b); err != nil {
 		return err
 	}
 	if err := s.promote(); err != nil {
@@ -215,7 +216,7 @@ func (s *Store) promote() error {
 	if err := os.Rename(filepath.Join(s.dir, s.name(nextFile)), filepath.Join(s.dir, s.name(rootFile))); err != nil {
 		return err
 	}
-	return syncDir(s.dir)
+	return atomicfile.SyncDir(s.dir)
 }
 
 func (s *Store) recoverRotation(root []byte, state ring.State) ([]byte, error) {
@@ -269,7 +270,7 @@ func (s *Store) write(base string, root []byte) error {
 			return err
 		}
 	}
-	return writeFile(filepath.Join(s.dir, s.name(base)), []byte(hex.EncodeToString(b)+"\n"))
+	return atomicfile.Write(filepath.Join(s.dir, s.name(base)), []byte(hex.EncodeToString(b)+"\n"))
 }
 
 // ParseUnlockKey decodes the 64 hexadecimal characters of an unlock key.
@@ -303,35 +304,4 @@ func readState(dir string) (ring.State, error) {
 func exists(path string) bool {
 	_, err := os.Lstat(path)
 	return err == nil
-}
-
-func writeFile(path string, b []byte) error {
-	tmp := path + ".tmp"
-	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		return err
-	}
-	_, err = f.Write(b)
-	if err == nil {
-		err = f.Sync()
-	}
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		return err
-	}
-	return syncDir(filepath.Dir(path))
-}
-
-func syncDir(dir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	return d.Sync()
 }

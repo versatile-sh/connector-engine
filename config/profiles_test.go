@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/versatile-sh/connector-engine/config"
+	"github.com/versatile-sh/connector-engine/internal/plugkit/adapters"
 )
 
 func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
@@ -36,7 +37,7 @@ func TestTheHeadlessProfileSelectsTheSameAdaptersAsBefore(t *testing.T) {
 	if r := cfg.Retention; r.DeliveredEvents != 0 || r.IdempotencyKeys != 0 || r.Audit != 0 || r.Calls != 0 {
 		t.Fatalf("headless prunes history: %+v", r)
 	}
-	if cfg.Secrets != (config.Secrets{Adapter: "localfile", DataKeyCache: cfg.Secrets.DataKeyCache, Dir: "/var/lib/connector-engine/secrets"}) || cfg.Secrets.DataKeyCache.Seconds() != 300 {
+	if cfg.Secrets != (config.Secrets{DataKeyCache: cfg.Secrets.DataKeyCache, Dir: "/var/lib/connector-engine/secrets"}) || cfg.Secrets.DataKeyCache.Seconds() != 300 {
 		t.Fatalf("headless secrets: %#v", cfg.Secrets)
 	}
 }
@@ -46,11 +47,7 @@ func TestAConfigThatDoesNotOptInDefaultsToTheLocalFileAndStillNeedsTheAcknowledg
 	if d := cfg.AdaptersSpec().Ports[config.PortSecrets].Default; !reflect.DeepEqual(d, []string{"builtin:localfile"}) {
 		t.Fatalf("default secrets adapter: %v", d)
 	}
-	found := false
-	for _, f := range cfg.Check(func(string) bool { return false }) {
-		found = found || f.Where == "secrets.adapter"
-	}
-	if !found {
+	if !has(findings(t, cfg, "builtin:localfile"), "port secrets", adapters.LevelError) {
 		t.Fatal("localfile without plaintext_root_key is refused in production")
 	}
 }

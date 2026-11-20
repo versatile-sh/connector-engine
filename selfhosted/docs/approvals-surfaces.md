@@ -213,7 +213,7 @@ Assets: the owner's decisions, the gateway, the bot tokens and webhook URLs, and
 ## 7. Not covered
 
 - Message references are kept in memory. After a console restart, the old chat messages are not edited when their approvals settle, and a click on them answers "expired, open the console".
-- A held call is marked delivered (A14) when the console receives the engine's answer, not when the client does. A client that drops in that window loses the answer. Retrying the identical call returns it again while `resultRetention` lasts.
+- A held call is marked delivered when the console receives the engine's answer, not when the client does. A client that drops in that window loses the answer. Retrying the identical call returns it again while `resultRetention` lasts.
 - Adding or removing a channel or a device rebuilds the relay. Pending approvals are then announced again, so the channels that already had them get a second message, and the first one is no longer edited.
 - "Always allow" removes the function's "ask" row. `DeleteGrant` then cancels the other pending approvals of that function, which their surfaces show as cancelled.
 - "Allow once" on a skill covers one `skill_load` call. Loading another file of the same skill is a new call and asks again. "Allow for this session" covers them all.

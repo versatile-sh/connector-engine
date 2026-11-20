@@ -324,7 +324,7 @@ func TestAnAddedSecretsAdapterIsSelectableAndReportsItsCapabilities(t *testing.T
 		return vault{secretsmemory.New()}, nil, nil
 	})
 	cfg := devConfig(t)
-	cfg.Secrets.Adapter, cfg.Secrets.Dir = "vault", t.TempDir()
+	cfg.Secrets.Dir = t.TempDir()
 	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:vault}", 1)
 	e := bootWith(t, r, cfg, adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
 	if doc := adaptersDocument(t, e); !opened || !strings.Contains(doc, "secrets.envelope") || !strings.Contains(doc, "secrets.root_key_sealed") {
@@ -366,7 +366,7 @@ func TestTheOnePasswordAdapterReadsItsTokenByReference(t *testing.T) {
 	}))
 	defer connect.Close()
 	cfg := devConfig(t)
-	cfg.Secrets.Adapter, cfg.Secrets.Dir = "onepassword", t.TempDir()
+	cfg.Secrets.Dir = t.TempDir()
 	cfg.Secrets.OnePassword = config.OnePassword{ConnectURL: connect.URL, TokenRef: "env:OP_CONNECT_TOKEN", Vault: "v", Item: "i", Field: "unlock"}
 	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:onepassword}", 1)
 	e := boot(t, cfg, adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret", "OP_CONNECT_TOKEN": "op-connect"})
@@ -402,7 +402,7 @@ func TestTheLocalIssuerMintsOnlyForTheOperatorAndOnlyItsOwnClaims(t *testing.T) 
 
 func TestALocalIssuerTokenSurvivesAnEngineRestart(t *testing.T) {
 	cfg := devConfig(t)
-	cfg.Secrets.Adapter, cfg.Secrets.Dir = "localfile", t.TempDir()
+	cfg.Secrets.Dir = t.TempDir()
 	adapters := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "secrets: {use: memory}", "secrets: {use: builtin:localfile}", 1)
 	env := map[string]string{"CN_OPERATOR_TOKEN": "op-secret"}
 	first := boot(t, cfg, adapters, env)

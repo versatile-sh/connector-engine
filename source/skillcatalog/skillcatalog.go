@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -47,7 +46,7 @@ type Entry struct {
 	Files       []EntryFile  `json:"files"`
 }
 
-// EntrySource is where the catalog read the skill folder.
+// EntrySource is where the catalog read the skill folder; Path names the folder or its SKILL.md.
 type EntrySource struct {
 	Repository string `json:"repository"`
 	Path       string `json:"path"`
@@ -83,28 +82,27 @@ func invalid(format string, args ...any) error {
 	return port.Errorf(port.CodeInvalidManifest, "skill entry: "+format, args...)
 }
 
-// Parse reads an entry strictly and refuses branch names, unsafe paths, oversize files and file addresses not pinned to the commit.
+// Parse reads an entry, ignoring catalog-only fields such as stars or alternates, and refuses branch names, unsafe paths, oversize files and file addresses not pinned to the commit.
 func Parse(data []byte) (Entry, error) {
 	raw, err := importer.YAMLToJSON(data)
 	if err != nil {
 		return Entry{}, err
 	}
 	var e Entry
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&e); err != nil {
+	if err := json.NewDecoder(bytes.NewReader(raw)).Decode(&e); err != nil {
 		return Entry{}, invalid("%v", err)
 	}
+	e.Source.Path = strings.TrimSuffix(strings.TrimSuffix(e.Source.Path, listing.SkillEntry), "/")
 	switch {
 	case e.Kind != string(port.KindSkill):
 		return Entry{}, invalid("kind %q is not skill", e.Kind)
 	case !entryID.MatchString(e.ID):
 		return Entry{}, invalid("id %q is lowercase letters, digits, dots, dashes and underscores", e.ID)
-	case !listing.SkillName(e.Name) || path.Base(e.Source.Path) != e.Name:
+	case !listing.SkillName(e.Name) || listing.SkillFolder(e.Source.Repository, e.Source.Path) != e.Name:
 		return Entry{}, invalid("name %q is an Agent Skills name equal to the folder of source.path %q", e.Name, e.Source.Path)
 	case !listing.FullCommit(e.Source.Commit):
 		return Entry{}, invalid("source.commit %q is not a full 40-hex commit", e.Source.Commit)
-	case listing.SkillPath(e.Source.Path) != nil:
+	case e.Source.Path != "" && listing.SkillPath(e.Source.Path) != nil:
 		return Entry{}, invalid("source.path %q is not a clean relative path", e.Source.Path)
 	case len(e.Files) == 0 || len(e.Files) > listing.MaxSkillFiles:
 		return Entry{}, invalid("an entry lists 1 to %d files", listing.MaxSkillFiles)
@@ -133,7 +131,11 @@ func pinned(raw string, s EntrySource, file string) error {
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
 		return invalid("file %s is fetched from a plain https address, not %q", file, raw)
 	}
-	if !strings.HasSuffix(u.EscapedPath(), "/"+s.Commit+"/"+s.Path+"/"+file) || strings.Contains(u.Path, "/../") {
+	folder := s.Path + "/"
+	if s.Path == "" {
+		folder = ""
+	}
+	if !strings.HasSuffix(u.EscapedPath(), "/"+s.Commit+"/"+folder+file) || strings.Contains(u.Path, "/../") {
 		return invalid("file %s address %q is not pinned to commit %s at %s", file, raw, s.Commit, s.Path)
 	}
 	return nil

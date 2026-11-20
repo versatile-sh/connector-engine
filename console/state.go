@@ -58,6 +58,7 @@ type stateFile struct {
 	OnboardingDismissed bool                     `json:"onboarding_dismissed,omitempty"`
 	Clients             map[string]OAuthClient   `json:"oauth_clients,omitempty"`
 	Refresh             map[string]RefreshGrant  `json:"oauth_refresh,omitempty"`
+	Notify              notifyState              `json:"notifications,omitzero"`
 }
 
 // State is the console's file in its volume: the owner account, the connected agents and the revoked ones, written atomically with mode 0600.

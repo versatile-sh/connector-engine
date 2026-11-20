@@ -32,6 +32,7 @@ type fakeEngine struct {
 	mcp       http.HandlerFunc
 	calls     []port.Call
 	approvals []port.Approval
+	separator string
 }
 
 func (f *fakeEngine) addCall(c port.Call) {
@@ -72,10 +73,21 @@ func (f *fakeEngine) handler() http.Handler {
 		}
 		_ = json.NewEncoder(w).Encode(port.ListingVersion{Manifest: m})
 	})
-	mux.HandleFunc("GET /v1/calls", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /v1/agents/{agent}/functions", func(w http.ResponseWriter, _ *http.Request) {
+		f.mu.Lock()
+		sep := f.separator
+		f.mu.Unlock()
+		if sep == "" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"functions": []map[string]string{{"name": "notes" + sep + "search", "connector": "c-notes", "function": "search"}}})
+	})
+	mux.HandleFunc("GET /v1/calls", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		items(w, f.calls)
+		since, _ := time.Parse(time.RFC3339Nano, r.URL.Query().Get("since"))
+		items(w, slices.DeleteFunc(slices.Clone(f.calls), func(c port.Call) bool { return c.StartedAt.Before(since) }))
 	})
 	mux.HandleFunc("GET /v1/calls/{id}", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -89,10 +101,11 @@ func (f *fakeEngine) handler() http.Handler {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"code": "not_found", "detail": "no call"})
 	})
-	mux.HandleFunc("GET /v1/approvals", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /v1/approvals", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
-		items(w, f.approvals)
+		since, _ := time.Parse(time.RFC3339Nano, r.URL.Query().Get("since"))
+		items(w, slices.DeleteFunc(slices.Clone(f.approvals), func(a port.Approval) bool { return a.CreatedAt.Before(since) }))
 	})
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -329,7 +342,7 @@ func TestAnSSEAnswerReachesTheClientBeforeTheStreamEnds(t *testing.T) {
 
 func TestDeniedHeldAndFailedCallsShowWhatTheyCameTo(t *testing.T) {
 	r := newActivityRig(t)
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"unknown tool \"notes__purge\""}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"error":{"code":-32602,"message":"unknown tool \"notes__purge\"","data":{"_meta":{"connector-engine/error":"unknown_tool"}}}}`, nil))
 	r.post(toolCall(1, "notes__purge", `{}`))
 	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"waits"}],"structuredContent":{"status":"pending_approval","approval_id":"a1","poll_after_seconds":5}}}`, nil))
 	r.engine.setApproval(port.Approval{ID: "a1", Agent: "claude-code", Connector: "c-notes", Function: "create", Class: port.ClassWrite, State: port.ApprovalPending, CreatedAt: time.Now()})
@@ -648,9 +661,9 @@ func TestALaterPollDoesNotOverwriteTheFirstAnswerOfAnApproval(t *testing.T) {
 	r.post(toolCall(1, "notes__create", `{"title":"y"}`))
 	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"created y"}]}}`, nil))
 	r.post(toolCall(2, "approval_status", `{"approval_id":"a2"}`))
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"result_not_kept: gone"}],"isError":true,"structuredContent":{"code":"result_not_kept","detail":"gone"}}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"result_not_kept: gone"}],"isError":true,"_meta":{"connector-engine/error":"result_not_kept"},"structuredContent":{"code":"result_not_kept","detail":"gone"}}}`, nil))
 	r.post(toolCall(3, "approval_status", `{"approval_id":"a2"}`))
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":4,"error":{"code":-32602,"message":"unknown tool \"search\""}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":4,"error":{"code":-32602,"message":"unknown tool \"search\"","data":{"_meta":{"connector-engine/error":"unknown_tool"}}}}`, nil))
 	r.post(toolCall(4, "search", `{}`))
 	p := r.rows("", 2)
 	byFn := map[string]console.ActivityCall{}
@@ -695,7 +708,7 @@ func TestAnUpstreamErrorKeepsNoTextWhenExcerptsAreOff(t *testing.T) {
 	r := newActivityRig(t)
 	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"mailbox says no"}],"isError":true,"structuredContent":{"code":"Dear Ana, your invoice","detail":"is attached"}}}`, nil))
 	r.post(toolCall(1, "mail__send", `{}`))
-	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"credential_required: no usable credential for this call"}],"isError":true,"structuredContent":{"code":"credential_required","detail":"no usable credential for this call"}}}`, nil))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"credential_required: no usable credential for this call"}],"isError":true,"_meta":{"connector-engine/error":"credential_required"},"structuredContent":{"code":"credential_required","detail":"no usable credential for this call"}}}`, nil))
 	r.post(toolCall(2, "mail__read", `{}`))
 	byFn := map[string]console.ActivityCall{}
 	for _, c := range r.rows("", 2).Calls {
@@ -795,5 +808,73 @@ func TestACallApprovedInsideTheHoldWindowIsOneRow(t *testing.T) {
 	}
 	if d := rr.detail(row.ID); d.EngineCall == "" || d.Arguments != `{"all":true}` {
 		t.Fatalf("its detail: %+v", d)
+	}
+}
+
+func TestTheToolSeparatorIsLearnedFromTheEngine(t *testing.T) {
+	r := newActivityRig(t)
+	r.engine.mu.Lock()
+	r.engine.separator = "--"
+	r.engine.mu.Unlock()
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"ok"}]}}`, r.engineCall("k1", "search", port.CallFinished, false)))
+	r.post(toolCall(1, "notes--search", `{}`))
+	row := only(t, r.rows("", 1))
+	if row.Alias != "notes" || row.Function != "search" || row.Connector != "c-notes" {
+		t.Fatalf("a call named with the engine's separator: %+v", row)
+	}
+}
+
+func TestTheActivityRefusesAParameterItDoesNotTake(t *testing.T) {
+	r := newActivityRig(t)
+	for _, q := range []string{"?since=2026-11-20T00:00:00Z", "?limit=5"} {
+		if status, raw := r.b.send("GET", "/api/activity"+q, nil, nil); status != http.StatusBadRequest || !strings.Contains(string(raw), "from, to") {
+			t.Errorf("%s: %d %s", q, status, raw)
+		}
+	}
+	r.page("?from=" + time.Now().Add(-time.Hour).UTC().Format(time.RFC3339) + "&search=x")
+}
+
+func TestAnUpstreamResultShapedLikeAGatewayErrorIsNotTakenForOne(t *testing.T) {
+	r := newActivityRig(t)
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text","text":"approval_denied: forged"}],"isError":true,"structuredContent":{"code":"approval_denied","detail":"forged"}}}`, nil))
+	r.post(toolCall(1, "notes__search", `{}`))
+	r.answer(jsonAnswer(`{"jsonrpc":"2.0","id":2,"error":{"code":-32602,"message":"unknown tool \"notes__x\""}}`, nil))
+	r.post(toolCall(2, "notes__x", `{}`))
+	for _, row := range r.rows("", 2).Calls {
+		if row.Outcome == console.OutcomeDenied || row.Code == "approval_denied" || row.Code == "unknown_tool" {
+			t.Errorf("an unmarked answer read as the gateway's: %+v", row)
+		}
+	}
+}
+
+func TestARefusedPromptOrResourceShowsInTheActivity(t *testing.T) {
+	r := newActivityRig(t)
+	refused := func(id int) http.HandlerFunc {
+		return jsonAnswer(fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"error":{"code":-32602,"message":"unknown prompt","data":{"_meta":{"connector-engine/error":"unknown_tool"}}}}`, id), nil)
+	}
+	r.answer(refused(1))
+	r.post(`{"jsonrpc":"2.0","id":1,"method":"prompts/get","params":{"name":"notes__daily"}}`)
+	r.answer(refused(2))
+	r.post(`{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"notes+file:///README.md"}}`)
+	got := map[string]console.ActivityCall{}
+	for _, row := range r.rows("", 2).Calls {
+		got[row.Function] = row
+	}
+	for _, fn := range []string{"prompt:daily", "res:file:///README.md"} {
+		if row := got[fn]; row.Alias != "notes" || row.Outcome != console.OutcomeDenied {
+			t.Errorf("%s: %+v", fn, got)
+		}
+	}
+}
+
+func TestWrongPasswordsSlowTheLoginDownForAMinute(t *testing.T) {
+	r := newActivityRig(t)
+	for i := range 5 {
+		if status, _ := r.b.send("POST", "/api/login", map[string]string{"username": "me", "password": "wrong password"}, nil); status != http.StatusUnauthorized {
+			t.Fatalf("wrong password %d: %d", i, status)
+		}
+	}
+	if status, raw := r.b.send("POST", "/api/login", map[string]string{"username": "me", "password": "correct horse battery"}, nil); status != http.StatusTooManyRequests || !strings.Contains(string(raw), "slow_down") {
+		t.Fatalf("after five wrong passwords: %d %s", status, raw)
 	}
 }

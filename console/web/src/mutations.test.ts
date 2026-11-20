@@ -44,6 +44,7 @@ describe("mutations", () => {
     { name: "removeConnector", run: () => staleAfter(mutations.removeConnector, "c1"), stale: ["session", "connectors", "skills"] },
     { name: "installImport", run: () => staleAfter(mutations.installImport, { mcp: "https://x", choices: {} }), stale: ["session", "connectors", "skills"] },
     { name: "setSkillAccess", run: () => staleAfter(mutations.setSkillAccess, { skill: "s1", agent: "cursor", access: "off" }), stale: ["skills"] },
+    { name: "setSkillAccessAll", run: () => staleAfter(mutations.setSkillAccessAll, { skill: "s1", access: "on" }), stale: ["skills"] },
     { name: "removeSkill", run: () => staleAfter(mutations.removeSkill, "s1"), stale: ["skills", "session"] },
     { name: "saveRecording", run: () => staleAfter(mutations.saveRecording, { record_arguments: true, record_results: false }), stale: [] },
     { name: "deleteActivity", run: () => staleAfter(mutations.deleteActivity, undefined), stale: ["activity", "activity-settings"] },

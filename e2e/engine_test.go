@@ -187,6 +187,7 @@ func (e *engine) token(t *testing.T, claims map[string]any) string {
 	t.Helper()
 	raw, _ := json.Marshal(claims)
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, e.HTTP+"/local/token", bytes.NewReader(raw))
+	req.Header.Set("Authorization", "Bearer "+operatorToken)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)

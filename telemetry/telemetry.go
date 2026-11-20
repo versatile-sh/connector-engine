@@ -1,4 +1,4 @@
-// Package telemetry serves the Prometheus metrics of the engine: calls by outcome, approvals by state, call latency and outbox lag.
+// Package telemetry serves the Prometheus metrics of the engine: calls by outcome, approvals by state, call latency, worker failures and outbox lag.
 package telemetry
 
 import (
@@ -21,6 +21,7 @@ type Metrics struct {
 	calls     *prometheus.CounterVec
 	approvals *prometheus.CounterVec
 	latency   *prometheus.HistogramVec
+	failures  prometheus.Counter
 }
 
 // New registers the catalogue; lag reads the age of the oldest undelivered outbox event at each scrape.
@@ -30,6 +31,7 @@ func New(outbox port.Outbox, now func() time.Time) *Metrics {
 	m.approvals = prometheus.NewCounterVec(prometheus.CounterOpts{Name: "connector_approvals_total", Help: "Approval records by the state they reached."}, []string{"tenant", "state"})
 	m.latency = prometheus.NewHistogramVec(prometheus.HistogramOpts{Name: "connector_gateway_call_duration_seconds", Help: "Time the gateway took to answer a tool call.",
 		Buckets: prometheus.ExponentialBuckets(0.005, 4, 8)}, []string{"tenant"})
+	m.failures = prometheus.NewCounter(prometheus.CounterOpts{Name: "connector_worker_sweep_failures_total", Help: "Worker sweeps and approved executions that failed or panicked."})
 	lag := prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: "connector_outbox_lag_seconds", Help: "Age of the oldest event not yet delivered."}, func() float64 {
 		pending, err := outbox.Pending(context.Background(), 1)
 		if err != nil || len(pending) == 0 {
@@ -37,7 +39,7 @@ func New(outbox port.Outbox, now func() time.Time) *Metrics {
 		}
 		return max(0, now().Sub(pending[0].Time).Seconds())
 	})
-	m.registry.MustRegister(m.calls, m.approvals, m.latency, lag)
+	m.registry.MustRegister(m.calls, m.approvals, m.latency, m.failures, lag)
 	return m
 }
 
@@ -45,6 +47,9 @@ func New(outbox port.Outbox, now func() time.Time) *Metrics {
 func (m *Metrics) Handler() http.Handler {
 	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{})
 }
+
+// WorkerFailed counts one failed or panicked worker sweep or approved execution.
+func (m *Metrics) WorkerFailed() { m.failures.Inc() }
 
 type metered struct {
 	gateway.Core

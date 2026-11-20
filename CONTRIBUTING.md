@@ -32,6 +32,7 @@ go build ./...
 - Postgres tests start a throwaway container and skip without Docker. Set `CN_PG=0` or `CN_DOCKER=0` to skip them on purpose.
 - Integration tests remove only what they created, by exact name.
 - On a busy machine, limit parallelism: `GOMAXPROCS=4 go test -p 2 ./...`.
+- `make seed` serves a throwaway console at `http://127.0.0.1:7477` (`SEED_ADDR=host:port` moves it) with 12 access keys, 15 connectors and 10 skills, to see pages with many items. It takes about nine minutes, prints a one-time `owner` password, keeps everything in memory and a temporary folder, and never touches a running stack or the system keychain. It is `TestSeedPlayground`, skipped unless `CN_SEED_ADDR` is set.
 
 ## Code rules
 

@@ -1,4 +1,4 @@
-// Package config holds connector-engine.yaml with every key and its default, and adapters.yaml through plugkit/adapters.
+// Package config holds connector-engine.yaml with every key of §14 and its default, and adapters.yaml through plugkit/adapters.
 package config
 
 import (
@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/agents-control/plugkit/adapters"
+
+	"github.com/agents-control/connector-engine/filter/builtin"
 )
 
-// Modes of the engine; production refuses what lists unless acknowledged.
+// Modes of the engine; production refuses what §14 lists unless acknowledged.
 const (
 	ModeProduction = "production"
 	ModeDev        = "dev"
@@ -41,9 +43,10 @@ type Config struct {
 	Runtime      Runtime      `yaml:"runtime"`
 	Audit        Audit        `yaml:"audit"`
 	Outbox       Outbox       `yaml:"outbox"`
+	Retention    Retention    `yaml:"retention"`
 }
 
-// Server holds the addresses the binary listens on; it is not a key.
+// Server holds the addresses the binary listens on; it is not a key of §14.
 type Server struct {
 	Listen         string        `yaml:"listen"`
 	GRPCListen     string        `yaml:"grpcListen"`
@@ -61,8 +64,9 @@ type Issuer struct {
 
 // LocalIssuer is the quickstart token issuer; enabling it needs the acknowledgement AckLocalIssuer.
 type LocalIssuer struct {
-	Enabled bool   `yaml:"enabled"`
-	Name    string `yaml:"name"`
+	Enabled     bool          `yaml:"enabled"`
+	Name        string        `yaml:"name"`
+	RotateEvery time.Duration `yaml:"rotateEvery"`
 }
 
 // TrustedProxy is the listener that accepts the identity headers of a fronting proxy; it is off by default and needs AckTrustedProxy.
@@ -76,7 +80,7 @@ type Operator struct {
 	TokenRef string `yaml:"tokenRef"`
 }
 
-// Auth is auth.*: issuers, audiences, token lifetime and the opt-ins.
+// Auth is auth.*: issuers, audiences, token lifetime and the opt-ins of §4.3.
 type Auth struct {
 	Issuers               []Issuer      `yaml:"issuers"`
 	Audience              string        `yaml:"audience"`
@@ -222,9 +226,10 @@ type Projection struct {
 	MaxPaths int    `yaml:"maxPaths"`
 }
 
-// ResultFilter is resultFilter.*: none or builtin.
+// ResultFilter is resultFilter.*: none or builtin, and the locale pattern sets the builtin filter masks besides secrets, emails, cards and phones.
 type ResultFilter struct {
-	Adapter string `yaml:"adapter"`
+	Adapter string   `yaml:"adapter"`
+	Locales []string `yaml:"locales"`
 }
 
 // Overlay is overlay.*: no suggester ships in this build.
@@ -338,7 +343,7 @@ type OnePassword struct {
 	Field      string `yaml:"field"`
 }
 
-// Container is runtime.container; no container runtime ships in this build.
+// Container is runtime.container; no container runtime ships in this build (OD-20).
 type Container struct {
 	CPU      int           `yaml:"cpu"`
 	Memory   string        `yaml:"memory"`
@@ -365,12 +370,21 @@ type Outbox struct {
 	Signing string `yaml:"signing"`
 }
 
-// Default returns every key at its default, and the keys of the binary at theirs.
+// Retention is retention.*: how often the worker prunes history and how long it keeps delivered events, idempotency keys, audit rows and finished calls; 0s keeps them forever.
+type Retention struct {
+	Every           time.Duration `yaml:"every"`
+	DeliveredEvents time.Duration `yaml:"deliveredEvents"`
+	IdempotencyKeys time.Duration `yaml:"idempotencyKeys"`
+	Audit           time.Duration `yaml:"audit"`
+	Calls           time.Duration `yaml:"calls"`
+}
+
+// Default returns every key of §14 at its default, and the keys of the binary at theirs.
 func Default() Config {
 	return Config{
 		Mode:   ModeProduction,
 		Server: Server{Listen: ":8080", GRPCListen: ":9090", MaxBodyBytes: 1 << 20, ShutdownGrace: 15 * time.Second},
-		Auth: Auth{LocalIssuer: LocalIssuer{Name: "connector-engine-local"}, AgentTokenMaxLifetime: time.Hour, SenderConstraint: "none",
+		Auth: Auth{LocalIssuer: LocalIssuer{Name: "connector-engine-local", RotateEvery: 30 * 24 * time.Hour}, AgentTokenMaxLifetime: time.Hour, SenderConstraint: "none",
 			Issuers: []Issuer{}, TrustedProxy: TrustedProxy{CIDRs: []string{}}},
 		Bootstrap: Bootstrap{Roles: []RoleRow{}},
 		Gateway: Gateway{ProtocolVersions: []string{"2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"}, RelayInstructions: "never", UpstreamContent: "refuse", ScanArgumentsForToken: true,
@@ -388,7 +402,7 @@ func Default() Config {
 		Exposure:     Exposure{OnTrifecta: "warn"},
 		Search:       Search{ThresholdTokens: 10000, ThresholdFunctions: 30, ResultMax: 5},
 		Projection:   Projection{Default: "off", MaxPaths: 20},
-		ResultFilter: ResultFilter{Adapter: "none"},
+		ResultFilter: ResultFilter{Adapter: "none", Locales: slices.Clone(builtin.DefaultLocales)},
 		Overlay:      Overlay{Suggester: "none"},
 		CLI:          CLI{DefaultForCodingAgents: true},
 		GRPC:         GRPC{UnaryOnly: true},
@@ -400,6 +414,7 @@ func Default() Config {
 		Runtime:     Runtime{Adapters: []string{"remote", "declarative"}, CallTimeout: 60 * time.Second, Container: Container{CPU: 1, Memory: "2GB", IdleStop: 60 * time.Second, Network: "none"}},
 		Audit:       Audit{Arguments: "reference"},
 		Outbox:      Outbox{Signing: "standard-webhooks"},
+		Retention:   Retention{Every: time.Hour},
 	}
 }
 

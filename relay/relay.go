@@ -9,6 +9,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/agents-control/connector-engine/internal/safe"
 	"github.com/agents-control/connector-engine/port"
 )
 
@@ -87,12 +88,12 @@ func (r Relay) giveUp(ctx context.Context, e port.Event, detail string) {
 	}
 }
 
-// Run flushes until ctx ends: it polls every Every while the outbox is empty and doubles its wait after each failure.
+// Run flushes until ctx ends: it polls every Every while the outbox is empty and doubles its wait after each failure or recovered panic.
 func (r Relay) Run(ctx context.Context) {
 	every, maxBackoff := r.every(), r.maxBackoff()
 	wait := every
 	for ctx.Err() == nil {
-		if _, err := r.Flush(ctx); err != nil && ctx.Err() == nil {
+		if err := safe.Run(func() error { _, err := r.Flush(ctx); return err }); err != nil && ctx.Err() == nil {
 			r.log().Warn("outbox relay failed", "error", err, "retry_in", wait)
 			if r.sleep(ctx, wait) != nil {
 				return

@@ -96,6 +96,15 @@ export const setSkillAccess = mutationOptions({
   onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, skillsQuery.queryKey),
 });
 
+/** What one access key's choice in a batch came to: set when it carries no error. */
+export type KeyResult = { agent: string; error?: string; code?: string };
+
+/** Sets one access on a skill for every key, or for the keys named, in one request; each key answers its own result. */
+export const setSkillAccessAll = mutationOptions({
+  mutationFn: ({ skill, access, keys }: { skill: string; access: Access; keys?: string[] }) => api<{ keys: KeyResult[] }>("PUT", `/api/skills/${at(skill, "keys")}`, keys ? { access, keys } : { access }),
+  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, skillsQuery.queryKey),
+});
+
 /** Removes an installed skill; the session is read again, as after any install or removal. */
 export const removeSkill = mutationOptions({
   mutationFn: (id: string) => api("DELETE", `/api/skills/${at(id)}`),

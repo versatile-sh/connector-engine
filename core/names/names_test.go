@@ -28,3 +28,16 @@ func TestNames(t *testing.T) {
 		t.Fatalf("deterministic order: %v", got)
 	}
 }
+
+func TestUpstreamNamesStayInsideTheirCharset(t *testing.T) {
+	for _, ok := range []string{"search", "repo.list-issues_v2", "prompt:summarize", "res:file:///notes/a.md", "res:https://x.test/items/{id}?q=1", port.InstructionsItem} {
+		if err := names.ValidUpstream(ok); err != nil {
+			t.Errorf("%q: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{"", "a b", "click [here](https://evil.test)", "<b>x</b>", "tool\nline", "prompt:**urgent**", strings.Repeat("a", 129), "res:https://x.test/[a](b)", "res:a b"} {
+		if err := names.ValidUpstream(bad); !port.IsCode(err, port.CodeInvalidManifest) {
+			t.Errorf("%q was accepted: %v", bad, err)
+		}
+	}
+}

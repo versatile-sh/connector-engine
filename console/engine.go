@@ -44,10 +44,6 @@ type Engine struct {
 	expires time.Time
 }
 
-type bodyReader interface {
-	readBody(io.Reader) error
-}
-
 var engineHTTP = &http.Client{Timeout: 90 * time.Second}
 
 func (e *Engine) client() *http.Client {
@@ -81,9 +77,6 @@ func (e *Engine) do(ctx context.Context, base, bearer, method, path string, in, 
 		return unreachable(fmt.Errorf("engine unreachable: %w", err))
 	}
 	defer resp.Body.Close()
-	if br, ok := out.(bodyReader); ok && resp.StatusCode < 300 {
-		return br.readBody(resp.Body)
-	}
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 	if err != nil {
 		return err
@@ -109,7 +102,7 @@ func (e *Engine) Mint(ctx context.Context, claims map[string]any, ttl time.Durat
 	var out struct {
 		Token string `json:"token"`
 	}
-	if err := e.do(ctx, e.PublicURL, "", http.MethodPost, "/local/token", body, &out); err != nil {
+	if err := e.do(ctx, e.PublicURL, e.Operator, http.MethodPost, "/local/token", body, &out); err != nil {
 		return "", err
 	}
 	if out.Token == "" {

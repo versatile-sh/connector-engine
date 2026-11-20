@@ -22,3 +22,10 @@ secrets:
   adapter: hostkey
   dir: /var/lib/connector-engine/secrets
   unlockSocket: /run/connector-engine-unlock/unlock.sock
+runtime:
+  allowPrivateHosts: true
+retention:
+  deliveredEvents: 168h
+  idempotencyKeys: 168h
+  audit: 2160h
+  calls: 2160h

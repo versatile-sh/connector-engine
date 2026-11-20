@@ -23,14 +23,12 @@ const (
 	registrationsPerMin = 10
 	maxPendingAuth      = 256
 	maxClientName       = 64
-	consentFailsPerMin  = 5
+	passwordFailsPerMin = 5
 )
 
 var appSchemes = map[string]string{"cursor": "Cursor", "vscode": "VS Code"}
 
 var hostedCallbacks = map[string]string{"https://antigravity.google/oauth-callback": "Antigravity"}
-
-var browserSchemes = []string{"https", "javascript", "data", "file", "blob", "about", "ftp", "ws", "wss", "mailto", "tel", "sms", "view-source", "chrome", "chrome-extension", "edge", "moz-extension", "intent", "filesystem", "jar", "vbscript", "resource"}
 
 type authRequest struct {
 	client    OAuthClient
@@ -54,7 +52,7 @@ func loopbackName(host string) bool {
 	return host == "127.0.0.1" || host == "localhost" || host == "::1"
 }
 
-// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port, an app's private-use scheme, or one exactly listed app callback page that shows the code for the owner to paste back; never any other https or a scheme a browser handles itself.
+// RedirectAllowed reports whether an OAuth redirect URI may be registered: loopback http on any port (RFC 8252 §7.3), a known app's scheme or a reverse-DNS private-use scheme with a dot (§7.1), or one exactly listed app callback page; any other scheme, such as a single-word OS or file handler, is refused.
 func RedirectAllowed(raw string) bool {
 	if _, ok := hostedCallbacks[raw]; ok {
 		return true
@@ -67,7 +65,8 @@ func RedirectAllowed(raw string) bool {
 	if scheme == "http" {
 		return loopbackName(u.Hostname())
 	}
-	return !slices.Contains(browserSchemes, scheme)
+	_, known := appSchemes[scheme]
+	return known || strings.Contains(scheme, ".")
 }
 
 func redirectMatches(registered, got string) bool {
@@ -289,7 +288,7 @@ func (c *Console) authorize(w http.ResponseWriter, r *http.Request) {
 	if redirect == "" && len(cl.RedirectURIs) == 1 {
 		redirect = cl.RedirectURIs[0]
 	}
-	if !cl.allows(redirect) {
+	if !cl.allows(redirect) || !RedirectAllowed(redirect) {
 		http.Error(w, "this redirect_uri is not registered for the client", http.StatusBadRequest)
 		return
 	}
@@ -387,7 +386,7 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 	c.loginMu.Lock()
 	defer c.loginMu.Unlock()
 	now := time.Now()
-	if c.consentFails.full(now, consentFailsPerMin) {
+	if c.passwordFails.full(now, passwordFailsPerMin) {
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
 		return false
@@ -398,12 +397,29 @@ func (c *Console) ownerConfirms(w http.ResponseWriter, password string) bool {
 		return false
 	}
 	if !ok {
-		c.consentFails.hit(now)
+		c.passwordFails.hit(now)
 		time.Sleep(500 * time.Millisecond)
 		writeJSON(w, http.StatusForbidden, apiError{Error: "wrong password", Code: "wrong_password"})
 		return false
 	}
 	return true
+}
+
+func (c *Console) agentFor(cl OAuthClient) string {
+	name := Slug(cl.Name)
+	a, taken := c.State.Agent(name)
+	if !taken || a.ClientID == cl.ID || a.ClientID == "" && a.ViaBrowser && c.State.SignedIn(name, cl.ID) {
+		return name
+	}
+	if suffixed := name + "-" + cl.ID[:8]; !c.ownedByOther(suffixed, cl.ID) {
+		return suffixed
+	}
+	return name + "-" + cl.ID
+}
+
+func (c *Console) ownedByOther(name, clientID string) bool {
+	a, taken := c.State.Agent(name)
+	return taken && a.ClientID != clientID
 }
 
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
@@ -433,12 +449,12 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect": withParams(req.redirect, params)})
 		return
 	}
-	a, err := c.BindAgent(r.Context(), req.client.Name, c.MaxAgentTTL)
+	a, err := c.BindAgent(r.Context(), c.agentFor(req.client), c.MaxAgentTTL)
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
-	if err := c.State.MarkBrowserConnected(a.Name, time.Now()); err != nil {
+	if err := c.State.MarkBrowserConnected(a.Name, req.client.ID, time.Now()); err != nil {
 		c.fail(w, err)
 		return
 	}
@@ -501,7 +517,7 @@ func (c *Console) exchangeCode(w http.ResponseWriter, r *http.Request, f url.Val
 	case f.Get("resource") != "" && code.resource != "" && strings.TrimRight(f.Get("resource"), "/") != strings.TrimRight(code.resource, "/"):
 		oauthError(w, http.StatusBadRequest, "invalid_target", "resource differs from the authorization request")
 	default:
-		c.issue(w, r, "", RefreshGrant{ClientID: code.clientID, Agent: code.agent, Resource: firstOf(code.resource, f.Get("resource"))})
+		c.issue(w, r, "", RefreshGrant{ClientID: code.clientID, Agent: code.agent, Resource: firstOf(code.resource, f.Get("resource")), Family: randomID()})
 	}
 }
 
@@ -517,7 +533,14 @@ func (c *Console) refresh(w http.ResponseWriter, r *http.Request, f url.Values) 
 	g, ok := c.State.RefreshGrant(key)
 	a, known := c.State.Agent(g.Agent)
 	switch {
-	case !ok || g.ClientID != f.Get("client_id"):
+	case !ok:
+		if reused, _ := c.State.RevokeReusedRefresh(key); reused {
+			oauthError(w, http.StatusBadRequest, "invalid_grant", "this refresh token was already used, so every token of its sign-in was ended; connect the app again")
+			return
+		}
+		oauthError(w, http.StatusBadRequest, "invalid_grant", "the refresh token is unknown, expired or of another client")
+		return
+	case g.ClientID != f.Get("client_id"):
 		oauthError(w, http.StatusBadRequest, "invalid_grant", "the refresh token is unknown, expired or of another client")
 		return
 	case !known || c.State.Revoked(g.Agent, g.Issued.Unix()):
@@ -530,7 +553,7 @@ func (c *Console) refresh(w http.ResponseWriter, r *http.Request, f url.Values) 
 			return
 		}
 	}
-	c.issue(w, r, key, RefreshGrant{ClientID: g.ClientID, Agent: g.Agent, Resource: g.Resource})
+	c.issue(w, r, key, RefreshGrant{ClientID: g.ClientID, Agent: g.Agent, Resource: g.Resource, Family: firstOf(g.Family, key)})
 }
 
 func (c *Console) issue(w http.ResponseWriter, r *http.Request, oldRefresh string, g RefreshGrant) {

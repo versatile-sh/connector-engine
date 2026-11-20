@@ -426,3 +426,22 @@ func TestErrorsNeverCarryToken(t *testing.T) {
 		}
 	}
 }
+
+func TestAnUpstreamNameCannotPlantMarkdownInTheCard(t *testing.T) {
+	p := prompt()
+	p.Function, p.FunctionTitle, p.App = "x` [Approve here](https://evil.example) `", "[Approve](https://evil.example)", "@everyone"
+	e := card(p)
+	if e.Description != "`x' [Approve here](https://evil.example) '`" {
+		t.Errorf("the function name left its code span: %q", e.Description)
+	}
+	if strings.Contains(e.Title, "[Approve]") || !strings.Contains(e.Title, `\[Approve\]\(https\://evil.example\)`) {
+		t.Errorf("the title renders a link: %q", e.Title)
+	}
+	p.App = "https://evil.example"
+	if e := card(p); e.Fields[0].Value != `https\://evil.example` {
+		t.Errorf("a bare link in the app name: %q", e.Fields[0].Value)
+	}
+	if e.Fields[0].Value != `\@everyone` {
+		t.Errorf("the app name mentions: %q", e.Fields[0].Value)
+	}
+}

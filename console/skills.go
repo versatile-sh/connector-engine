@@ -3,6 +3,7 @@ package console
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -69,12 +70,24 @@ func (c *Console) liveAgents() []Agent {
 	return out
 }
 
+func httpsOnly(raw string) string {
+	if u, err := url.Parse(raw); err == nil && u.Scheme == "https" && u.Host != "" {
+		return raw
+	}
+	return ""
+}
+
+func safeSource(s port.SkillSource) port.SkillSource {
+	s.URL = httpsOnly(s.URL)
+	return s
+}
+
 func (c *Console) skillPreview(e skillcatalog.Entry) SkillPreview {
 	keys := []string{}
 	for _, a := range c.liveAgents() {
 		keys = append(keys, a.Name)
 	}
-	return SkillPreview{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: e.Source.URL},
+	return SkillPreview{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: httpsOnly(e.Source.URL)},
 		Licence: port.SkillLicence{SPDX: e.License.SPDX, From: e.License.From, Redistributable: e.License.Redistributable}, Redistribution: e.Redistribution(),
 		HasScripts: e.HasScriptsDeclaredOrSeen(),
 		Digest:     e.Digest(), Files: fileViews(e.SkillFiles()), Keys: keys}
@@ -146,24 +159,48 @@ func (c *Console) setKeyRow(ctx context.Context, conn string, a Agent, access Ac
 
 // SetSkillAccess writes the owner's choice for one access key on one skill: off removes its row, on allows, ask asks once per session.
 func (c *Console) SetSkillAccess(ctx context.Context, conn, agent string, access Access) error {
-	if !access.Valid() {
-		return invalid("access %q is not off, on or ask", access)
-	}
-	agents := c.liveAgents()
-	i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == agent })
-	if i < 0 {
-		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + agent}
-	}
-	v, err := c.Engine.connector(ctx, conn)
+	results, err := c.SetSkillAccessAll(ctx, conn, []string{agent}, access)
 	if err != nil {
 		return err
 	}
-	if skill, err := c.isSkill(ctx, v); err != nil {
-		return err
-	} else if !skill || !v.RemovedAt.IsZero() {
-		return &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
+	return results[0].Err
+}
+
+// KeyResult is what one access key's choice on a skill came to: set when Err is nil.
+type KeyResult struct {
+	Agent string
+	Err   error
+}
+
+// SetSkillAccessAll sets one access on a skill for the named access keys, or every live key when none is named, and answers each key's result in order.
+func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []string, access Access) ([]KeyResult, error) {
+	if !access.Valid() {
+		return nil, invalid("access %q is not off, on or ask", access)
 	}
-	return c.bindSkill(ctx, conn, agents[i], access)
+	v, err := c.Engine.connector(ctx, conn)
+	if err != nil {
+		return nil, err
+	}
+	if skill, err := c.isSkill(ctx, v); err != nil {
+		return nil, err
+	} else if !skill || !v.RemovedAt.IsZero() {
+		return nil, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
+	}
+	agents := c.liveAgents()
+	if len(names) == 0 {
+		for _, a := range agents {
+			names = append(names, a.Name)
+		}
+	}
+	results := make([]KeyResult, 0, len(names))
+	for _, name := range names {
+		r := KeyResult{Agent: name, Err: &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no access key is named " + name}}
+		if i := slices.IndexFunc(agents, func(a Agent) bool { return a.Name == name }); i >= 0 {
+			r.Err = c.bindSkill(ctx, conn, agents[i], access)
+		}
+		results = append(results, r)
+	}
+	return results, nil
 }
 
 // Skills lists the workspace's installed skills with each access key's choice and the required connectors not installed.
@@ -191,7 +228,7 @@ func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
 		}
 		s := m.Skill
 		sum := SkillSummary{ID: string(conn.ID), Alias: conn.Alias, Title: firstOf(m.Title, s.Name), Description: m.Description, Publisher: skillcatalog.Publisher(s.Source.Repository, m.Publisher.Name), Version: conn.Listing.Version,
-			SkillPreview: SkillPreview{Name: s.Name, Category: s.Category, Source: s.Source, Licence: s.Licence, Redistribution: s.Redistribution, HasScripts: s.HasScripts,
+			SkillPreview: SkillPreview{Name: s.Name, Category: s.Category, Source: safeSource(s.Source), Licence: s.Licence, Redistribution: s.Redistribution, HasScripts: s.HasScripts,
 				Files: fileViews(s.Files), Keys: []string{}}, Access: []KeyAccess{}}
 		if f, err := c.skillFunction(ctx, string(conn.ID)); err == nil {
 			sum.State = string(f.State)

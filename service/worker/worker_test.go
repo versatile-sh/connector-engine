@@ -1,7 +1,13 @@
 package worker_test
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"log/slog"
 	"slices"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -133,5 +139,120 @@ func TestAFailingItemBacksOffAndDoesNotStarveTimers(t *testing.T) {
 	}
 	if f.Runtime.CallsTo("search") != 0 {
 		t.Fatal("the record whose re-list fails is not forwarded")
+	}
+}
+
+type brokenStore struct {
+	port.Store
+	panics bool
+}
+
+func (b brokenStore) Read(context.Context, port.Scope, func(port.Tx) error) error {
+	if b.panics {
+		panic("store bug")
+	}
+	return port.Errorf(port.CodeUnavailable, "store down")
+}
+
+func TestRunLogsCountsAndSurvivesFailingAndPanickingSweeps(t *testing.T) {
+	for _, panics := range []bool{false, true} {
+		f := newFixture(t)
+		var logs bytes.Buffer
+		var failures atomic.Int32
+		ctx, cancel := context.WithCancel(f.Ctx)
+		w := worker.New(f.Svc, brokenStore{Store: f.Store, panics: panics}, f.Clock, worker.Config{Interval: time.Millisecond,
+			Log: slog.New(slog.NewTextHandler(&logs, nil)), Failed: func() {
+				if failures.Add(1) == 3 {
+					cancel()
+				}
+			}})
+		done := make(chan error, 1)
+		go func() { done <- w.Run(ctx) }()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("panics=%v: Run did not report three failed sweeps", panics)
+		}
+		if !strings.Contains(logs.String(), "worker sweep failed") {
+			t.Fatalf("panics=%v: no log line: %q", panics, logs.String())
+		}
+	}
+}
+
+func heldAndApproved(t *testing.T, f *fixture) port.ApprovalID {
+	t.Helper()
+	st.Ok(f.Svc.SetConnectorLevel(f.Ctx, f.admin, f.conn.ID, port.LevelCustom))
+	st.Ok(f.Svc.CreateGrant(f.Ctx, f.admin, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: "w1", Connector: f.conn.ID, Selector: "*", Mode: port.ModeAllow}))
+	st.Ok(f.Svc.PutBinding(f.Ctx, f.admin, port.Binding{Connector: f.conn.ID, Agent: "x", AskRequester: true}))
+	st.Ok(f.Svc.CreateGrant(f.Ctx, f.admin, port.Grant{ScopeKind: port.ScopeAgent, ScopeID: "x", Connector: f.conn.ID, Selector: "*", Mode: port.ModeAsk}))
+	x := f.AgentClaims(port.Claims{Tenant: "t1", Workspace: "w1", Agent: "x", Session: "s1", OnBehalfOf: "alice"})
+	held := st.Ok(f.Svc.Call(f.Ctx, x, service.CallRequest{Name: "s__search", Arguments: []byte(`{"q":"a"}`)}))
+	st.Ok(f.Svc.DecideApproval(f.Ctx, f.Person("t1", "alice"), held.Approval.ID, port.DecisionApprove, "", "test"))
+	return held.Approval.ID
+}
+
+func TestShutdownLetsARunningApprovedExecutionFinishWithinTheGrace(t *testing.T) {
+	for _, c := range []struct {
+		grace time.Duration
+		state port.ApprovalState
+	}{{time.Minute, port.ApprovalExecuted}, {10 * time.Millisecond, port.ApprovalExecuting}} {
+		f := newFixture(t)
+		f.Clock.Advance(time.Since(st.Epoch))
+		id := heldAndApproved(t, f)
+		started, release := make(chan struct{}), make(chan struct{})
+		f.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) {
+			close(started)
+			<-release
+			return port.Result{Structured: json.RawMessage(`{"ok":true}`)}, nil
+		})
+		ctx, cancel := context.WithCancel(f.Ctx)
+		w := worker.New(f.Svc, f.Store, f.Clock, worker.Config{Interval: time.Hour, Grace: c.grace})
+		done := make(chan error, 1)
+		go func() { done <- w.Run(ctx) }()
+		<-started
+		cancel()
+		if c.grace < time.Second {
+			time.Sleep(100 * time.Millisecond)
+		}
+		close(release)
+		<-done
+		got := st.Ok(f.Svc.GetApproval(f.Ctx, f.Person("t1", "alice"), id)).Approval.State
+		if got != c.state {
+			t.Fatalf("grace %s: state %s, want %s", c.grace, got, c.state)
+		}
+	}
+}
+
+func TestSweepPrunesDeliveredEventsOncePerInterval(t *testing.T) {
+	f := newFixture(t)
+	events := func() int {
+		n := 0
+		for _, src := range []port.TenantID{port.Installation, "t1"} {
+			_ = f.Store.Read(f.Ctx, port.Scope{Tenant: src, Installation: src == port.Installation}, func(tx port.Tx) error {
+				evs, err := tx.EventsAfter(port.SourceOf(src), 0, 0)
+				n += len(evs)
+				return err
+			})
+		}
+		return n
+	}
+	pending := st.Ok(f.Store.Pending(f.Ctx, 0))
+	ids := make([]string, len(pending))
+	for i, e := range pending {
+		ids[i] = e.ID
+	}
+	if err := f.Store.MarkDelivered(f.Ctx, ids); err != nil {
+		t.Fatal(err)
+	}
+	before := events()
+	w := worker.New(f.Svc, f.Store, f.Clock, worker.Config{Retention: port.Retention{Delivered: time.Hour}, PruneEvery: time.Hour})
+	st.Ok(w.Sweep(f.Ctx))
+	if events() != before {
+		t.Fatal("events younger than the retention were pruned")
+	}
+	f.Clock.Advance(2 * time.Hour)
+	st.Ok(w.Sweep(f.Ctx))
+	if before == 0 || events() != 0 {
+		t.Fatalf("delivered events older than the retention survive: %d of %d", events(), before)
 	}
 }

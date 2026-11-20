@@ -10,10 +10,19 @@ import (
 	"github.com/agents-control/connector-engine/port"
 )
 
+func brazil(t *testing.T) builtin.Filter {
+	t.Helper()
+	f, err := builtin.New(builtin.DefaultLocales...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
 func run(t *testing.T, text string) (string, map[string]int) {
 	t.Helper()
 	content, _ := json.Marshal([]map[string]string{{"type": "text", "text": text}})
-	res, found, err := builtin.New().Filter(context.Background(), port.Result{Content: content})
+	res, found, err := brazil(t).Filter(context.Background(), port.Result{Content: content})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +110,7 @@ func TestOtherKinds(t *testing.T) {
 func TestStructuredContentAndCounts(t *testing.T) {
 	structured := json.RawMessage(`{"owner":{"email":"a@b.example.org","cpf":"529.982.247-25"},"notes":["call (11) 98765-4321","fine"],"count":3,"nested":{"count":12345678909}}`)
 	content := json.RawMessage(`[{"type":"text","text":"a@b.example.org and c@d.example.org"},{"type":"image","data":"4111111111111111","mimeType":"image/png"}]`)
-	res, found, err := builtin.New().Filter(context.Background(), port.Result{Content: content, Structured: structured, IsError: true})
+	res, found, err := brazil(t).Filter(context.Background(), port.Result{Content: content, Structured: structured, IsError: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,11 +134,32 @@ func TestStructuredContentAndCounts(t *testing.T) {
 
 func TestCleanResultIsReturnedUntouched(t *testing.T) {
 	in := port.Result{Content: json.RawMessage(`[ {"type":"text","text":"nothing here"} ]`), Structured: json.RawMessage(`{"b":1,  "a":2}`)}
-	out, found, err := builtin.New().Filter(context.Background(), in)
+	out, found, err := brazil(t).Filter(context.Background(), in)
 	if err != nil || len(found) != 0 || string(out.Content) != string(in.Content) || string(out.Structured) != string(in.Structured) {
 		t.Fatalf("%v %v %s %s", err, found, out.Content, out.Structured)
 	}
-	if _, _, err := builtin.New().Filter(context.Background(), port.Result{Content: json.RawMessage(`{`)}); !port.IsCode(err, port.CodeInvalidArgument) {
+	if _, _, err := brazil(t).Filter(context.Background(), port.Result{Content: json.RawMessage(`{`)}); !port.IsCode(err, port.CodeInvalidArgument) {
 		t.Fatalf("invalid JSON: %v", err)
+	}
+}
+
+func TestLocalePatternSetsAreChosenByName(t *testing.T) {
+	if got := builtin.DefaultLocales; len(got) != 1 || got[0] != "br" {
+		t.Fatalf("the default locales changed: %v", got)
+	}
+	content, _ := json.Marshal([]map[string]string{{"type": "text", "text": "cpf 529.982.247-25"}})
+	none, err := builtin.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, found, err := none.Filter(context.Background(), port.Result{Content: content})
+	if err != nil || found["cpf"] != 0 || string(res.Content) != string(content) {
+		t.Fatalf("no locale masks no CPF: %s %v %v", res.Content, found, err)
+	}
+	if _, found := run(t, "cpf 529.982.247-25"); found["cpf"] != 1 {
+		t.Fatalf("the br set masks a CPF: %v", found)
+	}
+	if _, err := builtin.New("xx"); err == nil {
+		t.Fatal("an unknown locale is refused")
 	}
 }

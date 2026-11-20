@@ -102,7 +102,7 @@ func (g *Gateway) listPrompts(ctx context.Context, req *mcp.ListPromptsRequest) 
 }
 
 func unknownItem(what, name string) error {
-	return &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: fmt.Sprintf("unknown %s %q", what, name)}
+	return ownError(jsonrpc.CodeInvalidParams, port.CodeUnknownTool, fmt.Sprintf("unknown %s %q", what, name))
 }
 
 func (g *Gateway) itemResult(ctx context.Context, req mcp.Request, what string, call service.CallRequest, into any) error {
@@ -121,7 +121,7 @@ func (g *Gateway) itemResult(ctx context.Context, req mcp.Request, what string, 
 		data, _ := json.Marshal(map[string]any{"approval_id": out.Approval.ID, "state": "pending", "poll_after_seconds": max(int(out.PollAfter/time.Second), 1)})
 		return &jsonrpc.Error{Code: codePending, Message: "waiting for a person's approval; send the same request again later", Data: data}
 	case service.OutcomeError:
-		return &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: string(out.Code) + ": " + strings.ReplaceAll(out.Detail, p.Token, redacted)}
+		return ownError(jsonrpc.CodeInternalError, out.Code, string(out.Code)+": "+strings.ReplaceAll(out.Detail, p.Token, redacted))
 	}
 	if err := json.Unmarshal(tokenscan.Scrub(out.Result.Content, p.Token, redacted), into); err != nil {
 		g.cfg.Logger.Error("agent endpoint", "error", err)

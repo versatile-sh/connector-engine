@@ -12,8 +12,8 @@ export const sessionQuery = queryOptions({
   },
 });
 
-/** What GET /api/agents answers: the access keys, the endpoint and the longest life a key may have. */
-export type KeysData = { agents: Agent[]; mcp_url: string; max_ttl_hours: number };
+/** What GET /api/agents answers: the access keys and the longest life a key may have. */
+export type KeysData = { agents: Agent[]; max_ttl_hours: number };
 
 /** Every installed connector. */
 export const connectorsQuery = queryOptions({
@@ -32,6 +32,16 @@ export const skillsQuery = queryOptions({
 /** The access keys an AI app connects with. */
 export const keysQuery = queryOptions({ queryKey: ["agents"], queryFn: () => api<KeysData>("GET", "/api/agents") });
 
+/** The access keys as the Access page reads them: a list that arrives with new keys tells the console they were seen, so the flags show this once; a failed mark only leaves them for the next visit. */
+export const keysPageQuery = queryOptions({
+  queryKey: [...keysQuery.queryKey, "page"],
+  queryFn: async () => {
+    const data = await api<KeysData>("GET", "/api/agents");
+    if (data.agents.some((key) => key.new)) await api("POST", "/api/agents/seen").catch(() => undefined);
+    return data;
+  },
+});
+
 /** Calls held for the owner, polled every few seconds. */
 export const approvalsQuery = queryOptions({
   queryKey: ["approvals"],
@@ -40,10 +50,13 @@ export const approvalsQuery = queryOptions({
   refetchInterval: 4_000,
 });
 
+/** The key every activity page shares, whatever its filter. */
+export const activityKey = ["activity"] as const;
+
 /** The activity page for a filter, its range ending at each fetch, refreshed while it is open. */
 export const activityQuery = (filter: ActivityFilter) =>
   queryOptions({
-    queryKey: ["activity", filter],
+    queryKey: [...activityKey, filter],
     queryFn: () => api<ActivityData>("GET", `/api/activity?${apiQueryOf(filter, new Date())}`),
     refetchInterval: 10_000,
     placeholderData: (previous) => previous,

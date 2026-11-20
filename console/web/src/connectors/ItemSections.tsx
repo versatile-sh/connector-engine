@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from "react";
 import type { Access, Item, ItemKind } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { Bubble } from "../ui/Bubble";
+import { Collapse } from "../ui/Collapse";
 import { ACCENT_BAR, QUIET_LINK, SURFACE, TOUCH, button } from "../ui/styles";
 import { AccessPicker } from "./AccessPicker";
 import { ITEM_KINDS, accessChoices, groupItems } from "./items";
@@ -88,13 +89,11 @@ function PromptPreview({ text }: { text: string }) {
       <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((was) => !was)} className={`${QUIET_LINK} relative mt-1.5 text-xs text-muted ${TOUCH}`}>
         {t(open ? "items.hidePreview" : "items.showPreview")}
       </button>
-      <div id={id} inert={!open} className={`grid transition-[grid-template-rows,opacity] duration-250 ease-(--ease-glide) ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
-        <div className="overflow-hidden">
-          <pre tabIndex={0} className={`${TEXT_BOX} mt-2 max-h-64 overflow-auto p-3`}>
-            {text}
-          </pre>
-        </div>
-      </div>
+      <Collapse id={id} open={open}>
+        <pre tabIndex={0} className={`${TEXT_BOX} mt-2 max-h-64 overflow-auto p-3`}>
+          {text}
+        </pre>
+      </Collapse>
     </>
   );
 }

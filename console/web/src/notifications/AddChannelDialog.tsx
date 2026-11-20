@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { api, errorText, type ChannelKind, type ChannelView } from "../api";
+import { errorText, type ChannelKind } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { addChannel } from "../mutations";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Sheet } from "../ui/Sheet";
@@ -13,21 +14,14 @@ const OPTION = `bubble flex flex-col items-start gap-0.5 border border-line-stro
 
 function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
   const t = useT();
-  const queryClient = useQueryClient();
   const setup = SETUP[kind];
   const [label, setLabel] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
-  const save = useMutation({
-    mutationFn: () => api<ChannelView>("POST", "/api/notifications/channels", { kind, label: label.trim() || t(setup.title), settings: settingsFor(setup, values) }),
-    onSuccess: () => {
-      save.reset();
-      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      onSaved();
-    },
-  });
+  const save = useMutation(addChannel);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (missingFields(setup, values).length === 0) save.mutate();
+    if (missingFields(setup, values).length > 0) return;
+    save.mutate({ kind, label: label.trim() || t(setup.title), settings: settingsFor(setup, values) }, { onSuccess: onSaved });
   };
   return (
     <form onSubmit={onSubmit} className="swap-in mt-5" aria-label={t(setup.title)}>
@@ -51,7 +45,7 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
           <Field
             key={field.name}
             label={t(field.label)}
-            hint={field.optional ? t("notify.field.optional") : field.secret ? t("notify.field.secretHint") : undefined}
+            hint={field.optional ? t("common.optional") : field.secret ? t("notify.field.secretHint") : undefined}
             type={field.secret ? "password" : "text"}
             autoComplete="off"
             spellCheck={false}

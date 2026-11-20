@@ -496,3 +496,32 @@ func TestRedirectURIsAreLoopbackOrAppSchemes(t *testing.T) {
 		}
 	}
 }
+
+func TestTheAuthorizationServerAdvertisesOnlyWhatItServes(t *testing.T) {
+	o := newOAuthRig(t)
+	r, err := http.Get(o.base + "/.well-known/oauth-authorization-server")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Body.Close()
+	var meta map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&meta); err != nil {
+		t.Fatal(err)
+	}
+	served := []string{"issuer", "authorization_endpoint", "token_endpoint", "registration_endpoint", "response_types_supported", "grant_types_supported",
+		"code_challenge_methods_supported", "token_endpoint_auth_methods_supported", "authorization_response_iss_parameter_supported"}
+	for k := range meta {
+		if !slices.Contains(served, k) {
+			t.Errorf("the metadata advertises %s, which this server does not serve", k)
+		}
+	}
+	resp, err := o.noRedo.Get(o.base + "/oauth/authorize?" + url.Values{"client_id": {"https://app.example/client.json"}, "response_type": {"code"}}.Encode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest || !strings.Contains(string(body), "/oauth/register") {
+		t.Fatalf("a URL client_id: %d %s", resp.StatusCode, body)
+	}
+}

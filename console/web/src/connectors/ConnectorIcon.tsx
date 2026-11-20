@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { iconURL } from "../api";
 
-const SIZE = { sm: "size-9 text-sm", md: "size-11 text-base", lg: "size-16 text-2xl" } as const;
+const SIZE = { xs: "size-5 text-[0.625rem]", sm: "size-9 text-sm", md: "size-11 text-base", lg: "size-16 text-2xl" } as const;
 
 /** A listing icon proxied through the console as image bytes on a paper disc, or the first letter of its title. */
 export function ConnectorIcon({ src, title, size = "md", onLime = false }: { src?: string | undefined; title: string; size?: keyof typeof SIZE; onLime?: boolean }) {

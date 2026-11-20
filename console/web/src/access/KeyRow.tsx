@@ -30,7 +30,7 @@ export function KeyRow({ entry, flow, error, dispatch, onConfirm }: KeyRowProps)
             className={button({ variant: "danger", size: "xs" })}
             onClick={() => dispatch({ type: "ask", name: entry.name })}
           >
-            {t("keys.revoke")}
+            {t("common.revoke")}
           </button>
         )}
       </div>

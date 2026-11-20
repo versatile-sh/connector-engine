@@ -52,8 +52,8 @@ export const SETUP: Record<ChannelKind, Setup> = {
       { name: "token", label: "notify.field.ntfyToken", secret: true, optional: true },
     ],
   },
-  discord_webhook: { kind: "discord_webhook", title: "notify.kind.discord_webhook", interactive: false, steps: ["notify.steps.discordWebhook.1", "notify.steps.discordWebhook.2"], fields: [WEBHOOK_URL] },
-  slack_webhook: { kind: "slack_webhook", title: "notify.kind.slack_webhook", interactive: false, steps: ["notify.steps.slackWebhook.1", "notify.steps.slackWebhook.2"], fields: [WEBHOOK_URL] },
+  discord_webhook: { kind: "discord_webhook", title: "notify.kind.discord_webhook", interactive: false, steps: ["notify.steps.discordWebhook.1", "notify.steps.webhook"], fields: [WEBHOOK_URL] },
+  slack_webhook: { kind: "slack_webhook", title: "notify.kind.slack_webhook", interactive: false, steps: ["notify.steps.slackWebhook.1", "notify.steps.webhook"], fields: [WEBHOOK_URL] },
 };
 
 /** Every channel kind in the order the picker shows them. */

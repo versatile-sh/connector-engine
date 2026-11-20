@@ -6,7 +6,7 @@ import { LanguageSwitch } from "../LanguageSwitch";
 import { Notice } from "../ui/Notice";
 import { SURFACE, button } from "../ui/styles";
 
-type ConsentRequest = { client: string; redirect: string; client_host?: string };
+type ConsentRequest = { client: string; redirect: string };
 
 /** The owner's answer to an AI app asking to connect by OAuth: allow or deny, then the browser goes back to the app. */
 export function Consent({ id }: { id: string }) {
@@ -45,7 +45,6 @@ export function Consent({ id }: { id: string }) {
             <p className="mt-3 text-muted">{t("consent.body", { client })}</p>
             <p className="mt-3 font-mono text-xs text-muted">
               {t("consent.returns", { target: request.data.redirect })}
-              {request.data.client_host ? ` · ${t("consent.from", { host: request.data.client_host })}` : null}
             </p>
             {done ? (
               <p role="status" className="mt-6 font-semibold">

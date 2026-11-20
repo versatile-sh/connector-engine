@@ -1,13 +1,11 @@
 package console
 
 import (
-	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -218,32 +216,11 @@ func (c *Console) register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (c *Console) lookupClient(ctx context.Context, id string) (OAuthClient, error) {
+func (c *Console) lookupClient(id string) (OAuthClient, error) {
 	if cl, ok := c.State.OAuthClient(id); ok {
 		return cl, nil
 	}
-	if !strings.HasPrefix(id, "https://") {
-		return OAuthClient{}, errors.New("unknown client_id: register the app first")
-	}
-	body, _, err := (Reach{}).Get(ctx, id, 64<<10, "application/json")
-	if err != nil {
-		return OAuthClient{}, fmt.Errorf("cannot read the client metadata document: %w", err)
-	}
-	var doc struct {
-		ClientID     string   `json:"client_id"`
-		ClientName   string   `json:"client_name"`
-		RedirectURIs []string `json:"redirect_uris"`
-	}
-	if err := json.Unmarshal(body, &doc); err != nil || doc.ClientID != id {
-		return OAuthClient{}, errors.New("the client metadata document does not name this client_id")
-	}
-	cl := OAuthClient{ID: id, Name: clientName(doc.ClientName)}
-	for _, u := range doc.RedirectURIs {
-		if RedirectAllowed(u) {
-			cl.RedirectURIs = append(cl.RedirectURIs, u)
-		}
-	}
-	return cl, nil
+	return OAuthClient{}, errors.New("unknown client_id: register the app first")
 }
 
 func withParams(redirect string, params map[string]string) string {
@@ -263,7 +240,7 @@ func withParams(redirect string, params map[string]string) string {
 
 func (c *Console) authorize(w http.ResponseWriter, r *http.Request) {
 	qv := r.URL.Query()
-	cl, err := c.lookupClient(r.Context(), qv.Get("client_id"))
+	cl, err := c.lookupClient(qv.Get("client_id"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -330,11 +307,7 @@ func (c *Console) consentInfo(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "this request expired or was already answered"})
 		return
 	}
-	out := map[string]string{"client": req.client.Name, "redirect": redirectTarget(req.redirect)}
-	if strings.HasPrefix(req.client.ID, "https://") {
-		out["client_host"] = redirectTarget(req.client.ID)
-	}
-	writeJSON(w, http.StatusOK, out)
+	writeJSON(w, http.StatusOK, map[string]string{"client": req.client.Name, "redirect": redirectTarget(req.redirect)})
 }
 
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
@@ -360,10 +333,8 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	if !strings.HasPrefix(req.client.ID, "https://") {
-		req.client.LastUsed = time.Now().UTC()
-		_ = c.State.PutOAuthClient(req.client)
-	}
+	req.client.LastUsed = time.Now().UTC()
+	_ = c.State.PutOAuthClient(req.client)
 	code := randomID()
 	c.asMu.Lock()
 	now := time.Now()

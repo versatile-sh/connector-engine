@@ -199,7 +199,6 @@ export const es: Record<MessageKey, string> = {
   "consent.title": "¿Permitir que {client} acceda a tus conectores?",
   "consent.body": "{client} verá los conectores instalados aquí, con los permisos que definiste para cada función. Puedes revocarlo cuando quieras en Conecta una app de IA.",
   "consent.returns": "Luego vuelves a {target}",
-  "consent.from": "cliente de {host}",
   "consent.allow": "Permitir",
   "consent.deny": "Denegar",
   "consent.done": "Listo. Puedes volver a {client}.",

@@ -55,7 +55,7 @@ export function SkillsPage() {
         ) : list.length === 0 ? (
           <EmptyState title={t("skills.empty.title")} body={t("skills.empty.body")} />
         ) : (
-          <ul className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
+          <ul className="grid gap-6 @xl:grid-cols-2 @4xl:grid-cols-3">
             {list.map((skill) => (
               <SkillCard
                 key={skill.id}

@@ -16,7 +16,7 @@ import { ConnectorCard, ConnectorCardSkeleton } from "./ConnectorCard";
 import { HubCard } from "./HubCard";
 import { PasteBox } from "./PasteBox";
 
-const GRID = "grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3";
+const GRID = "grid gap-6 @xl:grid-cols-2 @4xl:grid-cols-3";
 
 /** Every installed connector as a grid of cards in one panel, the first-run guide above it, and the import window. `/import` with no link opens the window at once. */
 export function ConnectorsPage() {

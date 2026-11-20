@@ -5,7 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { Icon } from "../ui/Icon";
 import { SearchBox } from "../ui/SearchBox";
 import { Select, type SelectOption } from "../ui/Select";
-import { CHIP, CONTROL, button } from "../ui/styles";
+import { CHIP, CONTROL, SURFACE, button } from "../ui/styles";
 import { dayOf, isNarrowed, lastWeek, periodOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
 
 const FILTER_OUTCOMES: readonly CallOutcome[] = ["ok", "error", "denied", "pending"];
@@ -50,7 +50,7 @@ function Search({ value, onSearch }: { value: string | undefined; onSearch(searc
 
 type FilterRowProps = { filter: ActivityFilter; data: ActivityData | undefined; named: ReadonlyMap<string, Named>; onChange(filter: ActivityFilter): void };
 
-/** The page's filters in one wrapping row: the range as chips or custom days, the connector, the access key and the outcome as selects that filter past eight options, the connector turning into a chip with its icon once chosen, a search by function name, and Clear filters while anything narrows the page. */
+/** The page's filters in one wrapping row in a card of its own, as wide as the page's columns: the range as chips or custom days, the connector, the access key and the outcome as selects that filter past eight options, the connector turning into a chip with its icon once chosen, a search by function name, and Clear filters while anything narrows the page. */
 export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
   const t = useT();
   const now = new Date();
@@ -58,7 +58,7 @@ export function FilterRow({ filter, data, named, onChange }: FilterRowProps) {
   const connectors = (data?.connectors ?? []).flatMap((count) => (count.connector ? [{ value: count.connector, text: titleOf(count.connector), icon: <ConnectorIcon src={named.get(count.connector)?.icon} title={titleOf(count.connector)} size="xs" /> }] : []));
   const period = (next: ActivityPeriod) => onChange({ ...filter, ...next });
   return (
-    <div role="group" aria-label={t("activity.filters")} className="mb-8 flex flex-wrap items-center gap-2">
+    <div role="group" aria-label={t("activity.filters")} className={`${SURFACE} mb-6 flex flex-wrap items-center gap-2 p-3 sm:p-4`}>
       <div role="group" aria-label={t("activity.range")} className="flex flex-wrap gap-2">
         {[...RANGES.map((range) => range.value), "custom" as const].map((range) => (
           <button key={range} type="button" aria-pressed={filter.range === range} className={`${CHIP} h-9 px-3.5 text-sm`} onClick={() => filter.range !== range && period(range === "custom" ? lastWeek(now) : { range })}>

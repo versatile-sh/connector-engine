@@ -69,6 +69,24 @@
   --ease-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+:root {
+  --card-fill: var(--color-ink-raised);
+  --tray-fill: var(--color-ink-raised);
+}
+
+.shell-surface {
+  --card-fill: var(--color-ink);
+  --tray-fill: var(--color-ink-sunken);
+}
+
+.shell-surface:has(dialog:modal) {
+  overflow: hidden;
+}
+
+html:has([data-shell]) {
+  scrollbar-gutter: auto;
+}
+
 html {
   overflow-x: clip;
   background: var(--color-ink);

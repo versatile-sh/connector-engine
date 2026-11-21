@@ -8,11 +8,11 @@ export const TOUCH_ROW = "pointer-coarse:after:absolute pointer-coarse:after:ins
 /** Press feedback for anything clickable that is drawn as a button. */
 export const PRESS = "transition-[background-color,border-color,color,opacity,transform] duration-150 active:scale-[0.96]";
 
-/** The one card: raised ink, a strong hairline and the light falling on its top edge, 12px corners. */
-export const SURFACE = "vignette-top rounded-xl border border-line-strong bg-ink-raised";
+/** The one card: a strong hairline and the light falling on its top edge, 12px corners; raised ink on a page, and ink on the shell's raised surface. */
+export const SURFACE = "vignette-top rounded-xl border border-line-strong bg-(color:--card-fill)";
 
-/** The one large raised panel a page holds its content in, as the site's directory and connector pages: 16px corners, a soft hairline. */
-export const PANEL = "vignette-top rounded-2xl border border-line bg-ink-raised";
+/** The one large panel a page holds its content in, as the site's directory and connector pages: 16px corners, a soft hairline; raised ink on a page, and a sunken tray on the shell's raised surface. */
+export const PANEL = "vignette-top rounded-2xl border border-line bg-(color:--tray-fill)";
 
 /** A sunken box inside a panel or a card: a list of rows, a block of text, the next step. */
 export const WELL = "rounded-xl border border-line bg-ink";

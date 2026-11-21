@@ -31,8 +31,8 @@ Each type's JSON Schema has the `$id` `https://agents-control.dev/connector-engi
 |---|---|
 | calls | `connector.call.started`, `finished`, `failed`, `denied`, `outcome_unknown` |
 | approvals | `connector.approval.requested`, `decided`, `expired`, `cancelled`, `brake`, `brake_cleared` |
-| connectors | `connector.connector.installed`, `updated`, `removed`, `instructions_changed`, `enabled_changed`, `blocked_changed` |
-| functions | `connector.function.quarantined`, `accepted`, `removed` |
+| connectors | `connector.connector.installed`, `updated`, `removed`, `instructions_changed`, `instructions_accepted`, `enabled_changed`, `blocked_changed` |
+| functions | `connector.function.quarantined`, `accepted`, `removed`, `class_changed`, `state_changed`, `projection_changed` |
 | grants and bindings | `connector.grant.created`, `revoked`, `expired`, `confirmed`, `connector.binding.changed` |
 | exposure | `connector.agent.exposure_warning` |
 | credentials | `connector.credential.connected`, `needs_reauth`, `revoked` |

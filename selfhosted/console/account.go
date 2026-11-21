@@ -91,26 +91,23 @@ func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
-	if u, ok := c.verify(w, strings.TrimSpace(in.Username), in.Password); ok {
+	if u, ok := c.verify(w, r, strings.TrimSpace(in.Username), in.Password); ok {
 		c.signIn(w, http.StatusOK, u.Person)
 	}
 }
 
-func (c *Console) verify(w http.ResponseWriter, username, password string) (User, bool) {
-	c.loginMu.Lock()
-	now := time.Now()
-	if c.passwordFails.locked(now, username) {
-		c.loginMu.Unlock()
+func (c *Console) verify(w http.ResponseWriter, r *http.Request, username, password string) (User, bool) {
+	ip := clientIP(r)
+	if c.passwordFails.locked(time.Now(), ip, username) {
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
 		return User{}, false
 	}
 	u, ok, err := c.State.CheckLogin(username, password)
 	if !ok && err == nil {
-		c.passwordFails.fail(now, username)
-		time.Sleep(500 * time.Millisecond)
+		c.passwordFails.fail(time.Now(), ip, username)
+		time.Sleep(wrongPasswordDelay)
 	}
-	c.loginMu.Unlock()
 	switch {
 	case errors.Is(err, ErrNoOwner):
 		writeError(w, http.StatusConflict, "create the owner account first")
@@ -124,7 +121,7 @@ func (c *Console) verify(w http.ResponseWriter, username, password string) (User
 
 func (c *Console) reauth(w http.ResponseWriter, r *http.Request, password string) bool {
 	u, _ := signedInUser(r.Context())
-	_, ok := c.verify(w, u.Username, password)
+	_, ok := c.verify(w, r, u.Username, password)
 	return ok
 }
 

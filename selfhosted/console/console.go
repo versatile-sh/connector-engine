@@ -40,7 +40,6 @@ type Console struct {
 	ManagersGroup string
 	SetupToken    string
 
-	loginMu       sync.Mutex
 	inviteMu      sync.Mutex
 	restoring     sync.Mutex
 	reconciling   sync.Mutex

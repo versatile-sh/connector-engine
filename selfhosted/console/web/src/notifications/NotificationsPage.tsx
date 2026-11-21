@@ -16,7 +16,7 @@ export function NotificationsPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-10">
-        <PageTitle section={t("nav.notifications")} title={t("notify.title")}>
+        <PageTitle title={t("notify.title")}>
           <p>{t("notify.intro")}</p>
           <p className="mt-2 text-sm">{t("notify.privacy")}</p>
         </PageTitle>

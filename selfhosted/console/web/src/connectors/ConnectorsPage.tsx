@@ -39,7 +39,7 @@ export function ConnectorsPage() {
     <section aria-labelledby="page-title">
       <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
         <div className="min-w-0">
-          <PageTitle section={t("nav.connectors")} title={t("connectors.title")} count={connectors.isSuccess ? list.length : undefined}>
+          <PageTitle title={t("connectors.title")} count={connectors.isSuccess ? list.length : undefined}>
             {t("connectors.intro")}
           </PageTitle>
         </div>

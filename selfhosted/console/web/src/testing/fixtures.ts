@@ -107,7 +107,7 @@ export const ACTIVITY = {
   agents: ["laptop"],
 } as const satisfies ActivityData;
 
-const SETTINGS = { record_arguments: false, record_results: false, retention_days: 30 } as const satisfies ActivitySettings;
+const SETTINGS = { record_arguments: false, record_results: false, retention: "30d", retention_days: 30 } as const satisfies ActivitySettings;
 
 const NOTIFICATIONS = { channels: [], devices: [], apps: [] } as const satisfies NotificationsData;
 
@@ -135,7 +135,7 @@ export const pageData = (session: Session): readonly (readonly [QueryKey, unknow
   [["agents"], KEYS],
   [["agents", "page"], KEYS],
   [["approvals"], { approvals: [APPROVAL] }],
-  [["activity", { range: "24h" }], ACTIVITY],
+  [["activity", { range: "24h" }, 30], { pages: [ACTIVITY], pageParams: [""] }],
   [["activity-settings"], SETTINGS],
   [["notifications"], NOTIFICATIONS],
   [["account"], ACCOUNT],

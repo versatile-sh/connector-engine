@@ -47,7 +47,7 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-10">
-        <PageTitle section={t("nav.activity")} title={t("activity.title")} count={data?.total} scope={filter.scope ? t("scope.count") : undefined}>
+        <PageTitle title={t("activity.title")} count={data?.total} scope={filter.scope ? t("scope.count") : undefined}>
           {t("activity.intro")}
         </PageTitle>
       </header>

@@ -31,7 +31,7 @@ export function AccountPage({ path }: { path: string }) {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-10">
-        <PageTitle section={t("nav.account")} title={t("account.title")}>
+        <PageTitle title={t("account.title")}>
           <p>{t("account.intro")}</p>
         </PageTitle>
       </header>

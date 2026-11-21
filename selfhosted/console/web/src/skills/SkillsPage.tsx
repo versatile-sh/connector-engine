@@ -33,7 +33,7 @@ export function SkillsPage() {
     <section aria-labelledby="page-title">
       <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
         <div className="min-w-0">
-          <PageTitle section={t("nav.skills")} title={t("skills.title")} count={skills.isSuccess ? list.length : undefined}>
+          <PageTitle title={t("skills.title")} count={skills.isSuccess ? list.length : undefined}>
             {t("skills.intro")}
           </PageTitle>
         </div>

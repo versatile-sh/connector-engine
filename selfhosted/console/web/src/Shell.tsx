@@ -15,6 +15,7 @@ import { useShell } from "./shell/useShell";
 import { Notice } from "./ui/Notice";
 import { button } from "./ui/styles";
 
+/** The sections of the console shell. */
 export type { Section } from "./shell/shell";
 
 const OAUTH: Record<string, MessageKey> = {

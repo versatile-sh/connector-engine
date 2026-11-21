@@ -1,6 +1,7 @@
 /** The owner's choice for one function: hidden, allowed at once, or held for approval on every call. */
 export type Access = "off" | "on" | "ask";
 
+/** Every access level a connector function can be set to. */
 export const ACCESS: readonly Access[] = ["off", "on", "ask"];
 
 /** What a function does by its own description; it is shown, never chosen. */
@@ -36,6 +37,7 @@ export type SessionUser = { person: string; username: string; role: Role };
 /** Whose row a key, a held call or a call is: the person and their name, empty once that person was removed. */
 export type RowOwner = { person: string; username: string };
 
+/** The console session the server reports: who is signed in, what they may do and the console facts. */
 export type Session = {
   owner_exists: boolean;
   signed_in: boolean;
@@ -51,6 +53,7 @@ export type Session = {
 /** How the root keys of the engine and the console rest: waiting for the host's unlock key, a plaintext file, or wrapped by a key in the OS keychain. */
 export type KeyProtection = "" | "locked" | "plaintext" | "wrapped";
 
+/** One function of a connector as the server lists it, with its kind and access. */
 export type FunctionView = {
   name: string;
   title?: string;
@@ -86,6 +89,7 @@ export type Profile = { agent: string; expired?: boolean } & ({ mode: "off" | "f
 /** The engine's answer for one access key on one function or item, with why when it narrows or refuses it. */
 export type Effect = { name: string; access: Access; reason?: string };
 
+/** An installed connector with its functions, credentials and sign-in state. */
 export type Connector = {
   id: string;
   alias: string;
@@ -121,6 +125,7 @@ export type SlotProfile = { slot: string; connector: string; alias: string; mode
 /** One permission set waiting to be given to an access key, with what it holds on each connector. */
 export type SlotView = { name: string; connectors: SlotProfile[] };
 
+/** A tool a probe of an MCP server found before import. */
 export type ProbedTool = {
   name: string;
   title?: string;
@@ -166,6 +171,7 @@ export type Skill = SkillFacts & {
   access: KeyAccess[];
 };
 
+/** What an import would install, shown before the user confirms. */
 export type Preview = {
   kind: "mcp" | "listing" | "skill";
   skill?: SkillFacts;
@@ -187,12 +193,16 @@ export type Preview = {
   host_loopback?: boolean;
 };
 
+/** Where an import reads from: an MCP URL, a listing or a local server. */
 export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
 
+/** An access key an AI app signs in with. */
 export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string; owner?: RowOwner };
 
+/** A freshly minted agent token, shown once. */
 export type AgentToken = { agent: string; token: string; expires_at: string };
 
+/** A call waiting for, or carrying, a human decision. */
 export type Approval = {
   id: string;
   agent: string;
@@ -212,6 +222,7 @@ export type Approval = {
 /** What a call came to: answered, failed, refused as unknown, held for approval, or still running. */
 export type CallOutcome = "ok" | "error" | "denied" | "pending" | "running";
 
+/** One recorded call in the activity log. */
 export type ActivityCall = {
   id: string;
   at: string;
@@ -231,6 +242,7 @@ export type ActivityCall = {
   owner?: RowOwner;
 };
 
+/** An activity row with its arguments and result, when recorded. */
 export type ActivityDetail = ActivityCall & {
   tool?: string;
   session?: string;
@@ -249,10 +261,13 @@ export type ActivityDetail = ActivityCall & {
   finished_at?: string;
 };
 
+/** Call counts of one hour in the activity chart. */
 export type HourCount = { start: string; ok: number; error: number; denied: number; pending: number; running: number };
 
+/** Call counts of one connector in the activity filters. */
 export type ConnectorCount = { connector?: string; alias?: string; skill?: boolean; total: number; failed: number };
 
+/** One page of the activity log with its totals and filters. */
 export type ActivityData = {
   from: string;
   to: string;
@@ -267,6 +282,7 @@ export type ActivityData = {
 /** How long the console keeps calls: none, a number of days or for ever. */
 export type Keep = "off" | "7d" | "30d" | "90d" | "forever";
 
+/** What the activity log records and how long it keeps it. */
 export type ActivitySettings = { record_arguments: boolean; record_results: boolean; retention: Keep; retention_days: number; cleared_at?: string };
 
 /** The period a deletion covers: calls older than some days, or from one instant to another. */
@@ -275,10 +291,12 @@ export type PrunePeriod = { older_than_days: number } | { from: string; to: stri
 /** How many calls a period holds, and whether they were deleted or only counted. */
 export type PruneResult = { count: number; deleted: boolean };
 
+/** An error answer of the console API. */
 export type ApiError = { status: number; message: string; code?: string | undefined };
 
 let csrfToken = "";
 
+/** Sets the CSRF token every mutating request carries. */
 export const setCsrf = (token: string | undefined) => {
   csrfToken = token ?? "";
 };
@@ -286,6 +304,7 @@ export const setCsrf = (token: string | undefined) => {
 const isApiError = (value: unknown): value is ApiError =>
   typeof value === "object" && value !== null && "status" in value && "message" in value;
 
+/** The message to show for any thrown value. */
 export const errorText = (error: unknown) => (isApiError(error) ? error.message : String(error));
 
 /** The machine code the console put on a refusal, such as `wrong_password`, when it gave one. */
@@ -335,6 +354,7 @@ export async function apiFile(method: string, path: string, body?: unknown): Pro
   return { blob: await response.blob(), name: attachmentName(response.headers.get("Content-Disposition")) };
 }
 
+/** The console URL that serves a listing icon through its proxy. */
 export const iconURL = (raw: string | undefined) => (raw ? `/api/icon?u=${encodeURIComponent(raw)}` : undefined);
 
 /** An answer to a held call: allow it once, for the app's session, from now on, or deny it. */
@@ -372,6 +392,7 @@ export type Decision = { outcome: ApprovalView; already_decided: boolean };
 /** Where a notification can go: chat bots that take clicks, and notify-only pushes and webhooks. */
 export type ChannelKind = "discord" | "slack" | "telegram" | "ntfy" | "discord_webhook" | "slack_webhook";
 
+/** A notification channel as the console shows it, without its secrets. */
 export type ChannelView = {
   id: string;
   kind: ChannelKind;
@@ -384,6 +405,7 @@ export type ChannelView = {
   error?: string;
 };
 
+/** A device registered for notifications. */
 export type DeviceView = { id: string; name: string; created_at: string; last_seen?: string };
 
 /** What GET /api/notifications answers; it never carries a secret. */

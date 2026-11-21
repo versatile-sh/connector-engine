@@ -24,7 +24,6 @@ function watchWordmark(node: HTMLDivElement | null) {
   return () => observer.disconnect();
 }
 
-/** The site's oversized wordmark, cropped at half height; it writes itself once, when it scrolls into view. */
 function FooterWordmark() {
   return (
     <div ref={watchWordmark} aria-hidden="true" className="wordmark-stage mt-10 overflow-hidden">

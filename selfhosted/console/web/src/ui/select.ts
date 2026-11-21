@@ -71,7 +71,6 @@ const GAP = 4;
 
 const EDGE = 8;
 
-/** A width and a height in pixels. */
 type Size = { width: number; height: number };
 
 /** Where an open list sits, in viewport pixels: its left edge, its width, the most height it may take, and its top under the trigger or its bottom over it. */

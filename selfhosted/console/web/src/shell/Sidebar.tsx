@@ -3,6 +3,7 @@ import type { Role, SessionUser } from "../api";
 import { Logotype, Mark } from "../Brand";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
+import { ThemeSwitch } from "../ThemeSwitch";
 import { navigate } from "../router";
 import { Icon } from "../ui/Icon";
 import { ICON_BUTTON, PRESS, TOUCH } from "../ui/styles";
@@ -87,7 +88,8 @@ export function Sidebar({ id, ref, section, waiting, user, role, rail, modal, si
       <SideNav section={section} waiting={waiting} rail={rail} onNavigate={onNavigate} />
       <div className="shrink-0 border-t border-line px-3 py-3">
         <UserMenu user={user} role={role} rail={rail} signingOut={signingOut} onSignOut={onSignOut} onNavigate={onNavigate} />
-        <div className="mt-2 group-data-rail/side:hidden">
+        <div className="mt-2 flex flex-col gap-1.5 group-data-rail/side:hidden">
+          <ThemeSwitch className="w-full" />
           <LanguageSwitch className="w-full" />
         </div>
       </div>

@@ -132,6 +132,7 @@ var routeCapabilities = map[string]Capability{
 	"GET /api/activity/{id}":                     CapActivityOwn,
 	"GET /api/activity/settings":                 CapActivityOwn,
 	"PUT /api/activity/settings":                 CapActivitySettings,
+	"POST /api/activity/prune":                   CapActivityDelete,
 	"DELETE /api/activity":                       CapActivityDelete,
 	"GET /api/notifications":                     CapNotificationsOwn,
 	"POST /api/notifications/channels":           CapNotificationsOwn,

@@ -850,7 +850,7 @@ func TestTheToolSeparatorIsLearnedFromTheEngine(t *testing.T) {
 
 func TestTheActivityRefusesAParameterItDoesNotTake(t *testing.T) {
 	r := newActivityRig(t)
-	for _, q := range []string{"?since=2026-11-20T00:00:00Z", "?limit=5"} {
+	for _, q := range []string{"?since=2026-11-20T00:00:00Z", "?offset=5"} {
 		if status, raw := r.b.send("GET", "/api/activity"+q, nil, nil); status != http.StatusBadRequest || !strings.Contains(string(raw), "from, to") {
 			t.Errorf("%s: %d %s", q, status, raw)
 		}

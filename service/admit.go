@@ -256,7 +256,11 @@ func (s *Service) run(ctx context.Context, h port.Handle, in invocation) (port.R
 
 func (s *Service) forwardDirect(ctx context.Context, in admitInput, plan forwardPlan) (Outcome, error) {
 	inv := s.invoke(ctx, invocation{Conn: plan.Conn, Manifest: in.T.Manifest, Function: in.T.Fn.Name, Credential: plan.Credential, Args: in.Args, Fields: in.Fields, Deadline: plan.Call.Deadline})
-	return s.settle(context.WithoutCancel(ctx), plan.Call, inv, nil)
+	out, err := s.settle(context.WithoutCancel(ctx), plan.Call, inv, nil)
+	if err != nil {
+		return toolError(CodeOutcomeUnknown, "the call may have run; it was not retried"), nil
+	}
+	return out, nil
 }
 
 func (s *Service) settle(ctx context.Context, call port.Call, inv invoked, a *port.Approval) (Outcome, error) {

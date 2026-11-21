@@ -365,21 +365,28 @@ func (s *Service) Call(ctx context.Context, p port.Principal, req CallRequest) (
 		args = json.RawMessage("{}")
 	}
 	for attempt := 0; ; attempt++ {
-		out, err := s.callOnce(ctx, p, sub, req, args)
+		adm, in, err := s.admitCall(ctx, p, sub, req, args)
 		if (port.IsCode(err, port.CodeGrantExhausted) || port.IsCode(err, port.CodeConflict)) && attempt == 0 {
 			continue
 		}
-		if port.IsCode(err, port.CodeGrantExhausted) {
+		switch {
+		case port.IsCode(err, port.CodeGrantExhausted):
 			return toolError(port.CodeGrantExhausted, "a use-limited grant was exhausted"), nil
+		case err != nil:
+			return Outcome{}, err
+		case adm.Deliver != nil:
+			return s.answer(ctx, *adm.Deliver)
+		case adm.Forward != nil:
+			return s.forwardDirect(ctx, in, *adm.Forward)
 		}
-		return out, err
+		return adm.Out, nil
 	}
 }
 
-func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subject, req CallRequest, payload json.RawMessage) (Outcome, error) {
+func (s *Service) admitCall(ctx context.Context, p port.Principal, sub port.Subject, req CallRequest, payload json.RawMessage) (admission, admitInput, error) {
 	t, found, err := s.resolve(ctx, sub, req)
 	if err != nil || !found {
-		return unknown(port.ReasonUnknownFunction), err
+		return admission{Out: unknown(port.ReasonUnknownFunction)}, admitInput{}, err
 	}
 	if t.Args != nil {
 		payload = t.Args
@@ -391,58 +398,50 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 	}
 	dec, err := s.d.Authorizer.Evaluate(ctx, query)
 	if err != nil {
-		return Outcome{}, err
+		return admission{}, admitInput{}, err
 	}
 	if parseErr == nil && s.needRelist(t, dec.Mode) {
 		if _, err := s.Relist(ctx, sub.Tenant, t.Conn.ID); err != nil {
-			return Outcome{}, err
+			return admission{}, admitInput{}, err
 		}
 		if t, _, err = s.resolve(ctx, sub, req); err != nil {
-			return Outcome{}, err
+			return admission{}, admitInput{}, err
 		}
 		query.Class = t.Fn.Class
 		if dec, err = s.d.Authorizer.Evaluate(ctx, query); err != nil {
-			return Outcome{}, err
+			return admission{}, admitInput{}, err
 		}
 	}
 	if dec.Mode == port.ModeDeny {
 		s.denied(ctx, sub, t.Conn.ID, t.Fn.Name, dec.Reason)
-		return unknown(dec.Reason), nil
+		return admission{Out: unknown(dec.Reason)}, admitInput{}, nil
 	}
 	if parseErr != nil {
-		return toolError(port.CodeInvalidArgument, "%v", parseErr), nil
+		return admission{Out: toolError(port.CodeInvalidArgument, "%v", parseErr)}, admitInput{}, nil
 	}
 	if bad := s.checkArguments(p, t, req, payload); bad != nil {
 		if bad.Code == port.CodeTokenInArguments {
 			s.denied(ctx, sub, t.Conn.ID, t.Fn.Name, bad.Code)
 		}
-		return *bad, nil
+		return admission{Out: *bad}, admitInput{}, nil
 	}
 	in := admitInput{Sub: sub, Exp: p.Claims.ExpiresAt, T: t, Args: payload, Fields: req.Fields, Dec: dec}
 	if dec.Mode != port.ModeAllow || slices.Contains(dec.Notes, port.NoteSessionGrant) {
 		sealed, err := s.d.Secrets.Seal(ctx, sub.Tenant, payload)
 		if err != nil {
-			return Outcome{}, err
+			return admission{}, admitInput{}, err
 		}
 		in.Sealed = &sealed
 	}
 	if in.Groups, err = s.groups(ctx, sub.Tenant, evaluate.People(sub)...); err != nil {
-		return Outcome{}, err
+		return admission{}, admitInput{}, err
 	}
 	var adm admission
-	if err := s.write(ctx, port.Scope{Tenant: sub.Tenant}, "Call", func(tx port.Tx) (err error) {
+	err = s.write(ctx, port.Scope{Tenant: sub.Tenant}, "Call", func(tx port.Tx) (err error) {
 		adm, err = s.admit(tx, in)
 		return err
-	}); err != nil {
-		return Outcome{}, err
-	}
-	switch {
-	case adm.Deliver != nil:
-		return s.answer(ctx, *adm.Deliver)
-	case adm.Forward != nil:
-		return s.forwardDirect(ctx, in, *adm.Forward)
-	}
-	return adm.Out, nil
+	})
+	return adm, in, err
 }
 
 func queryOf(sub port.Subject, t target, args json.RawMessage) port.Query {

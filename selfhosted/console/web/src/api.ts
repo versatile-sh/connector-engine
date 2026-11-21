@@ -143,6 +143,18 @@ export type SkillSource = { repository: string; path: string; commit: string; ur
 /** The licence a catalog states for a skill. */
 export type SkillLicence = { spdx?: string; from?: string; redistributable: boolean };
 
+/** What a skill asks of the app that runs it, derived from its files. */
+export type SkillNeeds = { tools: string[]; runtimes: string[]; network: boolean; mcp: string[] };
+
+/** How well an AI app can use a skill: full, instructions only, or not at all. */
+export type CompatStatus = "full" | "instructions" | "no";
+
+/** A skill's derived status in one AI app, with machine reasons; never a tested result. */
+export type ClientCompat = { client: string; name: string; status: CompatStatus; reasons: string[]; source: "derived" };
+
+/** An AI app behind this gateway's access keys that cannot fully use a skill, with those keys. */
+export type CompatWarning = ClientCompat & { keys: string[] };
+
 /** What a skill is before or after it is imported: provenance, licence, scripts and files. */
 export type SkillFacts = {
   name: string;
@@ -154,6 +166,9 @@ export type SkillFacts = {
   digest?: string;
   files: { path: string; bytes: number }[];
   keys: string[];
+  needs: SkillNeeds;
+  compat: ClientCompat[];
+  warnings: CompatWarning[];
 };
 
 /** One access key's choice on one skill. */

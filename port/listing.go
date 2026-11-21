@@ -126,7 +126,25 @@ type Skill struct {
 	Redistribution Redistribution `json:"redistribution"`
 	HasScripts     bool           `json:"has_scripts,omitempty"`
 	Requires       []string       `json:"requires,omitempty"`
+	Needs          *SkillNeeds    `json:"needs,omitempty"`
+	Compat         []SkillCompat  `json:"compat,omitempty"`
 	Files          []SkillFile    `json:"files"`
+}
+
+// SkillNeeds is what a skill asks of the app that runs it: tools, language runtimes, network access and MCP servers, all derived from its files.
+type SkillNeeds struct {
+	Tools    []string `json:"tools"`
+	Runtimes []string `json:"runtimes"`
+	Network  bool     `json:"network"`
+	MCP      []string `json:"mcp"`
+}
+
+// SkillCompat is the derived status of a skill in one AI app: full, instructions or no, with machine reasons; Source is always derived, never tested.
+type SkillCompat struct {
+	Client  string   `json:"client"`
+	Status  string   `json:"status"`
+	Reasons []string `json:"reasons"`
+	Source  string   `json:"source"`
 }
 
 // SkillSource is where a skill folder was read: repository, folder path, full commit and a page about it.

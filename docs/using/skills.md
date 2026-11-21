@@ -7,10 +7,16 @@ A skill is a folder of instructions and files an AI app can load on demand. The 
 ## Add a skill
 
 1. Open an install link: `http://127.0.0.1:7465/import?listing=<https URL of a skill catalog entry>`. The versatile.sh skills library uses these links.
-2. Review the licence, the source at its pinned commit, the file list with sizes, and a warning when the skill carries scripts.
+2. Review the licence, the source at its pinned commit, the file list with sizes, and a warning when the skill carries scripts, and a table of which AI apps can use it.
 3. Confirm, then set it per key on the **Skills** page. Keys made later start off.
 
 On confirm, each file is fetched over public `https`, checked against its sha256 and pinned to `source.commit`. Refused: a branch name instead of a commit, `..`, an absolute path, or more than 256 files, 1 MiB a file or 4 MiB a skill.
+
+## Which apps can use a skill
+
+A skill that runs bundled scripts does nothing useful in an app with no shell. The review and the skill's page list a "Requires" row (tools, runtimes, network, MCP servers) and one row per app: **Works**, **Instructions only** or **Does not run**, with a one-line reason. A catalog entry's own `requires` and `compat` are kept; otherwise the console derives them from the skill's files by the catalog's rules. Every value is derived from the files and a reviewed table of each app's abilities. Nothing is run or tested.
+
+When an access key belongs to an app that cannot fully use the skill, the skill's page and the review warn, for example "Gemini CLI can load these instructions but cannot run this skill's scripts". An import is never blocked. The console knows a key's app from the OAuth client name or from the **App** picked when the key is made on Access.
 
 ## How apps see skills
 

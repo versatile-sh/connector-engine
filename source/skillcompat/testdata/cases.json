@@ -1,0 +1,228 @@
+{
+ "analyze": [
+  {
+   "name": "frontmatter tools, shell fences, inline code and script network",
+   "skill_md": "---\nname: x\nallowed-tools: Read, Bash(git:*), WebFetch, mcp__gh__issue\n---\n# X\n```bash\n$ pip install foo && python a.py\n# docker ignored\n```\n```python\nnode = 1\n```\nRun `git status`; the word python in prose is not a command.\n",
+   "paths": [
+    "SKILL.md",
+    "scripts/a.py",
+    "scripts/b.sh"
+   ],
+   "files": {
+    "scripts/a.py": "import requests\nrequests.get(u)"
+   },
+   "want": {
+    "tools": [
+     "Bash",
+     "Read",
+     "WebFetch"
+    ],
+    "runtimes": [
+     "bash",
+     "git",
+     "python"
+    ],
+    "network": true,
+    "mcp": [
+     "gh"
+    ]
+   }
+  },
+  {
+   "name": "no frontmatter and prose only",
+   "skill_md": "# no frontmatter\nuse python and curl in prose\n",
+   "paths": [
+    "SKILL.md"
+   ],
+   "files": {},
+   "want": {
+    "tools": [],
+    "runtimes": [],
+    "network": false,
+    "mcp": []
+   }
+  }
+ ],
+ "allowed_tools": [
+  {
+   "skill_md": "---\nallowed-tools:\n  - Read\n  - Bash(ls:*)\n---\n",
+   "want": [
+    "Read",
+    "Bash(ls:*)"
+   ]
+  },
+  {
+   "skill_md": "---\nallowed-tools: [\"mcp__a__b\", \"Edit\"]\n---\n",
+   "want": [
+    "mcp__a__b",
+    "Edit"
+   ]
+  }
+ ],
+ "compat": [
+  {
+   "name": "plain skill is full everywhere",
+   "needs": {
+    "tools": [],
+    "runtimes": [],
+    "network": false,
+    "mcp": []
+   },
+   "has_scripts": false,
+   "want": {
+    "claude-code": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "codex-cli": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "cursor": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "gemini-cli": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "vscode-copilot": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "opencode": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "claude-desktop": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "chat-mcp": [
+     "full",
+     [
+      "ok"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "scripts need a shell",
+   "needs": {
+    "tools": [],
+    "runtimes": [],
+    "network": false,
+    "mcp": []
+   },
+   "has_scripts": true,
+   "want": {
+    "chat-mcp": [
+     "no",
+     [
+      "runs-bundled-code"
+     ]
+    ],
+    "claude-desktop": [
+     "no",
+     [
+      "runs-bundled-code"
+     ]
+    ],
+    "gemini-cli": [
+     "full",
+     [
+      "ok"
+     ]
+    ],
+    "claude-code": [
+     "full",
+     [
+      "ok"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "shell and read tools without scripts",
+   "needs": {
+    "tools": [
+     "Bash",
+     "Read"
+    ],
+    "runtimes": [],
+    "network": false,
+    "mcp": []
+   },
+   "has_scripts": false,
+   "want": {
+    "claude-desktop": [
+     "instructions",
+     [
+      "no-shell",
+      "no-files"
+     ]
+    ],
+    "cursor": [
+     "full",
+     [
+      "ok"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "network only",
+   "needs": {
+    "tools": [],
+    "runtimes": [],
+    "network": true,
+    "mcp": []
+   },
+   "has_scripts": false,
+   "want": {
+    "chat-mcp": [
+     "instructions",
+     [
+      "no-web"
+     ]
+    ]
+   }
+  }
+ ],
+ "chat_status": [
+  {
+   "needs": {
+    "tools": [],
+    "runtimes": [],
+    "network": false,
+    "mcp": []
+   },
+   "has_scripts": false,
+   "want": "full"
+  },
+  {
+   "needs": {
+    "tools": [],
+    "runtimes": [],
+    "network": false,
+    "mcp": []
+   },
+   "has_scripts": true,
+   "want": "no"
+  }
+ ]
+}

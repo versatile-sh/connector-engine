@@ -60,13 +60,13 @@ export const dismissGuide = mutationOptions({
 
 /** Allows or denies an AI app asking to connect by OAuth; allowing takes the owner's password and may give the new key a permission set. */
 export const decideConsent = mutationOptions({
-  mutationFn: ({ request, approve, password, slot }: { request: string; approve: boolean; password: string; slot?: string | undefined }) =>
+  mutationFn: ({ request, approve, password, slot }: { request: string; approve: boolean; password: string; slot?: string | undefined; app?: string | undefined }) =>
     api<{ redirect: string }>("POST", `/api/oauth/requests/${at(request)}`, approve ? { approve, password, slot } : { approve }),
 });
 
 /** Makes an access key, with a permission set's permissions when one is named; its token is in this answer only. */
 export const mintKey = mutationOptions({
-  mutationFn: (key: { name: string; ttl_hours: number; slot?: string | undefined }) => api<AgentToken>("POST", "/api/agents", key),
+  mutationFn: (key: { name: string; ttl_hours: number; slot?: string | undefined; app?: string | undefined }) => api<AgentToken>("POST", "/api/agents", key),
   onSuccess: (_token, key, _onMutate, { client }) => invalidate(client, keysQuery.queryKey, sessionQuery.queryKey, ...(key.slot ? [slotsQuery.queryKey, connectorsQuery.queryKey] : [])),
 });
 

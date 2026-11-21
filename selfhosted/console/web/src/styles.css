@@ -77,6 +77,36 @@
   --tray-fill: var(--color-ink-sunken);
 }
 
+.shell-surface::-webkit-scrollbar {
+  width: 14px;
+}
+
+.shell-surface::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 18px;
+}
+
+.shell-surface::-webkit-scrollbar-thumb {
+  border: 5px solid transparent;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.1) padding-box;
+}
+
+.shell-surface::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(255 255 255 / 0.2);
+}
+
+.shell-surface::-webkit-scrollbar-button {
+  display: none;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .shell-surface {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 0.14) transparent;
+  }
+}
+
 .shell-surface:has(dialog:modal) {
   overflow: hidden;
 }

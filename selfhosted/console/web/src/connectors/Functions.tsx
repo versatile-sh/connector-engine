@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import type { Access, Connector, FunctionView } from "../api";
+import { errorText, type Access, type Connector, type FunctionView } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { trustReadOnly } from "../mutations";
 import { Checkbox } from "../ui/Checkbox";
@@ -10,7 +10,7 @@ import { Tag } from "../ui/Tag";
 import { AccessPicker } from "./AccessPicker";
 import { ChoiceRow } from "./ChoiceRow";
 import { FunctionTools } from "./FunctionTools";
-import { KindLabel } from "./KindLabel";
+import { AsksOnce, KindLabel } from "./KindLabel";
 import type { Lens } from "./lens";
 import { toggledOne } from "./selection";
 import { accessCounts } from "./summary";
@@ -27,15 +27,16 @@ function ClassFlags({ connector, fn, access, manage }: { connector: string; fn: 
   const trust = useMutation(trustReadOnly);
   return (
     <>
-      {access === "on" && (fn.class === "" || fn.class === "destructive") ? (
-        <Tag tone="amber" title={t("kind.cappedHint")}>
-          {t("kind.capped")}
-        </Tag>
-      ) : null}
+      {access === "on" && (fn.class === "" || fn.class === "destructive") ? <AsksOnce /> : null}
       {manage && fn.kind === "read" && fn.class !== "read" ? (
         <button type="button" title={t("kind.trustReadHint")} disabled={trust.isPending} className={button({ variant: "quiet", size: "xs" })} onClick={() => trust.mutate({ connector, name: fn.name })}>
           {t("kind.trustRead")}
         </button>
+      ) : null}
+      {trust.isError ? (
+        <Tag tone="amber" dot>
+          {errorText(trust.error)}
+        </Tag>
       ) : null}
     </>
   );

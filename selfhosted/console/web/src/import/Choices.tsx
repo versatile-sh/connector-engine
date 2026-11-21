@@ -1,7 +1,7 @@
 import type { Access, ProbedTool } from "../api";
 import { AccessPicker } from "../connectors/AccessPicker";
 import { ChoiceRow } from "../connectors/ChoiceRow";
-import { KindLabel } from "../connectors/KindLabel";
+import { AsksOnce, KindLabel } from "../connectors/KindLabel";
 import { useT } from "../i18n/I18nProvider";
 import { LongList } from "../ui/LongList";
 import { SKELETON_LINE, WELL } from "../ui/styles";
@@ -14,11 +14,26 @@ export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; acce
     <LongList rows={tools} textOf={(tool) => `${tool.name} ${tool.title ?? ""} ${tool.description ?? ""}`} keyOf={(tool) => tool.name} label={t("detail.filter")} whole>
       {(shown) => (
         <ul className={WELL}>
-          {shown.map(({ row: tool, phase }) => (
-            <ChoiceRow key={tool.name} phase={phase} name={tool.name} title={tool.title} description={tool.description} flags={<KindLabel kind={tool.kind} />}>
-              <AccessPicker name={tool.name} value={accessOf(tool.name, tool.proposed)} onChange={(access) => choose(tool.name, access)} />
-            </ChoiceRow>
-          ))}
+          {shown.map(({ row: tool, phase }) => {
+            const access = accessOf(tool.name, tool.proposed);
+            return (
+              <ChoiceRow
+                key={tool.name}
+                phase={phase}
+                name={tool.name}
+                title={tool.title}
+                description={tool.description}
+                flags={
+                  <>
+                    <KindLabel kind={tool.kind} />
+                    {access === "on" ? <AsksOnce /> : null}
+                  </>
+                }
+              >
+                <AccessPicker name={tool.name} value={access} onChange={(next) => choose(tool.name, next)} />
+              </ChoiceRow>
+            );
+          })}
         </ul>
       )}
     </LongList>

@@ -137,7 +137,7 @@ export const ptBR: Record<MessageKey, string> = {
   "access.count.ask": "{count} pedir",
   "access.count.off": "{count, plural, =0 {# desligadas} one {# desligada} other {# desligadas}}",
   "kind.capped": "pergunta uma vez por sessão",
-  "kind.cappedHint": "Nenhuma revisão ou declaração do servidor diz que esta função é segura, ou ela apaga: ligada ainda pergunta uma vez em cada sessão.",
+  "kind.cappedHint": "Até que uma revisão classifique esta função, ou você confie que ela só lê, ligada ainda pergunta uma vez em cada sessão. Uma função que apaga sempre pergunta.",
   "kind.trustRead": "Confiar em só leitura",
   "kind.trustReadHint": "O servidor diz que esta função só lê. Confie nessa afirmação para que ligada rode sem perguntar e as chaves só de leitura a recebam.",
   "kind.read": "lê",

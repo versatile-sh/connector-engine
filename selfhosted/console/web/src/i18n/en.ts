@@ -135,7 +135,7 @@ export const en = {
   "access.count.ask": "{count} ask",
   "access.count.off": "{count} off",
   "kind.capped": "asks once a session",
-  "kind.cappedHint": "No review or server declaration says this function is safe, or it deletes: on still asks once in each session.",
+  "kind.cappedHint": "Until a review classes this function, or you trust its read-only claim, on still asks once in each session. A function that deletes always does.",
   "kind.trustRead": "Trust read-only",
   "kind.trustReadHint": "The server says this function only reads. Trust that claim so on runs without asking and read-only keys get it.",
   "kind.read": "reads",

@@ -1,5 +1,6 @@
 import type { Kind } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { Tag } from "../ui/Tag";
 
 const TONE: Record<Kind, string> = { read: "text-sky-400", write: "text-amber-400", destructive: "text-red-400" };
 
@@ -7,4 +8,14 @@ const TONE: Record<Kind, string> = { read: "text-sky-400", write: "text-amber-40
 export function KindLabel({ kind }: { kind: Kind }) {
   const t = useT();
   return <span className={`font-mono text-xs whitespace-nowrap ${TONE[kind]}`}>{t(`kind.${kind}`)}</span>;
+}
+
+/** The flag on a row set on whose class counts as deleting: the engine still asks once in each session. */
+export function AsksOnce() {
+  const t = useT();
+  return (
+    <Tag tone="amber" title={t("kind.cappedHint")}>
+      {t("kind.capped")}
+    </Tag>
+  );
 }

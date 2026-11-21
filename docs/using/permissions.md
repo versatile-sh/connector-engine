@@ -9,7 +9,7 @@ Every function of every connector is **off**, **on** or **ask**, for each access
 | Choice | The AI app |
 |---|---|
 | Off | does not see the function; a call answers like an unknown tool |
-| On | calls it directly |
+| On | calls it directly, unless its class counts as destructive (see [function classes](#function-classes)) |
 | Ask | the call waits until you decide; see [approvals](approvals.md) |
 
 A denied function looks exactly like one that does not exist, so an app cannot probe what is there.
@@ -35,7 +35,7 @@ The engine treats each function as read, write or destructive. Turning a functio
 | neither | none, which counts as destructive |
 
 - A server's `readOnlyHint` is only the server's claim. The function shows "reads", but on still asks once a session until you choose **Trust read-only** on its row. That makes it read: on then runs without asking, and keys held to reads get it. The console refuses that choice for a function with a reviewed or declared class.
-- After an update, the console once raises every function whose class an earlier console had set below its reviewed or declared class. Each raise drops the session answers of that function and is listed under **Changes** on the People page. An operator can still set a class through the engine API.
+- On its first start after an update, the console raises once every function whose class lies below its reviewed or declared class. Each raise drops the session answers of that function and is listed under **Changes** on the People page. An operator can still set a class through the engine API.
 
 ## Per-key profiles
 

@@ -83,7 +83,7 @@ export function ImportLanding({ source }: { source: ImportSource }) {
               {install.isError ? errorText(install.error) : ""}
             </p>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <button type="button" className={button({ variant: "quiet" })} onClick={() => navigate("/")}>
+              <button type="button" className={button({ variant: "quiet" })} onClick={() => navigate("/connectors")}>
                 {t("common.cancel")}
               </button>
               <button

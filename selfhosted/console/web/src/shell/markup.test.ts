@@ -16,7 +16,9 @@ const at = (html: string, text: string) => html.indexOf(text);
 
 const CURRENT: readonly (readonly [string, string])[] = [
   ["/", "/"],
-  ["/connectors/c1", "/"],
+  ["/connectors", "/connectors"],
+  ["/connectors/c1", "/connectors"],
+  ["/import", "/connectors"],
   ["/skills", "/skills"],
   ["/access", "/access"],
   ["/agents", "/access"],

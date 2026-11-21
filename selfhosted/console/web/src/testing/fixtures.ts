@@ -1,5 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
-import type { Account, ActivityData, ActivitySettings, DecisionRow, Approval, Capability, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
+import type { Account, ActivityData, ActivitySettings, ActivitySummary, DecisionRow, Approval, Capability, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
 import type { KeysData } from "../queries";
 
 /** Every capability a lone Owner holds. */
@@ -114,6 +114,32 @@ export const ACTIVITY = {
   agents: ["laptop"],
 } as const satisfies ActivityData;
 
+const dayHours = (): ActivitySummary["hours"] => Array.from({ length: 25 }, (_, at) => ({ start: new Date(Date.parse("2026-11-19T11:00:00Z") + at * 3_600_000).toISOString(), ok: at === 20 ? 2 : 0, error: at === 22 ? 1 : 0, denied: 0, pending: 0, running: 0 }));
+
+const hours = (count: number): ActivitySummary["hours"] => Array.from({ length: count }, (_, at) => ({ start: new Date(Date.parse("2026-11-13T12:00:00Z") + at * 3_600_000).toISOString(), ok: at % 5 === 0 ? 2 : 0, error: at === count - 3 ? 1 : 0, denied: 0, pending: 0, running: 0 }));
+
+/** A week with calls: three in the last day against two the day before, one of them failed, over two connectors and two access keys. */
+export const SUMMARY = {
+  at: "2026-11-20T12:00:00Z",
+  total: 7,
+  day: { total: 3, failed: 1 },
+  previous_day: { total: 2, failed: 0 },
+  day_hours: dayHours(),
+  hours: hours(169),
+  connectors: [
+    { connector: "c1", alias: "gmail", total: 5, failed: 1 },
+    { alias: "gone", total: 2, failed: 0 },
+  ],
+  keys: [
+    { agent: "laptop", total: 6, failed: 1 },
+    { agent: "phone", total: 1, failed: 0 },
+  ],
+  recent: [{ id: "k1", at: "2026-11-20T11:00:00Z", agent: "laptop", connector: "c1", alias: "gmail", function: "list_messages", class: "read", outcome: "ok", duration_ms: 120, captured: true, owner: ALICE }],
+} as const satisfies ActivitySummary;
+
+/** A week with no calls at all. */
+export const QUIET = { at: "2026-11-20T12:00:00Z", total: 0, day: { total: 0, failed: 0 }, previous_day: { total: 0, failed: 0 }, day_hours: dayHours().map((hour) => ({ ...hour, ok: 0, error: 0 })), hours: hours(169).map((hour) => ({ ...hour, ok: 0, error: 0 })), connectors: [], keys: [], recent: [] } as const satisfies ActivitySummary;
+
 const SETTINGS = { record_arguments: false, record_results: false, retention: "30d", retention_days: 30 } as const satisfies ActivitySettings;
 
 const NOTIFICATIONS = { channels: [], devices: [], apps: [] } as const satisfies NotificationsData;
@@ -145,6 +171,8 @@ export const pageData = (session: Session): readonly (readonly [QueryKey, unknow
   [["approvals", "recent", "mine"], { decisions: DECISIONS }],
   [["approvals", "recent", "everyone"], { decisions: DECISIONS }],
   [["activity", { range: "24h" }, 30], { pages: [ACTIVITY], pageParams: [""] }],
+  [["activity", "summary", "mine"], SUMMARY],
+  [["activity", "summary", "everyone"], SUMMARY],
   [["activity-settings"], SETTINGS],
   [["notifications"], NOTIFICATIONS],
   [["account"], ACCOUNT],

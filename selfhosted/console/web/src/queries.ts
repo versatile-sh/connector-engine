@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { activityViewOf, apiQueryOf, KEPT_DAYS, type ActivityFilter } from "./activity/activity";
 import type { Scope } from "./people/viewer";
-import { api, setCsrf, type Account, type LinkFacts, type PeopleData, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type DecisionRow, type Effect, type NotificationsData, type PrunePeriod, type PruneResult, type Session, type Skill, type SlotView } from "./api";
+import { api, setCsrf, type Account, type LinkFacts, type PeopleData, type ActivityData, type ActivityDetail, type ActivitySummary, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type DecisionRow, type Effect, type NotificationsData, type PrunePeriod, type PruneResult, type Session, type Skill, type SlotView } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -122,6 +122,21 @@ export const activityQuery = (filter: ActivityFilter, keptDays = KEPT_DAYS) =>
 
 /** How often the first page of the activity is read again. */
 export const ACTIVITY_POLL_MS = 10_000;
+
+/** How often the dashboard's summary is read again: a seven-day read is heavier than a page of calls, so it waits longer than the activity page. */
+export const DASHBOARD_POLL_MS = 30_000;
+
+/** What the dashboard shows for a scope, from one read of the console: the viewer's own calls, or everyone's. It sits under the activity key so deleting calls reads it again, and a scope change keeps the last answer on screen until the new one arrives. */
+export const dashboardQuery = (scope: Scope) =>
+  queryOptions({
+    queryKey: [...activityKey, "summary", scope],
+    queryFn: () => api<ActivitySummary>("GET", `/api/activity/summary${scope === "everyone" ? "?scope=everyone" : ""}`),
+    refetchInterval: DASHBOARD_POLL_MS,
+    placeholderData: keepPreviousData,
+  });
+
+/** The access keys a scope of the dashboard counts: the user's own, as `keysQuery`, which marks nothing as seen, or everyone's. */
+export const dashboardKeysQuery = (scope: Scope) => (scope === "mine" ? keysQuery : scopedKeysQuery("everyone"));
 
 /** How many calls a period holds, counted by the console without deleting any. */
 export const activityPruneQuery = (period: PrunePeriod) =>

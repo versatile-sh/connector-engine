@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { errorText, setSetupToken } from "./api";
 import { Frame } from "./Frame";
 import { useT } from "./i18n/I18nProvider";
+import { linkOf } from "./import/source";
 import { signIn } from "./mutations";
 import { ImportDialog } from "./account/ImportDialog";
 import { Field } from "./ui/Field";
@@ -22,8 +23,9 @@ const hostOf = (raw: string) => {
 
 /** The host an install link in the address bar points at, if the page is one; nothing of it is fetched before sign-in. */
 export function waitingLinkHost(path: string, query: URLSearchParams): string | undefined {
-  const link = path === "/import" ? (query.get("listing") ?? query.get("mcp")) : null;
-  return link ? hostOf(link) : undefined;
+  const link = linkOf(path, query);
+  const address = link && ("listing" in link ? link.listing : link.mcp);
+  return address ? hostOf(address) : undefined;
 }
 
 function Headline({ waitingHost }: { waitingHost?: string | undefined }) {

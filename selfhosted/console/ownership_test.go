@@ -250,6 +250,34 @@ func TestAMemberSeesAndActsOnOnlyTheirOwnKeysApprovalsAndActivity(t *testing.T) 
 			t.Errorf("the owner reads bob's call as %+v", d.Owner)
 		}
 	})
+
+	t.Run("the activity summary counts only the viewer's own calls unless a manager asks for everyone", func(t *testing.T) {
+		summary := func(who profiled, query string) console.ActivitySummary {
+			var s console.ActivitySummary
+			who.b.ok("GET", "/api/activity/summary"+query, nil, &s)
+			return s
+		}
+		bobs := p.activityUntil("?scope=everyone&person=p-bob", func(pg console.ActivityPage) bool { return len(pg.Calls) > 0 })
+		owners := p.activityUntil("", func(pg console.ActivityPage) bool { return len(pg.Calls) > 0 })
+		if s := summary(bob, ""); s.Total != len(bobs.Calls) || s.Day.Total != len(bobs.Calls) {
+			t.Errorf("bob's summary %+v, his calls %d", s.Day, len(bobs.Calls))
+		}
+		if s := summary(bob, "?scope=everyone"); s.Total != len(bobs.Calls) {
+			t.Errorf("bob asking for everyone counts %d, his own are %d", s.Total, len(bobs.Calls))
+		}
+		for _, call := range summary(bob, "?scope=everyone").Recent {
+			if call.Owner.Person != "p-bob" {
+				t.Errorf("bob's summary lists %+v", call)
+			}
+		}
+		if s := summary(p, ""); s.Total != len(owners.Calls) {
+			t.Errorf("the owner's own summary counts %d, not %d", s.Total, len(owners.Calls))
+		}
+		if s := summary(p, "?scope=everyone"); s.Total != len(owners.Calls)+len(bobs.Calls) {
+			t.Errorf("the owner's summary of everyone counts %d, not %d", s.Total, len(owners.Calls)+len(bobs.Calls))
+		}
+		p.refusedAs(t, http.StatusBadRequest, "GET", "/api/activity/summary?scope=all", nil)
+	})
 }
 
 func TestTheSessionNamesTheUserTheirCapabilitiesAndThePeopleCount(t *testing.T) {

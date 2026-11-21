@@ -6,7 +6,7 @@ import { renderMarkup } from "./testing/render.ts";
 
 const stableIds = (html: string) => html.replace(/_R_[0-9a-z]+_/g, "_R_");
 
-const PAGES = ["/", "/connectors/c1", "/access", "/approvals", "/activity", "/notifications", "/skills"];
+const PAGES = ["/", "/connectors", "/connectors/c1", "/access", "/approvals", "/activity", "/notifications", "/skills"];
 
 describe("a one-user install", () => {
   before(() => mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-11-20T12:00:00Z") }));

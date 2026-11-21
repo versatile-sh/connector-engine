@@ -33,7 +33,7 @@ vsh login [--user NAME] [--password-stdin] | logout
 vsh connectors [list] | show NAME | import URL|FILE [--mcp] [--local] [--yes] | remove NAME [--yes]
 vsh keys [list] | create NAME [--ttl 720h] | revoke NAME [--yes]
 vsh people [list] | invite owner|admin|member | role USERNAME ROLE | remove USERNAME [--yes]
-vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive|undeclared]
+vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive]
 vsh access CONNECTOR --key NAME follow|custom
 vsh approvals [list] | approve ID | deny ID
 vsh activity [--connector NAME] [--key NAME] [--since 1h] [--follow]
@@ -96,7 +96,7 @@ vsh connectors show check-notes
 ```text
 Check notes (mcp) from 127.0.0.1:7999
   write        ask   create
-  undeclared   on    mystery
+  read         on    mystery  (estimated from its name)
   destructive  ask   purge
   read         on    search
 installed Check notes
@@ -180,7 +180,7 @@ approved 18eb5f5700a4eb5f6bfadba9a5091f44
 |---|---|
 | all | `tab` / `shift+tab` or `1`–`4` switch screens, `q` quits, `esc` goes back or quits, `ctrl+c` quits |
 | Connectors | `↑` `↓` move, `/` filters, `enter` opens a connector |
-| a connector | its functions by read, write, destructive and undeclared; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
+| a connector | its functions by read, write and destructive; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
 | Keys | `n` creates a key and shows it once, `d` revokes one after a `y` |
 | Approvals | `a` approves, `d` denies |
 | Activity | the calls of the last hour, newest last, every 2 seconds |

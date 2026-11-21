@@ -1,6 +1,14 @@
 package console
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
+
+// UseListingProbe replaces how a listing preview probes its remote server.
+func (c *Console) UseListingProbe(probe func(context.Context, string, Reach) (Probed, error)) {
+	c.probe = probe
+}
 
 func AddTestUser(t testing.TB, s *State, person, username, password string, role Role) {
 	t.Helper()

@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import type { Role, SessionUser } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
+import { ThemeSwitch } from "../ThemeSwitch";
 import { navigate } from "../router";
 import { Icon } from "../ui/Icon";
 import { place, within } from "../ui/popup";
@@ -103,7 +104,10 @@ export function UserMenu({ user, role, rail, signingOut, onSignOut, onNavigate }
               {name}
             </p>
             {role ? <Tag title={t("shell.role")}>{t(`role.${role}`)}</Tag> : null}
-            <LanguageSwitch className="mt-1.5 w-full" />
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <LanguageSwitch className="flex-1" />
+              <ThemeSwitch />
+            </div>
           </div>
         ) : null}
         <a

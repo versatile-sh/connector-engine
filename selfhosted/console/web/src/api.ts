@@ -4,8 +4,8 @@ export type Access = "off" | "on" | "ask";
 /** The access modes an agent key can hold on a function: off, on or ask. */
 export const ACCESS: readonly Access[] = ["off", "on", "ask"];
 
-/** What a function does by its own description, or undeclared when its server says neither read-only nor destructive; it is shown, never chosen. */
-export type Kind = "read" | "write" | "destructive" | "undeclared";
+/** What a function does by its own description; it is shown, never chosen. */
+export type Kind = "read" | "write" | "destructive";
 
 /** A console user's role, in rank order: a Member uses the gateway, an Admin also manages connectors and policy, an Owner everything. */
 export type Role = "owner" | "admin" | "member";
@@ -62,6 +62,7 @@ export type FunctionView = {
   description?: string;
   class: string;
   kind: Kind;
+  estimated?: boolean;
   state: string;
   access: Access;
   capped?: boolean;
@@ -136,6 +137,7 @@ export type ProbedTool = {
   read_only: boolean;
   destructive: boolean;
   kind: Kind;
+  estimated?: boolean;
   proposed: Access;
 };
 
@@ -204,6 +206,7 @@ export type Preview = {
   version: string;
   remote_url?: string;
   website_url?: string;
+  page_url?: string;
   protocol?: string;
   auth?: string[];
   tools: ProbedTool[];
@@ -213,7 +216,7 @@ export type Preview = {
 };
 
 /** Where an import reads from: an MCP address, a catalog listing or a local command. */
-export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
+export type ImportSource = { mcp?: string; listing?: string; page?: string; local?: boolean; header_secret?: boolean };
 
 /** An agent key of the console: its name, expiry and whether a browser session made it. */
 export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string; owner?: RowOwner };

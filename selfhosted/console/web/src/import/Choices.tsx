@@ -15,7 +15,7 @@ export function Choices({ tools, accessOf, choose }: { tools: ProbedTool[]; acce
       {(shown) => (
         <ul className={WELL}>
           {shown.map(({ row: tool, phase }) => (
-            <ChoiceRow key={tool.name} phase={phase} name={tool.name} title={tool.title} description={tool.description} flags={<KindLabel kind={tool.kind} />}>
+            <ChoiceRow key={tool.name} phase={phase} name={tool.name} title={tool.title} description={tool.description} flags={<KindLabel kind={tool.kind} estimated={tool.estimated} />}>
               <AccessPicker name={tool.name} value={accessOf(tool.name, tool.proposed)} onChange={(access) => choose(tool.name, access)} />
             </ChoiceRow>
           ))}

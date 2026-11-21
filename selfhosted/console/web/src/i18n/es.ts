@@ -9,6 +9,8 @@ export const es: Record<MessageKey, string> = {
 
   "brand.label": "gateway de conectores",
   "lang.label": "Idioma",
+  "theme.toLight": "Cambiar al tema claro",
+  "theme.toDark": "Cambiar al tema oscuro",
 
   "common.cancel": "Cancelar",
   "common.close": "Cerrar",
@@ -141,7 +143,8 @@ export const es: Record<MessageKey, string> = {
   "kind.read": "lee",
   "kind.write": "modifica",
   "kind.destructive": "borra",
-  "kind.undeclared": "no declarada",
+  "kind.estimated": "estimada",
+  "kind.estimatedHint": "Su servidor no declara si solo lee ni si borra: estimada por los verbos de su nombre.",
 
   "detail.back": "Conectores",
   "detail.functions": "Funciones",

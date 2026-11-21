@@ -3,6 +3,7 @@ import { Wordmark } from "./Brand";
 import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { navigate } from "./router";
+import { ThemeSwitch } from "./ThemeSwitch";
 
 type FrameProps = { width: "narrow" | "wide" | "split"; home?: boolean; children: ReactNode };
 
@@ -30,7 +31,10 @@ export function Frame({ width, home = false, children }: FrameProps) {
         ) : (
           <Wordmark />
         )}
-        <LanguageSwitch />
+        <div className="flex items-center gap-2">
+          <ThemeSwitch />
+          <LanguageSwitch />
+        </div>
       </header>
       <main id="main" tabIndex={-1} className={`mx-auto flex w-full min-w-0 flex-1 flex-col justify-center px-5 py-10 sm:px-8 sm:py-14 ${WIDTH[width]}`}>
         {children}

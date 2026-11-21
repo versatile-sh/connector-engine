@@ -269,7 +269,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessOn || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessOn {
 		t.Fatalf("preview: %+v", pv)
 	}
-	if kinds["search"] != port.ClassRead || kinds["create"] != port.ClassWrite || kinds["purge"] != port.ClassDestructive || kinds["mystery"] != console.KindUndeclared {
+	if kinds["search"] != port.ClassRead || kinds["create"] != port.ClassWrite || kinds["purge"] != port.ClassDestructive || kinds["mystery"] != port.ClassRead {
 		t.Fatalf("preview kinds: %v", kinds)
 	}
 	if status, _ := b.send("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "write"}}, nil); status != http.StatusBadRequest {
@@ -465,22 +465,50 @@ func TestIconsAreImagesNeverSVG(t *testing.T) {
 	}
 }
 
-func TestOnlyADeclaredChangeOrDeleteProposesAsk(t *testing.T) {
+func TestOnlyAReadProposesOnAndDeclaredHintsBeatTheName(t *testing.T) {
 	no, yes := false, true
 	cases := []struct {
-		ann  *mcp.ToolAnnotations
-		kind port.Class
-		want console.Access
+		name      string
+		ann       *mcp.ToolAnnotations
+		kind      port.Class
+		estimated bool
+		want      console.Access
 	}{
-		{nil, console.KindUndeclared, console.AccessOn},
-		{&mcp.ToolAnnotations{}, console.KindUndeclared, console.AccessOn},
-		{&mcp.ToolAnnotations{ReadOnlyHint: true}, port.ClassRead, console.AccessOn},
-		{&mcp.ToolAnnotations{DestructiveHint: &no}, port.ClassWrite, console.AccessAsk},
-		{&mcp.ToolAnnotations{DestructiveHint: &yes}, port.ClassDestructive, console.AccessAsk},
+		{"sharepoint_search", nil, port.ClassRead, true, console.AccessOn},
+		{"create_event", &mcp.ToolAnnotations{}, port.ClassWrite, true, console.AccessAsk},
+		{"delete_file", nil, port.ClassDestructive, true, console.AccessAsk},
+		{"delete_file", &mcp.ToolAnnotations{ReadOnlyHint: true}, port.ClassRead, false, console.AccessOn},
+		{"search", &mcp.ToolAnnotations{DestructiveHint: &no}, port.ClassWrite, false, console.AccessAsk},
+		{"search", &mcp.ToolAnnotations{DestructiveHint: &yes}, port.ClassDestructive, false, console.AccessAsk},
 	}
 	for _, c := range cases {
-		if kind, got := console.Propose(c.ann); kind != c.kind || got != c.want {
-			t.Errorf("%+v: %s %s, want %s %s", c.ann, kind, got, c.kind, c.want)
+		if kind, estimated, got := console.Propose(c.name, c.ann); kind != c.kind || estimated != c.estimated || got != c.want {
+			t.Errorf("%s %+v: %s %v %s, want %s %v %s", c.name, c.ann, kind, estimated, got, c.kind, c.estimated, c.want)
+		}
+	}
+}
+
+func TestEstimateReadsTheVerbsInAName(t *testing.T) {
+	cases := map[string]port.Class{
+		"sharepoint_search":         port.ClassRead,
+		"outlook_email_search":      port.ClassRead,
+		"find_meeting_availability": port.ClassRead,
+		"read_resource":             port.ClassRead,
+		"sharepoint_folder_search":  port.ClassRead,
+		"outlook_calendar_search":   port.ClassRead,
+		"chat_message_search":       port.ClassRead,
+		"delete_file":               port.ClassDestructive,
+		"create_delete_job":         port.ClassDestructive,
+		"create_event":              port.ClassWrite,
+		"sendMessage":               port.ClassWrite,
+		"listItems":                 port.ClassRead,
+		"purgeCache":                port.ClassDestructive,
+		"deleted_items":             port.ClassRead,
+		"":                          port.ClassRead,
+	}
+	for name, want := range cases {
+		if got := console.Estimate(name); got != want {
+			t.Errorf("%q: %s, want %s", name, got, want)
 		}
 	}
 }

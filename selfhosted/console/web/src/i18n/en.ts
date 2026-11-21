@@ -7,6 +7,8 @@ export const en = {
 
   "brand.label": "connector gateway",
   "lang.label": "Language",
+  "theme.toLight": "Switch to light theme",
+  "theme.toDark": "Switch to dark theme",
 
   "common.cancel": "Cancel",
   "common.close": "Close",
@@ -139,7 +141,8 @@ export const en = {
   "kind.read": "reads",
   "kind.write": "changes",
   "kind.destructive": "deletes",
-  "kind.undeclared": "not declared",
+  "kind.estimated": "estimated",
+  "kind.estimatedHint": "Its server declares neither read-only nor destructive: estimated from the verbs in its name.",
 
   "detail.back": "Connectors",
   "detail.functions": "Functions",

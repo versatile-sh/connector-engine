@@ -9,6 +9,8 @@ export const ptBR: Record<MessageKey, string> = {
 
   "brand.label": "gateway de conectores",
   "lang.label": "Idioma",
+  "theme.toLight": "Mudar para o tema claro",
+  "theme.toDark": "Mudar para o tema escuro",
 
   "common.cancel": "Cancelar",
   "common.close": "Fechar",
@@ -141,7 +143,8 @@ export const ptBR: Record<MessageKey, string> = {
   "kind.read": "lê",
   "kind.write": "altera",
   "kind.destructive": "apaga",
-  "kind.undeclared": "não declarada",
+  "kind.estimated": "estimada",
+  "kind.estimatedHint": "O servidor não declara se ela só lê nem se apaga: estimada pelos verbos do nome.",
 
   "detail.back": "Conectores",
   "detail.functions": "Funções",

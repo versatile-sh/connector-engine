@@ -3,6 +3,7 @@ package console_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
@@ -92,6 +93,66 @@ func TestAListingFileIsPreviewedFromItsText(t *testing.T) {
 	} {
 		if status, out := b.send("POST", "/api/preview", body, nil); status != http.StatusBadRequest {
 			t.Fatalf("%v: %d %s", body, status, out)
+		}
+	}
+}
+
+func signInServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestAServerAnswering401AsksToSignIn(t *testing.T) {
+	srv := signInServer(t)
+	if _, err := console.Probe(context.Background(), srv.URL+"/mcp", console.Reach{Local: true}); !errors.Is(err, console.ErrSignInRequired) {
+		t.Fatalf("probe of a server answering 401: %v", err)
+	}
+}
+
+func TestAListingWhoseServerAsksToSignInKeepsItsFunctionsWithoutAWarning(t *testing.T) {
+	raw, err := os.ReadFile("../../source/files/testdata/notes.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := signInServer(t)
+	c := &console.Console{}
+	c.UseListingProbe(func(ctx context.Context, _ string, _ console.Reach) (console.Probed, error) {
+		return console.Probe(ctx, srv.URL+"/mcp", console.Reach{Local: true})
+	})
+	b := previewConsole(t, c)
+	var pv console.Preview
+	b.ok("POST", "/api/preview", map[string]any{"listing_text": string(raw)}, &pv)
+	if pv.Warning != "" || len(pv.Tools) != 1 || pv.Tools[0].Name != "read_note" {
+		t.Fatalf("preview of a listing whose server asks to sign in: warning %q tools %+v", pv.Warning, pv.Tools)
+	}
+}
+
+func TestAListingPreviewCarriesItsPageOnlyFromTheListingsOwnHost(t *testing.T) {
+	raw, err := os.ReadFile("../../source/files/testdata/notes.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := previewConsole(t, &console.Console{Fetch: func(context.Context, string, int64) ([]byte, error) { return raw, nil }})
+	for _, tc := range []struct{ listing, page, want string }{
+		{"https://listings.example/notes.yaml", "https://listings.example/connectors/notes", "https://listings.example/connectors/notes"},
+		{"https://listings.example/notes.yaml", "https://LISTINGS.example/connectors/notes", "https://LISTINGS.example/connectors/notes"},
+		{"http://127.0.0.1:8080/notes.yaml", "http://127.0.0.1:8080/connectors/notes", "http://127.0.0.1:8080/connectors/notes"},
+		{"https://listings.example/notes.yaml", "", ""},
+		{"https://listings.example/notes.yaml", "https://evil.example/connectors/notes", ""},
+		{"https://listings.example/notes.yaml", "https://listings.example.evil.example/notes", ""},
+		{"https://listings.example/notes.yaml", "http://listings.example/connectors/notes", ""},
+		{"https://listings.example/notes.yaml", "javascript:alert(1)//listings.example", ""},
+		{"https://listings.example/notes.yaml", "ftp://listings.example/notes", ""},
+		{"https://listings.example/notes.yaml", "/connectors/notes", ""},
+	} {
+		var pv console.Preview
+		b.ok("POST", "/api/preview", map[string]any{"listing": tc.listing, "page": tc.page}, &pv)
+		if pv.PageURL != tc.want {
+			t.Errorf("page %q for listing %q: got %q, want %q", tc.page, tc.listing, pv.PageURL, tc.want)
 		}
 	}
 }

@@ -94,7 +94,10 @@ func (c *Console) present(ctx context.Context, a port.Approval) (presented, erro
 	if m.Kind == port.KindSkill {
 		pr.skill, pr.kind, pr.title, pr.known = true, port.ClassRead, firstOf(m.Title, ref.Alias), true
 	} else if f, err := c.function(ctx, string(a.Connector), a.Function); err == nil {
-		pr.kind, pr.known = Nature(f, m), true
+		if kind, estimated := Nature(f, m); !estimated {
+			pr.kind = kind
+		}
+		pr.known = true
 		pr.title, _ = describe(f.Definition)
 	}
 	if pr.known {

@@ -123,9 +123,9 @@ func (e *Env) confirm(question string, yes bool) error {
 	return nil
 }
 
-// Commands returns the management leaves of vsh: status, login, logout, connectors, keys, access, approvals and activity.
+// Commands returns the management leaves of vsh: status, login, logout, connectors, keys, people, access, approvals and activity.
 func Commands() []*command.Command {
-	return []*command.Command{statusCommand(), loginCommand(), logoutCommand(), connectorsCommand(), keysCommand(), accessCommand(), approvalsCommand(), activityCommand()}
+	return []*command.Command{statusCommand(), loginCommand(), logoutCommand(), connectorsCommand(), keysCommand(), peopleCommand(), accessCommand(), approvalsCommand(), activityCommand()}
 }
 
 // SkillsList is the vsh skills list leaf: the installed skills and each key's access.

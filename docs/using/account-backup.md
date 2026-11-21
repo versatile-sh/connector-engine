@@ -107,12 +107,15 @@ Either kind of file works; the console tells them apart by their first bytes.
 A full restore, step by step:
 
 1. One restore runs at a time. The console stages its keys and activity.
-2. The engine stages its keys, replaces its rows in one transaction, and puts its keys in place.
+2. The engine stages its keys, replaces its rows in one transaction, checks them before the commit, and puts its keys in place.
 3. Only when the engine succeeds does the console put its own files in place.
 4. The root keys are wrapped again with this machine's keychain key.
 5. The engine and the console restart. `make import` runs `make unlock` for you; from the console, run `make unlock` yourself. Sign in with the restored account's password.
 
 - A refusal before the engine's commit leaves the install as it was.
+- The engine refuses, naming the first offending row and never its values, a snapshot whose schema is newer than its own, that holds a table it does not know, a row that does not decode or is there twice, two grants with one key, a grant row its rules refuse, a row stored under another tenant, or a binding to a connector the snapshot lacks. Rules that depend on this install's settings, such as `permission.alwaysMaxDuration`, are not applied, so a backup taken before a stricter setting still restores.
+- A grant that names a connector or a function the snapshot lacks is kept, as it can be written today: the restore answers it as a warning. It never applies until that connector and function exist.
+- An applied restore writes one `connector.snapshot.restored` audit row and event on the installation, with who restored it, the rows per kind and the number of warnings. The restore through the console is recorded as `system`, the engine's operator.
 - Importing the same backup again gives the same result. If a disk fails right after the commit, restore the same backup again.
 - Signed in, a full import asks for your password again. The first-run restore works only while no user exists.
 - A backup from an earlier console, with its one `owner` account, restores: the account becomes the Owner with this console's `--person`. A backup made by this console has `users` and no `owner`, and uses backup format 2, so an earlier console refuses it as written by a newer connector-engine. This is a one-way door: keep the earlier console's own backups if you may go back to it.

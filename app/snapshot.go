@@ -81,9 +81,13 @@ func (a *App) putSnapshot(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, port.Errorf(port.CodeInvalidArgument, "the body is not a snapshot: %v", err))
 		return
 	}
+	var out port.Restored
 	store, err := a.snapshotter()
 	if err == nil {
-		restore := func() error { return store.Restore(r.Context(), snap.Store) }
+		restore := func() (err error) {
+			out, err = store.Restore(r.Context(), snap.Store, string(port.PrincipalSystem))
+			return err
+		}
 		ks, ok := a.secrets.(keyStore)
 		switch {
 		case ok != (snap.Keys != nil):
@@ -99,8 +103,9 @@ func (a *App) putSnapshot(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, err)
 		return
 	}
-	a.log.InfoContext(r.Context(), "snapshot restored: the engine stops so that it starts again on the restored keys")
-	w.WriteHeader(http.StatusNoContent)
+	a.log.InfoContext(r.Context(), "snapshot restored: the engine stops so that it starts again on the restored keys", "warnings", len(out.Warnings))
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(out)
 	a.restoredOnce.Do(func() { close(a.restored) })
 }
 

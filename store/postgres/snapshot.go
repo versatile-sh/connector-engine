@@ -1,20 +1,25 @@
 package postgres
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io/fs"
 	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/core/restore"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
 const snapshotStore = "postgres"
 
-var snapshotTables = []struct{ name, order, serial string }{
+type snapshotTable struct{ name, order, serial string }
+
+var snapshotTables = []snapshotTable{
 	{"records", "kind, k", ""}, {"streams", "stream", ""}, {"outbox", "pos", "pos"}, {"audit", "id", "id"}, {"inbox", "tenant_id, id", ""},
 }
 
@@ -45,7 +50,7 @@ func (t *tx) as(tenant string) error {
 
 // Snapshot copies every row of every tenant and of the installation in one repeatable-read transaction.
 func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
-	snap := port.Snapshot{Store: snapshotStore, Tables: map[string][]json.RawMessage{}}
+	snap := port.Snapshot{Store: snapshotStore, Schema: Schema(), Tables: map[string][]json.RawMessage{}}
 	err := s.inAll(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(t *tx, tenants []string) error {
 		for _, tenant := range tenants {
 			if err := t.as(tenant); err != nil {
@@ -64,10 +69,13 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 	return snap, err
 }
 
-// Restore replaces every row with the snapshot's in one transaction that holds the tables exclusively; due work is rebuilt by the records trigger.
-func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
+// Restore replaces every row with a snapshot that CheckRows and restore.Apply accept, in one transaction that holds the tables exclusively; due work is rebuilt by the records trigger.
+func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (port.Restored, error) {
 	if snap.Store != snapshotStore {
-		return port.Errorf(port.CodeInvalidArgument, "a %q snapshot does not restore into a %s store", snap.Store, snapshotStore)
+		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %q snapshot does not restore into a %s store", snap.Store, snapshotStore)
+	}
+	if err := CheckRows(snap, Schema()); err != nil {
+		return port.Restored{}, err
 	}
 	byTenant := map[string]map[string][]json.RawMessage{}
 	serials := map[string]int64{}
@@ -79,7 +87,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 				ID     any    `json:"id"`
 			}
 			if err := json.Unmarshal(raw, &r); err != nil {
-				return port.Errorf(port.CodeInvalidArgument, "snapshot %s: %v", tb.name, err)
+				return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "snapshot %s: a row does not decode", tb.name)
 			}
 			if byTenant[r.Tenant] == nil {
 				byTenant[r.Tenant] = map[string][]json.RawMessage{}
@@ -93,7 +101,8 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 			}
 		}
 	}
-	return s.inAll(ctx, pgx.TxOptions{}, func(t *tx, tenants []string) error {
+	var out port.Restored
+	err := s.inAll(ctx, pgx.TxOptions{}, func(t *tx, tenants []string) error {
 		if _, err := t.exec(`LOCK TABLE records, streams, outbox, audit, inbox, due_work IN EXCLUSIVE MODE`); err != nil {
 			return err
 		}
@@ -138,8 +147,70 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 			owners = append(owners, port.TenantID(tenant))
 		}
 		slices.Sort(owners)
-		return t.canonicalGrants(owners)
+		in := func(tenant port.TenantID) (port.Tx, error) { return t, t.as(string(tenant)) }
+		var err error
+		out, err = restore.Apply(owners, in, by, time.Now().UTC())
+		return err
 	})
+	if err != nil {
+		return port.Restored{}, err
+	}
+	return out, nil
+}
+
+// Schema is the version of the schema the embedded migrations build: their count.
+func Schema() int {
+	files, _ := fs.Glob(migrations, "migrations/*.sql")
+	return len(files)
+}
+
+var recordDocs = map[string]func([]byte) error{
+	kindTenant: decodes[port.Tenant], kindConnector: decodes[port.Connector], kindFunction: decodes[port.Function],
+	kindBinding: decodes[port.Binding], kindGrant: decodes[port.Grant],
+}
+
+func decodes[V any](doc []byte) error {
+	var v V
+	return json.Unmarshal(doc, &v)
+}
+
+// CheckRows refuses, naming the first offending row, a snapshot in this store's row shape of a schema newer than schema, with an unknown table, or with a record that does not decode or repeats a key.
+func CheckRows(snap port.Snapshot, schema int) error {
+	if snap.Schema > schema {
+		return port.Errorf(port.CodeInvalidArgument, "snapshot: schema %d is newer than this store's %d; restore it with the release that took it", snap.Schema, schema)
+	}
+	for name := range snap.Tables {
+		if !slices.ContainsFunc(snapshotTables, func(tb snapshotTable) bool { return tb.name == name }) {
+			return port.Errorf(port.CodeInvalidArgument, "snapshot: table %s is not a table of this store", name)
+		}
+	}
+	keys, uniqs := map[[2]string]bool{}, map[[2]string]string{}
+	for _, raw := range snap.Tables["records"] {
+		var r struct {
+			Kind string          `json:"kind"`
+			K    string          `json:"k"`
+			Uniq *string         `json:"uniq"`
+			Doc  json.RawMessage `json:"doc"`
+		}
+		if json.Unmarshal(raw, &r) != nil || r.Kind == "" || r.K == "" || !bytes.HasPrefix(bytes.TrimSpace(r.Doc), []byte("{")) {
+			return port.Errorf(port.CodeInvalidArgument, "snapshot records: a row does not decode")
+		}
+		if decode := recordDocs[r.Kind]; decode != nil && decode(r.Doc) != nil {
+			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %q does not decode", r.Kind, r.K)
+		}
+		if keys[[2]string{r.Kind, r.K}] {
+			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %q is there twice", r.Kind, r.K)
+		}
+		keys[[2]string{r.Kind, r.K}] = true
+		if r.Uniq == nil {
+			continue
+		}
+		if other, ok := uniqs[[2]string{r.Kind, *r.Uniq}]; ok {
+			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %q and %q have one key", r.Kind, other, r.K)
+		}
+		uniqs[[2]string{r.Kind, *r.Uniq}] = r.K
+	}
+	return nil
 }
 
 const canonicalGrantsMigration = "migrations/0003_canonical_grants.sql"

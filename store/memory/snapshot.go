@@ -3,10 +3,11 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"time"
 
-	"github.com/versatile-sh/connector-engine/core/grant"
+	"github.com/versatile-sh/connector-engine/core/restore"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -47,6 +48,9 @@ func (tb *table[V]) load(rows []json.RawMessage) error {
 		var r storedRow[V]
 		if err := json.Unmarshal(raw, &r); err != nil {
 			return err
+		}
+		if _, ok := tb.rows[r.K]; ok {
+			return fmt.Errorf("%q is there twice", r.K)
 		}
 		tb.rows[r.K] = row[V]{tenant: r.Tenant, rev: r.Rev, v: r.V}
 	}
@@ -140,22 +144,28 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 	return snap, nil
 }
 
-// Restore replaces every row with the snapshot's, or changes nothing when any row does not decode.
-func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
+// Restore replaces every row with the snapshot's, or changes nothing when a row does not decode or a check of restore.Apply refuses it.
+func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (port.Restored, error) {
 	if err := ctx.Err(); err != nil {
-		return port.Errorf(port.CodeUnavailable, "%v", err)
+		return port.Restored{}, port.Errorf(port.CodeUnavailable, "%v", err)
 	}
-	if snap.Store != snapshotStore {
-		return port.Errorf(port.CodeInvalidArgument, "a %q snapshot does not restore into a %s store", snap.Store, snapshotStore)
+	if snap.Store != snapshotStore || snap.Schema != 0 {
+		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %q snapshot of schema %d does not restore into a %s store", snap.Store, snap.Schema, snapshotStore)
 	}
 	s.outside()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	work := New().d
 	var x snapshotData
-	for name, tb := range work.tables(&x) {
+	tables := work.tables(&x)
+	for name := range snap.Tables {
+		if tables[name] == nil {
+			return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "snapshot: table %s is not a table of a %s store", name, snapshotStore)
+		}
+	}
+	for name, tb := range tables {
 		if err := tb.load(snap.Tables[name]); err != nil {
-			return port.Errorf(port.CodeInvalidArgument, "snapshot %s: %v", name, err)
+			return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "snapshot %s: %v", name, err)
 		}
 	}
 	for _, r := range x.audit {
@@ -177,15 +187,22 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 	for _, r := range work.grants.rows {
 		tenants = append(tenants, r.tenant)
 	}
+	for _, r := range work.connectors.rows {
+		tenants = append(tenants, r.tenant)
+	}
+	for _, r := range work.bindings.rows {
+		tenants = append(tenants, r.tenant)
+	}
 	slices.Sort(tenants)
 	in := func(tenant port.TenantID) (port.Tx, error) {
-		return &tx{d: &work, scope: port.Scope{Tenant: tenant}, write: true}, nil
+		return &tx{d: &work, scope: port.Scope{Tenant: tenant, Installation: tenant == port.Installation}, write: true}, nil
 	}
-	if err := grant.RewriteTenants(slices.Compact(tenants), in, time.Now().UTC()); err != nil {
-		return err
+	out, err := restore.Apply(slices.Compact(tenants), in, by, time.Now().UTC())
+	if err != nil {
+		return port.Restored{}, err
 	}
 	s.d = work
-	return nil
+	return out, nil
 }
 
 var _ port.Snapshotter = (*Store)(nil)

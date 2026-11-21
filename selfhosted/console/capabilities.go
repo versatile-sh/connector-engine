@@ -126,6 +126,7 @@ var routeCapabilities = map[string]Capability{
 	"GET /api/oauth/requests/{id}":               CapKeysOwn,
 	"POST /api/oauth/requests/{id}":              CapKeysOwn,
 	"GET /api/approvals":                         CapApprovalsOwn,
+	"GET /api/approvals/recent":                  CapApprovalsOwn,
 	"POST /api/approvals/{id}":                   CapApprovalsOwn,
 	"POST /api/approvals/{id}/cancel":            CapApprovalsAny,
 	"GET /api/activity":                          CapActivityOwn,

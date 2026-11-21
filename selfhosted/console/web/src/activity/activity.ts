@@ -1,4 +1,5 @@
-import type { CallOutcome, Connector, HourCount, Kind, Skill } from "../api";
+import type { InfiniteData } from "@tanstack/react-query";
+import type { ActivityCall, ActivityData, CallOutcome, Connector, HourCount, Keep, Kind, PrunePeriod, Skill } from "../api";
 import type { Locale, MessageKey } from "../i18n";
 
 /** A range that ends now. */
@@ -51,8 +52,14 @@ const setNarrowing = (query: URLSearchParams, narrowing: Narrowing & Scoped) => 
 /** A local day as `YYYY-MM-DD`. */
 export const dayOf = (at: Date) => `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
 
-/** How many days back the console keeps calls, so a custom period starts at most this far back. */
+/** How many days back the console keeps calls by default, so a custom period starts at most this far back. */
 export const KEPT_DAYS = 30;
+
+/** The calls a page asks for at once. */
+export const PAGE_SIZE = 50;
+
+/** How many days back the console keeps calls for a retention; forever and an unknown one reach a year, off one day. */
+export const keptDaysOf = (keep: Keep | undefined): number => (keep === "7d" ? 7 : keep === "90d" ? 90 : keep === "off" ? 1 : keep === "forever" ? 366 : KEPT_DAYS);
 
 /** The local days a custom period can start or end on, newest first: from `to` back to `from`, both included, as `YYYY-MM-DD`. */
 export function daysBetween(from: string, to: string): string[] {
@@ -65,7 +72,7 @@ export function daysBetween(from: string, to: string): string[] {
 }
 
 /** The first local day the console still keeps calls for. */
-export const keptSince = (now: Date) => dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - KEPT_DAYS));
+export const keptSince = (now: Date, days = KEPT_DAYS) => dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days));
 
 /** The custom period the page opens with: the last seven local days, today included. */
 export const lastWeek = (now: Date): ActivityPeriod => ({ range: "custom", from: dayOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)), to: dayOf(now) });
@@ -124,22 +131,43 @@ export function inScope(filter: ActivityFilter, scope: "mine" | "everyone"): Act
 /** Whether anything narrows the page within its period. */
 export const isNarrowed = (filter: ActivityFilter) => Boolean(filter.connector || filter.agent || filter.outcome || filter.search || filter.person);
 
-/** The API query for a filter: a preset ends now; custom days run from the first's local midnight to the end of the last or now, at most the 30 days the console keeps. */
-export function apiQueryOf(filter: ActivityFilter, now: Date): string {
+/** The API query for a page of a filter, after `cursor` when given: a preset ends now; custom days run from the first's local midnight to the end of the last or now, at most the days the console keeps. */
+export function apiQueryOf(filter: ActivityFilter, now: Date, cursor = "", keptDays = KEPT_DAYS): string {
   let from: Date;
   let to = now;
   if (filter.range === "custom") {
     const first = startOf(filter.from) ?? now;
     const last = startOf(filter.to) ?? now;
     to = new Date(Math.min(now.getTime(), new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1).getTime()));
-    from = new Date(Math.min(to.getTime(), Math.max(first.getTime(), to.getTime() - 30 * 24 * HOUR)));
+    from = new Date(Math.min(to.getTime(), Math.max(first.getTime(), to.getTime() - keptDays * 24 * HOUR)));
   } else {
     const hours = RANGES.find((range) => range.value === filter.range)?.hours ?? 24;
     from = new Date(now.getTime() - hours * HOUR);
   }
-  const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() });
+  const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString(), limit: String(PAGE_SIZE) });
+  if (cursor) query.set("cursor", cursor);
   setNarrowing(query, filter);
   return query.toString();
+}
+
+/** What the activity page draws: the counts of the newest page and every call loaded so far, with whether more wait on the server. */
+export type ActivityView = Omit<ActivityData, "calls" | "next_cursor"> & { calls: ActivityCall[]; more: boolean; pages: number };
+
+/** Turns the loaded pages into the view: the first page holds the counts, the calls of every page follow in order. */
+export function activityViewOf(data: InfiniteData<ActivityData, string>): ActivityView {
+  const head = data.pages[0];
+  const last = data.pages[data.pages.length - 1];
+  return {
+    from: head?.from ?? "",
+    to: head?.to ?? "",
+    total: head?.total ?? 0,
+    hours: head?.hours ?? [],
+    connectors: head?.connectors ?? [],
+    agents: head?.agents ?? [],
+    calls: data.pages.flatMap((page) => page.calls),
+    more: Boolean(last?.next_cursor),
+    pages: data.pages.length,
+  };
 }
 
 /** One bar of the chart: its start, whether it is an hour or a local day, and its calls by outcome. */
@@ -228,3 +256,15 @@ export function namedOf(connectors: readonly Connector[], skills: readonly Skill
 
 /** The file a skill load read: the one named, or SKILL.md. */
 export const skillFile = (path: string | undefined) => path || "SKILL.md";
+
+/** What a deletion covers as the person picks it: calls older than some days, or the local days from one to another, both included. */
+export type PruneChoice = { mode: "older"; days: number } | { mode: "days"; from: string; to: string };
+
+/** The period the API deletes for a choice: older than N days, or from the first day's local midnight to the last millisecond of the last day; undefined for a day that does not exist or a first day after the last. */
+export function pruneBodyOf(choice: PruneChoice): PrunePeriod | undefined {
+  if (choice.mode === "older") return { older_than_days: choice.days };
+  const first = startOf(choice.from);
+  const last = startOf(choice.to);
+  if (!first || !last || first > last) return undefined;
+  return { from: first.toISOString(), to: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1, 0, 0, 0, -1).toISOString() };
+}

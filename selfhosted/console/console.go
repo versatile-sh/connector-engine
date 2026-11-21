@@ -48,6 +48,7 @@ type Console struct {
 	inviteFails   minuteWindow
 	signupHits    lockout
 	icons         iconCache
+	iconTries     iconTries
 	connects      connectStates
 	as            authServer
 	surf          surfaces

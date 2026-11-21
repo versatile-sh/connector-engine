@@ -90,6 +90,7 @@ type Origin struct {
 	Local        bool   `json:"local,omitempty"`
 	HeaderSecret bool   `json:"header_secret,omitempty"`
 	Digest       string `json:"digest,omitempty"`
+	Icon         string `json:"icon,omitempty"`
 }
 
 // State is the console's file in its volume: the users and their sessions, the connected agents and the revoked ones, written atomically with mode 0600.
@@ -420,6 +421,19 @@ func (s *State) MarkExported(at time.Time) error {
 func (s *State) PutOrigin(id string, o Origin) error {
 	return s.update(func(d *stateFile) error {
 		put(&d.Origins, id, o)
+		return nil
+	})
+}
+
+// SetOriginIcon records the icon of the skill id, keeping the rest of what its origin says; it does nothing for an id with no origin.
+func (s *State) SetOriginIcon(id, icon string) error {
+	return s.update(func(d *stateFile) error {
+		o, ok := d.Origins[id]
+		if !ok || o.Icon == icon {
+			return errUnchanged
+		}
+		o.Icon = icon
+		d.Origins[id] = o
 		return nil
 	})
 }

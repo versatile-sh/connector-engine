@@ -102,7 +102,6 @@ var routeCapabilities = map[string]Capability{
 	"POST /api/preview":                          CapConnectorsManage,
 	"POST /api/import":                           CapConnectorsManage,
 	"PUT /api/connectors/{id}/functions/{name}":  CapConnectorsManage,
-	"PUT /api/connectors/{id}/read-only":         CapConnectorsManage,
 	"PUT /api/connectors/{id}/items":             CapConnectorsManage,
 	"PUT /api/connectors/{id}/functions":         CapConnectorsManage,
 	"PUT /api/connectors/{id}/new-keys":          CapConnectorsManage,

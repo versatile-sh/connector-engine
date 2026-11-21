@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/core/listing"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -178,7 +179,7 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, keeps the function's class, replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every bound key the item rows of the connector.
+// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature unless a review or its server declares its class, which it keeps, replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every bound key the item rows of the connector.
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
 	results, err := c.SetAccessAll(ctx, conn, []string{name}, a)
 	if err != nil {
@@ -271,6 +272,11 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 			return err
 		}
 	}
+	if !item {
+		if f, err = c.classByNature(ctx, conn, f); err != nil {
+			return err
+		}
+	}
 	rows, err := c.workspaceGrants(ctx, conn)
 	if err != nil {
 		return err
@@ -282,6 +288,28 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 		return nil
 	}
 	return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorOf(name), Mode: a.mode(), DefinitionHash: f.DefinitionHash})
+}
+
+func (c *Console) classByNature(ctx context.Context, conn string, f port.Function) (port.Function, error) {
+	v, err := c.Engine.connector(ctx, conn)
+	if err != nil {
+		return f, err
+	}
+	m, err := c.Engine.manifest(ctx, v)
+	if err != nil {
+		return f, err
+	}
+	if _, source := listing.Base(f, m); source == port.ClassSourceReviewed || source == port.ClassSourceAnnotationRaise {
+		return f, nil
+	}
+	class := port.ClassWrite
+	if Nature(f, m) == port.ClassRead {
+		class = port.ClassRead
+	}
+	if class == f.Class {
+		return f, nil
+	}
+	return c.Engine.setClass(ctx, conn, f.Name, class)
 }
 
 func (c *Console) freeAlias(ctx context.Context, base string) (string, error) {

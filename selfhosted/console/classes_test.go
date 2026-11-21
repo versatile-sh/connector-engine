@@ -2,7 +2,6 @@ package console_test
 
 import (
 	"context"
-	"net/http"
 	"slices"
 	"testing"
 	"time"
@@ -53,35 +52,24 @@ func TestEnablingADeclaredDestructiveFunctionKeepsTheCap(t *testing.T) {
 	r.heldAtOnce("purge")
 }
 
-func TestEnablingAnUnhintedFunctionLeavesItUnclassified(t *testing.T) {
+func TestEnablingAnUnreviewedFunctionClassesItByItsHints(t *testing.T) {
 	r := newRig(t)
-	r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/functions/create", map[string]string{"access": "on"}, nil)
-	if f := r.function("create"); f.Class != port.ClassNone || f.Access != console.AccessOn {
+	for _, name := range []string{"create", "search"} {
+		r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/functions/"+name, map[string]string{"access": "on"}, nil)
+	}
+	if f := r.function("create"); f.Class != port.ClassWrite {
 		t.Fatalf("create after on: %+v", f)
 	}
-	r.heldAtOnce("create")
-}
-
-func TestAReadOnlyHintIsTrustedOnlyByAnExplicitChoice(t *testing.T) {
-	r := newRig(t)
-	if f := r.function("search"); f.Class != port.ClassNone || f.Kind != port.ClassRead || f.Access != console.AccessOn {
-		t.Fatalf("search proposed on: %+v", f)
-	}
-	r.heldAtOnce("search")
-	if status, _ := r.b.send("PUT", "/api/connectors/"+r.conn.ID+"/read-only", map[string]string{"name": "purge"}, nil); status != http.StatusBadRequest {
-		t.Fatalf("a declared destructive function taken as read-only: %d", status)
-	}
-	if status, _ := r.b.send("PUT", "/api/connectors/"+r.conn.ID+"/read-only", map[string]string{"name": "create"}, nil); status != http.StatusBadRequest {
-		t.Fatalf("a function without a read-only hint taken as read-only: %d", status)
-	}
-	r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/read-only", map[string]string{"name": "search"}, nil)
 	if f := r.function("search"); f.Class != port.ClassRead {
-		t.Fatalf("search after the choice: %+v", f)
+		t.Fatalf("search after on: %+v", f)
 	}
-	before := r.up.count("search")
-	ran(t, <-r.call(r.connect("", nil), "search", map[string]any{}), "search")
-	if r.up.count("search") != before+1 {
-		t.Fatal("a trusted read did not run at once")
+	cs := r.connect("", nil)
+	for _, name := range []string{"create", "search"} {
+		before := r.up.count(name)
+		ran(t, <-r.call(cs, name, map[string]any{}), name)
+		if r.up.count(name) != before+1 {
+			t.Fatalf("%s on did not run at once", name)
+		}
 	}
 }
 
@@ -155,7 +143,7 @@ func TestUpgradeRepairRaisesConsoleLoweredClasses(t *testing.T) {
 	}
 }
 
-func TestAReviewedClassIsTheFloorForTheRepairAndTheReadOnlyChoice(t *testing.T) {
+func TestAReviewedClassIsTheFloorForTheRepairAndForOn(t *testing.T) {
 	r := newRig(t)
 	ctx := console.WithActor(context.Background(), "console")
 	var fns struct{ Items []port.Function }
@@ -181,7 +169,8 @@ func TestAReviewedClassIsTheFloorForTheRepairAndTheReadOnlyChoice(t *testing.T) 
 	if f := r.function("search"); f.Kind != port.ClassWrite {
 		t.Fatalf("search reviewed as a change reads %+v", f)
 	}
-	if status, _ := r.b.send("PUT", "/api/connectors/"+r.conn.ID+"/read-only", map[string]string{"name": "search"}, nil); status != http.StatusBadRequest {
-		t.Fatalf("a reviewed function taken as read-only on its hint: %d", status)
+	r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/functions/search", map[string]string{"access": "on"}, nil)
+	if f := r.function("search"); f.Class != port.ClassWrite {
+		t.Fatalf("search reviewed as a change, turned on: %+v", f)
 	}
 }

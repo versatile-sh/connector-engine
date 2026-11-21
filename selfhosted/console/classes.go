@@ -7,38 +7,6 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-// TrustReadOnly classes a function read on the owner's word that its server's read-only hint is true; a reviewed or declared class, or no such hint, is refused.
-func (c *Console) TrustReadOnly(ctx context.Context, conn, name string) error {
-	if err := c.plainConnector(ctx, conn); err != nil {
-		return err
-	}
-	unlock, err := c.lockConnector(ctx, conn)
-	if err != nil {
-		return err
-	}
-	defer unlock()
-	v, err := c.Engine.connector(ctx, conn)
-	if err != nil {
-		return err
-	}
-	m, err := c.Engine.manifest(ctx, v)
-	if err != nil {
-		return err
-	}
-	f, err := c.function(ctx, conn, name)
-	if err != nil {
-		return err
-	}
-	if _, source := listing.Base(f, m); source != port.ClassSourceDefault || Nature(f, m) != port.ClassRead {
-		return invalid("function %s has no unreviewed read-only hint to trust", name)
-	}
-	if f.Class == port.ClassRead {
-		return nil
-	}
-	_, err = c.Engine.setClass(ctx, conn, name, port.ClassRead)
-	return err
-}
-
 // RepairClasses raises, once per console state, every admin class below the class a function's review or server declares, and records each raise in the audit.
 func (c *Console) RepairClasses(ctx context.Context) error {
 	if c.State.ClassesRepaired() {

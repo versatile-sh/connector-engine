@@ -20,7 +20,8 @@ var (
 	propScopes    = []rowScope{{Tenant, "t"}, {Workspace, "w"}, {Agent, "x"}, {Agent, "x2"}, {User, "u"}, {User, "v"}}
 	propSelectors = []string{"*", "class:read", "class:write", "class:destructive", "fn:f", "fn:g", "fn:d"}
 	propModes     = []Mode{Deny, Ask, AskOnce, Allow}
-	propTimes     = []int64{1, 4, 5, 6, 14, 15, 16, 40}
+	propTimes     = []int64{5, 6, 14, 15, 16, 40}
+	rewriteAt     = at(5)
 )
 
 func propWorld() *World {
@@ -48,7 +49,7 @@ func propRow(r *rand.Rand, id string) port.Grant {
 		}
 		return g
 	}
-	g.ExpiresAt = at(pick(r, []int64{0, 0, 5, 15}))
+	g.ExpiresAt = at(pick(r, []int64{0, 0, 3, 5, 15}))
 	if g.Mode == Allow || g.Mode == AskOnce {
 		g.MaxUses = r.IntN(3)
 		if g.MaxUses > 0 {
@@ -96,81 +97,87 @@ func decisions(w *World, rows []port.Grant) []evaluate.Decision {
 	return out
 }
 
+func twinOf(r *rand.Rand, base port.Grant, id string, agent port.AgentID) port.Grant {
+	g := propRow(r, id)
+	g.Tenant, g.ScopeKind, g.ScopeID, g.Connector, g.Listing, g.Selector, g.Agent = base.Tenant, base.ScopeKind, base.ScopeID, base.Connector, base.Listing, base.Selector, agent
+	if base.ScopeKind == Tenant {
+		g.DefinitionHash, g.ExpiresAt, g.MaxUses, g.Uses = "", at(0), 0, 0
+		if g.Mode == Allow || (g.Mode == Inherit && grant.Specificity(g.Selector) != 2) {
+			g.Mode = Deny
+		}
+		return g
+	}
+	if g.Mode == Inherit {
+		g.Mode = Deny
+	}
+	if grant.Specificity(g.Selector) == 2 && g.DefinitionHash == "" {
+		g.DefinitionHash = h1
+	}
+	return g
+}
+
+func conflicted(rows []port.Grant) bool {
+	return slices.ContainsFunc(rows, func(g port.Grant) bool { return g.Reason == grant.ConflictReason })
+}
+
+func sameAnswer(a, b evaluate.Decision) bool {
+	a.Matched, b.Matched = nil, nil
+	return reflect.DeepEqual(a, b)
+}
+
+func compare(t *testing.T, w *World, rows []port.Grant) (exact bool) {
+	t.Helper()
+	after := grant.Canonical(rows, rewriteAt)
+	exact = !conflicted(after)
+	before, i := decisions(w, rows), 0
+	eachTuple(w, after, func(req Request, d evaluate.Decision) {
+		b := before[i]
+		i++
+		switch {
+		case exact && !sameAnswer(b, d):
+			t.Fatalf("%+v changed\nbefore %+v\nafter  %+v\nrows %+v\nrewritten %+v", req, b, d, rows, after)
+		case d.Mode.Rank() > b.Mode.Rank():
+			t.Fatalf("%+v widened from %s to %s\nrows %+v\nrewritten %+v", req, b.Mode, d.Mode, rows, after)
+		}
+	})
+	return exact
+}
+
 func TestNormalizeKeepsEvaluation(t *testing.T) {
 	w := propWorld()
 	r := rand.New(rand.NewPCG(1, 2))
-	checked := 0
+	exact := 0
 	for range 1500 {
-		rows := propState(r)
-		after := grant.Canonical(rows)
-		if len(after) != len(rows) {
-			continue
-		}
-		checked++
-		before, got := decisions(w, rows), decisions(w, after)
-		for i := range before {
-			if !reflect.DeepEqual(before[i], got[i]) {
-				t.Fatalf("rows %+v\nbefore %+v\nafter  %+v", rows, before[i], got[i])
-			}
+		if compare(t, w, propState(r)) {
+			exact++
 		}
 	}
-	if checked < 400 {
-		t.Fatalf("only %d states without a collision", checked)
+	if exact < 1000 {
+		t.Fatalf("only %d states rewritten without a conflict", exact)
 	}
 }
 
 func TestNormalizeCollisionNeverWidens(t *testing.T) {
 	w := propWorld()
 	r := rand.New(rand.NewPCG(3, 4))
-	merged, denied := 0, 0
+	counts := map[bool]int{}
 	for range 1500 {
 		rows := propState(r)
 		base := rows[r.IntN(len(rows))]
 		if base.ScopeKind == Session {
 			continue
 		}
-		twin := propRow(r, "twin")
-		twin.Tenant, twin.ScopeKind, twin.ScopeID, twin.Connector, twin.Listing, twin.Selector = base.Tenant, base.ScopeKind, base.ScopeID, base.Connector, base.Listing, base.Selector
-		twin.Agent = port.AgentID(pick(r, []string{"", "x", "x2", "y"}))
-		if base.ScopeKind == Tenant {
-			twin.DefinitionHash, twin.ExpiresAt, twin.MaxUses, twin.Uses = "", at(0), 0, 0
-			if twin.Mode == Allow || (twin.Mode == Inherit && grant.Specificity(twin.Selector) != 2) {
-				twin.Mode = Deny
-			}
-		} else {
-			if twin.Mode == Inherit {
-				twin.Mode = Deny
-			}
-			if grant.Specificity(twin.Selector) == 2 && twin.DefinitionHash == "" {
-				twin.DefinitionHash = h1
+		agents := []port.AgentID{"", "x", "x2", "y", "z"}
+		r.Shuffle(len(agents), func(i, j int) { agents[i], agents[j] = agents[j], agents[i] })
+		for i := range 1 + r.IntN(3) {
+			twin := twinOf(r, base, "twin"+string(rune('a'+i)), agents[i])
+			if !slices.ContainsFunc(rows, func(g port.Grant) bool { return g.Key() == twin.Key() }) {
+				rows = append(rows, twin)
 			}
 		}
-		if slices.ContainsFunc(rows, func(g port.Grant) bool { return g.Key() == twin.Key() }) {
-			continue
-		}
-		rows = append(rows, twin)
-		after := grant.Canonical(rows)
-		if len(after) == len(rows) {
-			t.Fatalf("no merge: %+v", rows)
-		}
-		merged++
-		for _, g := range after {
-			if g.ID == base.ID || g.ID == twin.ID {
-				if g.Mode == Deny && base.Mode != Deny && twin.Mode != Deny {
-					denied++
-				}
-			}
-		}
-		before := decisions(w, rows)
-		i := 0
-		eachTuple(w, after, func(req Request, d evaluate.Decision) {
-			if d.Mode.Rank() > before[i].Mode.Rank() {
-				t.Fatalf("%+v widened from %s to %s\nrows %+v\nafter %+v", req, before[i].Mode, d.Mode, rows, after)
-			}
-			i++
-		})
+		counts[compare(t, w, rows)]++
 	}
-	if merged < 400 || denied == 0 {
-		t.Fatalf("merged %d states, %d merged to deny", merged, denied)
+	if counts[true] < 300 || counts[false] < 100 {
+		t.Fatalf("%d exact merges, %d merged to deny", counts[true], counts[false])
 	}
 }

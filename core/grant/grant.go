@@ -229,8 +229,11 @@ func Normalize(g port.Grant) port.Grant {
 	return g
 }
 
-// Canonical normalizes rows in order; rows that then share a key become the one that decides every instant, or else one permanent deny.
-func Canonical(rows []port.Grant) []port.Grant {
+// ConflictReason is the reason of the deny that replaces rows which came to share a key and none of which decides every instant.
+const ConflictReason = "rows_conflicted"
+
+// Canonical normalizes rows; of rows that then share a key, those dead at now go and the rest become the one that decides every later instant, or one permanent deny.
+func Canonical(rows []port.Grant, now time.Time) []port.Grant {
 	groups := map[string][]port.Grant{}
 	var keys []string
 	for _, g := range rows {
@@ -243,20 +246,28 @@ func Canonical(rows []port.Grant) []port.Grant {
 	}
 	out := make([]port.Grant, 0, len(keys))
 	for _, k := range keys {
-		out = append(out, merged(groups[k]))
+		out = append(out, merged(groups[k], now))
 	}
 	return out
 }
 
-func merged(rows []port.Grant) port.Grant {
+func merged(rows []port.Grant, now time.Time) port.Grant {
 	slices.SortFunc(rows, func(a, b port.Grant) int { return strings.Compare(string(a.ID), string(b.ID)) })
-	for _, r := range rows {
-		if len(rows) == 1 || decides(r, rows) {
+	live := slices.DeleteFunc(slices.Clone(rows), func(g port.Grant) bool { return !Live(g, now) })
+	switch len(live) {
+	case 0:
+		return rows[0]
+	case 1:
+		return live[0]
+	}
+	for _, r := range live {
+		if decides(r, live) {
 			return r
 		}
 	}
-	g := rows[0]
+	g := live[0]
 	g.Mode, g.ExpiresAt, g.MaxUses, g.Uses, g.Origin = port.ModeDeny, time.Time{}, 0, 0, port.OriginSettings
+	g.CreatedBy, g.CreatedAt, g.Reason = "system", now, ConflictReason
 	return g
 }
 
@@ -275,30 +286,36 @@ func decides(r port.Grant, rows []port.Grant) bool {
 	return true
 }
 
-// Rewrite stores Canonical of the rows tx lists, deleting merged rows before it writes changed ones; each merge leaves an audit row at now.
+// Rewrite stores Canonical of the rows tx lists, deleting merged rows first; each merge is audited with its original rows, and cleared agents with a count.
 func Rewrite(tx port.Tx, now time.Time) error {
 	rows, err := tx.ListGrants(port.GrantFilter{})
-	if err != nil {
+	if err != nil || len(rows) == 0 {
 		return err
 	}
-	out := Canonical(rows)
+	out := Canonical(rows, now)
 	kept, byKey := make(map[port.GrantID]port.Grant, len(out)), make(map[string]port.Grant, len(out))
 	for _, g := range out {
 		kept[g.ID], byKey[g.Key()] = g, g
 	}
-	replaced := map[port.GrantID][]port.GrantID{}
+	group := map[port.GrantID][]port.Grant{}
+	for _, g := range rows {
+		id := byKey[Normalize(g).Key()].ID
+		group[id] = append(group[id], g)
+	}
 	var changed []port.Grant
+	cleared := 0
 	for _, g := range rows {
 		k, ok := kept[g.ID]
 		switch {
 		case !ok:
-			survivor := byKey[Normalize(g).Key()]
-			replaced[survivor.ID] = append(replaced[survivor.ID], g.ID)
 			if err := tx.DeleteGrant(g.ID); err != nil {
 				return err
 			}
 		case !reflect.DeepEqual(k, g):
 			changed = append(changed, k)
+			if len(group[g.ID]) == 1 {
+				cleared++
+			}
 		}
 	}
 	for _, g := range changed {
@@ -307,11 +324,28 @@ func Rewrite(tx port.Tx, now time.Time) error {
 		}
 	}
 	for _, g := range out {
-		if ids := replaced[g.ID]; len(ids) > 0 {
+		if len(group[g.ID]) > 1 {
 			if err := tx.Audit(port.AuditRow{At: now, Tenant: g.Tenant, Actor: "system", Action: "grant.merged", Subject: string(g.ID),
-				Detail: map[string]any{"replaced": ids, "mode": string(g.Mode)}}); err != nil {
+				Detail: map[string]any{"rows": group[g.ID], "kept": g}}); err != nil {
 				return err
 			}
+		}
+	}
+	if cleared == 0 {
+		return nil
+	}
+	return tx.Audit(port.AuditRow{At: now, Tenant: rows[0].Tenant, Actor: "system", Action: "grant.agent_cleared", Subject: "grants", Detail: map[string]any{"count": cleared}})
+}
+
+// RewriteTenants runs Rewrite at now once per tenant, in the unit of work in returns for it.
+func RewriteTenants(tenants []port.TenantID, in func(port.TenantID) (port.Tx, error), now time.Time) error {
+	for _, tenant := range tenants {
+		tx, err := in(tenant)
+		if err != nil {
+			return err
+		}
+		if err := Rewrite(tx, now); err != nil {
+			return err
 		}
 	}
 	return nil

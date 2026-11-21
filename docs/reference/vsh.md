@@ -32,6 +32,7 @@ vsh status [--data DIR]
 vsh login [--user NAME] [--password-stdin] | logout
 vsh connectors [list] | show NAME | import URL|FILE [--mcp] [--local] [--yes] | remove NAME [--yes]
 vsh keys [list] | create NAME [--ttl 720h] | revoke NAME [--yes]
+vsh people [list] | invite owner|admin|member | role USERNAME ROLE | remove USERNAME [--yes]
 vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive]
 vsh access CONNECTOR --key NAME follow|custom
 vsh approvals [list] | approve ID | deny ID
@@ -119,6 +120,17 @@ eyJhbGciOi…
 NAME         EXPIRES           VIA
 claude-code  2026-12-20 20:45  key
 ```
+
+### people
+
+```sh
+vsh people invite member
+vsh people
+vsh people role bob admin
+vsh people remove bob --yes
+```
+
+`invite` prints a link once, on stdout: it works once, for 72 hours, on the console's own address. Only an Owner invites, changes roles or removes people. Removing a person signs them out and stops their keys now.
 
 ### access
 

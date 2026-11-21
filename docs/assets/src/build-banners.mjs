@@ -88,7 +88,7 @@ const hero = () => {
   const body = [
     mark(72, 56, 48 / 1024),
     wordmark(136, 87),
-    text(mono, "source-available  ·  PolyForm Shield", w - 72 - width(mono, "source-available  ·  PolyForm Shield", 14), 86, 14, MUTED),
+    text(mono, "open source  ·  GPL-3.0-or-later", w - 72 - width(mono, "open source  ·  GPL-3.0-or-later", 14), 86, 14, MUTED),
     text(serif, "connector-engine", 68, 214, 112, PAPER),
     runs([[serif, "Every MCP connector, ", 46, PAPER], [italic, "one gateway you control", 46, LIME], [serif, ".", 46, PAPER]], 72, 284),
     text(serif, "You decide what each AI app may run, and see every call it makes.", 72, 334, 34, MUTED),

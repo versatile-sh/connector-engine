@@ -110,6 +110,12 @@ export const setFunctionAccess = mutationOptions({
   onSettled: (_data, error, { connector, name, access }, _onMutate, { client }) => settleAccess(client, connector, [name], access, error !== null),
 });
 
+/** Takes a function's read-only hint as true on the owner's word, so its class becomes read. */
+export const trustReadOnly = mutationOptions({
+  mutationFn: ({ connector, name }: { connector: string; name: string }) => api("PUT", `/api/connectors/${at(connector, "read-only")}`, { name }),
+  onSettled: (_data, _error, _vars, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
+});
+
 /** Sets one item of a connector to off, on or ask, in the cached list at once, by name in the body since names hold `/` and `:`. */
 export const setItemAccess = mutationOptions({
   mutationFn: ({ connector, name, access }: { connector: string; name: string; access: Access }) => api("PUT", `/api/connectors/${at(connector, "items")}`, { name, access }),

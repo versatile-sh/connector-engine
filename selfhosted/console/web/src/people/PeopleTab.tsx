@@ -19,6 +19,7 @@ import { useViewer } from "./useViewer";
 
 const AUDIT: Partial<Record<string, MessageKey>> = {
   "user.created": "audit.user.created",
+  "function.class_raised": "audit.function.classRaised",
   "signup.changed": "audit.signup.changed",
   "invite.created": "audit.invite.created",
   "invite.revoked": "audit.invite.revoked",

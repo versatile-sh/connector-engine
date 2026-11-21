@@ -11,7 +11,7 @@ import (
 	st "github.com/versatile-sh/connector-engine/service/servicetest"
 )
 
-type functionAct struct {
+type adminAct struct {
 	prepare func(w *world)
 	act     func(w *world)
 }
@@ -29,7 +29,7 @@ func projectable(w *world) {
 	w.acceptAll()
 }
 
-var functionActs = map[string]functionAct{
+var functionActs = map[string]adminAct{
 	"AcceptFunction": {act: func(w *world) {
 		st.Ok(w.Svc.AcceptFunction(w.Ctx, w.admin, w.conn.ID, "search", w.hashes["search"], false))
 	}},
@@ -65,20 +65,20 @@ var functionActs = map[string]functionAct{
 	},
 }
 
-func functionAdminOperations() []server.Operation {
+func operationsUnder(match func(server.Operation) bool) []server.Operation {
 	var out []server.Operation
 	for _, o := range server.Operations() {
-		if o.Method != "GET" && strings.HasPrefix(o.Path, "/v1/connectors/{id}/") && (strings.Contains(o.Path, "/functions") || strings.Contains(o.Path, "/instructions")) {
+		if o.Method != "GET" && match(o) {
 			out = append(out, o)
 		}
 	}
 	return out
 }
 
-func TestEveryFunctionAdminActIsAudited(t *testing.T) {
-	ops := functionAdminOperations()
+func requireAudited(t *testing.T, ops []server.Operation, acts map[string]adminAct, subject func(*world) string, published bool) {
+	t.Helper()
 	if len(ops) == 0 {
-		t.Fatal("the operation table lists no function administration")
+		t.Fatal("the operation table lists no such administration")
 	}
 	seen := map[string]bool{}
 	for _, o := range ops {
@@ -87,35 +87,79 @@ func TestEveryFunctionAdminActIsAudited(t *testing.T) {
 		}
 		seen[o.RPC] = true
 		t.Run(o.RPC, func(t *testing.T) {
-			a, ok := functionActs[o.RPC]
+			a, ok := acts[o.RPC]
 			if !ok {
-				t.Fatalf("%s %s administers functions and has no audit expectation", o.Method, o.Path)
+				t.Fatalf("%s %s is administration and has no audit expectation", o.Method, o.Path)
 			}
 			w := newWorld(t, opts{})
 			if a.prepare != nil {
 				a.prepare(w)
 			}
-			var before []port.AuditRow
-			w.Read(tenant, func(tx port.Tx) { before, _ = tx.ListAudit(string(w.conn.ID)) })
-			events := len(w.Events())
+			rows := func() (out []port.AuditRow) {
+				w.Read(tenant, func(tx port.Tx) { out, _ = tx.ListAudit(subject(w)) })
+				return out
+			}
+			before, events := rows(), len(w.Events())
 			a.act(w)
-			var after []port.AuditRow
-			w.Read(tenant, func(tx port.Tx) { after, _ = tx.ListAudit(string(w.conn.ID)) })
+			after := rows()
 			if len(after) <= len(before) {
 				t.Fatalf("%s wrote no audit row", o.RPC)
 			}
 			row := after[len(after)-1]
-			if row.Actor != string(w.admin.Person) || row.Subject != string(w.conn.ID) || row.Tenant != tenant || !catalog.Known(row.Action) {
-				t.Fatalf("%s wrote %+v: want the admin, the connector and a published type", o.RPC, row)
+			if row.Actor != string(w.admin.Person) || row.Subject != subject(w) || row.Tenant != tenant {
+				t.Fatalf("%s wrote %+v: want the admin as actor, the subject and the tenant", o.RPC, row)
 			}
-			if !slices.Contains(w.Types(events), row.Action) {
-				t.Fatalf("%s audited %s without publishing it: %v", o.RPC, row.Action, w.Types(events))
+			if published && (!catalog.Known(row.Action) || !slices.Contains(w.Types(events), row.Action)) {
+				t.Fatalf("%s audited %s without publishing a catalog type: %v", o.RPC, row.Action, w.Types(events))
 			}
 		})
 	}
-	for rpc := range functionActs {
+	for rpc := range acts {
 		if !seen[rpc] {
 			t.Fatalf("expectation for %s matches no operation in the table", rpc)
 		}
 	}
+}
+
+func TestEveryFunctionAdminActIsAudited(t *testing.T) {
+	ops := operationsUnder(func(o server.Operation) bool {
+		return strings.HasPrefix(o.Path, "/v1/connectors/{id}/") && (strings.Contains(o.Path, "/functions") || strings.Contains(o.Path, "/instructions"))
+	})
+	requireAudited(t, ops, functionActs, func(w *world) string { return string(w.conn.ID) }, true)
+}
+
+var roleActs = map[string]adminAct{
+	"PutRole": {act: func(w *world) {
+		st.Ok(w.Svc.PutRole(w.Ctx, w.admin, port.RoleAssignment{Tenant: tenant, Person: "bia", Role: "approver", Scope: "t/t1/w/w1"}))
+	}},
+	"DeleteRole": {
+		prepare: func(w *world) {
+			st.Ok(w.Svc.PutRole(w.Ctx, w.admin, port.RoleAssignment{Tenant: tenant, Person: "bia", Role: "approver", Scope: "t/t1/w/w1"}))
+		},
+		act: func(w *world) {
+			if err := w.Svc.DeleteRole(w.Ctx, w.admin, port.RoleAssignment{Tenant: tenant, Person: "bia", Role: "approver", Scope: "t/t1/w/w1"}); err != nil {
+				w.t.Fatal(err)
+			}
+		},
+	},
+	"PutGroupMember": {act: func(w *world) {
+		st.Ok(w.Svc.PutGroupMember(w.Ctx, w.admin, port.GroupMember{Person: "bia", Group: "ops"}))
+	}},
+	"DeleteGroupMember": {
+		prepare: func(w *world) {
+			st.Ok(w.Svc.PutGroupMember(w.Ctx, w.admin, port.GroupMember{Person: "bia", Group: "ops"}))
+		},
+		act: func(w *world) {
+			if err := w.Svc.DeleteGroupMember(w.Ctx, w.admin, port.GroupMember{Person: "bia", Group: "ops"}); err != nil {
+				w.t.Fatal(err)
+			}
+		},
+	},
+}
+
+func TestEveryRoleAndGroupActIsAudited(t *testing.T) {
+	ops := operationsUnder(func(o server.Operation) bool {
+		return strings.HasPrefix(o.Path, "/v1/roles") || strings.HasPrefix(o.Path, "/v1/groups")
+	})
+	requireAudited(t, ops, roleActs, func(*world) string { return "bia" }, false)
 }

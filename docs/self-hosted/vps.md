@@ -7,9 +7,10 @@ connector-engine runs on any small Linux server you control. Pick the option for
 | Option | For | Reach it through | Exposed to the internet |
 |---|---|---|---|
 | [A. Single user](#option-a-single-user-recommended) (recommended) | you alone | an SSH tunnel | nothing but SSH |
-| [B. Team or headless](#option-b-team-or-headless) | several people, or a product | HTTPS through a reverse proxy | the engine's public listener, behind TLS and OIDC |
+| [B. Small team on the console](#option-b-small-team-on-the-console) | a few people sharing one console | HTTPS through a reverse proxy | the console, behind TLS |
+| [C. Headless](#option-c-headless) | a product, or many users | HTTPS through a reverse proxy | the engine's public listener, behind TLS and OIDC |
 
-**Never publish the person console on a public address.** It is a single-owner app built for `127.0.0.1`: its Host allowlist, session cookie and OAuth redirects assume loopback. A reverse proxy in front of it is not a supported setup. Teams use option B, the headless engine.
+**Never publish the console's port itself.** Keep it on `127.0.0.1` and reach it by SSH tunnel (option A), or put a TLS reverse proxy in front and set `CONSOLE_PUBLIC_URL` to the proxy's address (option B). The console has three roles (Owner, Admin, Member); the Host allowlist, `Secure` cookie and OAuth redirects follow `CONSOLE_PUBLIC_URL`. The first visitor of a new console becomes its Owner, so open it before anyone else can reach it.
 
 ## Option A: single user (recommended)
 
@@ -96,7 +97,18 @@ It asks for a passphrase twice and writes a dated `.cebak` file ([account and ba
 
 To update: export, rerun the installer, then `sudo systemctl restart connector-engine` ([updating](updating.md)).
 
-## Option B: team or headless
+## Option B: small team on the console
+
+The console on the server's loopback, with a TLS reverse proxy (Caddy, nginx) in front. The proxy forwards the original `Host` header and terminates TLS; the console never serves TLS itself.
+
+1. Install as in option A and bind the console to `127.0.0.1` (the default).
+2. Set `CONSOLE_PUBLIC_URL=https://console.example.com` (the address people type; add `:port` only if it is not 443). The Host allowlist, the `Secure` cookie, the OAuth redirects and the invite links all follow it. Requests for any other `Host` get `421`, and a mutation whose `Origin` is not that address gets `403`.
+3. Proxy `console.example.com` to `127.0.0.1:7465`. Do not publish port 7465.
+4. Open the address yourself first: whoever reaches a new console first becomes its Owner. Then invite the others from Account, People ([roles](person.md#roles-and-ownership)).
+
+The console does not read `X-Forwarded-For`, so every proxied client looks like the proxy to its login limit; see [person](person.md#people).
+
+## Option C: headless
 
 The headless engine with Postgres, from the repository's Docker Compose file, behind Caddy for TLS. People and agents sign in with your OIDC provider.
 
@@ -195,7 +207,7 @@ Back up first. `make up` rebuilds the image; the engine applies its migrations a
 
 - [ ] Only SSH (and 80/443 for option B) are open in `ufw status`.
 - [ ] `ss -ltn` shows 7465, 8080 and 8081 on `127.0.0.1` only.
-- [ ] Option B: `https://engine.example.com/readyz` answers 204, and a token from your IdP is accepted.
+- [ ] Option C: `https://engine.example.com/readyz` answers 204, and a token from your IdP is accepted.
 - [ ] A backup was restored once on another machine.
 
 More: [security model](../enterprise/security-model.md), [scaling](../enterprise/scaling.md), [troubleshooting](troubleshooting.md).

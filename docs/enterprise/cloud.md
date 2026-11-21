@@ -6,7 +6,7 @@ The supported ways to run connector-engine are on your own machine or on a serve
 
 > **Community templates, not tested by maintainers.** Nobody on the project runs Render, Railway or Fly.io. The templates are a starting point you verify yourself.
 
-The person console is never offered on a platform: it is a single-owner app that must stay on `127.0.0.1` ([security model](security-model.md#deploying-safely)).
+The person console is not offered on a platform: it keeps local state and a keychain-wrapped key, and runs on your machine or a server behind a TLS proxy ([security model](security-model.md#deploying-safely)).
 
 ## Where the templates are
 

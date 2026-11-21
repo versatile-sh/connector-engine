@@ -28,8 +28,9 @@ go build ./...
 | `CN_EXHAUSTIVE=1 go test ./core/approval ./core/evaluate` | the full model sweeps, which sample by default | about 7 min |
 | `cd selfhosted/console/web && npm ci && npm run lint && npm run typecheck && npm test` | the console web app | under 1 min |
 | `golangci-lint run` | Go linters | about 1 min |
+| `make vlint` | the versatile-sh org Go lint; fails only on findings not in `lint/vlint.baseline` (regenerate with `-write` when you fix old ones) | about 1 min |
 | `make test` | Go tests, web typecheck, layering check, `adapters check` of both profiles | |
-| `make check` | the `person` stack end to end on its own compose project | |
+| `make check` | `go vet`, `make vlint`, then the `person` stack end to end on its own compose project | |
 
 - Postgres tests start a throwaway container and skip without Docker. Set `CN_PG=0` or `CN_DOCKER=0` to skip them on purpose.
 - Integration tests remove only what they created, by exact name.

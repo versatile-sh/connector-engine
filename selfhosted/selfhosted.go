@@ -2,12 +2,14 @@
 package selfhosted
 
 import (
+	"cmp"
 	"context"
 	"embed"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/versatile-sh/connector-engine/app"
 	"github.com/versatile-sh/connector-engine/cli/command"
@@ -19,6 +21,9 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted/secrets/hostkey"
 	"github.com/versatile-sh/connector-engine/store/sqlite"
 )
+
+// PersonUnlockSocket is where the person profile's engine waits for the unlock key; unlock reads CN_UNLOCK_SOCKET first, and --socket overrides both.
+const PersonUnlockSocket = "/run/connector-engine-unlock/unlock.sock"
 
 //go:embed deploy/profiles/person/connector-engine.yaml deploy/profiles/person/adapters.yaml
 var person embed.FS
@@ -34,14 +39,15 @@ func PersonProfile() (engine, adapters []byte) {
 func Register(r *app.Registry) {
 	app.Register(r, app.Stores, app.Adapter{Name: "sqlite", Capabilities: []string{"store.transactional_outbox"},
 		Settings: map[string]adapters.ConfigKind{"path": adapters.ConfigString}}, openSQLite)
-	app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", Capabilities: []string{"secrets.envelope", "secrets.crypto_shredding"}, Check: checkHostkey}, openHostkey)
+	app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", Capabilities: []string{"secrets.envelope", "secrets.crypto_shredding"}, Check: checkHostkey,
+		Settings: map[string]adapters.ConfigKind{"unlockSocket": adapters.ConfigString}, Require: []string{"unlockSocket"}}, openHostkey)
 }
 
 // EngineCommands returns the subcommands the self-hosted engine binary adds: unlock.
 func EngineCommands() map[string]app.Command {
 	return map[string]app.Command{
 		"unlock": func(cfg config.Config, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-			return hostkey.Main(args, cfg.Secrets.UnlockSocket, stdin, stdout, stderr)
+			return hostkey.Main(args, cmp.Or(os.Getenv("CN_UNLOCK_SOCKET"), PersonUnlockSocket), stdin, stdout, stderr)
 		},
 	}
 }
@@ -85,7 +91,7 @@ func openSQLite(ctx context.Context, env app.Env) (port.Store, func(), error) {
 }
 
 func openHostkey(ctx context.Context, env app.Env) (port.SecretStore, func(), error) {
-	hk, err := hostkey.Open(ctx, env.Config.Secrets.Dir, env.Config.Secrets.UnlockSocket, env.Log)
+	hk, err := hostkey.Open(ctx, env.Config.Secrets.Dir, env.Setting("unlockSocket"), env.Log)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -94,9 +100,6 @@ func openHostkey(ctx context.Context, env app.Env) (port.SecretStore, func(), er
 
 func checkHostkey(c config.Config, acknowledged func(string) bool) config.Findings {
 	var fs config.Findings
-	if c.Secrets.UnlockSocket == "" {
-		fs = append(fs, config.Finding{Level: config.LevelError, Where: "secrets.unlockSocket", Message: "the hostkey adapter waits for the unlock key on this socket; it is empty"})
-	}
 	if !acknowledged(config.AckPlaintextRootKey) {
 		fs = append(fs, config.Finding{Level: c.RefusalLevel(), Where: "port secrets",
 			Message: "hostkey keeps a plaintext root key on a host without a keychain and until it is migrated; acknowledge " + config.AckPlaintextRootKey + " to run with it"})

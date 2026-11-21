@@ -59,14 +59,22 @@ func fileViews(files []port.SkillFile) []SkillFileView {
 	return out
 }
 
-func (c *Console) knownAgents() []Agent {
+func (c *Console) allAgents() []Agent {
 	out := c.State.Agents()
 	slices.SortFunc(out, func(a, b Agent) int { return strings.Compare(a.Name, b.Name) })
 	return out
 }
 
-func (c *Console) liveAgents() []Agent {
-	return slices.DeleteFunc(c.knownAgents(), func(a Agent) bool { return !a.ExpiresAt.After(time.Now()) })
+func (c *Console) knownAgents(ctx context.Context) []Agent {
+	return slices.DeleteFunc(c.allAgents(), func(a Agent) bool { return !c.mayOwnKey(ctx, a.Owner) })
+}
+
+func (c *Console) liveAgents(ctx context.Context) []Agent {
+	return live(c.knownAgents(ctx))
+}
+
+func live(list []Agent) []Agent {
+	return slices.DeleteFunc(list, func(a Agent) bool { return !a.ExpiresAt.After(time.Now()) })
 }
 
 func httpsOnly(raw string) string {
@@ -83,7 +91,7 @@ func safeSource(s port.SkillSource) port.SkillSource {
 
 func (c *Console) skillPreview(e skillcatalog.Entry) SkillPreview {
 	keys := []string{}
-	for _, a := range c.liveAgents() {
+	for _, a := range live(c.allAgents()) {
 		keys = append(keys, a.Name)
 	}
 	return SkillPreview{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: httpsOnly(e.Source.URL)},
@@ -188,7 +196,7 @@ func (c *Console) SetSkillAccessAll(ctx context.Context, conn string, names []st
 	} else if !skill || !v.RemovedAt.IsZero() {
 		return nil, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "no skill is installed as " + conn}
 	}
-	return eachKey(c.liveAgents(), names, func(a Agent) error { return c.bindSkill(ctx, conn, a, access) }), nil
+	return eachKey(c.liveAgents(ctx), names, func(a Agent) error { return c.bindSkill(ctx, conn, a, access) }), nil
 }
 
 func noKey(name string) error {
@@ -229,7 +237,7 @@ func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	agents := c.liveAgents()
+	agents := c.liveAgents(ctx)
 	installed := map[string]bool{}
 	var skills []SkillSummary
 	var requires [][]string

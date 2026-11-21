@@ -154,18 +154,18 @@ func (c *Console) logger() *slog.Logger {
 	return c.Log
 }
 
-func (c *Console) surfaceRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/approvals/{id}", c.approvalPage)
-	mux.HandleFunc("POST /api/approvals/{id}/decide", c.decideChoice)
-	mux.HandleFunc("GET /api/notifications", c.authed(c.listNotifications))
-	mux.HandleFunc("POST /api/notifications/channels", c.authed(c.addChannel))
-	mux.HandleFunc("DELETE /api/notifications/channels/{id}", c.authed(c.removeChannel))
-	mux.HandleFunc("POST /api/notifications/channels/{id}/test", c.authed(c.testChannel))
-	mux.HandleFunc("PUT /api/notifications/apps/{name}", c.authed(c.setElicit))
-	mux.HandleFunc("POST /api/notifications/devices", c.authed(c.pairDevice))
-	mux.HandleFunc("PATCH /api/notifications/devices/{id}", c.authed(c.renameDevice))
-	mux.HandleFunc("DELETE /api/notifications/devices/{id}", c.authed(c.revokeDevice))
-	mux.HandleFunc("GET /api/notify/stream", c.notifyStream)
+func (c *Console) surfaceRoutes(rt *router) {
+	rt.handle("GET /api/approvals/{id}", c.approvalPage)
+	rt.handle("POST /api/approvals/{id}/decide", c.decideChoice)
+	rt.handle("GET /api/notifications", c.listNotifications)
+	rt.handle("POST /api/notifications/channels", c.addChannel)
+	rt.handle("DELETE /api/notifications/channels/{id}", c.removeChannel)
+	rt.handle("POST /api/notifications/channels/{id}/test", c.testChannel)
+	rt.handle("PUT /api/notifications/apps/{name}", c.setElicit)
+	rt.handle("POST /api/notifications/devices", c.pairDevice)
+	rt.handle("PATCH /api/notifications/devices/{id}", c.renameDevice)
+	rt.handle("DELETE /api/notifications/devices/{id}", c.revokeDevice)
+	rt.handle("GET /api/notify/stream", c.notifyStream)
 }
 
 func me(r *http.Request) string {

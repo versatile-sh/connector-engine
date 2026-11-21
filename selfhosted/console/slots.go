@@ -130,7 +130,7 @@ func (c *Console) ClaimSlot(ctx context.Context, name, key string) error {
 	if !ok {
 		return noSlot(name)
 	}
-	a, err := agentNamed(c.knownAgents(), key)
+	a, err := agentNamed(c.knownAgents(ctx), key)
 	if err != nil {
 		return err
 	}

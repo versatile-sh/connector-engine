@@ -310,12 +310,12 @@ func (c *Console) inspectSetup(ctx context.Context, raw []byte, probe bool) (Bac
 	return BackupSummary{Kind: "setup", Counts: map[string]int{"connectors": len(s.Connectors), "skills": len(s.Skills)}, Setup: &s}, nil
 }
 
-func (c *Console) checkOptions(o SetupOptions) error {
+func (c *Console) checkOptions(ctx context.Context, o SetupOptions) error {
 	for name, ch := range o.Slots {
 		switch ch.Action {
 		case SlotKeep, SlotDiscard:
 		case SlotApply:
-			if _, err := agentNamed(c.knownAgents(), ch.Key); err != nil {
+			if _, err := agentNamed(c.knownAgents(ctx), ch.Key); err != nil {
 				return err
 			}
 		default:
@@ -331,7 +331,7 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte, opts SetupOptions
 	if err != nil {
 		return SetupResult{}, err
 	}
-	if err := c.checkOptions(opts); err != nil {
+	if err := c.checkOptions(ctx, opts); err != nil {
 		return SetupResult{}, err
 	}
 	if err := c.markInstalled(ctx, &s); err != nil {
@@ -415,7 +415,7 @@ func validChoice(name string, a Access) bool {
 }
 
 func (c *Console) applySlot(ctx context.Context, slot KeySlot, key string) error {
-	a, err := agentNamed(c.knownAgents(), key)
+	a, err := agentNamed(c.knownAgents(ctx), key)
 	if err != nil {
 		return err
 	}

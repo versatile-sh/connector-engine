@@ -122,6 +122,28 @@ The console acts on the engine as engine persons, never as one shared account:
 - Upgrading with your own `connector-engine.yaml`: add the service person's row to `bootstrap.roles`, or the console logs "waiting for the engine" and every page stays empty. The old `owner` row can stay; the console then manages it.
 - Each access key has one owner, the user who made it; its agent tokens and bindings carry that person as `on_behalf_of` and `agent_owner`. Keys from an earlier console belong to the first Owner. A key name another user's key has is refused with "this name is taken".
 
+## Roles and ownership
+
+Each console user has a role: Owner, Admin or Member. Every console route declares one capability, and a role either holds it or gets `403` with `code: forbidden`. A route that declares none is refused for everyone.
+
+| Capability | Owner | Admin | Member |
+|---|---|---|---|
+| `people.manage`, `backup.full`, `activity.delete` | yes | | |
+| `people.read`, `people.reset`, `connectors.manage`, `skills.manage`, `setup.manage`, `activity.settings` | yes | yes | |
+| `keys.any`, `approvals.any`, `activity.any` | yes | yes | |
+| `keys.own`, `approvals.own`, `activity.own`, `notifications.own`, `signin.own`, `account.own` | yes | yes | yes |
+
+- `GET /api/session` returns the signed-in `user` (`person`, `username`, `role`), the capabilities they hold as `can`, and `people`, the number of users.
+- A request naming someone else's access key, approval or activity row answers `404`, as an unknown one does, unless the user holds the matching `*.any` capability. Lists, connector profiles and batches show a Member only their own keys.
+- `GET /api/agents`, `GET /api/approvals` and `GET /api/activity` list the user's own rows, or everyone's with `scope=everyone` for a user with the `*.any` capability. `GET /api/activity` also takes `person=<person id>` with `scope=everyone`. Every row carries `owner: {person, username}`; the username is empty for a removed person.
+- An activity row belongs to the person its agent token acted for when the call was captured. Rows captured before multi-user belong to the first Owner.
+- "Always allow this app" is offered only to a user with `keys.any`, and refused for anyone else on every surface. A decision from a chat channel, a desktop link or an elicitation decides as the key's owner, so a Member's key never gets it there.
+- `keys.any` narrows and revokes anyone's key, but no one mints a token for another person's key: renewing a key whose name another user's key has is refused with "this name is taken".
+- An app that connects through the browser reuses a key only when the consenting user owns it; another user's consent makes their own key with a suffixed name.
+- A permission set applies to an own key with `keys.own`, and to anyone's with `keys.any`; discarding one needs `keys.any`.
+- Every row of `GET /api/approvals` also carries the `choices` open to the viewer, as the single approval view does.
+- A provider sign-in or a header secret needs `connectors.manage` on a `shared` connector; on a `per_person` connector every user signs in as themselves with `signin.own`. Registering an issuer's OAuth client always needs `connectors.manage`.
+
 ## Profile settings
 
 The profile is a pair of files in `selfhosted/deploy/profiles/person/`. What it sets beyond the engine defaults:

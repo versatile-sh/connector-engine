@@ -36,7 +36,7 @@ func TestRedirectIsTheAnswer(t *testing.T) {
 				var hits atomic.Int32
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					hits.Add(1)
-					http.Redirect(w, r, "/v1/elsewhere", status)
+					http.Redirect(w, r, "http://"+r.Host+"/v1/elsewhere", status)
 				}))
 				defer srv.Close()
 				u, _ := url.Parse(srv.URL)

@@ -3,12 +3,13 @@ package remote
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/versatile-sh/connector-engine/credential"
 )
 
 type recorded struct {
@@ -78,10 +79,10 @@ type capture struct {
 func (c *capture) RoundTrip(req *http.Request) (*http.Response, error) {
 	c.sent.Add(1)
 	resp, err := c.capture(req)
-	if err == nil && resp.StatusCode >= 300 && resp.StatusCode < 400 {
-		note := fmt.Sprintf("the upstream answered %d", resp.StatusCode)
-		if loc, perr := resp.Location(); perr == nil {
-			note += " and redirected to " + loc.Host
+	if err == nil {
+		note := ""
+		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+			note = credential.RedirectNote(resp.StatusCode, resp.Header.Get("Location"))
 		}
 		c.moved.Store(note)
 	}

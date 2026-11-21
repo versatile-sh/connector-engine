@@ -52,8 +52,8 @@ func Open(ctx context.Context, o Options) (*Console, func(), error) {
 	box := &sealed.Box{}
 	go unlockBox(ctx, box, o.Unlock, o.Log)
 	eng := &Engine{PublicURL: o.EngineURL, OperatorURL: o.OperatorURL, Operator: o.Operator, Tenant: o.Tenant, Workspace: o.Workspace, ServicePerson: o.ServicePerson}
-	c := &Console{Engine: eng, State: state, Sessions: NewSessions(state), Guard: Guard{Hosts: LoopbackHosts(public)}, Web: web.App(), Secrets: box,
-		MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: o.AgentTTL, Log: o.Log, Activity: activity, Restart: o.Restart, LoopbackHost: o.LoopbackHost,
+	c := &Console{Engine: eng, State: state, Sessions: &Sessions{state: state, Secure: public.Scheme == "https"}, Guard: Guard{Hosts: LoopbackHosts(public)}, Web: web.App(), Secrets: box,
+		PublicURL: public.String(), MCPURL: public.String() + "/mcp", OAuthRedirect: public.String() + "/oauth/callback", MaxAgentTTL: o.AgentTTL, Log: o.Log, Activity: activity, Restart: o.Restart, LoopbackHost: o.LoopbackHost,
 		ManagersGroup: o.ManagersGroup}
 	go c.prepareEngine(ctx)
 	go c.RunNotifications(ctx)

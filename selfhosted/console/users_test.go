@@ -127,19 +127,19 @@ func TestTheLastOwnerCanBeNeitherDemotedNorRemoved(t *testing.T) {
 	if _, err := c.State.CreateFirstOwner("me", userPassword); err != nil {
 		t.Fatal(err)
 	}
-	for name, err := range map[string]error{"demoted": c.State.SetRole("owner", RoleAdmin), "removed": c.State.RemoveUser("owner")} {
+	for name, err := range map[string]error{"demoted": c.State.SetRole("x", "owner", RoleAdmin), "removed": c.State.RemoveUser("x", "owner", nil)} {
 		if !errors.Is(err, ErrLastOwner) {
 			t.Errorf("the last owner %s: %v", name, err)
 		}
 	}
 	addUser(t, c.State, "p-2", "bob", RoleOwner)
-	if err := c.State.SetRole("owner", RoleMember); err != nil {
+	if err := c.State.SetRole("x", "owner", RoleMember); err != nil {
 		t.Fatalf("demoting one of two owners: %v", err)
 	}
-	if err := c.State.RemoveUser("p-2"); !errors.Is(err, ErrLastOwner) {
+	if err := c.State.RemoveUser("x", "p-2", nil); !errors.Is(err, ErrLastOwner) {
 		t.Fatalf("removing the remaining owner: %v", err)
 	}
-	if err := c.State.SetRole("p-2", Role("root")); err == nil {
+	if err := c.State.SetRole("x", "p-2", Role("root")); err == nil {
 		t.Fatal("an unknown role was set")
 	}
 }
@@ -174,7 +174,7 @@ func TestASessionOfARemovedUserIsRefused(t *testing.T) {
 	if code, _ := accountWith(c, bobs); code != http.StatusOK {
 		t.Fatalf("before removal: %d", code)
 	}
-	if err := c.State.RemoveUser("p-2"); err != nil {
+	if err := c.State.RemoveUser("x", "p-2", nil); err != nil {
 		t.Fatal(err)
 	}
 	if code, _ := accountWith(c, bobs); code != http.StatusUnauthorized {

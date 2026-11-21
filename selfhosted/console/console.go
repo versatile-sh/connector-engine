@@ -26,6 +26,7 @@ type Console struct {
 	Sessions      *Sessions
 	Guard         Guard
 	Web           fs.FS
+	PublicURL     string
 	MCPURL        string
 	OAuthRedirect string
 	MaxAgentTTL   time.Duration
@@ -39,10 +40,12 @@ type Console struct {
 	ManagersGroup string
 
 	loginMu       sync.Mutex
+	inviteMu      sync.Mutex
 	restoring     sync.Mutex
 	reconciling   sync.Mutex
 	keying        sync.Mutex
-	passwordFails minuteWindow
+	passwordFails lockout
+	inviteFails   minuteWindow
 	icons         iconCache
 	connects      connectStates
 	as            authServer
@@ -61,6 +64,14 @@ func (c *Console) Handler() http.Handler {
 
 func (c *Console) routes(rt *router) {
 	rt.handle("GET /api/session", c.session)
+	rt.handle("GET /api/people", c.listPeople)
+	rt.handle("POST /api/invites", c.createInvite)
+	rt.handle("DELETE /api/invites/{id}", c.revokeInvite)
+	rt.handle("POST /api/people/{person}/reset", c.createReset)
+	rt.handle("PUT /api/people/{person}/role", c.setRole)
+	rt.handle("DELETE /api/people/{person}", c.removePerson)
+	rt.handle("POST /api/invite/inspect", c.inspectInvite)
+	rt.handle("POST /api/invite/accept", c.acceptInvite)
 	rt.handle("GET /api/ready", c.ready)
 	rt.handle("POST /api/setup", c.setup)
 	rt.handle("POST /api/login", c.login)

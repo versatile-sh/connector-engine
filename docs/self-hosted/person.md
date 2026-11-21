@@ -23,7 +23,7 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 | `make unlock` | deliver the unlock key from the host keychain after a restart |
 | `make notify` | desktop popups for calls waiting for approval |
 | `make export` / `make import FILE=...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
-| `make reset-password` | set a new console password from this machine; `USER=<username>` names whose once there are several users |
+| `make reset-password` | set a new console password from this machine, even for the last Owner; `USER=<username>` names whose once there are several users |
 | `vsh login`, then `vsh connectors`, `vsh access`, `vsh approvals`, … | manage the install from a terminal as a signed-in user, with or without Docker ([vsh](../reference/vsh.md#sign-in-and-manage)) |
 | `make cli ARGS="tools list"` | `vsh` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
 | `make admin ARGS="tenants create t2"` | `vsh admin` against the operator listener with the generated operator token |
@@ -143,6 +143,27 @@ Each console user has a role: Owner, Admin or Member. Every console route declar
 - A permission set applies to an own key with `keys.own`, and to anyone's with `keys.any`; discarding one needs `keys.any`.
 - Every row of `GET /api/approvals` also carries the `choices` open to the viewer, as the single approval view does.
 - A provider sign-in or a header secret needs `connectors.manage` on a `shared` connector; on a `per_person` connector every user signs in as themselves with `signin.own`. Registering an issuer's OAuth client always needs `connectors.manage`.
+
+## People
+
+There is no sign-up screen. After the first run, an Owner adds a person from Account, People, "Invite a person": pick the role and copy the link. The person opens it on the console's own address, picks a username and a password, and is signed in. A link works once, for 72 hours, and dies when its creator is no longer an Owner. At most 20 links wait at a time. The link carries its token after a `#`, so it never reaches a server log, and the console keeps only its SHA-256.
+
+- Set `CONSOLE_PUBLIC_URL` to the address people use, or a link points at `127.0.0.1` and nobody else can open it. When that address is `https`, the session cookie is `Secure`; put TLS in front through a reverse proxy.
+- A forgotten password: an Owner makes a reset link for anyone else, an Admin only for a Member, never for oneself. The person opens it, sets a new password and is signed in; their other sessions end, and their keys, sign-ins and activity stay. A new link for the same person replaces the old one. `make reset-password` stays the way back in for an Owner nobody above can reset.
+- An Owner changes a role or removes a person. Removing signs the person out, stops their keys at once, deletes their provider sign-ins, channels and computers, and keeps their past activity. The last Owner can be neither demoted nor removed, and nobody removes themselves.
+- The People tab also lists the console's audit of these changes. The console keeps the newest 500 entries.
+- Wrong passwords are counted per username (5 a minute) with a ceiling of 30 a minute for the console; a wrong or used link counts 10 a minute for the whole console. A lock always expires.
+
+| Route | Needs | Does |
+|---|---|---|
+| `GET /api/people` | `people.read` | `{people, invites, audit}`; each person has `keys`, `you` and `may_reset` for the viewer; `audit` has at most 50 entries, newest first |
+| `POST /api/invites` `{role}` | `people.manage` | `201 {id, link, expires_at}` |
+| `POST /api/people/{person}/reset` | `people.reset` and the ladder | `201 {id, link, expires_at}` |
+| `DELETE /api/invites/{id}` | `people.reset` | `204`; a join link needs `people.manage`, a reset link its creator or `people.manage` |
+| `POST /api/invite/inspect` `{token}` | none | `200 {purpose, role, invited_by, username, expires_at}` or `410 link_gone`; `429` after 10 wrong links a minute |
+| `POST /api/invite/accept` `{token, username, password}` | none | `201 {csrf}` and the session cookie; `username` is ignored for a reset |
+| `PUT /api/people/{person}/role` `{role}` | `people.manage` | `204`; `409 last_owner` |
+| `DELETE /api/people/{person}` | `people.manage` | `204`; `409 last_owner`, `409 remove_self` |
 
 ## Profile settings
 

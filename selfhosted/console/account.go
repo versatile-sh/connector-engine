@@ -83,7 +83,7 @@ func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 func (c *Console) verify(w http.ResponseWriter, username, password string) (User, bool) {
 	c.loginMu.Lock()
 	now := time.Now()
-	if c.passwordFails.full(now, passwordFailsPerMin) {
+	if c.passwordFails.locked(now, username) {
 		c.loginMu.Unlock()
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
@@ -91,7 +91,7 @@ func (c *Console) verify(w http.ResponseWriter, username, password string) (User
 	}
 	u, ok, err := c.State.CheckLogin(username, password)
 	if !ok && err == nil {
-		c.passwordFails.hit(now)
+		c.passwordFails.fail(now, username)
 		time.Sleep(500 * time.Millisecond)
 	}
 	c.loginMu.Unlock()

@@ -9,6 +9,7 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -51,7 +52,7 @@ type User struct {
 }
 
 // ErrLastOwner refuses a change that would leave the console without an Owner.
-var ErrLastOwner = &statusError{status: http.StatusConflict, err: errors.New("the console keeps at least one owner")}
+var ErrLastOwner = &statusError{status: http.StatusConflict, code: "last_owner", err: errors.New("the console keeps at least one owner")}
 
 const (
 	defaultPerson        = "owner"
@@ -170,6 +171,7 @@ func (s *State) CreateFirstOwner(username, password string) (User, error) {
 			return ErrOwnerExists
 		}
 		put(&d.Users, u.Person, u)
+		record(d, u.Person, "user.created", u.Person, map[string]string{"role": string(RoleOwner), "via": "setup"})
 		return nil
 	})
 	return u, err
@@ -189,6 +191,11 @@ func (s *State) SetPassword(person, password, keep string) error {
 		u.Salt, u.Hash, u.Iterations = c.Salt, c.Hash, c.Iterations
 		d.Users[person] = u
 		maps.DeleteFunc(d.Sessions, func(k string, v StoredSession) bool { return v.Person == person && k != keep })
+		if keep == "" {
+			record(d, "host", "password.reset", person, nil)
+		} else {
+			record(d, person, "password.changed", person, nil)
+		}
 		return nil
 	})
 }
@@ -206,14 +213,15 @@ func (s *State) Rename(person, username string) error {
 		if err := usernameTaken(d, username, person); err != nil {
 			return err
 		}
+		record(d, person, "username.changed", person, map[string]string{"from": u.Username, "to": username})
 		u.Username = username
 		d.Users[person] = u
 		return nil
 	})
 }
 
-// SetRole changes the role of person; demoting the last Owner is refused.
-func (s *State) SetRole(person string, role Role) error {
+// SetRole changes the role of person as actor and records it; demoting the last Owner is refused.
+func (s *State) SetRole(actor, person string, role Role) error {
 	if _, err := ParseRole(string(role)); err != nil {
 		return err
 	}
@@ -225,20 +233,37 @@ func (s *State) SetRole(person string, role Role) error {
 		if u.Role == role {
 			return errUnchanged
 		}
+		record(d, actor, "role.changed", person, map[string]string{"from": string(u.Role), "to": string(role)})
 		u.Role = role
 		d.Users[person] = u
 		return nil
 	})
 }
 
-// RemoveUser deletes person and their sessions; removing the last Owner is refused.
-func (s *State) RemoveUser(person string) error {
+// RemoveUser deletes person as actor with their sessions, channels, devices, refresh grants of the named keys and the links they made or wait for, and records it; removing the last Owner is refused.
+func (s *State) RemoveUser(actor, person string, keys []string) error {
 	return s.update(func(d *stateFile) error {
-		if _, ok := d.Users[person]; !ok {
+		u, ok := d.Users[person]
+		if !ok {
 			return notFound("no user is %s", person)
 		}
 		delete(d.Users, person)
 		maps.DeleteFunc(d.Sessions, func(_ string, v StoredSession) bool { return v.Person == person })
+		maps.DeleteFunc(d.Invites, func(_ string, inv Invite) bool { return inv.CreatedBy == person || inv.Person == person })
+		for id, ch := range d.Notify.Channels {
+			if ch.Owner == person {
+				delete(d.Notify.Channels, id)
+				delete(d.Notify.Sealed, id)
+			}
+		}
+		maps.DeleteFunc(d.Notify.Devices, func(_ string, dev Device) bool { return dev.Owner == person })
+		for _, name := range keys {
+			delete(d.Notify.Elicit, name)
+		}
+		gone := func(_ string, g RefreshGrant) bool { return slices.Contains(keys, g.Agent) }
+		maps.DeleteFunc(d.Refresh, gone)
+		maps.DeleteFunc(d.Spent, gone)
+		record(d, actor, "user.removed", person, map[string]string{"username": u.Username, "role": string(u.Role), "keys": strconv.Itoa(len(keys))})
 		return nil
 	})
 }

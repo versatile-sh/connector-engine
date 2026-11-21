@@ -152,8 +152,8 @@ func TestRefusals(t *testing.T) {
 	if _, err := rt.Call(context.Background(), h, "nope", nil, time.Time{}); !port.IsCode(err, port.CodeNotFound) {
 		t.Fatalf("unknown function: %v", err)
 	}
-	if _, err := rt.Call(context.Background(), h, "jump", nil, time.Time{}); !port.IsCode(err, port.CodeUnavailable) {
-		t.Fatalf("a redirect off the allow-list must fail: %v", err)
+	if res, err := rt.Call(context.Background(), h, "jump", nil, time.Time{}); err != nil || !res.IsError {
+		t.Fatalf("a redirect off the allow-list is the upstream's answer, not followed: %+v %v", res, err)
 	}
 
 	other := declarative.New(credential.Applier{}, nil, egress.Guard{AllowPrivate: true})

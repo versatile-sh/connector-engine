@@ -80,13 +80,13 @@ func (r *Runtime) Content(ctx context.Context, h port.Handle, item string, argum
 		name := strings.TrimPrefix(item, kind)
 		res, err := in.session.GetPrompt(ctx, &mcp.GetPromptParams{Name: name, Arguments: a.Arguments})
 		if err != nil {
-			return port.Result{}, failed(ctx, err, "prompts/get", name)
+			return port.Result{}, in.failed(ctx, err, "prompts/get", name)
 		}
 		content = res.Messages
 	case port.ItemResource:
 		res, err := in.session.ReadResource(ctx, &mcp.ReadResourceParams{URI: a.URI})
 		if err != nil {
-			return port.Result{}, failed(ctx, err, "resources/read", a.URI)
+			return port.Result{}, in.failed(ctx, err, "resources/read", a.URI)
 		}
 		content = res.Contents
 	default:
@@ -116,7 +116,7 @@ func (r *Runtime) Complete(ctx context.Context, h port.Handle, item string, requ
 	}
 	res, err := in.session.Complete(ctx, &p)
 	if err != nil {
-		return nil, failed(ctx, err, "completion/complete", item)
+		return nil, in.failed(ctx, err, "completion/complete", item)
 	}
 	return json.Marshal(res.Completion)
 }

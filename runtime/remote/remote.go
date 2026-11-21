@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
@@ -76,12 +77,12 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	client := mcp.NewClient(&mcp.Implementation{Name: "connector-engine", Version: "0"}, nil)
 	session, err := client.Connect(valueless{ctx}, &mcp.StreamableClientTransport{
 		Endpoint:             m.Remote.URL,
-		HTTPClient:           &http.Client{Transport: capt},
+		HTTPClient:           credential.NewClient(capt),
 		DisableStandaloneSSE: true,
 		MaxRetries:           -1,
 	}, nil)
 	if err != nil {
-		return "", port.Errorf(port.CodeUnavailable, "connect %s: %v", u.Host, err)
+		return "", port.Errorf(port.CodeUnavailable, "connect %s: %v", u.Host, annotate(capt, err))
 	}
 	return r.started.Add(&instance{session: session, capture: capt, pages: map[string]page{}}), nil
 }
@@ -100,7 +101,7 @@ func (r *Runtime) ListFunctions(ctx context.Context, h port.Handle) ([]port.RawD
 	for cursor := ""; ; {
 		res, err := in.session.ListTools(ctx, &mcp.ListToolsParams{Cursor: cursor})
 		if err != nil {
-			return nil, port.ListMeta{}, port.Errorf(port.CodeUnavailable, "tools/list: %v", err)
+			return nil, port.ListMeta{}, port.Errorf(port.CodeUnavailable, "tools/list: %v", annotate(in.capture, err))
 		}
 		pg, ok := in.pageFor(cursor)
 		if !ok {
@@ -149,9 +150,13 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if len(arguments) == 0 {
 		arguments = json.RawMessage(`{}`)
 	}
+	before := in.capture.sent.Load()
 	res, err := in.session.CallTool(ctx, &mcp.CallToolParams{Name: function, Arguments: arguments})
 	if err != nil {
-		return port.Result{}, failed(ctx, err, "tools/call", function)
+		if errors.Is(err, mcp.ErrConnectionClosed) && in.capture.sent.Load() == before {
+			return port.Result{}, port.Errorf(port.CodeUnavailable, "tools/call %s: the connection was already closed and nothing was sent: %v", function, annotate(in.capture, err))
+		}
+		return port.Result{}, in.failed(ctx, err, "tools/call", function)
 	}
 	out := port.Result{IsError: res.IsError}
 	if out.Content, err = json.Marshal(res.Content); err != nil {
@@ -163,6 +168,17 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 		}
 	}
 	return out, nil
+}
+
+func annotate(c *capture, err error) error {
+	if n := c.note(); n != "" {
+		return fmt.Errorf("%w: %s", err, n)
+	}
+	return err
+}
+
+func (in *instance) failed(ctx context.Context, err error, method, name string) error {
+	return failed(ctx, annotate(in.capture, err), method, name)
 }
 
 func failed(ctx context.Context, err error, method, name string) error {

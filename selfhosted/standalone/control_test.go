@@ -3,6 +3,7 @@
 package standalone
 
 import (
+	"github.com/versatile-sh/connector-engine/selfhosted/peer"
 	"net"
 	"os"
 	"path/filepath"
@@ -24,7 +25,7 @@ func TestTheControlSocketServesOnlyItsOwnUser(t *testing.T) {
 	accepted := make(chan int, 1)
 	go func() {
 		if c, err := lis.Accept(); err == nil {
-			uid, _ := peerUID(c)
+			uid, _ := peer.UID(c)
 			accepted <- uid
 			c.Close()
 		}
@@ -38,7 +39,7 @@ func TestTheControlSocketServesOnlyItsOwnUser(t *testing.T) {
 	}
 	c.Close()
 
-	other := peerListener{Listener: lis.(peerListener).Listener, uid: os.Geteuid() + 1}
+	other := peer.Only(lis, os.Geteuid()+1)
 	go func() { _, _ = other.Accept() }()
 	c, err = net.Dial("unix", path)
 	if err != nil {

@@ -1,4 +1,4 @@
-package standalone
+package peer
 
 import (
 	"net"
@@ -8,7 +8,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func peerUID(c net.Conn) (int, error) {
+// UID is the user id of the process on the other end of c, or -1 where the OS reports none.
+func UID(c net.Conn) (int, error) {
 	raw, err := c.(syscall.Conn).SyscallConn()
 	if err != nil {
 		return -1, err
@@ -24,4 +25,5 @@ func peerUID(c net.Conn) (int, error) {
 	return int(cred.Uid), nil
 }
 
-func ownerUID(info os.FileInfo) int { return int(info.Sys().(*syscall.Stat_t).Uid) }
+// OwnerUID is the user id that owns the file, or -1 where the OS reports none.
+func OwnerUID(info os.FileInfo) int { return int(info.Sys().(*syscall.Stat_t).Uid) }

@@ -164,3 +164,18 @@ func TestAProviderSignInCompletesAsThePersonWhoBeganIt(t *testing.T) {
 		t.Fatalf("writes %v", writes)
 	}
 }
+
+func TestAProviderSignInBegunByAnotherUserIsRefusedInThisUsersBrowser(t *testing.T) {
+	c, rec := recordedConsole(t)
+	c.connects.add("s1", "https://issuer.test", "p-bob")
+	req := httptest.NewRequest(http.MethodGet, "/oauth/callback?state=s1&code=c1", nil)
+	req.AddCookie(sessionOf(t, c.State, "owner"))
+	w := httptest.NewRecorder()
+	c.oauthCallback(w, req)
+	if loc := w.Header().Get("Location"); loc != "/?oauth=wrong_user" {
+		t.Fatalf("the callback went to %q", loc)
+	}
+	if _, writes, _ := rec.seen(); len(writes) != 0 {
+		t.Fatalf("writes %v", writes)
+	}
+}

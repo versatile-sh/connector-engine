@@ -129,8 +129,8 @@ func (e *Engine) setClass(ctx context.Context, conn, function string, class port
 	return f, err
 }
 
-func (e *Engine) bind(ctx context.Context, conn, agent, owner string) error {
-	return e.Call(ctx, http.MethodPut, connectorPath(conn, "/bindings/", esc(agent)), map[string]any{"credential_policy": port.CredentialShared, "ask_requester": true, "agent_owner": owner}, nil)
+func (e *Engine) bind(ctx context.Context, conn, agent, owner string, r bindRule) error {
+	return e.Call(ctx, http.MethodPut, connectorPath(conn, "/bindings/", esc(agent)), map[string]any{"credential_policy": r.policy, "ask_requester": true, "approvers": r.approvers, "agent_owner": owner}, nil)
 }
 
 func (e *Engine) unbind(ctx context.Context, conn, agent string) error {

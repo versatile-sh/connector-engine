@@ -36,7 +36,7 @@ type Setup struct {
 	Slots         []SlotView       `yaml:"-" json:"slots,omitempty"`
 }
 
-// SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off and each access key's profile there, and in a review whether it is installed and the proposal of each choice this console would lower.
+// SetupConnector is one connector of a setup: its source, MCP address or listing address, the choice of each function and item, whether new keys start off, whose credential its calls use (shared when empty) and each access key's profile there, and in a review whether it is installed and the proposal of each choice this console would lower.
 type SetupConnector struct {
 	Name         string            `yaml:"name" json:"name"`
 	MCP          string            `yaml:"mcp,omitempty" json:"mcp,omitempty"`
@@ -47,6 +47,7 @@ type SetupConnector struct {
 	Functions    map[string]Access `yaml:"functions,omitempty" json:"functions"`
 	Items        map[string]Access `yaml:"items,omitempty" json:"items"`
 	NewKeysOff   bool              `yaml:"newKeysOff,omitempty" json:"new_keys_off,omitempty"`
+	Credentials  CredentialMode    `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 	Profiles     []Profile         `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	Exists       bool              `yaml:"-" json:"exists"`
 	Above        map[string]Access `yaml:"-" json:"above,omitempty"`
@@ -153,6 +154,9 @@ func (c *Console) ExportSetup(ctx context.Context) ([]byte, string, error) {
 	for _, cs := range connectors {
 		o, _ := c.State.OriginOf(cs.ID)
 		sc := SetupConnector{Name: cs.Alias, Transport: cs.Transport, Local: o.Local, HeaderSecret: o.HeaderSecret, Functions: map[string]Access{}, Items: map[string]Access{}, NewKeysOff: cs.NewKeysOff}
+		if cs.Mode == CredentialPerPerson {
+			sc.Credentials = cs.Mode
+		}
 		for _, p := range cs.Profiles {
 			sc.Profiles = append(sc.Profiles, Profile{Agent: names[p.Agent], Mode: p.Mode, Overrides: p.Overrides})
 		}
@@ -214,6 +218,9 @@ func parseSetup(raw []byte) (Setup, error) {
 	for _, sc := range s.Connectors {
 		if (sc.MCP == "") == (sc.Listing == "") {
 			return Setup{}, invalid("connector %s gives exactly one of mcp or listing", sc.Name)
+		}
+		if sc.Credentials != "" && !sc.Credentials.Valid() {
+			return Setup{}, invalid("connector %s: credentials is shared or per_person", sc.Name)
 		}
 		for name, a := range mergeChoices(sc) {
 			if !validChoice(name, a) {
@@ -355,6 +362,12 @@ func (c *Console) ImportSetup(ctx context.Context, raw []byte, opts SetupOptions
 		if err := c.State.SetNewKeysOff(id, sc.NewKeysOff); err != nil {
 			res.Failed[sc.Name] = "installed without its new-key default: " + err.Error()
 			continue
+		}
+		if sc.Credentials == CredentialPerPerson {
+			if err := c.SetCredentialMode(ctx, id, sc.Credentials); err != nil {
+				res.Failed[sc.Name] = "installed with the credential mode its listing starts with: " + err.Error()
+				continue
+			}
 		}
 		res.Added = append(res.Added, sc.Name)
 		for _, p := range sc.Profiles {

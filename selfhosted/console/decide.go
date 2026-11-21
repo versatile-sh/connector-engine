@@ -48,6 +48,7 @@ type ApprovalView struct {
 	AlwaysError    string           `json:"always_error,omitempty"`
 	approval       port.Approval
 	known          bool
+	offered        []surface.Choice
 }
 
 func (c *Console) connectorRef(ctx context.Context, conn port.ConnectorID) (ConnectorRef, port.Manifest, error) {
@@ -99,7 +100,7 @@ func (c *Console) present(ctx context.Context, a port.Approval) (presented, erro
 	return pr, nil
 }
 
-// Approval reads one approval with its connector, its function's nature and the choices still open.
+// Approval reads one approval with its connector, its function's nature and the choices still open to the context's actor: deciding when the call names them an approver, and cancelling someone else's call for an Owner or Admin.
 func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error) {
 	d, err := c.Engine.approval(ctx, id)
 	if err != nil {
@@ -128,20 +129,28 @@ func (c *Console) Approval(ctx context.Context, id string) (ApprovalView, error)
 		v.Connector.Title = "Skill"
 	}
 	v.FunctionTitle = pr.title
-	if a.State == port.ApprovalPending {
-		v.Choices = append(v.Choices, surface.ChoiceOnce)
-		if a.Mode == port.ModeAskOnce {
-			v.Choices, v.SessionUntil = append(v.Choices, surface.ChoiceSession), d.SessionUntil
-		}
-		if v.known {
-			v.Choices = append(v.Choices, surface.ChoiceAlways)
-		}
-		v.Choices = append(v.Choices, surface.ChoiceDeny)
+	if a.State != port.ApprovalPending {
+		return v, nil
+	}
+	v.offered = append(v.offered, surface.ChoiceOnce)
+	if a.Mode == port.ModeAskOnce {
+		v.offered, v.SessionUntil = append(v.offered, surface.ChoiceSession), d.SessionUntil
+	}
+	if v.known {
+		v.offered = append(v.offered, surface.ChoiceAlways)
+	}
+	v.offered = append(v.offered, surface.ChoiceDeny)
+	viewer := actorOf(ctx)
+	if viewer == "" || c.mayDecide(a, viewer) {
+		v.Choices = append(v.Choices, v.offered...)
+	}
+	if viewer != "" && viewer != string(a.OnBehalfOf) && c.seesEveryApproval(viewer) {
+		v.Choices = append(v.Choices, surface.ChoiceCancel)
 	}
 	return v, nil
 }
 
-// DecideChoice turns an answer into the engine's decision and reports whether another decision won the race.
+// DecideChoice turns an answer into the engine's decision, which refuses an actor the call does not name as an approver, and reports whether another decision won the race.
 func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Choice, channel, note string) (ApprovalView, bool, error) {
 	v, err := c.Approval(ctx, id)
 	if err != nil {
@@ -155,7 +164,7 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	switch {
 	case decision == "":
 		return v, false, invalid("the choice is once, session, always or deny")
-	case !slices.Contains(v.Choices, choice):
+	case !slices.Contains(v.offered, choice):
 		return v, false, invalid("%s is not offered for this call", choice)
 	}
 	out, err := c.Engine.decide(ctx, id, map[string]any{"decision": decision, "channel": channel, "note": note})

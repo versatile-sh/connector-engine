@@ -41,6 +41,14 @@ export const es: Record<MessageKey, string> = {
   "shell.keysPlaintext": "Tus secretos guardados están protegidos por una clave de cifrado guardada en un archivo de texto plano en este equipo. Ejecuta make keychain-migrate para llevarla al llavero del sistema.",
   "shell.keysLocked": "Tus secretos guardados están bloqueados. Ejecuta make unlock en este equipo para abrirlos con la clave del llavero del sistema.",
 
+  "nav.group.gateway": "Gateway",
+  "nav.group.settings": "Ajustes",
+  "shell.collapse": "Contraer la barra lateral",
+  "shell.expand": "Expandir la barra lateral",
+  "shell.openMenu": "Abrir el menú",
+  "shell.closeMenu": "Cerrar el menú",
+  "shell.userMenu": "{name}, menú de la cuenta",
+
   "oauth.connected": "La cuenta está conectada.",
   "oauth.refused": "El proveedor rechazó la conexión.",
   "oauth.unknown_state": "Ese enlace de conexión caducó; empieza de nuevo.",

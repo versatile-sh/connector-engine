@@ -14,6 +14,12 @@ const PATHS = {
   activity: "M3 12h4l2.5-6.5 5 13L17 12h4",
   expand: "M14 4.5h5.5V10M19.5 4.5l-6 6M10 19.5H4.5V14M4.5 19.5l6-6",
   chevron: "M6.5 9.5l5.5 5.5 5.5-5.5",
+  back: "M14.5 6.5L9 12l5.5 5.5",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  plug: "M9 3.5V8M15 3.5V8M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0zM12 17v3.5",
+  spark: "M10.5 4l1.7 4.8L17 10.5l-4.8 1.7L10.5 17l-1.7-4.8L4 10.5l4.8-1.7zM18 15v5M15.5 17.5h5",
+  bell: "M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 2H5zM10 21h4",
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0",
 } as const;
 
 /** The name of one icon of the console's set. */

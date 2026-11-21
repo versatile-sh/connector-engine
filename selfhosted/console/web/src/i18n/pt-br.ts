@@ -41,6 +41,14 @@ export const ptBR: Record<MessageKey, string> = {
   "shell.keysPlaintext": "Seus segredos salvos são protegidos por uma chave de criptografia guardada em um arquivo de texto puro neste computador. Rode make keychain-migrate para levá-la ao chaveiro do sistema.",
   "shell.keysLocked": "Seus segredos salvos estão trancados. Rode make unlock neste computador para abri-los com a chave do chaveiro do sistema.",
 
+  "nav.group.gateway": "Gateway",
+  "nav.group.settings": "Configurações",
+  "shell.collapse": "Recolher a barra lateral",
+  "shell.expand": "Expandir a barra lateral",
+  "shell.openMenu": "Abrir o menu",
+  "shell.closeMenu": "Fechar o menu",
+  "shell.userMenu": "{name}, menu da conta",
+
   "oauth.connected": "A conta está conectada.",
   "oauth.refused": "O provedor recusou a conexão.",
   "oauth.unknown_state": "Esse link de conexão expirou; comece de novo.",

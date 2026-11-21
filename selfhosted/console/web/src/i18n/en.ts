@@ -39,6 +39,14 @@ export const en = {
   "shell.keysPlaintext": "Your saved secrets are protected by an encryption key kept in a plaintext file on this computer. Run make keychain-migrate to move it into your system keychain.",
   "shell.keysLocked": "Your saved secrets are locked. Run make unlock on this computer to open them with the key in your system keychain.",
 
+  "nav.group.gateway": "Gateway",
+  "nav.group.settings": "Settings",
+  "shell.collapse": "Collapse the sidebar",
+  "shell.expand": "Expand the sidebar",
+  "shell.openMenu": "Open the menu",
+  "shell.closeMenu": "Close the menu",
+  "shell.userMenu": "{name}, account menu",
+
   "oauth.connected": "The account is connected.",
   "oauth.refused": "The provider refused the connection.",
   "oauth.unknown_state": "That connection link expired; start it again.",

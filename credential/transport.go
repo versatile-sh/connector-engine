@@ -43,6 +43,13 @@ type Transport struct {
 	AllowHosts []string
 }
 
+// NewClient returns an HTTP client over rt that hands a 3xx answer back as the answer instead of following it.
+func NewClient(rt http.RoundTripper) *http.Client {
+	return &http.Client{Transport: rt, CheckRedirect: noRedirect}
+}
+
+func noRedirect(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+
 // HostAllowed reports whether host, with or without a port, is listed in allow as host or host:port.
 func HostAllowed(allow []string, host, hostname string) bool {
 	return slices.Contains(allow, host) || slices.Contains(allow, hostname)

@@ -45,7 +45,7 @@ func (b *Broker) client() *http.Client {
 		if b.HTTP != nil {
 			c = new(*b.HTTP)
 		}
-		c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+		c.CheckRedirect = noRedirect
 		b.http = c
 	})
 	return b.http

@@ -43,6 +43,18 @@ func TestApprovalDeniedThenBrake(t *testing.T) {
 	want(t, w.call(x, "s__search", `{"q":"5"}`).Status, service.OutcomePending, "clearPause lifts it")
 }
 
+func TestAnAgentTokenCannotDecide(t *testing.T) {
+	w, x := askWorld(t)
+	held := w.call(x, "s__search", `{}`)
+	want(t, held.Status, service.OutcomePending, "held")
+	for _, d := range []port.Decision{port.DecisionApprove, port.DecisionDeny} {
+		_, err := w.Svc.DecideApproval(w.Ctx, x, held.Approval.ID, d, "", "test")
+		want(t, port.IsCode(err, port.CodeAgentPrincipalRefused), true, "the agent that asked decides nothing: "+string(d))
+	}
+	want(t, st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, held.Approval.ID)).Status, service.OutcomePending, "still pending")
+	want(t, w.Runtime.CallsTo("search"), 0, "nothing was forwarded")
+}
+
 func TestApprovalExpires(t *testing.T) {
 	w, x := askWorld(t)
 	held := w.call(x, "s__search", `{}`)

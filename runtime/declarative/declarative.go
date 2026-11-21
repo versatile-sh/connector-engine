@@ -72,7 +72,7 @@ func (r *Runtime) Start(_ context.Context, _ port.Connector, m port.Manifest, se
 	}
 	in := &instance{
 		base:   strings.TrimRight(m.REST.BaseURL, "/"),
-		client: &http.Client{Transport: credential.Transport{Base: transport, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}},
+		client: credential.NewClient(credential.Transport{Base: transport, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}),
 		order:  m.REST.Functions,
 		byName: map[string]port.RESTFunction{},
 	}
@@ -137,6 +137,9 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse+1))
 	if err != nil || len(body) > maxResponse {
 		return port.Result{}, port.Errorf(port.CodeUnavailable, "%s %s: the response is unreadable or over %d bytes", f.Method, f.Path, maxResponse)
+	}
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		body = []byte(credential.RedirectNote(resp.StatusCode, resp.Header.Get("Location")))
 	}
 	return result(resp.StatusCode, body), nil
 }

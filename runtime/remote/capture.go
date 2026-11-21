@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
+
+	"github.com/versatile-sh/connector-engine/credential"
 )
 
 type recorded struct {
@@ -66,12 +69,32 @@ func (t tee) Read(p []byte) (int, error) {
 }
 
 type capture struct {
-	next http.RoundTripper
-	mu   sync.Mutex
-	list []*recorded
+	next  http.RoundTripper
+	mu    sync.Mutex
+	list  []*recorded
+	sent  atomic.Int64
+	moved atomic.Value
 }
 
 func (c *capture) RoundTrip(req *http.Request) (*http.Response, error) {
+	c.sent.Add(1)
+	resp, err := c.capture(req)
+	if err == nil {
+		note := ""
+		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+			note = credential.RedirectNote(resp.StatusCode, resp.Header.Get("Location"))
+		}
+		c.moved.Store(note)
+	}
+	return resp, err
+}
+
+func (c *capture) note() string {
+	note, _ := c.moved.Load().(string)
+	return note
+}
+
+func (c *capture) capture(req *http.Request) (*http.Response, error) {
 	if req.Method != http.MethodPost || req.Body == nil {
 		return c.next.RoundTrip(req)
 	}

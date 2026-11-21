@@ -43,6 +43,15 @@ func TestTheSummaryHoldsTheLastDayAgainstTheDayBeforeAndTheWeekByConnectorAndKey
 			t.Errorf("the day before: %+v", s.PreviousDay)
 		}
 	})
+	t.Run("breaks the last 24 hours into hours that add up to the day's total", func(t *testing.T) {
+		sum := 0
+		for _, h := range s.DayHours {
+			sum += h.OK + h.Error + h.Denied + h.Pending + h.Running
+		}
+		if sum != s.Day.Total || len(s.DayHours) < 24 || len(s.DayHours) > 25 {
+			t.Errorf("the day's hours add up to %d over %d hours, the day counts %d", sum, len(s.DayHours), s.Day.Total)
+		}
+	})
 	t.Run("counts the week and its hours", func(t *testing.T) {
 		sum := 0
 		for _, h := range s.Hours {
@@ -98,6 +107,9 @@ func TestTheSummaryOfAQuietInstallIsEmptyListsNotNulls(t *testing.T) {
 		if list, ok := raw[name].([]any); !ok || len(list) != 0 {
 			t.Errorf("%s is %v", name, raw[name])
 		}
+	}
+	if list, ok := raw["day_hours"].([]any); !ok || len(list) < 24 {
+		t.Errorf("day_hours is %v", raw["day_hours"])
 	}
 	if raw["total"] != float64(0) {
 		t.Errorf("total %v", raw["total"])

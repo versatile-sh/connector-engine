@@ -27,12 +27,13 @@ type KeyCount struct {
 	Failed int    `json:"failed"`
 }
 
-// ActivitySummary is what GET /api/activity/summary answers: the last 24 hours against the 24 before them, and over the last seven days the calls by hour, by connector and by access key plus the newest ones.
+// ActivitySummary is what GET /api/activity/summary answers: the last 24 hours, by hour, against the 24 before them, and over the last seven days the calls by hour, by connector and by access key plus the newest ones.
 type ActivitySummary struct {
 	At          time.Time        `json:"at"`
 	Total       int              `json:"total"`
 	Day         WindowCount      `json:"day"`
 	PreviousDay WindowCount      `json:"previous_day"`
+	DayHours    []HourCount      `json:"day_hours"`
 	Hours       []HourCount      `json:"hours"`
 	Connectors  []ConnectorCount `json:"connectors"`
 	Keys        []KeyCount       `json:"keys"`
@@ -48,9 +49,14 @@ func (w *WindowCount) add(o CallOutcome) {
 
 func summaryOf(rows []joined, from, now time.Time) ActivitySummary {
 	first := from.Truncate(time.Hour)
-	s := ActivitySummary{At: now, Hours: []HourCount{}, Connectors: []ConnectorCount{}, Keys: []KeyCount{}, Recent: []ActivityCall{}}
+	dayFrom := now.Add(-day)
+	dayFirst := dayFrom.Truncate(time.Hour)
+	s := ActivitySummary{At: now, DayHours: []HourCount{}, Hours: []HourCount{}, Connectors: []ConnectorCount{}, Keys: []KeyCount{}, Recent: []ActivityCall{}}
 	for at := first; !at.After(now); at = at.Add(time.Hour) {
 		s.Hours = append(s.Hours, HourCount{Start: at})
+	}
+	for at := dayFirst; !at.After(now); at = at.Add(time.Hour) {
+		s.DayHours = append(s.DayHours, HourCount{Start: at})
 	}
 	byConn := map[string]*ConnectorCount{}
 	byKey := map[string]*KeyCount{}
@@ -64,8 +70,11 @@ func summaryOf(rows []joined, from, now time.Time) ActivitySummary {
 			s.Hours[i].add(r.Outcome)
 		}
 		switch {
-		case !r.At.Before(now.Add(-day)):
+		case !r.At.Before(dayFrom):
 			s.Day.add(r.Outcome)
+			if i := int(r.At.Sub(dayFirst) / time.Hour); i >= 0 && i < len(s.DayHours) {
+				s.DayHours[i].add(r.Outcome)
+			}
 		case !r.At.Before(now.Add(-2 * day)):
 			s.PreviousDay.add(r.Outcome)
 		}

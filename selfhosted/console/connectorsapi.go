@@ -278,7 +278,9 @@ func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	qv := r.URL.Query()
 	state := qv.Get("state")
 	pend, ok := c.connects.take(state)
-	back := func(result string) { http.Redirect(w, r, "/connectors?oauth="+url.QueryEscape(result), http.StatusSeeOther) }
+	back := func(result string) {
+		http.Redirect(w, r, "/connectors?oauth="+url.QueryEscape(result), http.StatusSeeOther)
+	}
 	switch {
 	case !ok:
 		back("unknown_state")

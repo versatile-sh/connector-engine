@@ -375,3 +375,4 @@ func TestTheSessionCookieIsSecureOnlyForAnHTTPSConsole(t *testing.T) {
 		t.Error("an https console's cookie is not Secure")
 	}
 }
+

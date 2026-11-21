@@ -43,18 +43,29 @@ func leaf(name, args, summary string, extra func(fs *flag.FlagSet), run func(ctx
 		return func(ctx context.Context, x *command.Exec) error {
 			e := &Env{X: x, Client: &Client{Base: Locate(ctx, *base, x.Getenv)}, Store: NewStore(x.Getenv), JSON: *asJSON}
 			if !o.anonymous {
-				s, err := e.Store.Load(ctx, e.Client.Base)
-				if errors.Is(err, errNoSession) {
-					return command.Fail(command.ExitAuth, "run 'vsh login'", "not signed in to %s", e.Client.Base)
-				}
+				c, err := Open(ctx, *base, x.Getenv)
 				if err != nil {
 					return err
 				}
-				e.Client.Session = s
+				e.Client = c
 			}
 			return run(ctx, e)
 		}
 	}}
+}
+
+// Open returns a client signed in to the console that Locate finds, or an error that says to run vsh login.
+func Open(ctx context.Context, base string, getenv func(string) string) (*Client, error) {
+	c := &Client{Base: Locate(ctx, base, getenv)}
+	s, err := NewStore(getenv).Load(ctx, c.Base)
+	if errors.Is(err, errNoSession) {
+		return nil, command.Fail(command.ExitAuth, "run 'vsh login'", "not signed in to %s", c.Base)
+	}
+	if err != nil {
+		return nil, err
+	}
+	c.Session = s
+	return c, nil
 }
 
 func (e *Env) print(v any, human func(w io.Writer)) error {

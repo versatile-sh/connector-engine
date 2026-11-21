@@ -68,9 +68,9 @@ export function ConnectorsPage() {
           ))}
         </ul>
       ) : empty ? (
-        <EmptyState title={t("connectors.empty.title")} body={manage ? t("connectors.empty.body") : t("connectors.empty.byAdmins")}>
+        <EmptyState icon="plug" title={t("connectors.empty.title")} body={manage ? t("connectors.empty.body") : t("connectors.empty.byAdmins")}>
           {manage ? (
-            <div className="flex max-w-2xl flex-col gap-5">
+            <div className="flex w-full flex-col gap-5 text-left">
               <HubCard />
               <PasteBox onPaste={open} />
             </div>

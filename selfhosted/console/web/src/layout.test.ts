@@ -39,7 +39,7 @@ describe("the pages' layout", () => {
       });
 
       test("opens with the header and its one h1", () => {
-        assert.match(html, /^<section[^>]*><header class="mb-2"><div class="flex flex-wrap items-baseline gap-x-3 gap-y-4"><h1 id="page-title"/);
+        assert.match(html, /^<section[^>]*><header class="mb-2 text-center"><div class="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-2"><h1 id="page-title"/);
         assert.equal(html.split("<h1").length - 1, 1);
       });
 
@@ -54,9 +54,14 @@ describe("ConnectorsPage", () => {
   describe("with connectors installed", () => {
     const html = draw(createElement(ConnectorsPage), 2);
 
-    test("puts the count and the Import action on the title's own line", () => {
+    test("centres the title with its count chip right after it", () => {
       const head = between(html, "<header", "</header>");
-      assert.match(head, /<\/h1><span class="rounded-full bg-paper\/10[^"]*">2<\/span><div class="flex flex-wrap items-center gap-2 sm:ml-auto"><button[^>]*>.*Import<\/button><\/div>/);
+      assert.match(head, /<\/h1><span class="rounded-full bg-paper\/10[^"]*">2<\/span><\/div>/);
+    });
+
+    test("centres the Import action under the lead", () => {
+      const head = between(html, "<header", "</header>");
+      assert.match(head, /<div class="[^"]*mx-auto mt-4">[^<]*<\/div><div class="mt-6 flex flex-wrap items-center justify-center gap-2"><button[^>]*>.*Import<\/button><\/div>/);
     });
 
     test("fills the width with 17rem-or-wider columns", () => {
@@ -77,7 +82,7 @@ describe("ConnectorsPage", () => {
 
     test("puts the filter in a toolbar row right under the header and over the grid", () => {
       const rest = html.slice(html.indexOf("</header>"));
-      assert.match(rest, /^<\/header><div class="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap"><span[^>]*><svg.*?<input type="search"[^>]*><\/span><\/div><ul class="grid grid-cols-/);
+      assert.match(rest, /^<\/header><div class="flex min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap"><span[^>]*><svg.*?<input type="search"[^>]*><\/span><\/div><ul class="grid grid-cols-/);
     });
 
     test("lets the filter take the free width of its row, at most 24rem", () => {
@@ -102,6 +107,7 @@ describe("ApprovalsPage", () => {
     test("draws it once when the list failed to load", () => {
       const html = renderMarkup(createElement(ApprovalsPage), { data: team([]), failed: [["approvals"]] });
       assert.match(html, /The console is down\./);
+      assert.doesNotMatch(html, /Nothing is <span/);
       assert.equal(scopes(html), 1);
     });
   });

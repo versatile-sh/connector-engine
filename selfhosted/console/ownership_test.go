@@ -199,6 +199,37 @@ func TestAMemberSeesAndActsOnOnlyTheirOwnKeysApprovalsAndActivity(t *testing.T) 
 		}
 	}
 
+	t.Run("recent decisions are the viewer's own unless a manager asks for everyone", func(t *testing.T) {
+		decisions := func(who profiled, query string) []console.DecisionRow {
+			var out struct{ Decisions []console.DecisionRow }
+			who.b.ok("GET", "/api/approvals/recent"+query, nil, &out)
+			return out.Decisions
+		}
+		ids := func(rows []console.DecisionRow) []string {
+			out := []string{}
+			for _, row := range rows {
+				out = append(out, row.ID)
+			}
+			slices.Sort(out)
+			return out
+		}
+		if got := decisions(bob, ""); !slices.Equal(ids(got), []string{mine}) || got[0].Owner.Person != "p-bob" || got[0].State == "pending" {
+			t.Errorf("bob's decisions %+v", got)
+		}
+		if got := decisions(bob, "?scope=everyone"); !slices.Equal(ids(got), []string{mine}) {
+			t.Errorf("bob asking for everyone gets %+v", got)
+		}
+		if got := decisions(p, ""); !slices.Equal(ids(got), []string{theirs}) {
+			t.Errorf("the owner's decisions %+v", got)
+		}
+		both := []string{mine, theirs}
+		slices.Sort(both)
+		if got := decisions(p, "?scope=everyone"); !slices.Equal(ids(got), both) {
+			t.Errorf("everyone's decisions %+v", got)
+		}
+		p.refusedAs(t, http.StatusBadRequest, "GET", "/api/approvals/recent?scope=all", nil)
+	})
+
 	t.Run("activity is scoped by the person a capture was made for", func(t *testing.T) {
 		mineOnly := func(person string) func(console.ActivityPage) bool {
 			return func(pg console.ActivityPage) bool {

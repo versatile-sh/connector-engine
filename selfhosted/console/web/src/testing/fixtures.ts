@@ -1,5 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
-import type { Account, ActivityData, ActivitySettings, Approval, Capability, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
+import type { Account, ActivityData, ActivitySettings, DecisionRow, Approval, Capability, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
 import type { KeysData } from "../queries";
 
 /** Every capability a lone Owner holds. */
@@ -96,6 +96,13 @@ export const APPROVAL = {
   choices: ["once", "always", "deny"],
 } as const satisfies Approval;
 
+/** Three decisions, newest first: an allowed call, a denied one and one that ran out of time. */
+export const DECISIONS = [
+  { id: "d1", agent: "laptop", connector: "c1", function: "send_message", class: "write", state: "executed", decided_by: "alice", channel: "console", at: "2026-11-20T11:55:00Z", owner: ALICE },
+  { id: "d2", agent: "laptop", connector: "c1", function: "delete_message", class: "write", state: "denied", decided_by: "alice", channel: "discord", at: "2026-11-20T09:00:00Z", owner: ALICE },
+  { id: "d3", agent: "phone", connector: "c1", function: "send_message", state: "expired", at: "2026-11-19T12:00:00Z", owner: ALICE },
+] as const satisfies readonly DecisionRow[];
+
 /** A day of activity with one call. */
 export const ACTIVITY = {
   from: "2026-11-19T00:00:00Z",
@@ -135,6 +142,8 @@ export const pageData = (session: Session): readonly (readonly [QueryKey, unknow
   [["agents"], KEYS],
   [["agents", "page"], KEYS],
   [["approvals"], { approvals: [APPROVAL] }],
+  [["approvals", "recent", "mine"], { decisions: DECISIONS }],
+  [["approvals", "recent", "everyone"], { decisions: DECISIONS }],
   [["activity", { range: "24h" }, 30], { pages: [ACTIVITY], pageParams: [""] }],
   [["activity-settings"], SETTINGS],
   [["notifications"], NOTIFICATIONS],

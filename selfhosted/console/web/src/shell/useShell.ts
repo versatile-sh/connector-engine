@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useSyncExternalStore } from "react";
-import { drawerOpen, loadCollapsed, railOf, saveCollapsed, shellOf, shellReducer, WIDE, type Store } from "./shell";
+import { drawerOpen, loadCollapsed, railOf, saveCollapsed, shellAt, shellOf, shellReducer, WIDE, type Store } from "./shell";
 
 const store = (): Store | undefined => {
   try {
@@ -19,6 +19,7 @@ const subscribe = (onChange: () => void) => {
 export function useShell(at: string) {
   const wide = useSyncExternalStore(subscribe, () => window.matchMedia(WIDE).matches, () => false);
   const [state, dispatch] = useReducer(shellReducer, undefined, () => shellOf(loadCollapsed(store())));
+  if (shellAt(state, at) !== state) dispatch({ type: "close" });
   useEffect(function shutTheDrawerWhenWide() {
     const query = window.matchMedia(WIDE);
     const widen = (event: MediaQueryListEvent) => {

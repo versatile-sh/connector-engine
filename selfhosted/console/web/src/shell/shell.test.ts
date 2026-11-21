@@ -14,6 +14,7 @@ import {
   railOf,
   saveCollapsed,
   serializeCollapsed,
+  shellAt,
   shellOf,
   shellReducer,
   wrapFocus,
@@ -176,6 +177,24 @@ describe("the shell", () => {
     test("keeps the viewer's rail choice while the drawer opens and shuts", () => {
       const open = shellReducer(shellOf(true), { type: "open", at: "/" });
       assert.equal(shellReducer(open, { type: "close" }).collapsed, true);
+    });
+  });
+
+  describe("when the page moves on and comes back", () => {
+    test("leaves the drawer shut on the address it was opened on", () => {
+      const open = shellReducer(shellOf(false), { type: "open", at: "/" });
+      const away = shellAt(open, "/skills");
+      assert.equal(drawerOpen(shellAt(away, "/"), false, "/"), false);
+    });
+
+    test("keeps the drawer open while the page stays where it was opened", () => {
+      const open = shellReducer(shellOf(false), { type: "open", at: "/" });
+      assert.equal(shellAt(open, "/"), open);
+    });
+
+    test("keeps the viewer's rail choice", () => {
+      const open = shellReducer(shellOf(true), { type: "open", at: "/" });
+      assert.equal(shellAt(open, "/skills").collapsed, true);
     });
   });
 

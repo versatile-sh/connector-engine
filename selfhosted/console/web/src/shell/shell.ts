@@ -105,6 +105,9 @@ export function shellReducer(state: ShellState, action: ShellAction): ShellState
   }
 }
 
+/** The state once the page is at `at`: a drawer opened on another address is shut for good, so coming back to its address does not open it again. */
+export const shellAt = (state: ShellState, at: string): ShellState => (state.drawerAt === undefined || state.drawerAt === at ? state : shellReducer(state, { type: "close" }));
+
 /** Whether the sidebar is drawn as the icon rail: only on a wide screen, and only when the viewer chose it. */
 export const railOf = (state: ShellState, wide: boolean): boolean => wide && state.collapsed;
 

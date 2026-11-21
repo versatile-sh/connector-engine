@@ -3,8 +3,8 @@ import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { notificationsQuery } from "../queries";
 import { Notice } from "../ui/Notice";
-import { PageTitle } from "../ui/PageTitle";
-import { SKELETON } from "../ui/styles";
+import { PageHeader } from "../ui/PageHeader";
+import { PAGE, SKELETON } from "../ui/styles";
 import { ChannelsSection } from "./ChannelsSection";
 import { DevicesSection } from "./DevicesSection";
 import { ElicitSection } from "./ElicitSection";
@@ -14,25 +14,28 @@ export function NotificationsPage() {
   const t = useT();
   const data = useQuery(notificationsQuery);
   return (
-    <section aria-labelledby="page-title">
-      <header className="mb-10">
-        <PageTitle title={t("notify.title")}>
-          <p>{t("notify.intro")}</p>
-          <p className="mt-2 text-sm">{t("notify.privacy")}</p>
-        </PageTitle>
-      </header>
+    <section aria-labelledby="page-title" className={PAGE}>
+      <PageHeader title={t("notify.title")}>
+        <p>{t("notify.intro")}</p>
+        <p className="mt-2 text-sm">{t("notify.privacy")}</p>
+      </PageHeader>
       {data.isError ? <Notice>{errorText(data.error)}</Notice> : null}
       {data.isPending ? (
-        <div aria-hidden="true" className="flex flex-col gap-6">
-          {[0, 1, 2].map((row) => (
+        <div aria-hidden="true" className="grid gap-6 lg:grid-cols-2">
+          {[0, 1].map((row) => (
             <div key={row} className={`${SKELETON} h-40`} />
           ))}
+          <div className={`${SKELETON} h-40 lg:col-span-2`} />
         </div>
       ) : data.data ? (
-        <div className="flex flex-col gap-6">
-          <ElicitSection apps={data.data.apps} />
-          <DevicesSection devices={data.data.devices} />
-          <ChannelsSection channels={data.data.channels} />
+        <div className="@container">
+          <div className="grid gap-6 @5xl:grid-cols-2">
+            <ElicitSection apps={data.data.apps} />
+            <DevicesSection devices={data.data.devices} />
+            <div className="@5xl:col-span-2">
+              <ChannelsSection channels={data.data.channels} />
+            </div>
+          </div>
         </div>
       ) : null}
     </section>

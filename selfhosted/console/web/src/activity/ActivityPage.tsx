@@ -8,8 +8,8 @@ import { activityQuery, activitySettingsQuery, connectorsQuery, skillsQuery } fr
 import { navigate, useLocation } from "../router";
 import { EmptyState } from "../ui/EmptyState";
 import { Notice } from "../ui/Notice";
-import { PageTitle } from "../ui/PageTitle";
-import { CAPTION, SKELETON, SURFACE, TITLE, button } from "../ui/styles";
+import { PageHeader } from "../ui/PageHeader";
+import { CAPTION, PAGE, SKELETON, SPLIT, SURFACE, TITLE, button } from "../ui/styles";
 import { callOf, filterOf, hrefOf, inScope, isNarrowed, keptDaysOf, namedOf, clearedOf, type ActivityFilter } from "./activity";
 import { ActivitySettings } from "./ActivitySettings";
 import { CallDetail } from "./CallDetail";
@@ -45,19 +45,17 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
   const data = activity.data;
   const named = namedOf(connectors.data ?? [], skills.data ?? []);
   return (
-    <section aria-labelledby="page-title">
-      <header className="mb-10">
-        <PageTitle title={t("activity.title")} count={data?.total} scope={filter.scope ? t("scope.count") : undefined}>
-          {t("activity.intro")}
-        </PageTitle>
-      </header>
+    <section aria-labelledby="page-title" className={PAGE}>
+      <PageHeader title={t("activity.title")} count={data?.total} scope={filter.scope ? t("scope.count") : undefined}>
+        {t("activity.intro")}
+      </PageHeader>
       <FilterRow filter={filter} data={data} named={named} scoped={offered} keptDays={keptDays} onChange={show} />
       {activity.isError ? (
-        <Notice className="mb-6" action={<button type="button" className={button({ variant: "quiet", size: "xs" })} onClick={() => void activity.refetch()}>{t("common.retry")}</button>}>
+        <Notice action={<button type="button" className={button({ variant: "quiet", size: "xs" })} onClick={() => void activity.refetch()}>{t("common.retry")}</button>}>
           {errorText(activity.error)}
         </Notice>
       ) : null}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
+      <div className={SPLIT}>
         <div className="flex min-w-0 flex-col gap-6">
           {data ? <HourlyChart hours={data.hours} /> : <div aria-hidden="true" className={`${SKELETON} h-60`} />}
           <section aria-labelledby="calls-title" className={`${SURFACE} min-w-0 p-4 sm:p-5`}>

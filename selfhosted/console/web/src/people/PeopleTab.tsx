@@ -9,7 +9,7 @@ import { peopleQuery } from "../queries";
 import { Disclosure } from "../ui/Disclosure";
 import { Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
-import { CAPTION, LEAD, PANEL, SKELETON_LINE, SUBTITLE, TITLE, WELL, button } from "../ui/styles";
+import { CAPTION, LEAD, SKELETON_LINE, SUBTITLE, SURFACE, TITLE, WELL, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { LinkSheet, type LinkFor } from "./LinkSheet";
 import { mayRevoke, nameOf, timeLeft } from "./people";
@@ -109,7 +109,7 @@ function Changes({ data }: { data: PeopleData }) {
   );
 }
 
-/** The people of this console in one panel: the count and Invite someone for those who may invite, one row per person, the links still waiting, and the newest changes behind Recent changes. */
+/** The people of this console in one card: the count and Invite someone for those who may invite, one row per person, the links still waiting, and the newest changes behind Recent changes. */
 export function PeopleTab() {
   const t = useT();
   const viewer = useViewer();
@@ -117,7 +117,7 @@ export function PeopleTab() {
   const [making, setMaking] = useState<LinkFor>();
   const data = people.data;
   return (
-    <section aria-labelledby="people-title" className={`${PANEL} p-4 sm:p-8`}>
+    <section aria-labelledby="people-title" className={`${SURFACE} p-5 sm:p-6`}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-baseline gap-3">

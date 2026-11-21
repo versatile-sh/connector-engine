@@ -433,7 +433,6 @@ export const es: Record<MessageKey, string> = {
   "activity.to": "Hasta",
   "activity.filters": "Filtros",
   "activity.connector": "Conector",
-  "activity.connector.clear": "Mostrar todos los conectores, no solo {name}",
   "activity.search": "Buscar una función o un conector",
   "activity.outcome": "Resultado",
   "activity.outcome.all": "Cualquier resultado",

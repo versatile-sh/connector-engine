@@ -11,14 +11,19 @@ export const PRESS = "transition-[background-color,border-color,color,opacity,tr
 /** The one card: raised ink, a strong hairline and the light falling on its top edge, 12px corners. */
 export const SURFACE = "vignette-top rounded-xl border border-line-strong bg-ink-raised";
 
-/** The one large panel a page holds its content in, as the site's directory and connector pages: 16px corners, a soft hairline; raised ink on a page, and a sunken tray on the shell's raised surface. */
-export const PANEL = "vignette-top rounded-2xl border border-line bg-(color:--tray-fill)";
+/** The one large panel of a page that stands on the page's own ink, outside the shell (the import landing): 16px corners, a soft hairline, raised ink. Inside the shell the content surface is the container, so a page never draws a panel in it. */
+export const PANEL = "vignette-top rounded-2xl border border-line bg-ink-raised";
 
 /** A sunken box inside a panel or a card: a list of rows, a block of text, the next step. */
 export const WELL = "rounded-xl border border-line bg-ink";
 
-/** A card of a grid inside a panel, from the site's directory: an ink tile whose border warms and whose top edge lights lime on hover or keyboard focus. */
-export const LIT_EDGE = `${WELL} relative isolate transition-colors duration-300 ease-(--ease-settle) before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-[radial-gradient(ellipse_75%_100%_at_50%_0%,rgb(198_244_50/0.1),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:border-lime/30 hover:before:opacity-100 focus-visible:border-lime/30 focus-visible:before:opacity-100`;
+const LIT = "relative isolate transition-colors duration-300 ease-(--ease-settle) before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-[radial-gradient(ellipse_75%_100%_at_50%_0%,rgb(198_244_50/0.1),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:border-lime/30 hover:before:opacity-100 focus-visible:border-lime/30 focus-visible:before:opacity-100";
+
+/** A card of a grid on the content surface, from the site's directory: a raised card whose border warms and whose top edge lights lime on hover or keyboard focus. */
+export const LIT_CARD = `${SURFACE} ${LIT}`;
+
+/** A tile inside a card, such as a link to the hub: an ink tile whose border warms and whose top edge lights lime on hover or keyboard focus. */
+export const LIT_EDGE = `${WELL} ${LIT}`;
 
 /** The lime hairline that lights the top edge of the box holding the next step; the box is `relative` and clips its overflow. */
 export const HAIRLINE = "pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-lime/70 to-transparent";
@@ -37,6 +42,15 @@ export const OPTION_CARD = `flex min-h-16 flex-col items-start justify-center ga
 
 /** Quiet underlined text link, also worn by buttons that sit among such links. */
 export const QUIET_LINK = "cursor-pointer underline decoration-line-strong underline-offset-4 transition-colors hover:text-paper hover:decoration-paper";
+
+/** The vertical rhythm of a page: its header, toolbar, content and sections stand in one column, 1.5rem apart; the header adds 0.5rem under itself. */
+export const PAGE = "flex flex-col gap-6";
+
+/** The grid of cards a page lists: as many 17rem-or-wider columns as the width holds, 1.5rem apart, so the cards fill the surface on a wide screen and stack on a phone. */
+export const CARD_GRID = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-6";
+
+/** The two-column body of a page whose side column is the shared facts or the secondary lists: the main column takes the rest, the side one is 20rem, 2.5rem apart from `lg`. */
+export const SPLIT = "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10";
 
 /** Small mono uppercase label over a page title, as the site's directory eyebrow. */
 export const EYEBROW = "font-mono text-[0.6875rem] tracking-[0.14em] text-muted uppercase";

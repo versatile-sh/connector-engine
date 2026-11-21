@@ -6,8 +6,8 @@ import { useViewer } from "../people/useViewer";
 import { accountQuery } from "../queries";
 import { navigate } from "../router";
 import { Notice } from "../ui/Notice";
-import { PageTitle } from "../ui/PageTitle";
-import { SKELETON } from "../ui/styles";
+import { PageHeader } from "../ui/PageHeader";
+import { PAGE, SKELETON } from "../ui/styles";
 import { Tabs, tabId } from "../ui/Tabs";
 import { BackupSection } from "./BackupSection";
 import { SignInSection } from "./SignInSection";
@@ -29,13 +29,11 @@ export function AccountPage({ path }: { path: string }) {
   const tab = accountTabOf(path, tabs);
   const many = tabs.length > 1;
   return (
-    <section aria-labelledby="page-title">
-      <header className="mb-10">
-        <PageTitle title={t("account.title")}>
-          <p>{t("account.intro")}</p>
-        </PageTitle>
-      </header>
-      {many ? <Tabs<AccountTab> label={t("account.tabs")} value={tab} options={tabs.map((value) => ({ value, text: t(`account.tab.${value}`) }))} onChange={(next) => navigate(accountPathOf(next), { keepScroll: true })} panel={PANEL_ID} className="mb-6" /> : null}
+    <section aria-labelledby="page-title" className={PAGE}>
+      <PageHeader title={t("account.title")}>
+        <p>{t("account.intro")}</p>
+      </PageHeader>
+      {many ? <Tabs<AccountTab> label={t("account.tabs")} value={tab} options={tabs.map((value) => ({ value, text: t(`account.tab.${value}`) }))} onChange={(next) => navigate(accountPathOf(next), { keepScroll: true })} panel={PANEL_ID} /> : null}
       <div id={PANEL_ID} role={many ? "tabpanel" : undefined} aria-labelledby={many ? tabId(PANEL_ID, tab) : undefined} className="flex flex-col gap-6">
         {tab === "people" ? <PeopleTab /> : <Own tab={tab} />}
       </div>

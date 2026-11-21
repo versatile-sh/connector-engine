@@ -13,8 +13,8 @@ import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
 import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
-import { PageTitle } from "../ui/PageTitle";
-import { HAIRLINE, LEAD, PANEL, SKELETON_LINE, SUBTITLE, TITLE, WELL, button } from "../ui/styles";
+import { PageHeader } from "../ui/PageHeader";
+import { HAIRLINE, LEAD, PAGE, SKELETON_LINE, SUBTITLE, SURFACE, TITLE, WELL, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { ClientPicker } from "./ClientPicker";
 import { KeyRow } from "./KeyRow";
@@ -29,7 +29,7 @@ const intoView = (element: HTMLElement | null) => {
 function Created({ token, endpoint }: { token: AgentToken; endpoint: string }) {
   const t = useT();
   return (
-    <section ref={intoView} aria-labelledby="created-title" className={`${WELL} arrive relative mb-6 scroll-mt-24 overflow-hidden p-5 sm:p-6`}>
+    <section ref={intoView} aria-labelledby="created-title" className={`${WELL} arrive relative scroll-mt-24 overflow-hidden p-5 sm:p-6`}>
       <span aria-hidden="true" className={HAIRLINE} />
       <div className="flex items-start gap-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-full border border-line-strong text-lime">
@@ -50,7 +50,7 @@ function Created({ token, endpoint }: { token: AgentToken; endpoint: string }) {
   );
 }
 
-/** Connect an AI app: one endpoint for every MCP client in a panel of its own, then a panel of access keys made and revoked here, and for a new key the exact way into each app. Once a second user exists, a viewer who may see everyone's keys picks Mine or Everyone in the list's heading, and each key then names its owner. */
+/** Connect an AI app: one endpoint for every MCP client in a card of its own, then, under Advanced, a card to make an access key beside the card of the keys made and revoked here, and for a new key the exact way into each app. Once a second user exists, a viewer who may see everyone's keys picks Mine or Everyone in the list's heading, and each key then names its owner. */
 export function AccessPage({ endpoint }: { endpoint: string }) {
   const t = useT();
   const { path, query } = useLocation();
@@ -93,23 +93,21 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
   const maxDays = Math.max(1, Math.floor((keys.data?.max_ttl_hours ?? 720) / 24));
   const list = keys.data?.agents ?? [];
   return (
-    <section aria-labelledby="page-title">
-      <header className="mb-10">
-        <PageTitle title={t("keys.title")}>
-          {t("keys.intro")}
-        </PageTitle>
-      </header>
-      <section aria-label={t("clients.title")} className={`${PANEL} mb-14 p-4 sm:p-8`}>
+    <section aria-labelledby="page-title" className={PAGE}>
+      <PageHeader title={t("keys.title")}>{t("keys.intro")}</PageHeader>
+      <section aria-label={t("clients.title")} className={`${SURFACE} p-5 sm:p-6`}>
         <ClientPicker url={endpoint} />
       </section>
-      <section aria-labelledby="advanced-title" className={`${PANEL} p-4 sm:p-8`}>
-        <h2 id="advanced-title" className={TITLE}>
-          {t("keys.advanced")}
-        </h2>
-        <p className={`${LEAD} mt-1 mb-6 text-sm`}>{t("keys.advancedIntro")}</p>
+      <section aria-labelledby="advanced-title" className="mt-4 flex flex-col gap-6">
+        <div>
+          <h2 id="advanced-title" className={TITLE}>
+            {t("keys.advanced")}
+          </h2>
+          <p className={`${LEAD} mt-1 text-sm`}>{t("keys.advancedIntro")}</p>
+        </div>
         {mint.data ? <Created key={mint.data.token} token={mint.data} endpoint={endpoint} /> : null}
         <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:gap-10">
-          <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${WELL} p-5`}>
+          <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>
             <h2 id="new-key" className={`${SUBTITLE} mb-4`}>
               {t("keys.new")}
             </h2>
@@ -131,7 +129,7 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
             </button>
             <p className="mt-4 text-[0.8125rem] leading-snug text-pretty text-muted">{t("keys.skillsOff")}</p>
           </form>
-          <section aria-labelledby="keys-title" className={`${WELL} p-5`}>
+          <section aria-labelledby="keys-title" className={`${SURFACE} p-5`}>
             <div className={offered ? "mb-3 flex flex-wrap items-center gap-x-3 gap-y-2" : "mb-3 flex items-baseline gap-3"}>
               <h2 id="keys-title" className={SUBTITLE}>
                 {t("keys.list")}

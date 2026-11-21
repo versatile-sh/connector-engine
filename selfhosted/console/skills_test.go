@@ -142,6 +142,24 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 	if skills.Skills[0].Publisher != "example" {
 		t.Fatalf("the publisher is not the repository owner: %q", skills.Skills[0].Publisher)
 	}
+	t.Run("the entry's icon reaches the preview, the installed skill and the API", func(t *testing.T) {
+		const icon = "https://versatile.sh/avatars/example.png"
+		if pv.Icon != icon || skills.Skills[0].Icon != icon {
+			t.Fatalf("preview %q, installed %q", pv.Icon, skills.Skills[0].Icon)
+		}
+		var raw struct{ Skills []map[string]any }
+		b.ok("GET", "/api/skills", nil, &raw)
+		if raw.Skills[0]["icon"] != icon {
+			t.Fatalf("the API does not return the icon: %v", raw.Skills[0]["icon"])
+		}
+	})
+	t.Run("an entry without an icon has none in the preview", func(t *testing.T) {
+		var bare console.Preview
+		b.ok("POST", "/api/preview", map[string]any{"listing": catalogBase + "pdf-unlicensed.yaml"}, &bare)
+		if bare.Icon != "" {
+			t.Fatalf("%q", bare.Icon)
+		}
+	})
 	t.Run("the preview and the installed skill carry the derived requirements and per-app status", func(t *testing.T) {
 		for name, sk := range map[string]console.SkillPreview{"preview": *pv.Skill, "installed": skills.Skills[0].SkillPreview} {
 			status := map[string]string{}

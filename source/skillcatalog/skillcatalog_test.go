@@ -149,6 +149,44 @@ compat:
 	}
 }
 
+func TestAnEntryIconIsKeptOnlyAsAPlainHTTPSAddress(t *testing.T) {
+	ctx := context.Background()
+	t.Run("the listing carries the https icon of its entry", func(t *testing.T) {
+		m, err := skillcatalog.Load(ctx, fixture(t, nil), entryURL)
+		if err != nil || m.Icon != "https://versatile.sh/avatars/example.png" {
+			t.Fatalf("%v %q", err, m.Icon)
+		}
+	})
+	t.Run("an entry without an icon has none", func(t *testing.T) {
+		m, err := skillcatalog.Load(ctx, fixture(t, nil), "https://catalog.example/skills/catalog/pdf-unlicensed.yaml")
+		if err != nil || m.Icon != "" {
+			t.Fatalf("%v %q", err, m.Icon)
+		}
+	})
+	const given = "icon: https://versatile.sh/avatars/example.png"
+	for _, c := range []struct{ name, line, want string }{
+		{"a relative path is resolved against the entry", "icon: ../avatars/example.png", "https://catalog.example/skills/avatars/example.png"},
+		{"an https address on another host is kept", "icon: //cdn.example/example.png", "https://cdn.example/example.png"},
+		{"http is dropped", "icon: http://versatile.sh/avatars/example.png", ""},
+		{"a data URI is dropped", "icon: data:image/png;base64,AAAA", ""},
+		{"a script address is dropped", "icon: javascript:alert(1)", ""},
+		{"credentials in the address are dropped", "icon: https://user:pass@versatile.sh/avatars/example.png", ""},
+		{"an address with no host is dropped", "icon: https:///example.png", ""},
+		{"a fragment is dropped", "icon: https://versatile.sh/avatars/example.png#x", ""},
+		{"an address over 2048 bytes is dropped", "icon: https://versatile.sh/" + strings.Repeat("a", 2100) + ".png", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			m, err := skillcatalog.Load(ctx, fixture(t, map[string]string{entryURL: strings.Replace(entry(t, "pdf.yaml"), given, c.line, 1)}), entryURL)
+			if err != nil {
+				t.Fatalf("a bad icon refused the entry: %v", err)
+			}
+			if m.Icon != c.want {
+				t.Fatalf("%q, want %q", m.Icon, c.want)
+			}
+		})
+	}
+}
+
 func TestTheFetcherRefusesPlainHTTP(t *testing.T) {
 	if _, err := skillcatalog.Fetcher(nil)(context.Background(), "http://127.0.0.1/x.yaml", 10); err == nil {
 		t.Fatal("http was fetched")

@@ -13,7 +13,7 @@ function Provenance({ preview, host }: { preview: Preview; host: string }) {
   const t = useT();
   const text = t(preview.kind === "mcp" ? "import.fromServer" : "import.fromCatalog", { host });
   return (
-    <p className="mt-4 flex max-w-full justify-center text-sm text-muted">
+    <p className="mt-4 flex max-w-full justify-center text-sm text-muted lg:justify-start">
       {isWeb(preview.url) ? (
         <a href={preview.url} target="_blank" rel="noreferrer noopener" title={preview.url} className={`${QUIET_LINK} inline-flex max-w-full items-center gap-1.5`}>
           <span className="truncate">{text}</span>
@@ -31,7 +31,7 @@ function Provenance({ preview, host }: { preview: Preview; host: string }) {
 
 function Skeleton() {
   return (
-    <div aria-hidden="true" className="mt-6 flex w-full flex-col items-center">
+    <div aria-hidden="true" className="mt-6 flex w-full flex-col items-center lg:items-start">
       <div className="shimmer size-16 rounded-2xl" />
       <div className={`${SKELETON_LINE} mt-5 h-11 w-72 max-w-full`} />
       <div className={`${SKELETON_LINE} mt-5 h-5 w-56 max-w-full`} />
@@ -39,16 +39,16 @@ function Skeleton() {
   );
 }
 
-/** The head of the install-link page, centred: a quiet caption naming where the link came from, then the icon tile, the one serif title, a row of chips, the description and a single provenance line; a skeleton while the link is read and the bare host when it cannot be. */
+/** The head of the install-link page, centred below `lg` and left-aligned in its column from `lg`: a quiet caption naming where the link came from, then the icon tile, the one serif title, a row of chips, the description and a single provenance line; a skeleton while the link is read and the bare host when it cannot be. */
 export function LandingHeader({ host, preview }: { host: string; preview: UseQueryResult<Preview> }) {
   const t = useT();
   return (
-    <header className="flex min-w-0 flex-col items-center text-center">
+    <header className="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">
       <p className={`${CAPTION} max-w-full truncate`} translate="no">
         {t("import.linkEyebrow", { host })}
       </p>
       {preview.isSuccess ? (
-        <div className="swap-in flex min-w-0 max-w-full flex-col items-center">
+        <div className="swap-in flex min-w-0 max-w-full flex-col items-center lg:items-start">
           <div className="mt-6">
             <ConnectorIcon src={preview.data.icon} title={preview.data.title} size="lg" />
           </div>

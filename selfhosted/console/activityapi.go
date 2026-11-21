@@ -1,9 +1,12 @@
 package console
 
 import (
+	"cmp"
 	"context"
+	"encoding/base64"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,10 +15,12 @@ import (
 )
 
 const (
-	activityListMax = 500
-	activityWindow  = 24 * time.Hour
-	joinSkew        = time.Second
-	engineRowPrefix = "e-"
+	activityListMax  = 500
+	activityPageDef  = 50
+	activityRangeMax = 366 * day
+	activityWindow   = 24 * time.Hour
+	joinSkew         = time.Second
+	engineRowPrefix  = "e-"
 )
 
 // ActivityCall is one row of the activity page, with its owner: a captured call joined with the engine's audit row, or an engine row alone.
@@ -67,12 +72,13 @@ type ConnectorCount struct {
 	Failed    int    `json:"failed"`
 }
 
-// ActivityPage is what GET /api/activity answers: the newest calls that pass the filter, their count by hour, by connector and the apps seen.
+// ActivityPage is what GET /api/activity answers: one page of the newest calls that pass the filter with the cursor of the next, and the counts by hour, by connector and the apps seen over all of them.
 type ActivityPage struct {
 	From       time.Time        `json:"from"`
 	To         time.Time        `json:"to"`
 	Calls      []ActivityCall   `json:"calls"`
 	Total      int              `json:"total"`
+	NextCursor string           `json:"next_cursor,omitempty"`
 	Hours      []HourCount      `json:"hours"`
 	Connectors []ConnectorCount `json:"connectors"`
 	Agents     []string         `json:"agents"`
@@ -82,7 +88,32 @@ type activityFilter struct {
 	from, to                 time.Time
 	connector, agent, search string
 	outcome                  CallOutcome
+	limit                    int
+	after                    *rowCursor
 	titles                   map[string]string
+}
+
+type rowCursor struct {
+	at time.Time
+	id string
+}
+
+func (c rowCursor) String() string {
+	return base64.RawURLEncoding.EncodeToString([]byte(c.at.UTC().Format(time.RFC3339Nano) + "|" + c.id))
+}
+
+func parseRowCursor(s string) (*rowCursor, error) {
+	raw, err := base64.RawURLEncoding.DecodeString(s)
+	at, id, ok := strings.Cut(string(raw), "|")
+	t, terr := time.Parse(time.RFC3339Nano, at)
+	if err != nil || !ok || terr != nil || id == "" {
+		return nil, invalid("cursor is one the activity gave")
+	}
+	return &rowCursor{at: t, id: id}, nil
+}
+
+func (c rowCursor) before(r ActivityCall) bool {
+	return r.At.Before(c.at) || r.At.Equal(c.at) && r.ID < c.id
 }
 
 func (f activityFilter) found(r ActivityCall) bool {
@@ -346,9 +377,14 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 		}
 		p.Calls = append(p.Calls, r)
 	}
-	slices.SortStableFunc(p.Calls, func(x, y ActivityCall) int { return y.At.Compare(x.At) })
-	if len(p.Calls) > activityListMax {
-		p.Calls = p.Calls[:activityListMax]
+	slices.SortFunc(p.Calls, func(x, y ActivityCall) int { return cmp.Or(y.At.Compare(x.At), strings.Compare(y.ID, x.ID)) })
+	if f.after != nil {
+		p.Calls = slices.DeleteFunc(p.Calls, func(r ActivityCall) bool { return !f.after.before(r) })
+	}
+	if len(p.Calls) > f.limit {
+		last := p.Calls[f.limit-1]
+		p.Calls = p.Calls[:f.limit]
+		p.NextCursor = rowCursor{at: last.At, id: last.ID}.String()
 	}
 	for _, cc := range byConn {
 		p.Connectors = append(p.Connectors, *cc)
@@ -363,7 +399,7 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 	return p
 }
 
-var activityParams = []string{"from", "to", "connector", "agent", "search", "outcome", "scope", "person"}
+var activityParams = []string{"from", "to", "connector", "agent", "search", "outcome", "scope", "person", "limit", "cursor"}
 
 func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, error) {
 	qv := r.URL.Query()
@@ -374,6 +410,21 @@ func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, erro
 	}
 	now := time.Now().UTC()
 	f := activityFilter{from: now.Add(-activityWindow), to: now, connector: qv.Get("connector"), agent: qv.Get("agent"), search: strings.ToLower(strings.TrimSpace(qv.Get("search"))), outcome: CallOutcome(qv.Get("outcome"))}
+	f.limit = activityPageDef
+	if v := qv.Get("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > activityListMax {
+			return f, invalid("limit is a number from 1 to %d", activityListMax)
+		}
+		f.limit = n
+	}
+	if v := qv.Get("cursor"); v != "" {
+		cur, err := parseRowCursor(v)
+		if err != nil {
+			return f, err
+		}
+		f.after = cur
+	}
 	for name, into := range map[string]*time.Time{"from": &f.from, "to": &f.to} {
 		if v := qv.Get(name); v != "" {
 			t, err := time.Parse(time.RFC3339, v)
@@ -386,8 +437,8 @@ func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, erro
 	if f.to.Before(f.from) {
 		return f, invalid("from is before to")
 	}
-	if f.to.Sub(f.from) > activityRetention+time.Hour {
-		return f, invalid("the range is at most %d days", retentionDays)
+	if f.to.Sub(f.from) > activityRangeMax {
+		return f, invalid("the range is at most %d days", activityRangeMax/day)
 	}
 	switch f.outcome {
 	case "", OutcomeOK, OutcomeError, OutcomeDenied, OutcomePending, OutcomeRunning:
@@ -446,7 +497,7 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 	rows := c.owned(join(captures, facts, c.separator(r.Context(), firstAgent(f.agent, captures))))
 	rows = slices.DeleteFunc(rows, func(j joined) bool {
 		p := j.row.Owner.Person
-		return !all && p != u.Person || all && person != "" && p != person
+		return !all && p != u.Person || all && person != "" && p != person || c.Activity.Hidden(j.row.At)
 	})
 	writeJSON(w, http.StatusOK, pageOf(rows, f))
 }
@@ -512,7 +563,7 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	u, _ := signedInUser(r.Context())
 	for _, j := range c.owned(join(captures, facts, c.separator(r.Context(), agent))) {
-		if j.row.ID == id && may(u, CapActivityOwn, CapActivityAny, j.row.Owner.Person) {
+		if j.row.ID == id && !c.Activity.Hidden(j.row.At) && may(u, CapActivityOwn, CapActivityAny, j.row.Owner.Person) {
 			writeJSON(w, http.StatusOK, detailOf(j))
 			return
 		}
@@ -523,19 +574,21 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 type activitySettingsView struct {
 	RecordArguments bool      `json:"record_arguments"`
 	RecordResults   bool      `json:"record_results"`
+	Retention       Keep      `json:"retention"`
 	RetentionDays   int       `json:"retention_days"`
 	ClearedAt       time.Time `json:"cleared_at,omitzero"`
 }
 
 func (c *Console) activitySettings(w http.ResponseWriter, _ *http.Request) {
 	s := c.Activity.Settings()
-	writeJSON(w, http.StatusOK, activitySettingsView{RecordArguments: s.RecordArguments, RecordResults: s.RecordResults, RetentionDays: retentionDays, ClearedAt: s.ClearedAt})
+	writeJSON(w, http.StatusOK, activitySettingsView{RecordArguments: s.RecordArguments, RecordResults: s.RecordResults, Retention: s.Retention.or(), RetentionDays: s.Retention.days(), ClearedAt: s.ClearedAt})
 }
 
 func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		RecordArguments *bool `json:"record_arguments"`
 		RecordResults   *bool `json:"record_results"`
+		Retention       *Keep `json:"retention"`
 	}
 	if !readJSON(w, r, &in) {
 		return
@@ -544,7 +597,15 @@ func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "give record_arguments and record_results")
 		return
 	}
-	if err := c.Activity.SetRecording(*in.RecordArguments, *in.RecordResults); err != nil {
+	if in.Retention != nil && !slices.Contains(Keeps, *in.Retention) {
+		writeError(w, http.StatusBadRequest, "retention is off, 7d, 30d, 90d or forever")
+		return
+	}
+	err := c.Activity.SetRecording(*in.RecordArguments, *in.RecordResults)
+	if err == nil && in.Retention != nil {
+		err = c.Activity.SetRetention(*in.Retention)
+	}
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "cannot save the activity settings")
 		return
 	}
@@ -557,4 +618,66 @@ func (c *Console) deleteActivity(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// PruneResult is what POST /api/activity/prune answers: how many calls the period holds and whether they were deleted or only counted.
+type PruneResult struct {
+	Count   int  `json:"count"`
+	Deleted bool `json:"deleted"`
+}
+
+type pruneRequest struct {
+	From      *time.Time `json:"from"`
+	To        *time.Time `json:"to"`
+	OlderThan *int       `json:"older_than_days"`
+	DryRun    bool       `json:"dry_run"`
+}
+
+func (in pruneRequest) span(now time.Time) (from, to time.Time, err error) {
+	switch {
+	case in.OlderThan != nil && (in.From != nil || in.To != nil):
+		return from, to, invalid("give older_than_days or from and to, not both")
+	case in.OlderThan != nil && *in.OlderThan >= 0:
+		return from, now.Add(-time.Duration(*in.OlderThan) * day), nil
+	case in.From != nil && in.To != nil && !in.To.Before(*in.From):
+		return in.From.UTC(), in.To.UTC(), nil
+	}
+	return from, to, invalid("give older_than_days, or from and to with from not after to")
+}
+
+func (c *Console) pruneActivity(w http.ResponseWriter, r *http.Request) {
+	var in pruneRequest
+	if !readJSON(w, r, &in) {
+		return
+	}
+	now := time.Now().UTC()
+	from, to, err := in.span(now)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	c.Activity.Flush()
+	f := activityFilter{from: latest(from, c.Activity.Floor()), to: to, limit: 1}
+	captures, err := c.Activity.Captures(f.from)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "cannot read the activity log")
+		return
+	}
+	facts, err := c.engineFacts(r.Context(), f.from.Add(-joinSkew), "")
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	rows := c.owned(join(captures, facts, c.separator(r.Context(), firstAgent("", captures))))
+	rows = slices.DeleteFunc(rows, func(j joined) bool {
+		return j.row.At.After(to) || j.row.At.Before(f.from) || c.Activity.Hidden(j.row.At)
+	})
+	count := len(rows)
+	if !in.DryRun {
+		if _, err := c.Activity.DeleteRange(from, to); err != nil {
+			writeError(w, http.StatusInternalServerError, "cannot delete the activity")
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, PruneResult{Count: count, Deleted: !in.DryRun})
 }

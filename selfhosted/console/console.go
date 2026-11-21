@@ -116,6 +116,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("GET /api/icon", c.icon)
 	rt.handle("GET /api/activity", c.withActivity(c.listActivity))
 	rt.handle("DELETE /api/activity", c.withActivity(c.deleteActivity))
+	rt.handle("POST /api/activity/prune", c.withActivity(c.pruneActivity))
 	rt.handle("GET /api/activity/settings", c.withActivity(c.activitySettings))
 	rt.handle("PUT /api/activity/settings", c.withActivity(c.setActivitySettings))
 	rt.handle("GET /api/activity/{id}", c.withActivity(c.activityDetail))

@@ -151,6 +151,9 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 		ok         bool
 	)
 	switch {
+	case len(rest) == 2 && rest[0] == "call" && (rest[1] == "-h" || rest[1] == "--help" || rest[1] == "-help"):
+		c.help(c.out)
+		return 0
 	case len(rest) >= 2 && rest[0] == "call":
 		if rest[1] == "-h" || rest[1] == "--help" || rest[1] == "-help" {
 			c.help(c.out)

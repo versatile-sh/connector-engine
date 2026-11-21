@@ -56,7 +56,7 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 
 The console draws what the session's `can` list allows and never works out a role's rights itself. Multi-user chrome appears only once `session.people` is above one, so a one-user install looks as it did (`src/oneUser.test.ts` holds its pages to a snapshot).
 
-- **Role badge**: the viewer's role as a mono `Tag` inside the Account link.
+- **Role badge**: the viewer's role as a mono `Tag` under their name in the sidebar's user button, and in the rail in the head of the user menu. The name shows always; the role only once a second user exists.
 - **Mine | Everyone**: a small `Segmented` for a viewer with the list's `*.any` capability, in the list's own card (the Access keys list, the Activity filter row) or under the page title (Approvals). It is a value sent to the server, so it is segmented, kept in the address as `?scope=everyone`. With Everyone, the count reads "everyone · 12" and each row carries its owner as a `Tag`; Activity adds a person `Select`.
 - **Someone else's held call** reads "waiting for bob" and offers only the answers the server lists in `choices`, with **Cancel this call** when `cancel` is among them.
 - **Read-only for Members**: what only managers change shows disabled with "Set by your admins", never hidden when the Member still needs to see it (function access, the shared credential). Import, Remove and the first-run guide are hidden.

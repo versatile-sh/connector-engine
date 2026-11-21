@@ -54,9 +54,10 @@ describe("FilterRow", () => {
       assert.match(open, /<span class="min-w-0 flex-1 truncate ">All connectors<\/span>/);
     });
 
-    test("keeps the toolbar's classes", () => {
-      const toolbar = (html: string) => /<div role="group" aria-label="Filters" class="([^"]*)"/.exec(html)?.[1];
-      assert.equal(toolbar(chosen), toolbar(open));
+    test("keeps the row's classes", () => {
+      const rows = (html: string) => /<div role="group" aria-label="Filters" class="@container"><div class="([^"]*)">/.exec(html)?.[1];
+      assert.ok(rows(open));
+      assert.equal(rows(chosen), rows(open));
     });
   });
 
@@ -81,8 +82,13 @@ describe("FilterRow", () => {
 
   describe("on a wide container", () => {
     test("shares one row that does not wrap when only the range and narrowing controls show", () => {
-      assert.match(open, /@5xl:flex-row/);
+      assert.match(open, /<div class="flex flex-col gap-2 @5xl:flex-row @5xl:items-center">/);
       assert.match(open, /@5xl:flex-nowrap/);
+    });
+
+    test("queries the container from a child, never from the container itself", () => {
+      const container = /<div role="group" aria-label="Filters" class="([^"]*)">/.exec(open)?.[1];
+      assert.equal(container, "@container");
     });
 
     test("makes the search the one flexible control", () => {
@@ -90,8 +96,8 @@ describe("FilterRow", () => {
     });
 
     test("keeps two rows once custom days or Everyone add controls", () => {
-      assert.doesNotMatch(row({ range: "custom", from: "2026-11-14", to: "2026-11-20" }), /@5xl:flex-row/);
-      assert.doesNotMatch(row({ range: "24h", scope: "everyone" }, true), /@5xl:flex-row/);
+      assert.match(row({ range: "custom", from: "2026-11-14", to: "2026-11-20" }), /<div class="flex flex-col gap-2 ">/);
+      assert.match(row({ range: "24h", scope: "everyone" }, true), /<div class="flex flex-col gap-2 ">/);
     });
   });
 

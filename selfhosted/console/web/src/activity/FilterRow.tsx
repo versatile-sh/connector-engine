@@ -19,7 +19,7 @@ const dayText = (day: string, locale: Locale) => {
   return new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short" }).format(new Date(year, month - 1, date));
 };
 
-const WIDTH = "w-full @2xl:w-40 @2xl:shrink-0";
+const WIDTH = "w-full @2xl:w-40 @5xl:w-36";
 
 function Choice<T extends string>({ label, all, value, options, onChange, className = WIDTH }: { label: string; all: string; value: T | undefined; options: readonly SelectOption<T>[]; onChange(value: T | undefined): void; className?: string }) {
   return <Select<T | ""> label={label} value={value ?? ""} options={[{ value: "", text: all }, ...options]} onChange={(next) => onChange(next === "" ? undefined : next)} disabled={options.length === 0 && value === undefined} className={className} />;
@@ -86,43 +86,45 @@ export function FilterRow({ filter, data, named, scoped = false, keptDays, onCha
   const dayOption = (day: string) => ({ value: day, text: dayText(day, locale) });
   const roomy = !everyone && filter.range !== "custom";
   return (
-    <div role="group" aria-label={t("activity.filters")} className={`@container flex flex-col gap-2 ${roomy ? "@5xl:flex-row @5xl:items-center" : ""}`}>
-      <div className={`flex flex-wrap items-center gap-2 ${roomy ? "@5xl:shrink-0 @5xl:flex-nowrap" : ""}`}>
-        {scoped ? <ScopeSwitch scope={everyone ? "everyone" : "mine"} onChange={(scope) => onChange(inScope(filter, scope))} /> : null}
-        <div role="group" aria-label={t("activity.range")} className={`flex flex-wrap gap-2 ${roomy ? "@5xl:flex-nowrap" : ""}`}>
-          {[...RANGES.map((range) => range.value), "custom" as const].map((range) => (
-            <button key={range} type="button" aria-pressed={filter.range === range} className={`${CHIP} h-9 px-3.5 text-sm`} onClick={() => filter.range !== range && period(range === "custom" ? lastWeek(now) : { range })}>
-              {t(`activity.range.${range}`)}
-            </button>
-          ))}
-        </div>
-        {filter.range === "custom" ? (
-          <span className="swap-in flex items-center gap-1.5">
-            <Select<string> label={t("activity.from")} value={filter.from} options={daysBetween(keptSince(now, keptDays), filter.to).map(dayOption)} onChange={(from) => period({ ...filter, from })} className="w-36" />
-            <span aria-hidden="true" className="text-muted">
-              –
+    <div role="group" aria-label={t("activity.filters")} className="@container">
+      <div className={`flex flex-col gap-2 ${roomy ? "@5xl:flex-row @5xl:items-center" : ""}`}>
+        <div className={`flex flex-wrap items-center gap-2 ${roomy ? "@5xl:shrink-0 @5xl:flex-nowrap" : ""}`}>
+          {scoped ? <ScopeSwitch scope={everyone ? "everyone" : "mine"} onChange={(scope) => onChange(inScope(filter, scope))} /> : null}
+          <div role="group" aria-label={t("activity.range")} className={`flex flex-wrap gap-2 ${roomy ? "@5xl:flex-nowrap" : ""}`}>
+            {[...RANGES.map((range) => range.value), "custom" as const].map((range) => (
+              <button key={range} type="button" aria-pressed={filter.range === range} className={`${CHIP} h-9 px-3 text-sm`} onClick={() => filter.range !== range && period(range === "custom" ? lastWeek(now) : { range })}>
+                {t(`activity.range.${range}`)}
+              </button>
+            ))}
+          </div>
+          {filter.range === "custom" ? (
+            <span className="swap-in flex items-center gap-1.5">
+              <Select<string> label={t("activity.from")} value={filter.from} options={daysBetween(keptSince(now, keptDays), filter.to).map(dayOption)} onChange={(from) => period({ ...filter, from })} className="w-36" />
+              <span aria-hidden="true" className="text-muted">
+                –
+              </span>
+              <Select<string> label={t("activity.to")} value={filter.to} options={daysBetween(filter.from, dayOf(now)).map(dayOption)} onChange={(to) => period({ ...filter, to })} className="w-36" />
             </span>
-            <Select<string> label={t("activity.to")} value={filter.to} options={daysBetween(filter.from, dayOf(now)).map(dayOption)} onChange={(to) => period({ ...filter, to })} className="w-36" />
-          </span>
-        ) : null}
-      </div>
-      <div className={`grid grid-cols-2 gap-2 @2xl:flex @2xl:flex-wrap @2xl:items-center ${roomy ? "@5xl:min-w-0 @5xl:flex-1 @5xl:flex-nowrap" : ""}`}>
-        <Choice label={t("activity.connector")} all={t("activity.connectors.all")} value={filter.connector} options={connectors} onChange={(connector) => onChange({ ...filter, connector })} className={`${WIDTH} @5xl:w-44`} />
-        <Choice label={t("activity.key")} all={t("activity.app.all")} value={filter.agent} options={keys.map((agent) => ({ value: agent, text: agent }))} onChange={(agent) => onChange({ ...filter, agent })} />
-        {everyone ? <Choice label={t("activity.person")} all={t("activity.person.all")} value={filter.person} options={people} onChange={(person) => onChange({ ...filter, person })} /> : null}
-        <Choice<CallOutcome> label={t("activity.outcome")} all={t("activity.outcome.all")} value={filter.outcome} options={FILTER_OUTCOMES.map((outcome) => ({ value: outcome, text: t(`outcome.${outcome}`) }))} onChange={(outcome) => onChange({ ...filter, outcome })} />
-        <div className="col-span-2 flex min-w-0 items-center gap-2 @2xl:min-w-48 @2xl:flex-1">
-          <Search value={filter.search} onSearch={(search) => onChange({ ...filter, search })} />
-          <button
-            type="button"
-            tabIndex={narrowed ? undefined : -1}
-            aria-hidden={narrowed ? undefined : true}
-            inert={!narrowed}
-            className={`${button({ variant: "quiet", size: "xs" })} transition-opacity duration-250 ${narrowed ? "" : "invisible opacity-0"}`}
-            onClick={() => onChange(clearedOf(filter))}
-          >
-            {t("activity.clearFilters")}
-          </button>
+          ) : null}
+        </div>
+        <div className={`grid grid-cols-2 gap-2 @2xl:flex @2xl:flex-wrap @2xl:items-center ${roomy ? "@5xl:min-w-0 @5xl:flex-1 @5xl:flex-nowrap" : ""}`}>
+          <Choice label={t("activity.connector")} all={t("activity.connectors.all")} value={filter.connector} options={connectors} onChange={(connector) => onChange({ ...filter, connector })} className={`${WIDTH} @5xl:w-40`} />
+          <Choice label={t("activity.key")} all={t("activity.app.all")} value={filter.agent} options={keys.map((agent) => ({ value: agent, text: agent }))} onChange={(agent) => onChange({ ...filter, agent })} />
+          {everyone ? <Choice label={t("activity.person")} all={t("activity.person.all")} value={filter.person} options={people} onChange={(person) => onChange({ ...filter, person })} /> : null}
+          <Choice<CallOutcome> label={t("activity.outcome")} all={t("activity.outcome.all")} value={filter.outcome} options={FILTER_OUTCOMES.map((outcome) => ({ value: outcome, text: t(`outcome.${outcome}`) }))} onChange={(outcome) => onChange({ ...filter, outcome })} />
+          <div className="col-span-2 flex min-w-0 items-center gap-2 @2xl:min-w-64 @2xl:flex-1">
+            <Search value={filter.search} onSearch={(search) => onChange({ ...filter, search })} />
+            <button
+              type="button"
+              tabIndex={narrowed ? undefined : -1}
+              aria-hidden={narrowed ? undefined : true}
+              inert={!narrowed}
+              className={`${button({ variant: "quiet", size: "xs" })} transition-opacity duration-250 ${narrowed ? "" : "invisible opacity-0"}`}
+              onClick={() => onChange(clearedOf(filter))}
+            >
+              {t("activity.clearFilters")}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -10,9 +10,9 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 
 | Token | Use |
 | --- | --- |
-| `ink` | page background |
-| `ink-raised` | cards, panels, dialogs |
-| `ink-sunken` | footer band, code and copy boxes |
+| `ink` | page background; the sidebar's ground; a card on the shell's surface |
+| `ink-raised` | the shell's content surface, the current-link pill, cards and panels on a page, dialogs |
+| `ink-sunken` | footer band, code and copy boxes, a panel's tray on the shell's surface |
 | `paper` | text and the primary button |
 | `muted`, `muted-light` | secondary text, placeholders, counts |
 | `line`, `line-strong` | hairlines and borders |
@@ -37,7 +37,7 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 ## Components
 
 - **Button** (`button({ variant, size })`): a pill. `primary` paper on ink for the main action of a view, `secondary` outlined, `quiet` text only, `danger` amber outlined for removal. Sizes `xs` (in rows), `sm`, `md`. Every button presses in.
-- **Surfaces**: `SURFACE` is the one card (raised, strong hairline, light on the top edge, 12px). `PANEL` is the one large panel a page holds its content in (16px, soft hairline). `WELL` is the sunken box inside a panel or card: a list of rows, a block of text. `LIT_EDGE` is a grid card inside a panel whose top edge lights lime on hover and focus. `HAIRLINE` lights the top edge of the box that holds the next step.
+- **Surfaces**: `SURFACE` is the one card (strong hairline, light on the top edge, 12px). `PANEL` is the one large panel a page holds its content in (16px, soft hairline). Both take their fill from the surface they sit on (`--card-fill`, `--tray-fill`): raised ink on a page of `ink`, and, inside the shell's content surface, an ink card and a sunken `ink-sunken` tray, so a card is never raised ink on raised ink. `WELL` is the sunken box inside a panel or card: a list of rows, a block of text. `LIT_EDGE` is a grid card inside a panel whose top edge lights lime on hover and focus. `HAIRLINE` lights the top edge of the box that holds the next step.
 - **Field** (`Field`, `FIELD`, `CONTROL`): ink fill, strong hairline, paper on focus, amber when invalid; the note under it keeps its height. `CONTROL` is the field at 36px for filter rows, `SearchBox` and `Select`.
 - **Choices**: `CHIP` for one pressed choice, `Segmented` for one of a few (the language switch, access off/on/ask, ranges), `Select` for one of many or where a `Segmented` has no room, `Choice` for one of a few that fits its container (a `Segmented` where the container has room, else a `Select` of the options that can be taken), `OPTION_CARD` for one of a few that each need a line, `Switch` for on/off (on is paper), `Checkbox` for picking rows of a list (paper, with a mixed state for a select-all).
 - **Tabs** (`Tabs`): a row of text tabs over a hairline that switch the view of one panel. The chosen tab is paper with a 2px paper underline that glides to it on transform alone; the others are muted. The arrows wrap, Home and End go to the ends, and the tab that gets focus is the one shown (automatic activation), so a tab only holds a view that shows at once. Past six tabs the row scrolls sideways with faded edges and a `Select` of every tab sits at its end. A machine name (an access key) is set in mono. `<Tabs label value options onChange panel />` with `options` of `{ value, text, hint?, mono? }`; the panel is `<div id={panel} role="tabpanel" aria-labelledby={tabId(panel, value)}>`.
@@ -50,7 +50,7 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 - **Sheet**: the one dialog, centred, 16px, rising in; full screen on a phone.
 - **EmptyState**: a serif headline with its lime word, a muted line, the way to fill the view.
 - **Frame**: pages outside the sections (setup, sign-in, an install link, consent, one held call): the grid and light, the wordmark and language, one column.
-- **PageTitle**: mono eyebrow, the `Display` title, the mono count of what the page lists, the lead.
+- **PageTitle**: the `Display` title, the mono count of what the page lists, the lead. It has no eyebrow: the sidebar and the top strip name the section.
 
 ## Several people
 
@@ -64,7 +64,7 @@ The console draws what the session's `can` list allows and never works out a rol
 
 ## Layout
 
-A section page is a `PageTitle`, then one `PANEL` (or a few `SURFACE`s for pages of settings), the way the site's directory is. Cards in a panel use container queries (`@container` with `@xl:`/`@4xl:` columns), so the same card works in a panel, a dialog or a narrow column.
+A section page is a `PageTitle`, then one `PANEL` (or a few `SURFACE`s for pages of settings), the way the site's directory is, on the shell's content surface. Cards in a panel use container queries (`@container` with `@xl:`/`@4xl:` columns), so the same card works in a panel, a dialog or a narrow column.
 
 A page of settings (Account, Notifications) is a column of `SURFACE` cards, one concern each: an icon, a title, one line of what it does and at most one action beside the title, then its body. A card whose list grows (paired computers, channels, apps) takes the full width, and forms side by side in one card end with their buttons on one line.
 
@@ -80,6 +80,20 @@ When a panel shows one of several views, its `Tabs` are the panel's first row, o
 - **Fitts**: the primary action is large and close to what it acts on.
 - **Doherty**: feedback in under 400 ms; a pending control shows it at once.
 - **Tesler**: the complexity lives in the code, not on the screen; defaults and one-request batches do the work.
+
+## Shell
+
+Every signed-in page lives in one shell (`src/Shell.tsx`, its parts in `src/shell/`): a sidebar, a top strip and the content surface. The shell mounts once; between pages only the content under `main` swaps (`key` on the section), so the sidebar, its marks and the strip never remount and nothing around the content moves. The window never scrolls: `main#main` does, and `navigate()` and a change of section scroll it back to the top. A page draws no `min-h-dvh` and no scroll of its own, and a sticky offset is measured from the surface's top edge.
+
+- **Sidebar**: 16rem at the left on the page's own `ink`, with no card and no border. The logotype and, on its edge, the collapse handle; then the links in two groups, Gateway (Connectors, Skills, Access, Approvals, Activity) and Settings (Notifications, Account), each under a mono eyebrow; at the foot the signed-in user (round initial, name, role) and the language. Every link has an icon from `ui/Icon`.
+- **Current link**: one raised-ink pill (`ink-raised`, strong hairline, light on its top edge) with paper text and a short lime bar on its left edge, a mark like the filter list's chosen row. The pill and its bar are one element that glides between links on transform alone, placed once without motion. The lime bar is the sidebar's one live colour, so the count of held calls on Approvals is a paper mono count on paper at 10%, never lime. Never a lime fill, never a lime focus ring.
+- **Rail**: the handle shrinks the sidebar to a 4.5rem rail of icons and back, in 250ms on the glide curve, and the choice is kept in `localStorage` under `console.sidebar` (only the exact value `collapsed` reads as a rail). In the rail the names show as tooltips on hover and on keyboard focus, the group eyebrows become hairlines, the count of held calls sits on its icon, and the language moves into the user menu. Only a wide screen shows the rail; the drawer is always full width.
+- **User menu**: the user's mark opens a small raised panel with Account and Sign out, placed as a `Select`'s list is, over the button near the bottom and as a sheet from the bottom on a phone. It is a disclosure, not an application menu: Tab moves through it, Escape closes it and gives focus back to its button, and a press or focus outside closes it. Escape inside it never closes the drawer too.
+- **Top strip**: 4rem, over the content only and on the page's ground. It names where the page is (group and section, in mono), shows the first-run progress and the endpoint chip to copy. Its first item on a narrow screen is the menu button.
+- **Content surface**: `main`, one `ink-raised` surface with 16px corners and a soft hairline, starting under the top strip and 12px from the window's right and bottom edges, holding the notices, the page and the site's footer, scrolling on its own while the sidebar and the strip stay put.
+- **Below `lg`**: the sidebar is a drawer, the same element slid in from the left (never a second copy of the links). Open, it is a modal dialog (`role="dialog"`, `aria-modal`), the rest of the shell is `inert`, Tab wraps inside it, focus goes to the current link and, when it closes, back to the menu button. Escape, the scrim, the close button and any link close it, and so does leaving the page or a wide screen. The content surface is full-bleed: no corners, no side hairlines.
+- **Keyboard and landmarks**: the skip link comes first and lands on `main`; the links sit in a `nav` labelled Console, the current one with `aria-current="page"`; the handle, the menu button and the user menu are real buttons. Focus is the 1px neutral outline.
+- **Logic that tests**: the links, the active one, the saved width, the drawer and its keys are plain functions in `src/shell/shell.ts`, held by `shell.test.ts`.
 
 ## Responsiveness
 

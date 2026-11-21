@@ -17,14 +17,13 @@ import (
 )
 
 const (
-	retentionDays     = 30
-	activityRetention = retentionDays * 24 * time.Hour
-	activityQueue     = 1024
-	activityDay       = "2006-01-02"
-	captureDay        = "20060102"
-	activityExt       = ".jsonl"
-	activitySettings  = "settings.json"
-	activityLineMax   = 4 << 20
+	day              = 24 * time.Hour
+	activityQueue    = 1024
+	activityDay      = "2006-01-02"
+	captureDay       = "20060102"
+	activityExt      = ".jsonl"
+	activitySettings = "settings.json"
+	activityLineMax  = 4 << 20
 )
 
 // CallOutcome is what a call came to, as the activity page shows it.
@@ -39,11 +38,53 @@ const (
 	OutcomeRunning CallOutcome = "running"
 )
 
-// ActivitySettings is what the owner keeps of each call, and when the log was last cleared.
+// Keep is how long the console keeps captured calls: off keeps none, forever never prunes; the empty value is 30 days.
+type Keep string
+
+// How long calls are kept.
+const (
+	KeepOff     Keep = "off"
+	Keep7Days   Keep = "7d"
+	Keep30Days  Keep = "30d"
+	Keep90Days  Keep = "90d"
+	KeepForever Keep = "forever"
+)
+
+// Keeps lists every choice of Keep, shortest first.
+var Keeps = []Keep{KeepOff, Keep7Days, Keep30Days, Keep90Days, KeepForever}
+
+func (k Keep) or() Keep {
+	if k == "" {
+		return Keep30Days
+	}
+	return k
+}
+
+func (k Keep) days() int {
+	switch k.or() {
+	case Keep7Days:
+		return 7
+	case Keep90Days:
+		return 90
+	case Keep30Days:
+		return 30
+	}
+	return 0
+}
+
+// Span is a period of deleted activity, hiding the engine rows that no file of the console can delete.
+type Span struct {
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
+}
+
+// ActivitySettings is what the owner keeps of each call, for how long, when the log was last cleared and which periods were deleted since.
 type ActivitySettings struct {
 	RecordArguments bool      `json:"record_arguments"`
 	RecordResults   bool      `json:"record_results"`
+	Retention       Keep      `json:"retention,omitempty"`
 	ClearedAt       time.Time `json:"cleared_at,omitzero"`
+	Deleted         []Span    `json:"deleted,omitempty"`
 }
 
 // Capture is what the console saw of one tools/call on its /mcp proxy, owned by the token's on_behalf_of person; a Late capture is the answer approval_status gave for an earlier held call.
@@ -84,13 +125,14 @@ type activityJob struct {
 	flushed chan struct{}
 }
 
-// Activity is the console's log of captured calls: one JSON line per call in a file per UTC day, kept 30 days, written by one goroutine so the proxy never waits on the disk.
+// Activity is the console's log of captured calls: one JSON line per call in a file per UTC day, kept as long as the settings say (30 days by default), written by one goroutine so the proxy never waits on the disk.
 type Activity struct {
 	dir  string
 	log  *slog.Logger
 	now  func() time.Time
 	jobs chan activityJob
 	done chan struct{}
+	quit chan struct{}
 
 	sendMu   sync.RWMutex
 	closed   bool
@@ -106,7 +148,7 @@ func OpenActivity(dir string, log *slog.Logger) (*Activity, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	a := &Activity{dir: dir, log: log, now: time.Now, jobs: make(chan activityJob, activityQueue), done: make(chan struct{}), settings: ActivitySettings{RecordArguments: true}}
+	a := &Activity{dir: dir, log: log, now: time.Now, jobs: make(chan activityJob, activityQueue), done: make(chan struct{}), quit: make(chan struct{}), settings: ActivitySettings{RecordArguments: true}}
 	raw, err := os.ReadFile(filepath.Join(dir, activitySettings))
 	switch {
 	case err == nil:
@@ -118,6 +160,7 @@ func OpenActivity(dir string, log *slog.Logger) (*Activity, error) {
 	}
 	a.prune()
 	go a.write()
+	go a.pruneEvery(time.Hour)
 	return a, nil
 }
 
@@ -125,6 +168,19 @@ func newCaptureID(at time.Time) string {
 	b := make([]byte, 8)
 	rand.Read(b)
 	return at.UTC().Format(captureDay) + "-" + hex.EncodeToString(b)
+}
+
+func (a *Activity) pruneEvery(d time.Duration) {
+	tick := time.NewTicker(d)
+	defer tick.Stop()
+	for {
+		select {
+		case <-tick.C:
+			a.prune()
+		case <-a.quit:
+			return
+		}
+	}
 }
 
 func (a *Activity) write() {
@@ -147,7 +203,7 @@ func (a *Activity) append(c Capture) error {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if c.At.Before(a.settings.ClearedAt) {
+	if a.settings.Retention.or() == KeepOff || c.At.Before(a.settings.ClearedAt) {
 		return nil
 	}
 	path := filepath.Join(a.dir, c.At.UTC().Format(activityDay)+activityExt)
@@ -197,6 +253,7 @@ func (a *Activity) Close() {
 	a.sendMu.Lock()
 	if !a.closed {
 		a.closed = true
+		close(a.quit)
 		close(a.jobs)
 	}
 	a.sendMu.Unlock()
@@ -249,7 +306,7 @@ func (a *Activity) DeleteAll() error {
 	return a.saveSettings(s)
 }
 
-// Floor is the oldest time the activity page shows: retention or the last clearing, whichever is later.
+// Floor is the oldest time the activity page shows: the retention window or the last clearing, whichever is later.
 func (a *Activity) Floor() time.Time {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -257,11 +314,15 @@ func (a *Activity) Floor() time.Time {
 }
 
 func (a *Activity) floorLocked() time.Time {
-	floor := a.now().Add(-activityRetention)
-	if a.settings.ClearedAt.After(floor) {
-		return a.settings.ClearedAt
+	var floor time.Time
+	switch k := a.settings.Retention.or(); k {
+	case KeepOff:
+		floor = a.now()
+	case KeepForever:
+	default:
+		floor = a.now().Add(-time.Duration(k.days()) * day)
 	}
-	return floor
+	return latest(floor, a.settings.ClearedAt)
 }
 
 func (a *Activity) days() ([]string, error) {
@@ -292,9 +353,12 @@ func (a *Activity) pruneLocked() {
 		a.log.Warn("activity prune", "error", err)
 		return
 	}
-	oldest := a.now().Add(-activityRetention).UTC().Format(activityDay) + activityExt
+	if a.settings.Retention.or() == KeepForever {
+		return
+	}
+	oldest := a.floorLocked().UTC().Format(activityDay) + activityExt
 	for _, name := range names {
-		if name < oldest {
+		if name < oldest || a.settings.Retention.or() == KeepOff {
 			if err := os.Remove(filepath.Join(a.dir, name)); err != nil {
 				a.log.Warn("activity prune", "error", err)
 			}
@@ -382,4 +446,94 @@ func readCaptures(path string, each func(Capture)) error {
 		}
 	}
 	return sc.Err()
+}
+
+// SetRetention chooses how long calls are kept and prunes what is already past it.
+func (a *Activity) SetRetention(k Keep) error {
+	if !slices.Contains(Keeps, k) {
+		return errors.New("unknown retention")
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	s := a.settings
+	s.Retention = k
+	if err := a.saveSettings(s); err != nil {
+		return err
+	}
+	a.pruneLocked()
+	return nil
+}
+
+// Hidden reports whether a call that started at the given time was deleted with its period.
+func (a *Activity) Hidden(at time.Time) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return slices.ContainsFunc(a.settings.Deleted, func(s Span) bool { return !at.Before(s.From) && !at.After(s.To) })
+}
+
+// DeleteRange removes the captured calls that started from through to and hides the engine rows of that period, from the zero time meaning everything up to to; it returns how many captures went.
+func (a *Activity) DeleteRange(from, to time.Time) (int, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	names, err := a.days()
+	if err != nil {
+		return 0, err
+	}
+	first, last := from.UTC().Format(activityDay)+activityExt, to.UTC().Format(activityDay)+activityExt
+	gone := 0
+	for _, name := range names {
+		if !from.IsZero() && name < first || name > last {
+			continue
+		}
+		n, err := dropCaptures(filepath.Join(a.dir, name), from, to)
+		if err != nil {
+			return gone, err
+		}
+		gone += n
+	}
+	s := a.settings
+	if from.IsZero() {
+		s.ClearedAt = latest(s.ClearedAt, to)
+	} else {
+		s.Deleted = append(slices.Clone(s.Deleted), Span{From: from, To: to})
+	}
+	floor := a.floorLocked()
+	s.Deleted = slices.DeleteFunc(s.Deleted, func(sp Span) bool { return sp.To.Before(floor) })
+	a.log.Info("activity deleted", "from", from, "to", to, "captures", gone)
+	return gone, a.saveSettings(s)
+}
+
+func dropCaptures(path string, from, to time.Time) (int, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	var kept bytes.Buffer
+	gone, changed := 0, false
+	sc := bufio.NewScanner(f)
+	sc.Buffer(make([]byte, 64<<10), activityLineMax)
+	for sc.Scan() {
+		line := bytes.TrimSpace(sc.Bytes())
+		var c Capture
+		if len(line) == 0 || json.Unmarshal(line, &c) != nil || c.ID == "" || c.At.Before(from) || c.At.After(to) {
+			if len(line) > 0 {
+				kept.Write(line)
+				kept.WriteByte('\n')
+			}
+			continue
+		}
+		changed = true
+		if !c.Late {
+			gone++
+		}
+	}
+	err = sc.Err()
+	f.Close()
+	if err != nil || !changed {
+		return 0, err
+	}
+	if kept.Len() == 0 {
+		return gone, os.Remove(path)
+	}
+	return gone, writeAtomic(path, kept.Bytes())
 }

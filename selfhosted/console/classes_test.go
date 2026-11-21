@@ -114,7 +114,7 @@ func TestACappedFunctionIsNotOfferedAlways(t *testing.T) {
 
 func TestUpgradeRepairRaisesConsoleLoweredClasses(t *testing.T) {
 	r := newRig(t)
-	ctx := console.WithActor(context.Background(), "owner")
+	ctx := console.WithActor(context.Background(), "console")
 	r.engineClass("purge", port.ClassWrite)
 	cs := r.connect("", nil)
 	pending := r.call(cs, "purge", map[string]any{"n": 1})
@@ -159,5 +159,36 @@ func TestUpgradeRepairRaisesConsoleLoweredClasses(t *testing.T) {
 	}
 	if f := r.function("purge"); f.Class != port.ClassWrite || raised() != 1 {
 		t.Fatalf("a second repair changed a deliberate lowering: %+v, %d raises", f, raised())
+	}
+}
+
+func TestAReviewedClassIsTheFloorForTheRepairAndTheReadOnlyChoice(t *testing.T) {
+	r := newRig(t)
+	ctx := console.WithActor(context.Background(), "console")
+	var fns struct{ Items []port.Function }
+	if err := r.eng.Read(ctx, "GET", "/v1/connectors/"+r.conn.ID+"/functions", nil, &fns); err != nil {
+		t.Fatal(err)
+	}
+	hash := map[string]port.Hash{}
+	for _, f := range fns.Items {
+		hash[f.Name] = f.DefinitionHash
+	}
+	review := map[string]any{"owner": "local", "name": r.conn.Listing, "version": r.conn.Version, "functions": []map[string]any{
+		{"name": "search", "hash": hash["search"], "class": port.ClassWrite}, {"name": "create", "hash": hash["create"], "class": port.ClassDestructive}}}
+	if err := r.eng.Call(ctx, "POST", "/v1/listings:review", review, nil); err != nil {
+		t.Fatal(err)
+	}
+	r.engineClass("create", port.ClassRead)
+	if err := r.c.RepairClasses(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if f := r.function("create"); f.Class != port.ClassDestructive || f.Kind != port.ClassDestructive {
+		t.Fatalf("create after the repair: %+v", f)
+	}
+	if f := r.function("search"); f.Kind != port.ClassWrite {
+		t.Fatalf("search reviewed as a change reads %+v", f)
+	}
+	if status, _ := r.b.send("PUT", "/api/connectors/"+r.conn.ID+"/read-only", map[string]string{"name": "search"}, nil); status != http.StatusBadRequest {
+		t.Fatalf("a reviewed function taken as read-only on its hint: %d", status)
 	}
 }

@@ -50,7 +50,7 @@ func (t *tx) as(tenant string) error {
 
 // Snapshot copies every row of every tenant and of the installation in one repeatable-read transaction.
 func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
-	snap := port.Snapshot{Store: snapshotStore, Schema: Schema(), Tables: map[string][]json.RawMessage{}}
+	snap := port.Snapshot{Store: snapshotStore, Schema: schema(), Tables: map[string][]json.RawMessage{}}
 	err := s.inAll(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(t *tx, tenants []string) error {
 		for _, tenant := range tenants {
 			if err := t.as(tenant); err != nil {
@@ -74,7 +74,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	if snap.Store != snapshotStore {
 		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %q snapshot does not restore into a %s store", snap.Store, snapshotStore)
 	}
-	if err := CheckRows(snap, Schema()); err != nil {
+	if err := CheckRows(snap, schema()); err != nil {
 		return port.Restored{}, err
 	}
 	byTenant := map[string]map[string][]json.RawMessage{}
@@ -158,8 +158,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	return out, nil
 }
 
-// Schema is the version of the schema the embedded migrations build: their count.
-func Schema() int {
+func schema() int {
 	files, _ := fs.Glob(migrations, "migrations/*.sql")
 	return len(files)
 }

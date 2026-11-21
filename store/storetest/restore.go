@@ -27,7 +27,9 @@ func seedRestore(e *env) port.Snapshotter {
 		g.Reason = restoreSecret
 		dangling := agentGrant("ta", "g2", "fn:gone", 0)
 		dangling.ScopeKind, dangling.ScopeID, dangling.Connector, dangling.DefinitionHash = port.ScopeUser, "alice", "c-gone", "h"
-		return errors.Join(err, tx.PutGrant(g), tx.PutGrant(dangling),
+		gone := agentGrant("ta", "g3", "fn:gone", 0)
+		gone.DefinitionHash = "h"
+		return errors.Join(err, tx.PutGrant(g), tx.PutGrant(dangling), tx.PutGrant(gone),
 			tx.PutBinding(port.Binding{Tenant: "ta", Workspace: "w", Connector: "c1", Agent: "x", CredentialPolicy: port.CredentialPolicy("shared")}))
 	}))
 	return src
@@ -129,15 +131,14 @@ func restoreRefusesBrokenSnapshots(e *env) {
 		snap port.Snapshot
 		name string
 	}{future, "future_rows"}
+	before := viewOf(e, e.s, e.o)
 	for name, c := range cases {
-		s, o := e.fresh()
-		before := viewOf(e, s, o)
-		_, err := s.(port.Snapshotter).Restore(ctx, c.snap, "operator")
+		_, err := src.Restore(ctx, c.snap, "operator")
 		if !port.IsCode(err, port.CodeInvalidArgument) || !strings.Contains(err.Error(), c.name) || strings.Contains(err.Error(), restoreSecret) {
 			e.t.Errorf("%s: got %v, want invalid_argument naming %q without the row's values", name, err, c.name)
 			continue
 		}
-		e.same(before, viewOf(e, s, o))
+		e.same(before, viewOf(e, e.s, e.o))
 	}
 }
 
@@ -148,8 +149,9 @@ func restoreRecordsItself(e *env) {
 	s, o := e.fresh()
 	out, err := s.(port.Snapshotter).Restore(ctx, snap, "ops")
 	e.must(err)
-	e.same(map[string]int{"bindings": 1, "connectors": 1, "functions": 0, "grants": 2, "tenants": 1}, out.Counts)
-	e.same([]string{"grant g2 names connector c-gone, which the snapshot lacks"}, out.Warnings)
+	e.same(map[string]int{"bindings": 1, "connectors": 1, "functions": 0, "grants": 3, "tenants": 1}, out.Counts)
+	slices.Sort(out.Warnings)
+	e.same([]string{"grant g2 names connector c-gone, which the snapshot lacks", "grant g3 names function gone, which the snapshot lacks"}, out.Warnings)
 	var audit []port.AuditRow
 	var events []port.Event
 	e.must(s.Read(ctx, inst, func(tx port.Tx) (err error) {
@@ -161,7 +163,7 @@ func restoreRecordsItself(e *env) {
 	if len(audit) != 1 || audit[0].Actor != "ops" || audit[0].Action != "connector.snapshot.restored" {
 		e.t.Fatalf("audit %+v", audit)
 	}
-	if len(events) != 1 || events[0].Type != "connector.snapshot.restored" || events[0].Data["by"] != "ops" || events[0].Data["warnings"] != float64(1) {
+	if len(events) != 1 || events[0].Type != "connector.snapshot.restored" || events[0].Data["by"] != "ops" || events[0].Data["warnings"] != float64(2) {
 		e.t.Fatalf("events %+v", events)
 	}
 	pending, err := o.Pending(ctx, 0)

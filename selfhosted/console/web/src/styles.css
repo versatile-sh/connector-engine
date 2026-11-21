@@ -301,6 +301,17 @@ svg {
   mix-blend-mode: normal;
 }
 
+::view-transition-new(root) {
+  z-index: 1;
+}
+
+.theme-swap,
+.theme-swap *,
+.theme-swap *::before,
+.theme-swap *::after {
+  transition: none !important;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
 }

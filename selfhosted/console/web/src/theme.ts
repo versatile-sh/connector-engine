@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 
 /** The theme that is drawn. */
 export type Theme = "light" | "dark";
@@ -72,13 +73,16 @@ export function toggleTheme(from: Point) {
     return;
   }
   const radius = revealRadius(from, window.innerWidth, window.innerHeight);
-  const transition = document.startViewTransition(() => draw(next));
+  const root = document.documentElement;
+  root.classList.add("theme-swap");
+  const transition = document.startViewTransition(() => flushSync(() => draw(next)));
   void transition.ready.then(() =>
-    document.documentElement.animate(
+    root.animate(
       { clipPath: [`circle(0px at ${from.x}px ${from.y}px)`, `circle(${radius}px at ${from.x}px ${from.y}px)`] },
-      { duration: REVEAL_MS, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)", pseudoElement: "::view-transition-new(root)" },
+      { duration: REVEAL_MS, easing: "cubic-bezier(0.65, 0, 0.35, 1)", pseudoElement: "::view-transition-new(root)" },
     ),
   );
+  void transition.finished.finally(() => root.classList.remove("theme-swap"));
 }
 
 function currentTheme(): Theme {

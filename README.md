@@ -35,7 +35,7 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 | **Docker** (any OS) | `git clone https://github.com/versatile-sh/connector-engine && cd connector-engine && make up` | works today |
 | **Linux, macOS** | `curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh \| sh`, then `vsh up --open` | after v0.1.0 |
 | **Windows** | `irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 \| iex` | after v0.1.0 |
-| **A VPS** | [Run it on a VPS](docs/self-hosted/vps.md): the binary or Docker on loopback, reached through an SSH tunnel; or the headless engine behind Caddy | works today with Docker |
+| **A VPS** | [Run it on a VPS](docs/self-hosted/vps.md): the binary or Docker on loopback, reached through an SSH tunnel; a small team behind a TLS proxy; or the headless engine behind Caddy | works today with Docker |
 | **Docker, no clone** (Linux) | `docker run -d --network host -v connector-engine:/var/lib/connector-engine --entrypoint /usr/local/bin/vsh ghcr.io/versatile-sh/connector-engine:latest up --data /var/lib/connector-engine --no-keychain` | after v0.1.0 |
 
 Works today, with Docker:
@@ -105,7 +105,7 @@ vsh approvals
 | **Secrets at rest**<br/>Envelope encryption; root keys wrapped by your OS keychain. | **Activity and events**<br/>Every call on record, redacted; a CloudEvent for every decision. | **Backups**<br/>Encrypted full backups, and shareable setups without credentials. |
 | **Headless engine**<br/>No console: your IdP, the operator API, your product decides. | **Adapters**<br/>Postgres, 1Password, webhooks, or your own through one registry. | **Self-hosted**<br/>Runs on your machine or your cloud. Source-available. |
 
-> Never expose the person console to the internet: it is a single-owner app for `127.0.0.1`. On a server, reach it through an SSH tunnel, or run the headless engine behind TLS and OIDC ([VPS guide](docs/self-hosted/vps.md)).
+> Never publish the console's port itself. On a server, reach it through an SSH tunnel, or put a TLS reverse proxy in front and set `CONSOLE_PUBLIC_URL` for a small team; the first visitor of a new console becomes its Owner. Products and many users run the headless engine behind TLS and OIDC ([VPS guide](docs/self-hosted/vps.md)).
 
 <a id="docs"></a>
 

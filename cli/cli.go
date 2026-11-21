@@ -31,8 +31,15 @@ func Skills(more ...*command.Command) *command.Command {
 	return &command.Command{Name: "skills", Summary: "Work with skills.", Subs: append(more, skills.ExportCommand())}
 }
 
-// Root returns the vsh tree with subs under it.
+// Root returns the vsh tree with subs under it, panicking when two subs share a name.
 func Root(summary string, subs ...*command.Command) *command.Command {
+	seen := map[string]bool{}
+	for _, c := range subs {
+		if seen[c.Name] {
+			panic("cli: duplicate command " + c.Name)
+		}
+		seen[c.Name] = true
+	}
 	return &command.Command{Name: "vsh", Summary: summary, Subs: subs}
 }
 

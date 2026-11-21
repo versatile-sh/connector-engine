@@ -29,10 +29,19 @@ func TestGroupErrorExitsOne(t *testing.T) {
 }
 
 func TestEveryCommandHasHelp(t *testing.T) {
-	for _, args := range [][]string{{"--help"}, {"tools", "--help"}, {"tools", "call", "-h"}, {"skills", "export", "--help"}, {"admin", "--help"}, {"admin", "tenants", "create", "--help"}} {
+	for _, args := range [][]string{{"--help"}, {"tools", "--help"}, {"tools", "call", "-h"}, {"skills", "export", "--help"}, {"admin", "--help"}, {"admin", "tenants", "create", "--help"}, {"admin", "call", "--help"}} {
 		code, out, errw := run(args...)
 		if code != command.ExitOK || !strings.HasPrefix(out, "Usage: vsh") || errw != "" {
 			t.Fatalf("%v: code %d out %q err %q", args, code, out, errw)
 		}
 	}
+}
+
+func TestRootRefusesTwoCommandsOfOneName(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("no panic")
+		}
+	}()
+	cli.Root("x", cli.Tools(), cli.Tools())
 }

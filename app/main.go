@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -30,11 +32,19 @@ func Main(b Build, args, environ []string, stdin io.Reader, stdout, stderr io.Wr
 	if b.Adapters == nil {
 		b.Adapters = Core()
 	}
+	for _, reserved := range []string{"adapters", "init"} {
+		if _, dup := b.Commands[reserved]; dup {
+			panic("app: command " + reserved + " is built in")
+		}
+	}
 	fs := flag.NewFlagSet("connector-engine", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	configPath := fs.String("config", env(environ, "CN_CONFIG"), "connector-engine.yaml; empty takes the defaults")
 	adaptersPath := fs.String("adapters", env(environ, "CN_ADAPTERS_FILE"), "adapters.yaml; empty takes the defaults and the CN_* variables")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
 		return 2
 	}
 	cfg, err := config.Load(*configPath)
@@ -44,6 +54,10 @@ func Main(b Build, args, environ []string, stdin io.Reader, stdout, stderr io.Wr
 	}
 	cfg = cfg.With(b.Adapters.Builtins()...)
 	if rest := fs.Args(); len(rest) > 0 {
+		if (rest[0] == "adapters" || rest[0] == "init") && slices.ContainsFunc(rest[1:], func(a string) bool { return a == "-h" || a == "--help" || a == "-help" }) {
+			fmt.Fprintln(stdout, "usage: connector-engine adapters check --file f | adapters plan --file f --against url | init [--dir d] [--db-host h]")
+			return 0
+		}
 		if rest[0] == "adapters" {
 			return cfg.AdaptersMain(append(rest[1:], "--file", *adaptersPath), environ, stdout, stderr)
 		}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,6 +110,10 @@ func TestRetentionIsChosenKeptAndAppliedByThePrune(t *testing.T) {
 	if _, err := os.Stat(old); !os.IsNotExist(err) {
 		t.Fatalf("a day past the new retention was kept: %v", err)
 	}
+	put("7d")
+	if n := strings.Count(strings.Join(r.auditActions(), " "), "activity.retention.changed"); n != 1 {
+		t.Fatalf("a retention change is audited once, a repeat is not: %d in %v", n, r.auditActions())
+	}
 	if _, s := put("forever"); s["retention"] != "forever" {
 		t.Fatalf("forever: %v", s)
 	}
@@ -159,6 +164,9 @@ func TestDeletingAPeriodCountsFirstThenRemovesItsCallsAndHidesEngineRows(t *test
 	if status, _ := r.b.send("GET", "/api/activity/e-k1", nil, nil); status != http.StatusNotFound {
 		t.Fatalf("a hidden engine row's detail: %d", status)
 	}
+	if audit := r.auditActions(); len(audit) == 0 || audit[0] != "activity.deleted" {
+		t.Fatalf("a deletion is audited: %v", audit)
+	}
 	var out map[string]any
 	r.b.ok("POST", "/api/activity/prune", map[string]any{"older_than_days": 0}, &out)
 	if p := r.page(""); p.Total != 0 || out["count"] != float64(5) {
@@ -176,4 +184,12 @@ func TestAPruneNeedsOneClearPeriod(t *testing.T) {
 	if status, _ := r.b.send("POST", "/api/activity/prune", map[string]any{"older_than_days": 1}, map[string]string{"X-CSRF-Token": "nope"}); status != http.StatusForbidden {
 		t.Fatalf("a prune without CSRF: %d", status)
 	}
+}
+
+func (r *activityRig) auditActions() []string {
+	var out []string
+	for _, a := range r.state.Audit(10) {
+		out = append(out, a.Action)
+	}
+	return out
 }

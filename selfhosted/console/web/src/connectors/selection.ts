@@ -33,8 +33,8 @@ const RANK: Record<Access, number> = { off: 0, ask: 1, on: 2 };
 /** The widest default among the picked rows: a key held to the default can take nothing wider for any of them. */
 export const widestOf = (bases: readonly Access[]): Access | undefined => bases.reduce<Access | undefined>((widest, base) => (widest === undefined || RANK[base] > RANK[widest] ? base : widest), undefined);
 
-/** A one-click change of every function of a declared kind: reads on, changes ask, deletes off. */
-export type Preset = { kind: Exclude<Kind, "undeclared">; access: Access };
+/** A one-click change of every function of a kind: reads on, changes ask, deletes off. */
+export type Preset = { kind: Kind; access: Access };
 
 /** The class presets, in the order the menu lists them. */
 export const PRESETS: readonly Preset[] = [

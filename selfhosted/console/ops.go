@@ -13,14 +13,15 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-// FunctionView is one function of a connector as the console shows it: its class, what it does by nature, the owner's choice read back from the engine's grants,
-// and whether on still asks because a review or its server declares it destructive.
+// FunctionView is one function of a connector as the console shows it: its class, what it does by nature or by an estimate from its name, the owner's choice
+// read back from the engine's grants, and whether on still asks because a review or its server declares it destructive.
 type FunctionView struct {
 	Name        string     `json:"name"`
 	Title       string     `json:"title,omitempty"`
 	Description string     `json:"description,omitempty"`
 	Class       port.Class `json:"class"`
 	Kind        port.Class `json:"kind"`
+	Estimated   bool       `json:"estimated,omitempty"`
 	State       string     `json:"state"`
 	Access      Access     `json:"access"`
 	Capped      bool       `json:"capped,omitempty"`
@@ -131,7 +132,8 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 				continue
 			}
 			title, desc := describe(f.Definition)
-			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f, m), State: string(f.State), Access: functionAccess(f, rows), Capped: declaredDestructive(f, m)})
+			kind, estimated := Nature(f, m)
+			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: kind, Estimated: estimated, State: string(f.State), Access: functionAccess(f, rows), Capped: declaredDestructive(f, m)})
 		}
 		if s.Profiles, err = c.profiles(ctx, string(conn.ID), agentRows); err != nil {
 			return nil, err
@@ -310,7 +312,7 @@ func (c *Console) classByNature(ctx context.Context, conn string, f port.Functio
 		return f, nil
 	}
 	class := port.ClassWrite
-	if Nature(f, m) == port.ClassRead {
+	if kind, estimated := Nature(f, m); kind == port.ClassRead && !estimated {
 		class = port.ClassRead
 	}
 	if class == f.Class {

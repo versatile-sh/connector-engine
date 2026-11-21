@@ -220,7 +220,7 @@ export function prettyJSON(text: string): string {
 }
 
 /** The class the engine recorded, when it is one the console has a label for. */
-export const kindOf = (value: string | undefined): Kind | undefined => (value === "read" || value === "write" || value === "destructive" || value === "undeclared" ? value : undefined);
+export const kindOf = (value: string | undefined): Kind | undefined => (value === "read" || value === "write" || value === "destructive" ? value : undefined);
 
 const APPROVAL_STATES: Record<string, MessageKey> = {
   pending: "approvalState.pending",

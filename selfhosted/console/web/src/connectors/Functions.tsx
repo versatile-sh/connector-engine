@@ -63,7 +63,7 @@ export function Functions({ connector, lens, scope, copy }: FunctionsProps) {
                       lead={lens.many ? <Checkbox label={t("bulk.pick", { name: fn.name })} checked={selected.has(fn.name)} onChange={() => setSelected(toggledOne(selected, fn.name))} /> : undefined}
                       flags={
                         <>
-                          <KindLabel kind={fn.kind} />
+                          <KindLabel kind={fn.kind} estimated={fn.estimated} />
                           {asksOnce(fn, lens.accessOf(fn.name, fn.access)) ? <AsksOnce /> : null}
                           {fn.state !== "active" ? (
                             <Tag tone="amber" dot title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>

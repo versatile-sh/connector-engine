@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"iter"
 	"net/url"
+	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -60,6 +62,7 @@ type ProbedTool struct {
 	ReadOnly    bool       `json:"read_only"`
 	Destructive bool       `json:"destructive"`
 	Kind        port.Class `json:"kind"`
+	Estimated   bool       `json:"estimated,omitempty"`
 	Proposed    Access     `json:"proposed"`
 }
 
@@ -77,21 +80,18 @@ type Probed struct {
 	Items       []Item       `json:"items"`
 }
 
-// KindUndeclared is the console's kind of a tool whose server declares neither readOnlyHint nor destructiveHint; it is never stored as an engine class.
-const KindUndeclared port.Class = "undeclared"
-
-// Propose pre-classifies a tool from its hints, which come from an untrusted server: a declared read or a tool that declares nothing is on; a declared change or delete waits for the owner.
-func Propose(a *mcp.ToolAnnotations) (kind port.Class, proposed Access) {
-	kind = KindOf(a)
-	if kind == port.ClassRead || kind == KindUndeclared {
-		return kind, AccessOn
+// Propose pre-classifies a tool from its hints, which come from an untrusted server, or from its name when it declares none: only a read is on.
+func Propose(name string, a *mcp.ToolAnnotations) (kind port.Class, estimated bool, proposed Access) {
+	kind, estimated = KindOf(name, a)
+	if kind == port.ClassRead {
+		return kind, estimated, AccessOn
 	}
-	return kind, AccessAsk
+	return kind, estimated, AccessAsk
 }
 
 func probedTool(name, title, description string, hints *mcp.ToolAnnotations) ProbedTool {
-	kind, proposed := Propose(hints)
-	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: kind == port.ClassRead, Destructive: kind == port.ClassDestructive, Kind: kind, Proposed: proposed}
+	kind, estimated, proposed := Propose(name, hints)
+	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: !estimated && kind == port.ClassRead, Destructive: !estimated && kind == port.ClassDestructive, Kind: kind, Estimated: estimated, Proposed: proposed}
 }
 
 func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
@@ -101,29 +101,57 @@ func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{ReadOnlyHint: a.ReadOnlyHint != nil && *a.ReadOnlyHint, DestructiveHint: a.DestructiveHint}
 }
 
-// KindOf names what a tool does by its hints: read or destructive as declared, write when it declares it does not delete, else undeclared.
-func KindOf(a *mcp.ToolAnnotations) port.Class {
+// KindOf names what a tool does by its hints: read or destructive as declared, write when it declares it does not delete.
+// A tool that declares neither gets Estimate of its name, with estimated true.
+func KindOf(name string, a *mcp.ToolAnnotations) (kind port.Class, estimated bool) {
 	switch {
 	case a != nil && a.ReadOnlyHint:
-		return port.ClassRead
+		return port.ClassRead, false
 	case a == nil || a.DestructiveHint == nil:
-		return KindUndeclared
+		return Estimate(name), true
 	case *a.DestructiveHint:
-		return port.ClassDestructive
+		return port.ClassDestructive, false
 	}
-	return port.ClassWrite
+	return port.ClassWrite, false
 }
 
-// Nature is what an installed function does: its reviewed class in the pinned manifest m when it has one, else what its MCP hints say.
-func Nature(f port.Function, m port.Manifest) port.Class {
+var (
+	destructiveVerbs = wordSet("delete", "remove", "trash", "destroy", "drop", "purge", "revoke", "cancel", "archive", "erase", "wipe", "unlink", "uninstall", "terminate")
+	writeVerbs       = wordSet("create", "update", "send", "write", "post", "add", "set", "upload", "edit", "book", "submit", "publish", "copy", "move", "rename", "share", "invite", "assign", "upsert", "insert", "put", "patch", "modify", "change", "save", "apply", "merge", "close", "reopen", "approve", "reject", "complete", "start", "stop", "run", "execute", "trigger", "schedule", "reply", "comment", "react", "pin", "unpin", "star", "mark", "enable", "disable", "restore", "import", "attach", "link", "transfer", "pay", "charge", "refund", "deploy", "commit", "push", "duplicate", "convert", "generate", "make", "new", "manage", "batch", "bulk", "toggle", "lock", "unlock", "subscribe", "unsubscribe", "follow", "unfollow", "like", "tag", "label", "move", "resolve", "invoke", "call", "fill", "replace", "append", "clear", "reset", "clone", "sync", "install", "register", "upgrade", "retry", "rerun", "build", "claim", "rotate", "grant", "revert", "rollback")
+	camelBoundary    = regexp.MustCompile(`([a-z0-9])([A-Z])`)
+	nonWord          = regexp.MustCompile(`[^a-z0-9]+`)
+)
+
+func wordSet(words ...string) map[string]bool {
+	set := make(map[string]bool, len(words))
+	for _, w := range words {
+		set[w] = true
+	}
+	return set
+}
+
+// Estimate guesses a tool's class from the verbs in its name, by the MCP catalog's rule: a destructive verb, else a write verb, else read.
+func Estimate(name string) port.Class {
+	words := nonWord.Split(strings.ToLower(camelBoundary.ReplaceAllString(name, "${1}_${2}")), -1)
+	switch {
+	case slices.ContainsFunc(words, func(w string) bool { return destructiveVerbs[w] }):
+		return port.ClassDestructive
+	case slices.ContainsFunc(words, func(w string) bool { return writeVerbs[w] }):
+		return port.ClassWrite
+	}
+	return port.ClassRead
+}
+
+// Nature is what an installed function does: its reviewed class in the pinned manifest m when it has one, else what KindOf says.
+func Nature(f port.Function, m port.Manifest) (kind port.Class, estimated bool) {
 	if class, source := listing.Base(f, m); source == port.ClassSourceReviewed {
-		return class
+		return class, false
 	}
 	var d struct {
 		Annotations *mcp.ToolAnnotations `json:"annotations"`
 	}
 	_ = json.Unmarshal(f.Definition, &d)
-	return KindOf(d.Annotations)
+	return KindOf(f.Name, d.Annotations)
 }
 
 // Probe connects to an MCP server (server/discover for 2026-07-28, initialize before), reads its server info and lists its tools.

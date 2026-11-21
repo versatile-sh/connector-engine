@@ -76,7 +76,7 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	client := mcp.NewClient(&mcp.Implementation{Name: "connector-engine", Version: "0"}, nil)
 	session, err := client.Connect(valueless{ctx}, &mcp.StreamableClientTransport{
 		Endpoint:             m.Remote.URL,
-		HTTPClient:           &http.Client{Transport: capt},
+		HTTPClient:           credential.NewClient(capt),
 		DisableStandaloneSSE: true,
 		MaxRetries:           -1,
 	}, nil)

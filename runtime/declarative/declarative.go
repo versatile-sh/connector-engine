@@ -72,7 +72,7 @@ func (r *Runtime) Start(_ context.Context, _ port.Connector, m port.Manifest, se
 	}
 	in := &instance{
 		base:   strings.TrimRight(m.REST.BaseURL, "/"),
-		client: &http.Client{Transport: credential.Transport{Base: transport, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}},
+		client: credential.NewClient(credential.Transport{Base: transport, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}),
 		order:  m.REST.Functions,
 		byName: map[string]port.RESTFunction{},
 	}

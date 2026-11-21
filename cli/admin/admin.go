@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/cli/command"
 	"github.com/versatile-sh/connector-engine/server"
 )
 
@@ -162,6 +163,10 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 	default:
 		return c.usage()
 	}
+	if slices.ContainsFunc(rest, func(a string) bool { return a == "-h" || a == "--help" || a == "-help" }) {
+		c.opHelp(op, positional)
+		return 0
+	}
 	if *base == "" {
 		fmt.Fprintln(c.err, "no engine address: set --url or VSH_ADMIN_URL")
 		return 2
@@ -174,18 +179,37 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 	return c.send(req)
 }
 
-func (c *Cmd) request(ctx context.Context, op server.Operation, positional, args []string, base, token string) (*http.Request, error) {
-	fields := server.Fields(server.Elem(reflect.TypeOf(op.In())))
+func opFlags(op server.Operation) (*flag.FlagSet, map[string]*string, *string, *string) {
 	fs := flag.NewFlagSet(op.ID, flag.ContinueOnError)
-	fs.SetOutput(c.err)
 	values := map[string]*string{}
-	for _, f := range fields {
+	for _, f := range server.Fields(server.Elem(reflect.TypeOf(op.In()))) {
 		if scalar(f.Type) && !slices.Contains(op.PathParams(), f.Name) {
 			values[f.Name] = fs.String(kebab(f.Name), "", "field "+f.Name)
 		}
 	}
 	raw := fs.String("json", "", "request body or fields as JSON, under the flags")
 	key := fs.String("idempotency-key", "", "retry-safe key of a mutation; random when empty")
+	return fs, values, raw, key
+}
+
+func (c *Cmd) opHelp(op server.Operation, positional []string) {
+	fs, _, _, _ := opFlags(op)
+	usage := "Usage: vsh admin call " + op.ID
+	for _, a := range Aliases {
+		if a.Operation == op.ID {
+			usage = "Usage: vsh admin " + a.Group + " " + a.Verb
+		}
+	}
+	for _, p := range append(slices.Clone(op.PathParams()), positional...) {
+		usage += " <" + kebab(p) + ">"
+	}
+	command.WriteHelp(c.out, usage, op.Method+" "+op.Path+" (operation "+op.ID+"); $VSH_ADMIN_URL and $VSH_ADMIN_TOKEN give the engine and its bearer token.", fs)
+}
+
+func (c *Cmd) request(ctx context.Context, op server.Operation, positional, args []string, base, token string) (*http.Request, error) {
+	fields := server.Fields(server.Elem(reflect.TypeOf(op.In())))
+	fs, values, raw, key := opFlags(op)
+	fs.SetOutput(c.err)
 	if err := parseInterleaved(fs, args); err != nil {
 		return nil, err
 	}

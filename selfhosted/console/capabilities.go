@@ -130,6 +130,7 @@ var routeCapabilities = map[string]Capability{
 	"POST /api/approvals/{id}":                   CapApprovalsOwn,
 	"POST /api/approvals/{id}/cancel":            CapApprovalsAny,
 	"GET /api/activity":                          CapActivityOwn,
+	"GET /api/activity/summary":                  CapActivityOwn,
 	"GET /api/activity/{id}":                     CapActivityOwn,
 	"GET /api/activity/settings":                 CapActivityOwn,
 	"PUT /api/activity/settings":                 CapActivitySettings,

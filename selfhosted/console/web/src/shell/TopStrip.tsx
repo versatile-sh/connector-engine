@@ -14,7 +14,7 @@ function Endpoint({ url }: { url: string }) {
   const t = useT();
   const { result, copy } = useCopy();
   return (
-    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} title={url} className={`inline-flex h-9 max-w-[12rem] min-w-0 items-center gap-2 rounded-full border border-line-strong px-3.5 font-mono text-xs text-muted hover:border-paper/50 hover:text-paper sm:max-w-xs ${PRESS}`}>
+    <button type="button" onClick={() => void copy(url)} aria-label={t("shell.copyEndpoint", { url })} title={url} className={`inline-flex h-9 max-w-[9.5rem] min-w-0 items-center gap-2 rounded-full border border-line-strong px-3.5 font-mono text-xs text-muted hover:border-paper/50 hover:text-paper sm:max-w-xs ${PRESS}`}>
       <span className="size-1.5 shrink-0 rounded-full bg-lime" aria-hidden="true" />
       <span className="min-w-0 truncate" translate="no">{url.replace(/^https?:\/\//, "")}</span>
       <Icon name={result === "copied" ? "check" : "copy"} className={`size-3.5 ${result === "copied" ? "text-lime" : ""}`} />

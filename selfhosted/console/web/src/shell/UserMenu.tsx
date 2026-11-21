@@ -81,7 +81,7 @@ export function UserMenu({ user, rail, signingOut, onSignOut, onNavigate }: User
           </span>
           {user ? <span className="truncate font-mono text-xs leading-tight text-muted">{t(`role.${user.role}`)}</span> : null}
         </span>
-        <Icon name="chevron" className="size-4 text-muted transition-[rotate,opacity] duration-250 ease-(--ease-glide) group-aria-expanded/user:rotate-180 group-data-rail/side:opacity-0" />
+        <Icon name="chevron" className="size-4 text-muted transition-[rotate,opacity] duration-250 ease-(--ease-glide) group-aria-expanded/user:rotate-180 group-data-rail/side:hidden" />
       </button>
       <div
         ref={popup}

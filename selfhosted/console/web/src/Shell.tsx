@@ -109,7 +109,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           id="main"
           ref={surface}
           tabIndex={-1}
-          className="shell-surface vignette-top relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain border border-line bg-ink-raised [scrollbar-gutter:stable] max-lg:border-x-0 max-lg:border-b-0 focus-visible:outline-none lg:mr-3 lg:mb-3 lg:rounded-2xl"
+          className="shell-surface vignette-top relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain border border-line bg-ink-raised [scrollbar-gutter:stable] max-lg:border-x-0 max-lg:border-b-0 focus-visible:outline-offset-0 lg:mr-3 lg:mb-3 lg:rounded-2xl"
         >
           <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pt-8 pb-16 sm:px-8 lg:px-10 lg:pt-10">
             {oauth ? (

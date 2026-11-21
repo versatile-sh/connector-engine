@@ -103,6 +103,14 @@ describe("ImportLanding", () => {
       t.assert.doesNotMatch(withIcon, /uppercase[^>]*>F<\/span>/);
     });
 
+    test("draws the icon of the install link for Paper Context Resolver on the tile through the console's icon proxy", (t) => {
+      const icon = "https://versatile.sh/avatars/lllllllama.png";
+      const paper = { ...SKILL, name: "paper-context-resolver", title: "Paper Context Resolver", icon };
+      const html = draw(paper, { listing: "https://versatile.sh/skills/catalog/paper-context-resolver.yaml" });
+      t.assert.match(html, /<header[^>]*>[^]*<img[^>]*src="\/api\/icon\?u=https%3A%2F%2Fversatile\.sh%2Favatars%2Flllllllama\.png"/);
+      t.assert.doesNotMatch(html, /uppercase[^>]*>P<\/span>/);
+    });
+
     test("shows the owner and the licence as chips", (t) => {
       t.assert.match(textOf(html), /Skill/);
       t.assert.match(html, />by vercel-labs</);

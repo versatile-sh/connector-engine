@@ -268,6 +268,16 @@ describe("ImportLanding", () => {
     });
   });
 
+  describe("with a connector link that names its catalog page", () => {
+    const PAGE = "https://versatile.sh/connectors/mail";
+    const html = draw({ ...CONNECTOR, page_url: PAGE }, { ...CONNECTOR_SOURCE, page: PAGE });
+
+    test("links the provenance line to the catalog page, not the listing", (t) => {
+      t.assert.match(html, /<a href="https:\/\/versatile\.sh\/connectors\/mail"[^>]*title="https:\/\/versatile\.sh\/connectors\/mail"[^>]*>[^]*From the versatile\.sh catalog/);
+      t.assert.doesNotMatch(html, /<a href="https:\/\/versatile\.sh\/connectors\/catalog\/mail\.yaml"/);
+    });
+  });
+
   describe("with a connector that lists no function", () => {
     const html = draw({ ...CONNECTOR, tools: [], warning: "the server could not be reached to list its functions" }, CONNECTOR_SOURCE);
 

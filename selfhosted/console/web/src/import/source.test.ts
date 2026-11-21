@@ -62,6 +62,12 @@ describe("linkOf", () => {
     describe(`on ${path}`, () => {
       test("reads a listing link", () => assert.deepEqual(linkOf(path, new URLSearchParams(listing)), { listing: "https://versatile.sh/l/linear.yaml" }));
       test("reads an MCP link", () => assert.deepEqual(linkOf(path, new URLSearchParams(mcp)), { mcp: "https://mcp.example.com/mcp" }));
+      test("reads a listing link with its catalog page", () =>
+        assert.deepEqual(linkOf(path, new URLSearchParams(listing + "&page=" + encodeURIComponent("https://versatile.sh/connectors/linear"))), {
+          listing: "https://versatile.sh/l/linear.yaml",
+          page: "https://versatile.sh/connectors/linear",
+        }));
+      test("ignores a page without a listing", () => assert.deepEqual(linkOf(path, new URLSearchParams(mcp + "&page=https%3A%2F%2Fversatile.sh%2Fconnectors%2Flinear")), { mcp: "https://mcp.example.com/mcp" }));
       test("prefers the listing when both are given", () => assert.deepEqual(linkOf(path, new URLSearchParams(listing + "&" + mcp.slice(1))), { listing: "https://versatile.sh/l/linear.yaml" }));
       test("reads nothing from an empty link", () => assert.equal(linkOf(path, new URLSearchParams("?listing=&mcp=")), undefined));
       test("reads nothing without a link", () => assert.equal(linkOf(path, new URLSearchParams()), undefined));

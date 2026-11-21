@@ -12,16 +12,17 @@ const isWeb = (raw: string) => /^https?:\/\//i.test(raw);
 function Provenance({ preview, host }: { preview: Preview; host: string }) {
   const t = useT();
   const text = t(preview.kind === "mcp" ? "import.fromServer" : "import.fromCatalog", { host });
+  const href = preview.page_url ?? preview.url;
   return (
     <p className="mt-4 flex max-w-full justify-center text-sm text-muted lg:justify-start">
-      {isWeb(preview.url) ? (
-        <a href={preview.url} target="_blank" rel="noreferrer noopener" title={preview.url} className={`${QUIET_LINK} inline-flex max-w-full items-center gap-1.5`}>
+      {isWeb(href) ? (
+        <a href={href} target="_blank" rel="noreferrer noopener" title={href} className={`${QUIET_LINK} inline-flex max-w-full items-center gap-1.5`}>
           <span className="truncate">{text}</span>
           <Icon name="external" className="size-3.5" />
           <span className="sr-only">{t("common.opensNewTab")}</span>
         </a>
       ) : (
-        <span title={preview.url} className="truncate">
+        <span title={href} className="truncate">
           {text}
         </span>
       )}

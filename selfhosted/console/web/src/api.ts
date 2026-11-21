@@ -206,6 +206,7 @@ export type Preview = {
   version: string;
   remote_url?: string;
   website_url?: string;
+  page_url?: string;
   protocol?: string;
   auth?: string[];
   tools: ProbedTool[];
@@ -215,7 +216,7 @@ export type Preview = {
 };
 
 /** Where an import reads from: an MCP address, a catalog listing or a local command. */
-export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
+export type ImportSource = { mcp?: string; listing?: string; page?: string; local?: boolean; header_secret?: boolean };
 
 /** An agent key of the console: its name, expiry and whether a browser session made it. */
 export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string; owner?: RowOwner };

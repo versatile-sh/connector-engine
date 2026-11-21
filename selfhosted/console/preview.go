@@ -15,6 +15,7 @@ import (
 type importRequest struct {
 	MCP          string            `json:"mcp,omitempty"`
 	Listing      string            `json:"listing,omitempty"`
+	Page         string            `json:"page,omitempty"`
 	ListingText  string            `json:"listing_text,omitempty"`
 	Local        bool              `json:"local,omitempty"`
 	HeaderSecret bool              `json:"header_secret,omitempty"`
@@ -38,6 +39,7 @@ type Preview struct {
 	Version      string        `json:"version"`
 	RemoteURL    string        `json:"remote_url,omitempty"`
 	WebsiteURL   string        `json:"website_url,omitempty"`
+	PageURL      string        `json:"page_url,omitempty"`
 	Protocol     string        `json:"protocol,omitempty"`
 	Auth         []string      `json:"auth,omitempty"`
 	Tools        []ProbedTool  `json:"tools"`
@@ -69,12 +71,30 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 			return Preview{}, err
 		}
 		u, _ := url.Parse(src)
+		var p Preview
 		if skillcatalog.Kind(body) == string(port.KindSkill) {
-			return c.previewSkill(src, u.Host, body)
+			p, err = c.previewSkill(src, u.Host, body)
+		} else {
+			p, err = c.previewListing(ctx, src, u.Host, body)
 		}
-		return c.previewListing(ctx, src, u.Host, body)
+		if err != nil {
+			return Preview{}, err
+		}
+		p.PageURL = catalogPage(in.Page, u)
+		return p, nil
 	}
 	return Preview{}, invalid("give exactly one of mcp, listing or listing_text")
+}
+
+func catalogPage(raw string, listing *url.URL) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || listing == nil || u.Host == "" || !strings.EqualFold(u.Host, listing.Host) {
+		return ""
+	}
+	if u.Scheme == "https" || u.Scheme == "http" && egress.IsLoopback(u.Hostname()) {
+		return u.String()
+	}
+	return ""
 }
 
 func (c *Console) previewListingText(ctx context.Context, body []byte) (Preview, error) {

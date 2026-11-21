@@ -104,7 +104,7 @@ One toolbar, two groups: the period (Mine or Everyone, the range chips, custom d
 
 ## Dashboard
 
-`/` is the Dashboard, the first link of the sidebar; Connectors is `/connectors` (`/connectors/<id>` for one, `/import` for the import window), and an install link, `?listing=` or `?mcp=`, opens its review on `/import`, `/` and `/connectors` alike. `src/shell/shell.ts` maps paths to sections (`sectionOf`), `src/import/source.ts` reads the links (`linkOf`).
+`/` is the Dashboard, the first link of the sidebar; Connectors is `/connectors` (`/connectors/<id>` for one, `/import` for the import window), and an install link, `?listing=` or `?mcp=`, opens its review on `/import`, `/` and `/connectors` alike. A listing link may carry `?page=`, the entry's page in its directory; the provenance line opens it when the preview accepts it (`page_url`), else the listing. `src/shell/shell.ts` maps paths to sections (`sectionOf`), `src/import/source.ts` reads the links (`linkOf`).
 
 It follows the page rhythm, in this order: the header, a toolbar holding Mine | Everyone only for a viewer who may see everyone's, the first-run guide while it has a step left (only for those who manage connectors), then one `@container` of four rows of cells:
 

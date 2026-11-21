@@ -31,10 +31,11 @@ export function readSource(text: string, kind: SourceKind, options: { local: boo
 
 const LINK_PATHS: ReadonlySet<string> = new Set(["/import", "/", "/connectors"]);
 
-/** The address an install link in the console's address carries, `?listing=` or `?mcp=`: on `/import`, where the site sends them, and on the front pages `/` and `/connectors`, where older links and pasted ones land. */
-export function linkOf(path: string, query: URLSearchParams): { listing: string } | { mcp: string } | undefined {
+/** The address an install link in the console's address carries, `?listing=` (with its catalog `?page=`) or `?mcp=`: on `/import`, where the site sends them, and on the front pages `/` and `/connectors`, where older links and pasted ones land. */
+export function linkOf(path: string, query: URLSearchParams): { listing: string; page?: string } | { mcp: string } | undefined {
   if (!LINK_PATHS.has(path)) return undefined;
   const listing = query.get("listing");
+  const page = query.get("page");
   const mcp = query.get("mcp");
-  return listing ? { listing } : mcp ? { mcp } : undefined;
+  return listing ? { listing, ...(page ? { page } : {}) } : mcp ? { mcp } : undefined;
 }

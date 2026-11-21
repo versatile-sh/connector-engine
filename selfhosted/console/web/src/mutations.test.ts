@@ -53,7 +53,6 @@ describe("mutations", () => {
     { name: "removeSkill", run: () => staleAfter(mutations.removeSkill, "s1"), stale: ["skills", "session"] },
     { name: "saveRecording", run: () => staleAfter(mutations.saveRecording, { record_arguments: true, record_results: false }), stale: [] },
     { name: "deleteActivity", run: () => staleAfter(mutations.deleteActivity, undefined), stale: ["activity", "activity-settings"] },
-    { name: "setElicit", run: () => staleAfter(mutations.setElicit, { name: "cursor", elicit: true }), stale: ["notifications"] },
     { name: "addChannel", run: () => staleAfter(mutations.addChannel, { kind: "ntfy", label: "n", settings: {} }), stale: ["notifications"] },
     { name: "testChannel", run: () => staleAfter(mutations.testChannel, "ch1"), stale: [] },
     { name: "removeChannel", run: () => staleAfter(mutations.removeChannel, "ch1"), stale: ["notifications"] },

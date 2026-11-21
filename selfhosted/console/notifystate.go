@@ -34,7 +34,6 @@ type Device struct {
 type notifyState struct {
 	Channels map[string]StoredChannel `json:"channels,omitempty"`
 	Devices  map[string]Device        `json:"devices,omitempty"`
-	Elicit   map[string]bool          `json:"elicit,omitempty"`
 	Sealed   map[string]port.Sealed   `json:"channel_secrets,omitempty"`
 	LinkKey  string                   `json:"link_key,omitempty"`
 	Cursor   int64                    `json:"cursor,omitempty"`
@@ -142,32 +141,6 @@ func (s *State) DeviceByKey(keyHash string) (Device, bool) {
 		}
 	}
 	return Device{}, false
-}
-
-// ElicitApps returns the apps the owner lets ask in their own window.
-func (s *State) ElicitApps() map[string]bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return maps.Clone(s.data.Notify.Elicit)
-}
-
-// Elicits reports whether the app may ask in its own window.
-func (s *State) Elicits(app string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.data.Notify.Elicit[app]
-}
-
-// SetElicit turns asking in the app's own window on or off.
-func (s *State) SetElicit(app string, on bool) error {
-	return s.update(func(d *stateFile) error {
-		if on {
-			put(&d.Notify.Elicit, app, true)
-		} else {
-			delete(d.Notify.Elicit, app)
-		}
-		return nil
-	})
 }
 
 func (s *State) linkKeyRecords() (*port.Sealed, string) {

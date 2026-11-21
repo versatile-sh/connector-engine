@@ -131,20 +131,18 @@ func TestADesktopLinkDecidesOnlyAsItsDevicesOwner(t *testing.T) {
 	}
 }
 
-func TestAUserCannotSeeOrChangeAnotherUsersChannelsDevicesOrApps(t *testing.T) {
+func TestAUserCannotSeeOrChangeAnotherUsersChannelsOrDevices(t *testing.T) {
 	r := newRig(t)
 	alice, bob := r.member("p-alice", "alice"), r.member("p-bob", "bob")
 	ch := r.channel(bob, "2")
 	var paired struct{ Device console.DeviceView }
 	bob.ok("POST", "/api/notifications/devices", map[string]any{"name": "laptop"}, &paired)
-	bob.ok("POST", "/api/agents", map[string]any{"name": "bobkey"}, nil)
 	var list struct {
 		Channels []console.ChannelView
 		Devices  []console.DeviceView
-		Apps     []struct{ Name string }
 	}
 	alice.ok("GET", "/api/notifications", nil, &list)
-	if len(list.Channels)+len(list.Devices)+len(list.Apps) != 0 {
+	if len(list.Channels)+len(list.Devices) != 0 {
 		t.Fatalf("alice sees %+v", list)
 	}
 	for _, req := range []struct{ method, path string }{
@@ -153,15 +151,14 @@ func TestAUserCannotSeeOrChangeAnotherUsersChannelsDevicesOrApps(t *testing.T) {
 		{"PATCH", "/api/notifications/devices/" + paired.Device.ID},
 		{"DELETE", "/api/notifications/devices/" + paired.Device.ID},
 		{"POST", "/api/notifications/devices"},
-		{"PUT", "/api/notifications/apps/bobkey"},
 	} {
-		body := map[string]any{"name": "mine now", "id": paired.Device.ID, "elicit": true}
+		body := map[string]any{"name": "mine now", "id": paired.Device.ID}
 		if status, raw := alice.send(req.method, req.path, body, nil); status != http.StatusNotFound {
 			t.Errorf("%s %s: %d %s", req.method, req.path, status, raw)
 		}
 	}
 	bob.ok("GET", "/api/notifications", nil, &list)
-	if len(list.Channels) != 1 || list.Channels[0].SecretHint != "QRST" || len(list.Devices) != 1 || list.Devices[0].Name != "laptop" || len(list.Apps) != 1 || list.Apps[0].Name != "bobkey" {
+	if len(list.Channels) != 1 || list.Channels[0].SecretHint != "QRST" || len(list.Devices) != 1 || list.Devices[0].Name != "laptop" {
 		t.Fatalf("bob's own settings after alice tried: %+v", list)
 	}
 	var tested struct{ OK bool }

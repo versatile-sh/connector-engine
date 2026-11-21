@@ -417,7 +417,7 @@ export type ChannelView = {
 export type DeviceView = { id: string; name: string; created_at: string; last_seen?: string };
 
 /** What GET /api/notifications answers; it never carries a secret. */
-export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[]; apps: { name: string; elicit: boolean }[] };
+export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[] };
 
 /** A computer just paired for desktop popups: its key, shown once, and the command that uses it. */
 export type PairedDevice = { device: DeviceView; key: string; command: string };

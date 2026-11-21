@@ -29,7 +29,6 @@ type surfaces struct {
 	relay   *surface.Relay
 	links   spentSet
 	hub     deviceHub
-	el      elicitState
 }
 
 type approvalOwner struct {

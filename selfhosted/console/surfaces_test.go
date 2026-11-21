@@ -96,16 +96,26 @@ func newFake() *fakeChannel {
 	return &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}
 }
 
-func newRig(t *testing.T) *rig {
+func newRig(t *testing.T, tweaks ...func(*config.Config)) *rig {
+	t.Helper()
+	return newSeededRig(t, "", tweaks...)
+}
+
+func newSeededRig(t *testing.T, seed string, tweaks ...func(*config.Config)) *rig {
 	t.Helper()
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	base := "http://" + lis.Addr().String()
-	public, operator := bootEngine(t, base, func(c *config.Config) { c.Approval.HoldWindow, c.Gateway.Skills = 10*time.Second, "tools" })
+	public, operator := bootEngine(t, base, append([]func(*config.Config){func(c *config.Config) { c.Approval.HoldWindow, c.Gateway.Skills = 10*time.Second, "tools" }}, tweaks...)...)
 	up := newUpstream(t)
 	statePath := t.TempDir() + "/state.json"
+	if seed != "" {
+		if err := os.WriteFile(statePath, []byte(seed), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	state, err := console.OpenState(statePath, "owner")
 	if err != nil {
 		t.Fatal(err)

@@ -99,7 +99,6 @@ func TestAMemberSeesAndActsOnOnlyTheirOwnKeysApprovalsAndActivity(t *testing.T) 
 			bob.refusedAs(t, http.StatusNotFound, "DELETE", "/api/agents/"+name, nil)
 			bob.refusedAs(t, http.StatusNotFound, "GET", "/api/connectors/"+p.conn+"/profiles/"+name, nil)
 			bob.refusedAs(t, http.StatusNotFound, "PUT", "/api/connectors/"+p.conn+"/profiles/"+name, map[string]any{"names": []string{"lookup"}, "access": "off"})
-			bob.refusedAs(t, http.StatusNotFound, "PUT", "/api/notifications/apps/"+name, map[string]any{"elicit": true})
 		}
 		if got := bob.batch("PUT", "/api/connectors/"+p.conn+"/profiles", map[string]any{"mode": "off", "keys": []string{"alpha"}}); got["alpha"] != "not_found" {
 			t.Errorf("a batch over another's key %v", got)

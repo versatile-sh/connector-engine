@@ -109,7 +109,7 @@ export const ACTIVITY = {
 
 const SETTINGS = { record_arguments: false, record_results: false, retention: "30d", retention_days: 30 } as const satisfies ActivitySettings;
 
-const NOTIFICATIONS = { channels: [], devices: [], apps: [] } as const satisfies NotificationsData;
+const NOTIFICATIONS = { channels: [], devices: [] } as const satisfies NotificationsData;
 
 const ACCOUNT = { username: "alice", last_export: "2026-11-19T00:00:00Z" } as const satisfies Account;
 

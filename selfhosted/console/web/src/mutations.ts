@@ -220,11 +220,6 @@ export const pruneActivity = mutationOptions({
   onSuccess: (_data, _period, _onMutate, { client }) => invalidate(client, activityKey, activitySettingsQuery.queryKey),
 });
 
-/** Turns MCP elicitation on or off for one app. */
-export const setElicit = mutationOptions({
-  mutationFn: ({ name, elicit }: { name: string; elicit: boolean }) => api("PUT", `/api/notifications/apps/${at(name)}`, { elicit }),
-  onSettled: (_data, _error, _choice, _onMutate, { client }) => invalidate(client, notificationsQuery.queryKey),
-});
 
 /** Adds a notification channel; its secrets are never shown again. */
 export const addChannel = mutationOptions({

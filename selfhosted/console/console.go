@@ -121,7 +121,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("GET /api/activity/settings", c.withActivity(c.activitySettings))
 	rt.handle("PUT /api/activity/settings", c.withActivity(c.setActivitySettings))
 	rt.handle("GET /api/activity/{id}", c.withActivity(c.activityDetail))
-	agent := c.gateMCP(c.refuseRevoked(c.capture(c.elicitProxy(c.agentProxy()))))
+	agent := c.gateMCP(c.refuseRevoked(c.capture(c.agentProxy())))
 	for _, m := range []string{"GET", "POST", "DELETE"} {
 		rt.handle(m+" /mcp", agent.ServeHTTP)
 	}

@@ -161,7 +161,6 @@ func (c *Console) surfaceRoutes(rt *router) {
 	rt.handle("POST /api/notifications/channels", c.addChannel)
 	rt.handle("DELETE /api/notifications/channels/{id}", c.removeChannel)
 	rt.handle("POST /api/notifications/channels/{id}/test", c.testChannel)
-	rt.handle("PUT /api/notifications/apps/{name}", c.setElicit)
 	rt.handle("POST /api/notifications/devices", c.pairDevice)
 	rt.handle("PATCH /api/notifications/devices/{id}", c.renameDevice)
 	rt.handle("DELETE /api/notifications/devices/{id}", c.revokeDevice)
@@ -188,19 +187,7 @@ func (c *Console) listNotifications(w http.ResponseWriter, r *http.Request) {
 		devices = append(devices, DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt, LastSeen: d.LastSeen})
 	}
 	slices.SortFunc(devices, func(a, b DeviceView) int { return a.CreatedAt.Compare(b.CreatedAt) })
-	elicit := c.State.ElicitApps()
-	type app struct {
-		Name   string `json:"name"`
-		Elicit bool   `json:"elicit"`
-	}
-	apps := []app{}
-	for _, a := range c.State.Agents() {
-		if a.Owner == me(r) {
-			apps = append(apps, app{Name: a.Name, Elicit: elicit[a.Name]})
-		}
-	}
-	slices.SortFunc(apps, func(a, b app) int { return strings.Compare(a.Name, b.Name) })
-	writeJSON(w, http.StatusOK, map[string]any{"channels": views, "devices": devices, "apps": apps})
+	writeJSON(w, http.StatusOK, map[string]any{"channels": views, "devices": devices})
 }
 
 func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {
@@ -292,25 +279,6 @@ func (c *Console) testChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
-}
-
-func (c *Console) setElicit(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		Elicit bool `json:"elicit"`
-	}
-	if !readJSON(w, r, &in) {
-		return
-	}
-	name := r.PathValue("name")
-	if owner, ok := c.State.KeyOwner(name); !ok || owner != me(r) {
-		writeError(w, http.StatusNotFound, "no such app")
-		return
-	}
-	if err := c.State.SetElicit(name, in.Elicit); err != nil {
-		c.fail(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {

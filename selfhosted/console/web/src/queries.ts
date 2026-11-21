@@ -130,7 +130,7 @@ export const approvalQuery = (id: string, token: string | null) =>
     refetchOnWindowFocus: false,
   });
 
-/** The notification channels, the paired computers and the per-app elicitation switches. */
+/** The notification channels and the paired computers. */
 export const notificationsQuery = queryOptions({ queryKey: ["notifications"], queryFn: () => api<NotificationsData>("GET", "/api/notifications") });
 
 /** The owner's name and when the last full backup was made. */

@@ -360,3 +360,9 @@ func (in *inflight) settle(oversize bool, size int) {
 		in.activity.Record(*cp)
 	}
 }
+
+func metaString(meta map[string]json.RawMessage, key string) string {
+	var s string
+	_ = json.Unmarshal(meta[key], &s)
+	return s
+}

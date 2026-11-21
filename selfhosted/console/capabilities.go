@@ -138,7 +138,6 @@ var routeCapabilities = map[string]Capability{
 	"POST /api/notifications/channels":           CapNotificationsOwn,
 	"DELETE /api/notifications/channels/{id}":    CapNotificationsOwn,
 	"POST /api/notifications/channels/{id}/test": CapNotificationsOwn,
-	"PUT /api/notifications/apps/{name}":         CapNotificationsOwn,
 	"POST /api/notifications/devices":            CapNotificationsOwn,
 	"PATCH /api/notifications/devices/{id}":      CapNotificationsOwn,
 	"DELETE /api/notifications/devices/{id}":     CapNotificationsOwn,

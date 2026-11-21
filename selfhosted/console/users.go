@@ -257,9 +257,6 @@ func (s *State) RemoveUser(actor, person string, keys []string) error {
 			}
 		}
 		maps.DeleteFunc(d.Notify.Devices, func(_ string, dev Device) bool { return dev.Owner == person })
-		for _, name := range keys {
-			delete(d.Notify.Elicit, name)
-		}
 		gone := func(_ string, g RefreshGrant) bool { return slices.Contains(keys, g.Agent) }
 		maps.DeleteFunc(d.Refresh, gone)
 		maps.DeleteFunc(d.Spent, gone)

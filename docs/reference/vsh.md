@@ -30,7 +30,7 @@ Management, as the signed-in user of the console:
 ```text
 vsh status [--data DIR]
 vsh login [--user NAME] [--password-stdin] | logout
-vsh connectors [list] | show NAME | import URL [--mcp] [--local] [--yes] | remove NAME [--yes]
+vsh connectors [list] | show NAME | import URL|FILE [--mcp] [--local] [--yes] | remove NAME [--yes]
 vsh keys [list] | create NAME [--ttl 720h] | revoke NAME [--yes]
 vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive]
 vsh access CONNECTOR --key NAME follow|custom
@@ -103,7 +103,7 @@ NAME         TITLE        FUNCTIONS  KEYS  STATE
 check-notes  Check notes  4          0     enabled
 ```
 
-`import` reads a listing URL, or an MCP server's address with `--mcp` (`--local` allows one on this machine or its network). It shows what the console proposes and asks before it installs, unless `--yes`. A connector that needs a sign-in is signed in to from the console's Connectors page. `remove` asks before it deletes the connector and its credentials.
+`import` reads a listing URL, a listing file on this machine (at most 60 KiB, sent to the console as `listing_text`), or an MCP server's address with `--mcp` (`--local` allows one on this machine or its network). A skill comes from its catalog URL, never a file. A connector installed from a file has no listing address, so a setup export points at its server's address instead, as it does for any connector without a recorded listing. It shows what the console proposes and asks before it installs, unless `--yes`. A connector that needs a sign-in is signed in to from the console's Connectors page. `remove` asks before it deletes the connector and its credentials.
 
 ### keys
 
@@ -159,6 +159,21 @@ approved 18eb5f5700a4eb5f6bfadba9a5091f44
 ```
 
 `--follow` asks the console every `--every` (2s) and prints each new call, and a call again when its outcome changes, until interrupted.
+
+## The full-screen vsh
+
+`vsh` with no command in a terminal, or `vsh ui`, opens a full-screen view of the same console API, as the signed-in user (run `vsh login` first). It fits 80×24 and uses the extra room of a wider terminal.
+
+| Screen | Keys |
+|---|---|
+| all | `tab` / `shift+tab` or `1`–`4` switch screens, `q` quits, `esc` goes back or quits, `ctrl+c` quits |
+| Connectors | `↑` `↓` move, `/` filters, `enter` opens a connector |
+| a connector | its functions by read, write and destructive; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
+| Keys | `n` creates a key and shows it once, `d` revokes one after a `y` |
+| Approvals | `a` approves, `d` denies |
+| Activity | the calls of the last hour, newest last, every 2 seconds |
+
+A change shows at once and is sent to the console; when the console refuses it, the screen goes back to what it was and the footer gives the reason. Approvals and activity refresh every 2 seconds.
 
 ## Lifecycle without Docker
 

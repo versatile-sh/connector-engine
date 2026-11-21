@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/connector-engine ./cmd/connector-engine && \
     go build -ldflags "-s -w" -o /out/core/vsh ./cmd/vsh && \
     go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/connector-engine-selfhosted ./selfhosted/cmd/connector-engine && \
-    go build -ldflags "-s -w" -o /out/vsh ./selfhosted/cmd/vsh && \
+    go build -ldflags "-s -w -X main.version=${VERSION}" -o /out/vsh ./selfhosted/cmd/vsh && \
     go build -ldflags "-s -w" -o /out/connector-console ./selfhosted/cmd/connector-console && \
     go build -ldflags "-s -w" -o /out/testmcp ./internal/testmcp && \
     mkdir -p /dirs/var/lib/connector-engine/secrets /dirs/var/lib/connector-console /dirs/run/connector-engine

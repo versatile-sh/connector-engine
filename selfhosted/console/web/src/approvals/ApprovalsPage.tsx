@@ -63,7 +63,7 @@ export function ApprovalsPage() {
                 <li key={row} className={`${SKELETON} h-32`} />
               ))}
             </ul>
-          ) : list.length === 0 ? (
+          ) : approvals.isError ? null : list.length === 0 ? (
             <EmptyState icon="shield" title={t("approvals.empty.title")} body={t("approvals.empty.body")} />
           ) : (
             <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} keyOf={(approval) => approval.id} label={t("approvals.filter")} whole bar>
@@ -88,11 +88,11 @@ export function ApprovalsPage() {
               )}
             </LongList>
           )}
-          <RecentDecisions decisions={decisions.data} named={named} owners={everyone} />
+          <RecentDecisions decisions={decisions.data} failed={decisions.isError} named={named} owners={everyone} />
         </div>
         <aside className="flex min-w-0 flex-col gap-6">
-          <AskFunctions connectors={connectors.data} />
-          <ReachYou data={notifications.data} />
+          <AskFunctions connectors={connectors.data} failed={connectors.isError} />
+          <ReachYou data={notifications.data} failed={notifications.isError} />
         </aside>
       </div>
     </section>

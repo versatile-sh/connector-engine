@@ -11,10 +11,10 @@ const LABEL: Record<DecisionKind, MessageKey> = { approved: "approvals.recent.ap
 
 const TONE: Record<DecisionKind, { tone: "paper" | "amber" | "muted"; dot: boolean }> = { approved: { tone: "paper", dot: false }, denied: { tone: "amber", dot: true }, expired: { tone: "muted", dot: false }, cancelled: { tone: "muted", dot: false } };
 
-type RecentDecisionsProps = { decisions: readonly DecisionRow[] | undefined; named: ReadonlyMap<string, Named>; owners: boolean };
+type RecentDecisionsProps = { decisions: readonly DecisionRow[] | undefined; failed: boolean; named: ReadonlyMap<string, Named>; owners: boolean };
 
 /** The last decisions, newest first, each with how it ended, the function or skill and its connector, the key that asked and, to the right, who answered and when; with everyone's, the owner of the call too. */
-export function RecentDecisions({ decisions, named, owners }: RecentDecisionsProps) {
+export function RecentDecisions({ decisions, failed, named, owners }: RecentDecisionsProps) {
   const t = useT();
   const locale = useLocale();
   const now = useNow();
@@ -23,7 +23,9 @@ export function RecentDecisions({ decisions, named, owners }: RecentDecisionsPro
       <h2 id="recent-decisions-title" className={TITLE}>
         {t("approvals.recent.title")}
       </h2>
-      {!decisions ? (
+      {!decisions && failed ? (
+        <p className="mt-2 text-sm text-pretty text-muted">{t("approvals.unavailable")}</p>
+      ) : !decisions ? (
         <div aria-hidden="true" className="mt-4 flex flex-col gap-3">
           {[0, 1, 2].map((row) => (
             <div key={row} className={`${SKELETON_LINE} h-9 w-full`} />

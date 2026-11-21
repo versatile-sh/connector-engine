@@ -106,7 +106,7 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
           <p className={`${LEAD} mt-1 text-sm`}>{t("keys.advancedIntro")}</p>
         </div>
         {mint.data ? <Created key={mint.data.token} token={mint.data} endpoint={endpoint} /> : null}
-        <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)] lg:gap-10">
+        <div className="grid items-start gap-6 xl:grid-cols-[22rem_minmax(0,1fr)] xl:gap-10">
           <form onSubmit={onSubmit} aria-labelledby="new-key" className={`${SURFACE} p-5`}>
             <h2 id="new-key" className={`${SUBTITLE} mb-4`}>
               {t("keys.new")}

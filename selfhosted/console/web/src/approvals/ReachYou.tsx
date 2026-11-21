@@ -38,7 +38,7 @@ function Row({ icon, label, note, tag }: RowProps) {
 }
 
 /** Where a held call reaches the viewer: this console, always, the AI app when an app is set to ask there, then the computers paired for popups and the chat channels with their status, the first few and a count of the rest, and the way to Notifications; with nothing but the console, a line on how to add more. */
-export function ReachYou({ data }: { data: NotificationsData | undefined }) {
+export function ReachYou({ data, failed }: { data: NotificationsData | undefined; failed: boolean }) {
   const t = useT();
   const locale = useLocale();
   const reach = data ? reachOf(data) : undefined;
@@ -49,7 +49,9 @@ export function ReachYou({ data }: { data: NotificationsData | undefined }) {
       <h2 id="reach-title" className={TITLE}>
         {t("approvals.reach.title")}
       </h2>
-      {!reach ? (
+      {!reach && failed ? (
+        <p className="mt-2 text-sm text-pretty text-muted">{t("approvals.unavailable")}</p>
+      ) : !reach ? (
         <div aria-hidden="true" className="mt-4 flex flex-col gap-3">
           {[0, 1, 2].map((row) => (
             <div key={row} className={`${SKELETON_LINE} h-9 w-full`} />

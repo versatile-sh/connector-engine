@@ -838,6 +838,7 @@ export const ptBR: Record<MessageKey, string> = {
   "creds.approves.shared": "Donos e Admins também podem aprovar chamadas.",
   "creds.approves.per_person": "Só o dono da chave aprova chamadas.",
   "creds.count": "{signed} de {count, plural, one {# pessoa} other {# pessoas}} entraram",
+  "approvals.unavailable": "Não foi possível ler. Recarregue a página para tentar de novo.",
   "approvals.asked": "Pedida {when}",
   "approvals.ask.title": "Funções em Perguntar",
   "approvals.ask.intro": "Uma chamada a uma delas para aqui até você responder.",

@@ -138,7 +138,7 @@ export function ConnectorDetail({ id }: { id: string }) {
           <div id={PROFILE_PANEL} role={tabs ? "tabpanel" : undefined} aria-labelledby={tabs ? tabId(PROFILE_PANEL, profile?.agent ?? "") : undefined} className="min-w-0">
             <ConnectorChoices connector={connector} agent={profile?.agent} />
           </div>
-          <aside className="flex flex-col gap-6 lg:self-start lg:tall:sticky lg:tall:top-6">
+          <aside className="flex flex-col gap-6 xl:self-start xl:tall:sticky xl:tall:top-6">
             <Credentials connector={connector} />
             <section aria-labelledby="facts-title" className={`${WELL} p-5`}>
               <h2 id="facts-title" className={SUBTITLE}>

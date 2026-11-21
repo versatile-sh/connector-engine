@@ -836,6 +836,7 @@ export const en = {
   "creds.approves.shared": "Owners and Admins can also approve calls.",
   "creds.approves.per_person": "Only the key's owner approves calls.",
   "creds.count": "{signed} of {count, plural, one {# person} other {# people}} signed in",
+  "approvals.unavailable": "That could not be read. Reload the page to try again.",
   "approvals.asked": "Asked {when}",
   "approvals.ask.title": "Functions set to Ask",
   "approvals.ask.intro": "A call to one of these stops here until you answer.",

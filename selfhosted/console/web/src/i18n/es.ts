@@ -838,6 +838,7 @@ export const es: Record<MessageKey, string> = {
   "creds.approves.shared": "Propietarios y Admins también pueden aprobar llamadas.",
   "creds.approves.per_person": "Solo el propietario de la clave aprueba llamadas.",
   "creds.count": "{signed} de {count, plural, one {# persona} other {# personas}} iniciaron sesión",
+  "approvals.unavailable": "No se pudo leer. Recarga la página para intentarlo de nuevo.",
   "approvals.asked": "Pedida {when}",
   "approvals.ask.title": "Funciones en Preguntar",
   "approvals.ask.intro": "Una llamada a una de ellas se detiene aquí hasta que respondas.",

@@ -11,10 +11,10 @@ mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-11-20T12:00:00Z") });
 
 type Overrides = readonly (readonly [QueryKey, unknown])[];
 
-const draw = (session: Session, overrides: Overrides = [], path = "/approvals") => {
-  const names = new Set(overrides.map(([key]) => JSON.stringify(key)));
+const draw = (session: Session, overrides: Overrides = [], path = "/approvals", failed: readonly QueryKey[] = []) => {
+  const names = new Set([...overrides.map(([key]) => key), ...failed].map((key) => JSON.stringify(key)));
   const data = [...pageData(session).filter(([key]) => !names.has(JSON.stringify(key))), ...overrides];
-  return renderMarkup(createElement(ApprovalsPage), { path, data });
+  return renderMarkup(createElement(ApprovalsPage), { path, data, failed });
 };
 
 const NONE: Overrides = [[["approvals"], { approvals: [] }]];
@@ -42,7 +42,7 @@ describe("ApprovalsPage", () => {
     });
 
     test("lays the main column and the side column out as two columns on a wide screen", () => {
-      assert.match(html, /<div class="grid items-start gap-6 lg:grid-cols-\[minmax\(0,1fr\)_20rem\] lg:gap-10">/);
+      assert.match(html, /<div class="grid items-start gap-6 xl:grid-cols-\[minmax\(0,1fr\)_20rem\] xl:gap-10">/);
     });
 
     test("fills the main column with the empty card then the recent decisions", () => {
@@ -145,6 +145,20 @@ describe("ApprovalsPage", () => {
 
     test("draws a placeholder where the arguments are on their way", () => {
       assert.match(html, /shimmer rounded-full mt-3 h-8 w-full max-w-md/);
+    });
+  });
+
+  describe("when a read fails", () => {
+    test("says so in the waiting list's place and never that nothing is waiting", () => {
+      const html = draw(ONE_OWNER, [], "/approvals", [["approvals"]]);
+      assert.match(html, /The console is down\./);
+      assert.doesNotMatch(html, /Nothing is <span/);
+    });
+
+    test("says each side card could not be read, with no placeholder that never ends", () => {
+      const html = draw(ONE_OWNER, NONE, "/approvals", [["connectors"], ["notifications"], ["approvals", "recent", "mine"]]);
+      assert.equal(count(html, "That could not be read."), 3);
+      assert.doesNotMatch(html, /shimmer/);
     });
   });
 

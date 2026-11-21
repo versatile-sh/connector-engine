@@ -10,10 +10,10 @@ const SHOWN = 5;
 
 const NAMES = 3;
 
-type AskFunctionsProps = { connectors: readonly Connector[] | undefined };
+type AskFunctionsProps = { connectors: readonly Connector[] | undefined; failed: boolean };
 
-/** The connectors and functions that stop for an answer: each connector with how many of its functions are at Ask and the first few by name, linking to its page, the first few connectors and a link to the rest; with none at Ask, how to set one. */
-export function AskFunctions({ connectors }: AskFunctionsProps) {
+/** The connectors and functions that stop for an answer: each connector with how many of its functions are at Ask and the first few by name, linking to its page, the first few connectors and a link to the rest; with none at Ask, how to set one, and a muted line when the connectors could not be read. */
+export function AskFunctions({ connectors, failed }: AskFunctionsProps) {
   const t = useT();
   const asked = connectors ? askedOf(connectors) : undefined;
   return (
@@ -22,7 +22,9 @@ export function AskFunctions({ connectors }: AskFunctionsProps) {
         {t("approvals.ask.title")}
       </h2>
       <p className="mt-1 text-sm text-pretty text-muted">{t("approvals.ask.intro")}</p>
-      {!asked ? (
+      {!asked && failed ? (
+        <p className="mt-4 text-sm text-pretty text-muted">{t("approvals.unavailable")}</p>
+      ) : !asked ? (
         <div aria-hidden="true" className="mt-4 flex flex-col gap-3">
           {[0, 1].map((row) => (
             <div key={row} className={`${SKELETON_LINE} h-9 w-full`} />

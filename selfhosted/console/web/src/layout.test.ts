@@ -107,6 +107,7 @@ describe("ApprovalsPage", () => {
     test("draws it once when the list failed to load", () => {
       const html = renderMarkup(createElement(ApprovalsPage), { data: team([]), failed: [["approvals"]] });
       assert.match(html, /The console is down\./);
+      assert.doesNotMatch(html, /Nothing is <span/);
       assert.equal(scopes(html), 1);
     });
   });

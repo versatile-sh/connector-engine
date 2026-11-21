@@ -21,9 +21,9 @@ function Arguments({ id }: { id: string }) {
   const line = previewOf(args.data);
   if (!line) return null;
   return (
-    <p className={`${WELL} mt-3 line-clamp-2 px-3 py-2 font-mono text-xs break-all text-muted`} translate="no">
+    <p className={`${WELL} mt-3 px-3 py-2 font-mono text-xs break-all text-muted`} translate="no">
       <span className="sr-only">{t("common.arguments")}: </span>
-      {line}
+      <span className="line-clamp-2">{line}</span>
     </p>
   );
 }

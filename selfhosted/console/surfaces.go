@@ -190,15 +190,7 @@ type tracked struct {
 	surf    *surfaces
 }
 
-func (t tracked) scrub(err error) string {
-	msg := err.Error()
-	for _, s := range t.secrets {
-		if s != "" {
-			msg = strings.ReplaceAll(msg, s, "[redacted]")
-		}
-	}
-	return msg
-}
+func (t tracked) scrub(err error) string { return surface.ScrubText(err.Error(), t.secrets...) }
 
 func (t tracked) Notify(ctx context.Context, p surface.Prompt) (surface.Ref, error) {
 	if t.owner != "" && !t.surf.reaches(p.Approval, t.owner) {

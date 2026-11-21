@@ -69,7 +69,6 @@ func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// setupTokenOK reports whether r carries the setup token, or none is configured or an Owner exists already.
 func (c *Console) setupTokenOK(r *http.Request) bool {
 	if c.SetupToken == "" || c.State.HasOwner() {
 		return true

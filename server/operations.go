@@ -38,6 +38,7 @@ type Operation struct {
 	Public bool
 	Live   bool
 	Never  bool
+	Doc    string
 	In     func() any
 	Out    any
 	call   func(ctx context.Context, e *Env, p port.Principal, in any) (any, error)
@@ -48,6 +49,8 @@ type option func(*Operation)
 func public() option { return func(o *Operation) { o.Public = true } }
 
 func never() option { return func(o *Operation) { o.Never = true } }
+
+func described(doc string) option { return func(o *Operation) { o.Doc = doc } }
 
 func op[I, O any](id, method, path, rpc string, status int, fn func(context.Context, *Env, port.Principal, I) (O, error), opts ...option) Operation {
 	o := Operation{

@@ -234,7 +234,7 @@ var operations = []Operation{
 	}),
 	op("listGrants", get, "/v1/grants", "ListGrants", ok200, func(ctx context.Context, e *Env, p port.Principal, in ListGrantsRequest) (Grants, error) {
 		return items[Grants](e.Svc.ListGrants(ctx, p, port.GrantFilter{ScopeKind: in.ScopeKind, ScopeID: in.ScopeID, Agent: in.Agent, Connector: in.Connector}))
-	}),
+	}, described("Lists grant rows. Only a session row names an agent, so a filter on agent returns session rows only.")),
 	op("confirmGrant", post, "/v1/grants/{id}:confirm", "ConfirmGrant", ok200, func(ctx context.Context, e *Env, p port.Principal, in GrantRequest) (port.Grant, error) {
 		return e.Svc.ConfirmGrant(ctx, p, in.ID)
 	}),

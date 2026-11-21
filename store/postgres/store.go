@@ -105,6 +105,11 @@ func (s *Store) Migrate(ctx context.Context) error {
 		if _, err := q.Exec(ctx, string(sql)); err != nil {
 			return fail(err)
 		}
+		if f == canonicalGrantsMigration {
+			if err := migrateGrants(ctx, q); err != nil {
+				return err
+			}
+		}
 		if _, err := q.Exec(ctx, `INSERT INTO schema_migrations VALUES ($1)`, f); err != nil {
 			return fail(err)
 		}

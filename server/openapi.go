@@ -110,6 +110,9 @@ func pathItem(o Operation) doc {
 	if o.Public {
 		item["security"] = []any{}
 	}
+	if o.Doc != "" {
+		item["description"] = o.Doc
+	}
 	if o.HasBody() {
 		body := objectOf(fields, append(o.PathParams(), o.QueryParams()...), false)
 		if len(body["properties"].(doc)) > 0 {

@@ -3,8 +3,10 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/core/grant"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -170,6 +172,17 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 	}
 	if work.inboxData == nil {
 		work.inboxData = map[string][]byte{}
+	}
+	var tenants []port.TenantID
+	for _, r := range work.grants.rows {
+		tenants = append(tenants, r.tenant)
+	}
+	slices.Sort(tenants)
+	in := func(tenant port.TenantID) (port.Tx, error) {
+		return &tx{d: &work, scope: port.Scope{Tenant: tenant}, write: true}, nil
+	}
+	if err := grant.RewriteTenants(slices.Compact(tenants), in, time.Now().UTC()); err != nil {
+		return err
 	}
 	s.d = work
 	return nil

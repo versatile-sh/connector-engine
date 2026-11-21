@@ -71,7 +71,7 @@ func (s *Service) PutBinding(ctx context.Context, p port.Principal, b port.Bindi
 	return b, err
 }
 
-// DeleteBinding removes a binding with the agent's rows on the connector and cancels the agent's pending approvals there.
+// DeleteBinding removes a binding with the agent's session and agent rows on the connector and cancels the agent's pending approvals there.
 func (s *Service) DeleteBinding(ctx context.Context, p port.Principal, connector port.ConnectorID, agent port.AgentID) error {
 	c, err := s.connectorOf(ctx, p, connector, authz.BindingWrite)
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *Service) unbind(tx port.Tx, b port.Binding, by string) error {
 	if err := s.removeBinding(tx, b, by); err != nil {
 		return err
 	}
-	rows, err := tx.ListGrants(port.GrantFilter{Connector: b.Connector, Agent: b.Agent})
+	rows, err := tx.ListGrants(port.GrantFilter{ScopeKind: port.ScopeSession, Connector: b.Connector, Agent: b.Agent})
 	if err != nil {
 		return err
 	}
@@ -179,6 +179,7 @@ func (s *Service) CreateGrant(ctx context.Context, p port.Principal, g port.Gran
 	if err := grant.Validate(g, grant.Policy{Now: s.now(), AlwaysMax: s.cfg.AlwaysMax}); err != nil {
 		return out, err
 	}
+	g = grant.Normalize(g)
 	err := s.write(ctx, port.Scope{Tenant: g.Tenant}, "CreateGrant", func(tx port.Tx) error {
 		rows, err := tx.ListGrants(port.GrantFilter{ScopeKind: g.ScopeKind, ScopeID: g.ScopeID})
 		if err != nil {

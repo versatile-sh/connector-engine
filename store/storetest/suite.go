@@ -62,6 +62,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"purge tenant":              purgeTenant,
 		"prune history":             pruneHistory,
 		"snapshot and restore":      snapshotRestore,
+		"restore normalizes agent":  restoreNormalizesAgent,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -975,4 +976,82 @@ func snapshotRestore(e *env) {
 	}
 	e.must(src.Restore(ctx, snap))
 	e.same(want, viewOf(e, e.s, e.o))
+}
+
+// LegacyGrants writes, in tenant ta, rows an older release could store: a user row naming an agent and three pairs of agent rows whose keys differ only by agent.
+func LegacyGrants(t *testing.T, s port.Store) {
+	t.Helper()
+	err := s.Write(ctx, inst, func(tx port.Tx) error {
+		return tx.PutTenant(port.Tenant{ID: "ta", State: port.TenantActive, CreatedAt: t0})
+	})
+	if err == nil {
+		err = s.Write(ctx, scopeA, func(tx port.Tx) error {
+			user := agentGrant("ta", "u1", "*", 0)
+			user.ScopeKind, user.ScopeID, user.Agent, user.Mode = port.ScopeUser, "alice", "x", port.ModeDeny
+			named := agentGrant("ta", "a1", "class:read", 0)
+			named.Agent, named.ExpiresAt = "x", t0.Add(time.Hour)
+			bare := agentGrant("ta", "a2", "class:read", 0)
+			bare.Mode = port.ModeDeny
+			survivor := agentGrant("ta", "b1", "class:write", 0)
+			survivor.Agent, survivor.Mode = "x", port.ModeDeny
+			dropped := agentGrant("ta", "b2", "class:write", 0)
+			dropped.ExpiresAt = t0.Add(time.Hour)
+			counted := agentGrant("ta", "c1", "class:destructive", 1)
+			counted.Agent = "x"
+			twin := agentGrant("ta", "c2", "class:destructive", 1)
+			return errors.Join(tx.PutGrant(user), tx.PutGrant(named), tx.PutGrant(bare), tx.PutGrant(survivor), tx.PutGrant(dropped), tx.PutGrant(counted), tx.PutGrant(twin))
+		})
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// CheckCanonicalGrants fails unless tenant ta holds the canonical form of LegacyGrants: u1 and b1 without their agent, a2 alone, c1 as the deny of a conflict, audited.
+func CheckCanonicalGrants(t *testing.T, s port.Store) {
+	t.Helper()
+	var got []port.Grant
+	if err := s.Read(ctx, scopeA, func(tx port.Tx) (err error) {
+		got, err = tx.ListGrants(port.GrantFilter{})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	slices.SortFunc(got, func(a, b port.Grant) int { return strings.Compare(string(a.ID), string(b.ID)) })
+	if len(got) != 4 {
+		t.Fatalf("grants %+v", got)
+	}
+	for i, id := range []port.GrantID{"a2", "b1", "c1", "u1"} {
+		if g := got[i]; g.ID != id || g.Agent != "" || g.Mode != port.ModeDeny || g.MaxUses != 0 || !g.ExpiresAt.IsZero() || (id == "c1") != (g.Reason == "rows_conflicted") {
+			t.Fatalf("grants %+v", got)
+		}
+	}
+	for subject, action := range map[string]string{"a2": "grant.merged", "b1": "grant.merged", "c1": "grant.merged", "grants": "grant.agent_cleared"} {
+		var audit []port.AuditRow
+		if err := s.Read(ctx, scopeA, func(tx port.Tx) (err error) {
+			audit, err = tx.ListAudit(subject)
+			return err
+		}); err != nil || len(audit) != 1 || audit[0].Action != action {
+			t.Fatalf("audit of %s: %+v %v", subject, audit, err)
+		}
+		if rows, _ := audit[0].Detail["rows"].([]any); action == "grant.merged" && len(rows) != 2 {
+			t.Fatalf("audit of %s names %d original rows", subject, len(rows))
+		}
+	}
+	if err := s.Write(ctx, scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "a3", "class:read", 0)) }); !port.IsCode(err, port.CodeConflict) {
+		t.Fatalf("a row with the canonical key of a2: %v", err)
+	}
+}
+
+func restoreNormalizesAgent(e *env) {
+	src, ok := e.s.(port.Snapshotter)
+	if !ok {
+		e.t.Skip("the store takes no snapshot")
+	}
+	LegacyGrants(e.t, e.s)
+	snap, err := src.Snapshot(ctx)
+	e.must(err)
+	s, _ := e.fresh()
+	e.must(s.(port.Snapshotter).Restore(ctx, snap))
+	CheckCanonicalGrants(e.t, s)
 }

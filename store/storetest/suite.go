@@ -852,7 +852,7 @@ func purgeTenant(e *env) {
 	fill(scopeB)
 	counts, err := purger.PurgeTenant(ctx, "ta")
 	e.must(err)
-	e.same([]int{1, 1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"], counts["permission_changes"]})
+	e.same([]int{1, 1, 1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"], counts["permission_changes"], counts["permission_head"]})
 	e.same([]string{"tbg"}, append(keysOf(e.changes(scopeA, 0, 0, 0)), keysOf(e.changes(scopeB, 0, 0, 0))...))
 	e.same(int64(0), e.lockedRevision(scopeA))
 	for scope, want := range map[port.Scope]int{scopeA: 0, scopeB: 1} {

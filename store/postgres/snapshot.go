@@ -25,6 +25,8 @@ var snapshotTables = []snapshotTable{
 
 var permissionTables = []snapshotTable{{"permission_head", "tenant_id", ""}, {"permission_changes", "revision, seq", ""}}
 
+var allTables = append(slices.Clone(snapshotTables), permissionTables...)
+
 func (s *Store) inAll(ctx context.Context, opts pgx.TxOptions, fn func(t *tx, tenants []string) error) error {
 	q, err := s.pool.BeginTx(ctx, opts)
 	if err != nil {
@@ -58,7 +60,7 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 			if err := t.as(tenant); err != nil {
 				return err
 			}
-			for _, tb := range append(slices.Clone(snapshotTables), permissionTables...) {
+			for _, tb := range allTables {
 				rows, err := many[json.RawMessage](t, `SELECT to_jsonb(x) FROM `+tb.name+` x WHERE tenant_id = $1 ORDER BY `+tb.order, tenant)
 				if err != nil {
 					return err
@@ -81,7 +83,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	}
 	byTenant := map[string]map[string][]json.RawMessage{}
 	serials := map[string]int64{}
-	for _, tb := range append(slices.Clone(snapshotTables), permissionTables...) {
+	for _, tb := range allTables {
 		for _, raw := range snap.Tables[tb.name] {
 			var r struct {
 				Tenant string `json:"tenant_id"`
@@ -181,7 +183,7 @@ func CheckRows(snap port.Snapshot, schema int) error {
 		return port.Errorf(port.CodeInvalidArgument, "snapshot: schema %d is newer than this store's %d; restore it with the release that took it", snap.Schema, schema)
 	}
 	for name := range snap.Tables {
-		if !slices.ContainsFunc(append(slices.Clone(snapshotTables), permissionTables...), func(tb snapshotTable) bool { return tb.name == name }) {
+		if !slices.ContainsFunc(allTables, func(tb snapshotTable) bool { return tb.name == name }) {
 			return port.Errorf(port.CodeInvalidArgument, "snapshot: table %s is not a table of this store", restore.Quote(name))
 		}
 	}

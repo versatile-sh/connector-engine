@@ -24,9 +24,6 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 				counts[kind+"s"]++
 			}
 		}
-		if _, err := t.exec(`DELETE FROM permission_head WHERE tenant_id = ?3`, string(tenant)); err != nil {
-			return err
-		}
 		if _, err := t.exec(`DELETE FROM due_work WHERE tenant_id = ?3`, string(tenant)); err != nil {
 			return err
 		}
@@ -35,6 +32,7 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 			"events":             `DELETE FROM outbox WHERE tenant_id = ?3 AND delivered_at IS NOT NULL`,
 			"inbox":              `DELETE FROM inbox WHERE tenant_id = ?3`,
 			"permission_changes": `DELETE FROM permission_changes WHERE tenant_id = ?3`,
+			"permission_head":    `DELETE FROM permission_head WHERE tenant_id = ?3`,
 		} {
 			n, err := t.exec(sql, string(tenant))
 			if err != nil {

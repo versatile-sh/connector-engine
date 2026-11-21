@@ -51,7 +51,10 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 	before = len(d.permChanges)
 	d.permChanges = slices.DeleteFunc(d.permChanges, func(c port.PermissionChange) bool { return c.Tenant == tenant })
 	counts["permission_changes"] = before - len(d.permChanges)
-	delete(d.permHeads, tenant)
+	if _, ok := d.permHeads[tenant]; ok {
+		counts["permission_head"] = 1
+		delete(d.permHeads, tenant)
+	}
 	prefix := key(string(tenant), "")
 	maps.DeleteFunc(d.inbox, func(k string, _ time.Time) bool { return strings.HasPrefix(k, prefix) })
 	maps.DeleteFunc(d.inboxData, func(k string, _ []byte) bool { return strings.HasPrefix(k, prefix) })

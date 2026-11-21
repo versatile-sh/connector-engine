@@ -26,10 +26,10 @@ function Back() {
   const t = useT();
   return (
     <a
-      href="/"
+      href="/connectors"
       onClick={(event) => {
         event.preventDefault();
-        navigate("/");
+        navigate("/connectors");
       }}
       className={`${QUIET_LINK} inline-flex items-center gap-1.5 self-start text-sm text-muted`}
     >
@@ -51,7 +51,7 @@ function Remove({ connector, remove, onClose }: { connector: Connector; remove: 
         <button type="button" autoFocus className={button({ variant: "secondary" })} onClick={onClose}>
           {t("common.cancel")}
         </button>
-        <button type="button" disabled={remove.isPending} className={button({ variant: "danger" })} onClick={() => remove.mutate(connector.id, { onSuccess: () => navigate("/", { replace: true }) })}>
+        <button type="button" disabled={remove.isPending} className={button({ variant: "danger" })} onClick={() => remove.mutate(connector.id, { onSuccess: () => navigate("/connectors", { replace: true }) })}>
           <Icon name="trash" className="size-4" />
           {t("detail.removeConfirm")}
         </button>

@@ -11,28 +11,19 @@ import { Mark } from "./Brand";
 import { ConnectorDetail } from "./connectors/ConnectorDetail";
 import { ConnectorsPage } from "./connectors/ConnectorsPage";
 import { Consent } from "./access/Consent";
+import { DashboardPage } from "./dashboard/DashboardPage";
 import { useT } from "./i18n/I18nProvider";
 import { ImportLanding } from "./import/ImportLanding";
+import { linkOf } from "./import/source";
 import { InvitePage } from "./invite/InvitePage";
 import { NotificationsPage } from "./notifications/NotificationsPage";
 import { viewerOf } from "./people/viewer";
 import { sessionQuery } from "./queries";
 import { SkillsPage } from "./skills/SkillsPage";
 import { useLocation } from "./router";
-import type { ImportSource } from "./api";
-import { Shell, type Section } from "./Shell";
+import { sectionOf } from "./shell/shell";
+import { Shell } from "./Shell";
 import { button } from "./ui/styles";
-
-const linkedSource = (path: string, query: URLSearchParams): ImportSource | undefined => {
-  if (path !== "/import") return undefined;
-  const listing = query.get("listing");
-  const mcp = query.get("mcp");
-  return listing ? { listing } : mcp ? { mcp } : undefined;
-};
-
-const SECTIONS: Record<string, Section> = { "/access": "access", "/agents": "access", "/approvals": "approvals", "/skills": "skills", "/activity": "activity", "/notifications": "notifications", "/account": "account" };
-
-const sectionOf = (path: string): Section => SECTIONS[path] ?? (path.startsWith("/account/") ? "account" : "connectors");
 
 function Splash({ failure, onRetry }: { failure?: string; onRetry?: () => void }) {
   const t = useT();
@@ -67,7 +58,7 @@ export function App() {
   if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} />;
   if (path === "/connect") return <Consent id={query.get("request") ?? ""} />;
   const viewer = viewerOf(session.data);
-  const linked = viewer.can("connectors.manage") || viewer.can("skills.manage") ? linkedSource(path, query) : undefined;
+  const linked = viewer.can("connectors.manage") || viewer.can("skills.manage") ? linkOf(path, query) : undefined;
   if (linked) return <ImportLanding key={JSON.stringify(linked)} source={linked} />;
   const section = sectionOf(path);
   const detail = path.startsWith("/connectors/") ? decodeURIComponent(path.slice("/connectors/".length)) : undefined;
@@ -85,10 +76,14 @@ export function App() {
         <NotificationsPage />
       ) : section === "account" ? (
         <AccountPage path={path} />
-      ) : detail ? (
-        <ConnectorDetail id={detail} />
+      ) : section === "connectors" ? (
+        detail ? (
+          <ConnectorDetail id={detail} />
+        ) : (
+          <ConnectorsPage />
+        )
       ) : (
-        <ConnectorsPage />
+        <DashboardPage />
       )}
     </Shell>
   );

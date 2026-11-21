@@ -2,7 +2,7 @@ import type { MessageKey } from "../i18n";
 import type { IconName } from "../ui/Icon";
 
 /** The console's sections and the paths each one owns. */
-export type Section = "connectors" | "skills" | "access" | "approvals" | "activity" | "notifications" | "account";
+export type Section = "dashboard" | "connectors" | "skills" | "access" | "approvals" | "activity" | "notifications" | "account";
 
 /** One link of the sidebar: the section it opens, where, what it is called and its icon. */
 export type NavItem = { section: Section; href: string; label: MessageKey; icon: IconName };
@@ -16,7 +16,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     id: "gateway",
     label: "nav.group.gateway",
     items: [
-      { section: "connectors", href: "/", label: "nav.connectors", icon: "plug" },
+      { section: "dashboard", href: "/", label: "nav.dashboard", icon: "dashboard" },
+      { section: "connectors", href: "/connectors", label: "nav.connectors", icon: "plug" },
       { section: "skills", href: "/skills", label: "nav.skills", icon: "spark" },
       { section: "access", href: "/access", label: "nav.access", icon: "key" },
       { section: "approvals", href: "/approvals", label: "nav.approvals", icon: "shield" },
@@ -44,13 +45,35 @@ export function navView(section: Section, waiting: number): readonly (Omit<NavGr
   }));
 }
 
+const SECTION_OF: Readonly<Record<string, Section>> = {
+  "/": "dashboard",
+  "/connectors": "connectors",
+  "/import": "connectors",
+  "/skills": "skills",
+  "/access": "access",
+  "/agents": "access",
+  "/approvals": "approvals",
+  "/activity": "activity",
+  "/notifications": "notifications",
+  "/account": "account",
+};
+
+/** The section a path belongs to: `/` is the dashboard, `/connectors` and every connector under it (and `/import`, which opens the import window there) are the connectors, Account owns its tabs, and a path the console does not know opens the dashboard. */
+export function sectionOf(path: string): Section {
+  const exact = SECTION_OF[path];
+  if (exact) return exact;
+  if (path.startsWith("/connectors/")) return "connectors";
+  if (path.startsWith("/account/")) return "account";
+  return "dashboard";
+}
+
 /** The group and the link names of a section, for the line over the page. */
 export function crumbOf(section: Section): { group: MessageKey; label: MessageKey } {
   for (const group of NAV_GROUPS) {
     const item = group.items.find((entry) => entry.section === section);
     if (item) return { group: group.label, label: item.label };
   }
-  return { group: NAV_GROUPS[0]?.label ?? "nav.group.gateway", label: "nav.connectors" };
+  return { group: NAV_GROUPS[0]?.label ?? "nav.group.gateway", label: "nav.dashboard" };
 }
 
 /** Where the sidebar's width is kept between visits. */

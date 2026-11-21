@@ -63,6 +63,7 @@ AI app ──MCP──▶ gateway (/mcp)
 - It refuses data after the top-level value.
 - The gateway's own tools (`find`, `call`, approval and skill tools) apply the same parse to their parameters, and `call` also refuses wrapper keys that differ from `name`, `arguments` and `fields` only by case.
 - Every event is written to the outbox inside the use case's transaction. `relay/` delivers it at least once, in order. Schema URIs (`https://agents-control.dev/...`) are stable wire identifiers.
+- An event holds the tenant's stream row until commit, so a write emits its events after its last row write: it locks its rows, then the stream row, like a call admission, and a revocation never deadlocks against a call. A read that must see the tenant's other recorded writes committed (the denial count, a removed person's bindings, accepting functions) emits what it holds first.
 
 ## Grants
 

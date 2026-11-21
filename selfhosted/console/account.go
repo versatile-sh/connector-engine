@@ -26,7 +26,7 @@ func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 
 func (c *Console) session(w http.ResponseWriter, r *http.Request) {
 	u, csrf, ok := c.Sessions.Current(r)
-	out := map[string]any{"owner_exists": c.State.HasOwner(), "signed_in": ok, "mcp_url": c.MCPURL}
+	out := map[string]any{"owner_exists": c.State.HasOwner(), "signed_in": ok, "mcp_url": c.MCPURL, "signup_open": c.State.Signup().Enabled && c.State.HasOwner()}
 	if c.SetupToken != "" && !c.State.HasOwner() {
 		out["setup_token_required"] = true
 	}

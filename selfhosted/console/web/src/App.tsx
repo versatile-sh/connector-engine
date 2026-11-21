@@ -51,11 +51,11 @@ export function App() {
   if (path === "/restored") return <Restored />;
   if (session.isPending) return <Splash />;
   if (session.isError) return <Splash failure={errorText(session.error)} onRetry={() => void session.refetch()} />;
-  const { owner_exists, signed_in, mcp_url, setup_token_required } = session.data;
+  const { owner_exists, signed_in, mcp_url, setup_token_required, signup_open } = session.data;
   if (path === "/invite") return <InvitePage />;
   if (!owner_exists) return <Auth mode="setup" endpoint={mcp_url} needsSetupToken={setup_token_required === true} />;
   if (path.startsWith("/approve/") && (signed_in || query.has("t"))) return <ApprovePage id={decodeURIComponent(path.slice("/approve/".length))} token={query.get("t")} signedIn={signed_in} />;
-  if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} />;
+  if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} signupOpen={signup_open === true} />;
   if (path === "/connect") return <Consent id={query.get("request") ?? ""} />;
   const viewer = viewerOf(session.data);
   const linked = viewer.can("connectors.manage") || viewer.can("skills.manage") ? linkOf(path, query) : undefined;

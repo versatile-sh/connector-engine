@@ -44,6 +44,7 @@ export type Session = {
   csrf?: string;
   mcp_url: string;
   setup_token_required?: boolean;
+  signup_open?: boolean;
   onboarding_dismissed?: boolean;
   key_protection?: KeyProtection;
   user?: SessionUser;
@@ -521,7 +522,10 @@ export type PendingLink = { id: string; purpose: LinkPurpose; role: Role; person
 export type AuditEntry = { at: string; actor: string; action: string; target: string; detail?: Record<string, string> };
 
 /** What GET /api/people answers: the people, the links still waiting and the newest changes, newest first. */
-export type PeopleData = { people: Person[]; invites: PendingLink[]; audit: AuditEntry[] };
+export type PeopleData = { people: Person[]; invites: PendingLink[]; audit: AuditEntry[]; signup: SignupSettings };
+
+/** Whether anyone may create an account on the sign-in screen, and the role that account gets. */
+export type SignupSettings = { enabled: boolean; role: "member" | "admin" };
 
 /** A join or reset link just made: shown once, with when it stops working. */
 export type NewLink = { id: string; link: string; expires_at: string };

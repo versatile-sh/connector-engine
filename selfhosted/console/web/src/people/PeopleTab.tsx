@@ -14,10 +14,12 @@ import { Tag } from "../ui/Tag";
 import { LinkSheet, type LinkFor } from "./LinkSheet";
 import { nameOf, timeLeft } from "./people";
 import { PersonRow } from "./PersonRow";
+import { SignupSetting } from "./SignupSetting";
 import { useViewer } from "./useViewer";
 
 const AUDIT: Partial<Record<string, MessageKey>> = {
   "user.created": "audit.user.created",
+  "signup.changed": "audit.signup.changed",
   "invite.created": "audit.invite.created",
   "invite.revoked": "audit.invite.revoked",
   "reset.created": "audit.reset.created",
@@ -88,7 +90,7 @@ function Changes({ data }: { data: PeopleData }) {
     >
       <ol className="border-t border-line">
         {data.audit.map((entry) => {
-          const key = AUDIT[entry.action];
+          const key = entry.action === "user.created" && entry.actor === entry.target ? "audit.user.signedUp" : AUDIT[entry.action];
           return (
             <li key={`${entry.at}-${entry.action}-${entry.target}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-b border-line px-4 py-2.5 text-sm last:border-b-0">
               <span className="min-w-0 grow basis-56">
@@ -152,6 +154,7 @@ export function PeopleTab() {
               <PersonRow key={person.person} person={person} viewer={viewer} onReset={(target) => setMaking({ purpose: "reset", person: target })} />
             ))}
           </ul>
+          {viewer.can("people.manage") ? <SignupSetting settings={data.signup} /> : null}
           <Links data={data} />
           <Changes data={data} />
         </>

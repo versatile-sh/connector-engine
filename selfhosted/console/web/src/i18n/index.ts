@@ -2,6 +2,7 @@ import { en, type MessageKey } from "./en";
 import { es } from "./es";
 import { ptBR } from "./pt-br";
 
+/** The keys of the English catalog, which every other locale must cover. */
 export type { MessageKey } from "./en";
 
 /** The languages the console speaks. */

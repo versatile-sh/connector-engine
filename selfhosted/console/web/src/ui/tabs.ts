@@ -14,7 +14,6 @@ export function stepOf(key: string, at: number, count: number): number | undefin
   return step && count > 0 ? step(Math.max(at, 0), count) : undefined;
 }
 
-/** A tab in its scrolling row and the visible part of that row, in pixels. */
 type Span = { left: number; width: number };
 
 /** Where a row of tabs scrolls to so the tab `tab` shows whole with `room` to spare beside it, or nothing when it already shows. */

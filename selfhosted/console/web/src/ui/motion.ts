@@ -1,4 +1,3 @@
-/** One element's move in a FLIP: the transform it is drawn at first and the one its CSS transition carries it to. */
 type Move = { element: HTMLElement; from: string; to: string };
 
 /** Draws each element at its `from` transform at once, then, after one style flush, lets its own CSS transition carry it to `to`; with transitions off, as under reduced motion, it lands there at once. */

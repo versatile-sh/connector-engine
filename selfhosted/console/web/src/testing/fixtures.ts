@@ -1,5 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
-import type { Account, ActivityData, ActivitySettings, ActivitySummary, DecisionRow, Approval, Capability, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
+import type { Account, ActivityData, ActivitySettings, ActivitySummary, DecisionRow, Approval, Capability, ChannelKindView, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
 import type { KeysData } from "../queries";
 
 /** Every capability a lone Owner holds. */
@@ -142,18 +142,26 @@ export const QUIET = { at: "2026-11-20T12:00:00Z", total: 0, day: { total: 0, fa
 
 const SETTINGS = { record_arguments: false, record_results: false, retention: "30d", retention_days: 30 } as const satisfies ActivitySettings;
 
-const NOTIFICATIONS = { channels: [], devices: [], apps: [] } as const satisfies NotificationsData;
+/** The channel kinds as GET /api/notifications lists them. */
+export const CHANNEL_KINDS = [
+  { kind: "discord", title: "Discord", interactive: true, fields: [{ name: "token", label: "Bot token", secret: true }, { name: "owner_user_id", label: "Your Discord user id", secret: false }] },
+  { kind: "slack", title: "Slack", interactive: true, fields: [{ name: "app_token", label: "App-level token", placeholder: "xapp-", secret: true }, { name: "bot_token", label: "Bot token", placeholder: "xoxb-", secret: true }, { name: "owner_user_id", label: "Your Slack member id", secret: false }] },
+  { kind: "ntfy", title: "ntfy", interactive: false, fields: [{ name: "url", label: "Topic URL", secret: true }, { name: "token", label: "Access token", secret: true, optional: true }] },
+  { kind: "future_chat", title: "Future chat", interactive: true, fields: [{ name: "key", label: "Key", secret: true }] },
+] as const satisfies ChannelKindView[];
+
+const NOTIFICATIONS = { channels: [], devices: [], apps: [], kinds: CHANNEL_KINDS } as const satisfies NotificationsData;
 
 const ACCOUNT = { username: "alice", last_export: "2026-11-19T00:00:00Z" } as const satisfies Account;
 
 /** The people of a team of three, a pending invite and one change. */
 export const PEOPLE = {
   people: [
-    { person: "owner", username: "alice", role: "owner", created_at: "2026-11-01T00:00:00Z", keys: 1, you: true },
-    { person: "p-carol", username: "carol", role: "admin", created_at: "2026-11-02T00:00:00Z", keys: 0, you: false },
-    { person: "p-bob", username: "bob", role: "member", created_at: "2026-11-03T00:00:00Z", keys: 3, you: false },
+    { person: "owner", username: "alice", role: "owner", created_at: "2026-11-01T00:00:00Z", keys: 1, you: true, may_reset: false },
+    { person: "p-carol", username: "carol", role: "admin", created_at: "2026-11-02T00:00:00Z", keys: 0, you: false, may_reset: true },
+    { person: "p-bob", username: "bob", role: "member", created_at: "2026-11-03T00:00:00Z", keys: 3, you: false, may_reset: true },
   ],
-  invites: [{ id: "i1", purpose: "join", role: "member", person: "", created_by: "owner", created_at: "2026-11-19T00:00:00Z", expires_at: "2026-11-22T00:00:00Z" }],
+  invites: [{ id: "i1", purpose: "join", role: "member", person: "", created_by: "owner", created_at: "2026-11-19T00:00:00Z", expires_at: "2026-11-22T00:00:00Z", may_revoke: true }],
   audit: [{ at: "2026-11-03T00:00:00Z", actor: "owner", action: "user.created", target: "p-bob" }],
 } as const satisfies PeopleData;
 

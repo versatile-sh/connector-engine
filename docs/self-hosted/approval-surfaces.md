@@ -117,7 +117,7 @@ type Channel interface {
 - Buttons carry `<choice>:<key>`, where `key` is a 12-character relay nonce, never the approval id. It fits Telegram's 64-byte `callback_data`, Discord's 100-character `custom_id` and Slack's `action_id`. A click on a key the relay no longer knows answers "expired, open the console".
 - `Relay` consumes a `Feed`. For `requested` it asks the `Desk` for a `Prompt` and fans it out to every channel. For `settled` it calls `Settle` everywhere it notified. For a click it calls `Desk.Decide` with the channel kind and `<kind>:<platform user id>` as the note.
 
-A new channel is one file implementing `Channel`, plus one entry in the console's channel factory.
+A new channel is a package that implements `Channel` and exports one `surface.Kind` (its name, title, fields with their secret and optional flags, owner-id pattern, allowed hosts, whether it takes answers, and its constructor), plus that value in the console's `channelKinds` list. `GET /api/notifications` serves the kinds, so the settings page draws the setup form from them; the web only adds translated words for a kind it knows, and shows the server's English for one it does not.
 
 | Kind | Inbound | Clicks | Limits |
 |---|---|---|---|

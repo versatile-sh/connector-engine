@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -239,3 +240,18 @@ func (c *Channel) call(ctx context.Context, method string, body, out any) error 
 func (c *Channel) scrub(err error) string { return surface.Scrub(err, c.token) }
 
 func (c *Channel) scrubText(s string) string { return surface.ScrubText(s, c.token) }
+
+// Kind describes the Telegram channel for the console's settings page and factory.
+var Kind = surface.Kind{
+	Name:        "telegram",
+	Title:       "Telegram",
+	Interactive: true,
+	Fields: []surface.Field{
+		{Name: "token", Label: "Bot token", Secret: true, Hint: true},
+		{Name: "owner_user_id", Label: "Your Telegram user id"},
+	},
+	Owner: regexp.MustCompile(`^[0-9]{1,24}$`),
+	New: func(s map[string]string) (surface.Channel, error) {
+		return New(Config{Token: s["token"], OwnerUserID: s["owner_user_id"]})
+	},
+}

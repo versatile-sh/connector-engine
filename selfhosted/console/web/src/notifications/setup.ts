@@ -1,63 +1,54 @@
-import type { ChannelKind } from "../api";
-import type { MessageKey } from "../i18n";
+import type { ChannelKindView } from "../api";
+import type { MessageKey, Translate } from "../i18n";
 
 /** One value a channel needs: its settings name, its label, whether it is a secret, and whether it may stay empty. */
-export type SetupField = { name: string; label: MessageKey; secret: boolean; optional?: boolean; placeholder?: string };
+export type SetupField = { name: string; label: string; labelKey?: MessageKey; secret: boolean; optional?: boolean; placeholder?: string };
 
 /** How one kind of channel is set up: the steps to follow outside the console and the values to paste back. */
-export type Setup = { kind: ChannelKind; title: MessageKey; interactive: boolean; steps: readonly MessageKey[]; fields: readonly SetupField[] };
+export type Setup = { kind: string; title: string; titleKey?: MessageKey; interactive: boolean; steps: readonly MessageKey[]; fields: readonly SetupField[] };
 
-const WEBHOOK_URL: SetupField = { name: "url", label: "notify.field.webhookUrl", secret: true, placeholder: "https://" };
+type Words = { title: MessageKey; steps: readonly MessageKey[]; labels: Readonly<Record<string, MessageKey>> };
 
-/** The setup of each channel kind. */
-export const SETUP: Record<ChannelKind, Setup> = {
+const WEBHOOK_STEP: MessageKey = "notify.steps.webhook";
+
+const WORDS: Readonly<Record<string, Words>> = {
   discord: {
-    kind: "discord",
     title: "notify.kind.discord",
-    interactive: true,
     steps: ["notify.steps.discord.1", "notify.steps.discord.2", "notify.steps.discord.3", "notify.steps.discord.4"],
-    fields: [
-      { name: "token", label: "notify.field.botToken", secret: true },
-      { name: "owner_user_id", label: "notify.field.discordUser", secret: false },
-    ],
+    labels: { token: "notify.field.botToken", owner_user_id: "notify.field.discordUser" },
   },
   slack: {
-    kind: "slack",
     title: "notify.kind.slack",
-    interactive: true,
     steps: ["notify.steps.slack.1", "notify.steps.slack.2", "notify.steps.slack.3", "notify.steps.slack.4"],
-    fields: [
-      { name: "app_token", label: "notify.field.appToken", secret: true, placeholder: "xapp-" },
-      { name: "bot_token", label: "notify.field.botToken", secret: true, placeholder: "xoxb-" },
-      { name: "owner_user_id", label: "notify.field.slackMember", secret: false },
-    ],
+    labels: { app_token: "notify.field.appToken", bot_token: "notify.field.botToken", owner_user_id: "notify.field.slackMember" },
   },
   telegram: {
-    kind: "telegram",
     title: "notify.kind.telegram",
-    interactive: true,
     steps: ["notify.steps.telegram.1", "notify.steps.telegram.2", "notify.steps.telegram.3", "notify.steps.telegram.4"],
-    fields: [
-      { name: "token", label: "notify.field.botToken", secret: true },
-      { name: "owner_user_id", label: "notify.field.telegramUser", secret: false },
-    ],
+    labels: { token: "notify.field.botToken", owner_user_id: "notify.field.telegramUser" },
   },
-  ntfy: {
-    kind: "ntfy",
-    title: "notify.kind.ntfy",
-    interactive: false,
-    steps: ["notify.steps.ntfy.1", "notify.steps.ntfy.2"],
-    fields: [
-      { name: "url", label: "notify.field.topicUrl", secret: true, placeholder: "https://ntfy.sh/" },
-      { name: "token", label: "notify.field.ntfyToken", secret: true, optional: true },
-    ],
-  },
-  discord_webhook: { kind: "discord_webhook", title: "notify.kind.discord_webhook", interactive: false, steps: ["notify.steps.discordWebhook.1", "notify.steps.webhook"], fields: [WEBHOOK_URL] },
-  slack_webhook: { kind: "slack_webhook", title: "notify.kind.slack_webhook", interactive: false, steps: ["notify.steps.slackWebhook.1", "notify.steps.webhook"], fields: [WEBHOOK_URL] },
+  ntfy: { title: "notify.kind.ntfy", steps: ["notify.steps.ntfy.1", "notify.steps.ntfy.2"], labels: { url: "notify.field.topicUrl", token: "notify.field.ntfyToken" } },
+  discord_webhook: { title: "notify.kind.discord_webhook", steps: ["notify.steps.discordWebhook.1", WEBHOOK_STEP], labels: { url: "notify.field.webhookUrl" } },
+  slack_webhook: { title: "notify.kind.slack_webhook", steps: ["notify.steps.slackWebhook.1", WEBHOOK_STEP], labels: { url: "notify.field.webhookUrl" } },
 };
 
-/** Every channel kind in the order the picker shows them. */
-export const SETUPS: readonly Setup[] = Object.values(SETUP);
+/** The setup of each kind the server lists: its fields, secrets and interactivity come from the server, its translated words from here when the console has them. */
+export function setupsOf(kinds: readonly ChannelKindView[]): Setup[] {
+  return kinds.map((k) => {
+    const words = WORDS[k.kind];
+    return {
+      kind: k.kind,
+      title: k.title,
+      titleKey: words?.title,
+      interactive: k.interactive,
+      steps: words?.steps ?? [],
+      fields: k.fields.map((f) => ({ name: f.name, label: f.label, labelKey: words?.labels[f.name], secret: f.secret, optional: f.optional, placeholder: f.placeholder })),
+    };
+  });
+}
+
+/** A translated text when the console has one, else the server's English. */
+export const textOf = (t: Translate, key: MessageKey | undefined, fallback: string) => (key ? t(key) : fallback);
 
 /** The settings body of POST /api/notifications/channels: trimmed values, empty optional ones left out. */
 export function settingsFor(setup: Setup, values: Readonly<Record<string, string>>): Record<string, string> {

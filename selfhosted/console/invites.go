@@ -79,6 +79,10 @@ func mayResetFor(creator, target User) bool {
 	return creator.Can(CapPeopleReset) && creator.Person != target.Person && (creator.Role == RoleOwner || !target.Role.AtLeast(creator.Role))
 }
 
+func mayRevokeFor(by User, inv Invite) bool {
+	return by.Can(CapPeopleManage) || inv.Purpose == PurposeReset && inv.CreatedBy == by.Person && by.Can(CapPeopleReset)
+}
+
 func linkLive(d *stateFile, inv Invite, now time.Time) bool {
 	creator, ok := d.Users[inv.CreatedBy]
 	if !ok || now.After(inv.ExpiresAt) {
@@ -184,7 +188,7 @@ func (s *State) RevokeLink(actor, id string) error {
 		if !ok {
 			return notFound("no link is %s", id)
 		}
-		if !by.Can(CapPeopleManage) && (inv.Purpose != PurposeReset || inv.CreatedBy != actor || !by.Can(CapPeopleReset)) {
+		if !mayRevokeFor(by, inv) {
 			return errForbidden
 		}
 		delete(d.Invites, id)

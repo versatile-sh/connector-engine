@@ -71,7 +71,7 @@ function Points({ endpoint }: { endpoint: string }) {
   );
 }
 
-/** First-visit owner creation or sign-in as an editorial page: the serif headline with its lime answer, the form in a card beside it, and what the gateway does under the headline. An install link waiting in the address bar is named in the headline and opens once signed in. */
+/** First-visit owner creation, sign-in, or when sign-up is open creating an account, as an editorial page: the serif headline with its lime answer, the form in a card beside it, and what the gateway does under the headline. An install link waiting in the address bar is named in the headline and opens once signed in. */
 export function Auth({ mode, endpoint, waitingHost, needsSetupToken, signupOpen, startCreating }: AuthProps) {
   const t = useT();
   const [username, setUsername] = useState("");

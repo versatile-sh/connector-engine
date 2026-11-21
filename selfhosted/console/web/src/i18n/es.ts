@@ -37,8 +37,8 @@ export const es: Record<MessageKey, string> = {
   "nav.waiting": "{count} en espera",
   "shell.signOut": "Salir",
   "shell.setup": "Configuración {done}/{total}",
-  "shell.keysPlaintext": "Tus secretos guardados están protegidos por una clave de cifrado guardada en un archivo de texto plano en este equipo. Ejecuta make keychain-migrate para llevarla al llavero del sistema.",
-  "shell.keysLocked": "Tus secretos guardados están bloqueados. Ejecuta make unlock en este equipo para abrirlos con la clave del llavero del sistema.",
+  "shell.keysPlaintext": "Tus secretos guardados están protegidos por una clave de cifrado guardada en un archivo de texto plano en este equipo. Ejecuta mise run keychain-migrate para llevarla al llavero del sistema.",
+  "shell.keysLocked": "Tus secretos guardados están bloqueados. Ejecuta mise run unlock en este equipo para abrirlos con la clave del llavero del sistema.",
 
   "nav.group.gateway": "Gateway",
   "nav.group.settings": "Ajustes",
@@ -795,7 +795,7 @@ export const es: Record<MessageKey, string> = {
   "backup.result.needsSignIn": "necesita inicio de sesión",
   "backup.result.nothing": "No se añadió nada.",
   "restored.title": "Restaurado",
-  "restored.body": "Ejecuta make unlock en este equipo para terminar. Esta página sigue sola cuando la consola esté lista.",
+  "restored.body": "Ejecuta mise run unlock en este equipo para terminar. Esta página sigue sola cuando la consola esté lista.",
   "restored.waiting": "Esperando a que la consola se reinicie",
   "backup.import.passwordHint": "Restaurar sobre esta instalación pide la contraseña de tu cuenta.",
 

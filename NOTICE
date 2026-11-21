@@ -9,8 +9,9 @@ The third-party components below keep their own licenses, found in their own
 directories; their notices must be kept.
 
 internal/plugkit
-  Copied from github.com/agents-control/plugkit. MIT, see
-  internal/plugkit/LICENSE.
+  Copied from github.com/agents-control/plugkit, Versatile's own code, under
+  the GPL-3.0-or-later licence of this repository. internal/plugkit/LICENSE
+  points to it.
 
 Go module dependencies (go.mod), compiled into the release binaries. Each
 module ships its own license files; `go mod vendor` puts them under

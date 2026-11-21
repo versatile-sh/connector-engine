@@ -23,7 +23,7 @@ const (
 
 var errBadToken = errors.New("the link is not valid or has expired")
 
-const gatewayLocked = "the gateway is locked: run make unlock on this computer, then open the link again"
+const gatewayLocked = "the gateway is locked: run mise run unlock on this computer, then open the link again"
 
 type signingKey struct {
 	mu  sync.Mutex

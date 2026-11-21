@@ -118,7 +118,7 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 
 `selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`), desktop notifications, and the install without Docker (`selfhosted/standalone`), which runs the engine and the console in one process over the `sqlite` store.
 
-- Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
+- Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `mise run test` and CI.
 - Composition: every adapter of the store, secrets, runtime, source, sink, filter, index, auth and authz ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or builds a tree with `cli.Root` and runs it with `command.Main` (`vsh`). `selfhosted/selfhosted.go` lists the self-hosted adapters and commands; `selfhosted/cmd/vsh/main.go` adds the TUI, `manage` and the `standalone` lifecycle commands itself.
 
 ```go

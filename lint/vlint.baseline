@@ -105,11 +105,14 @@ selfhosted/console/peopleapi.go	clockseam	383e3a5c	time.Now: read time through t
 selfhosted/console/peopleapi.go	clockseam	d067fd75	time.Now: read time through the injected clock port
 selfhosted/console/profiles.go	clockseam	724d6043	time.Now: read time through the injected clock port
 selfhosted/console/proxy.go	doccomment	95b12de3	doc comment on unexported bearerClaims: delete it, the name and the test carry the intent
-selfhosted/console/seed_test.go	noskipenv	48d7b52a	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/console/seed_test.go	noskipenv	450f576a	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
 selfhosted/console/setup.go	clockseam	7c5f80a4	time.Now: read time through the injected clock port
 selfhosted/console/signup.go	clockseam	7031cee9	time.Now: read time through the injected clock port
 selfhosted/console/signup.go	clockseam	a8e1e09a	time.Now: read time through the injected clock port
 selfhosted/console/signup.go	clockseam	e6606008	time.Now: read time through the injected clock port
+selfhosted/console/skillicons.go	clockseam	c8954bd8	time.Since: read time through the injected clock port
+selfhosted/console/skillicons.go	clockseam	ecd84430	time.Now: read time through the injected clock port
+selfhosted/console/skillicons.go	doccomment	c58ee279	doc comment on unexported backfillIcons: delete it, the name and the test carry the intent
 selfhosted/console/skills.go	clockseam	e72d1f2e	time.Now: read time through the injected clock port
 selfhosted/console/state.go	clockseam	1fdc50c4	time.Now: read time through the injected clock port
 selfhosted/console/state.go	clockseam	233be647	time.Now: read time through the injected clock port
@@ -165,6 +168,7 @@ store/postgres/postgres_test.go	noskipenv	d02d51db	silent test skip: fail instea
 store/postgres/snapshot.go	clockseam	9dfa529c	time.Now: read time through the injected clock port
 store/postgres/snapshot.go	clockseam	cdea9b3a	time.Now: read time through the injected clock port
 store/storetest/crosstenant.go	noskipenv	fe7c8533	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+store/storetest/permissions.go	noskipenv	fe7c8533	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
 store/storetest/restore.go	errstring	ad754642	error matched by its message text: use a sentinel with errors.Is or errors.As
 store/storetest/restore.go	errstring	ad754642	error matched by its message text: use a sentinel with errors.Is or errors.As
 store/storetest/restore.go	noskipenv	fe7c8533	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS

@@ -1,0 +1,174 @@
+[tools]
+go = "1.27.3"
+golangci-lint = "2.15.0"
+node = "26.13.0"
+"go:github.com/versatile-sh/go-lint/cmd/vlint" = "0.3.1"
+"go:github.com/mgechev/revive" = "1.17.1"
+
+[env]
+_.source = "scripts/stack-env.sh"
+
+[tasks.vendor]
+description = "go mod vendor, when Go is on the host"
+run = "if command -v go >/dev/null 2>&1; then go mod vendor; fi"
+
+[tasks.up]
+description = "Build and start the stack (PROFILE=headless for the headless one; CONSOLE_PORT=9123 moves the console)"
+depends = ["vendor"]
+run = '''
+$COMPOSE --profile $PROFILE up -d --build
+if [ "$PROFILE" = person ]; then
+  mise run unlock
+  echo "console: http://127.0.0.1:$CONSOLE_PORT   agent endpoint: http://127.0.0.1:$CONSOLE_PORT/mcp"
+fi
+'''
+
+[tasks.down]
+description = "Stop the stack"
+run = "$COMPOSE --profile $PROFILE down"
+
+[tasks.logs]
+description = "Follow the stack logs"
+run = "$COMPOSE --profile $PROFILE logs -f"
+
+[tasks.ps]
+description = "List the stack containers"
+run = "$COMPOSE --profile $PROFILE ps"
+
+[tasks.build]
+description = "Build the stack images"
+depends = ["vendor"]
+run = "$COMPOSE --profile $PROFILE build"
+
+[tasks.cli]
+description = "Run vsh from the image against the console: mise run cli -- tools list"
+usage = 'arg "[args]" var=#true default="--help"'
+run = '''
+docker run --rm -i --network host -e CN_ENDPOINT="${CN_ENDPOINT:-http://127.0.0.1:$CONSOLE_PORT/mcp}" -e CN_AGENT_TOKEN \
+  --entrypoint /usr/local/bin/vsh $RUN_IMAGE $usage_args
+'''
+
+[tasks.admin]
+description = "Run vsh admin from the image against the engine operator port: mise run admin -- <args>"
+usage = 'arg "[args]" var=#true default="--help"'
+run = '''
+docker run --rm -i --network ${PROJECT}_default -e VSH_ADMIN_URL=http://$ENGINE:8081 \
+  -e VSH_ADMIN_TOKEN="$($COMPOSE --profile $PROFILE exec -T postgres cat /run/connector-engine/operator-token)" \
+  --entrypoint /usr/local/bin/vsh $RUN_IMAGE admin $usage_args
+'''
+
+[tasks.vsh]
+description = "Build bin/vsh, the host side of the OS keychain"
+run = '''
+if command -v go >/dev/null 2>&1; then go build -o bin/vsh ./selfhosted/cmd/vsh; else echo "no Go on this host: the keychain is skipped" >&2; fi
+'''
+
+[tasks.unlock]
+description = "Deliver the root keys from the OS keychain to the running stack"
+depends = ["vsh"]
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" VSH="${VSH:-bin/vsh}" selfhosted/scripts/keychain.sh unlock'
+
+[tasks.keychain-status]
+description = "Where each root key is protected"
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" VSH="${VSH:-bin/vsh}" selfhosted/scripts/keychain.sh status'
+
+[tasks.keychain-migrate]
+description = "Move plaintext root keys into the OS keychain"
+depends = ["vsh"]
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" VSH="${VSH:-bin/vsh}" selfhosted/scripts/keychain.sh migrate'
+
+[tasks.keychain-revert]
+description = "Move the root keys back out of the OS keychain"
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" VSH="${VSH:-bin/vsh}" selfhosted/scripts/keychain.sh revert'
+
+[tasks.keychain-recovery]
+description = "Show the recovery phrase of the root keys"
+depends = ["vsh"]
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" VSH="${VSH:-bin/vsh}" selfhosted/scripts/keychain.sh recovery'
+
+[tasks.keychain-import]
+description = "Import root keys from a recovery phrase"
+depends = ["vsh"]
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" VSH="${VSH:-bin/vsh}" selfhosted/scripts/keychain.sh import'
+
+[tasks.notify]
+description = "Send a test notification through the console"
+depends = ["vsh"]
+run = '${VSH:-bin/vsh} notify --console http://127.0.0.1:$CONSOLE_PORT'
+
+[tasks.reset-password]
+description = "Reset a console password on the machine that runs it (RESET_USER=name picks the user)"
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" UNLOCK="mise run unlock" MODE="$MODE" YES="$YES" selfhosted/scripts/account.sh reset-password'
+
+[tasks.export]
+description = "Export a backup (MODE=setup exports a shareable setup, YES=1 skips the questions)"
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" UNLOCK="mise run unlock" MODE="$MODE" YES="$YES" selfhosted/scripts/account.sh export'
+
+[tasks.import]
+description = "Import a backup or a setup: mise run import -- <file>"
+usage = 'arg "<file>"'
+run = 'COMPOSE="$SELFHOSTED_COMPOSE" UNLOCK="mise run unlock" MODE="$MODE" YES="$YES" selfhosted/scripts/account.sh import "$usage_file"'
+
+[tasks.seed]
+description = "Serve a throwaway console with many items to see the layout at scale (SEED_ADDR=host:port moves it)"
+run = '''
+cd selfhosted/console/web && npm ci --no-audit --no-fund && npm run build
+cd ../../..
+CN_SEED_ADDR="${SEED_ADDR:-127.0.0.1:7477}" go test ./selfhosted/console -run '^TestSeedPlayground$' -count=1 -timeout 0 -v
+'''
+
+[tasks.layering]
+description = "selfhosted/ imports the core, never the other way round"
+run = "scripts/check-layering.sh"
+
+[tasks.fmt]
+description = "Format the Go files"
+run = "gofmt -w ."
+
+[tasks.lint-fast]
+description = "Fast tier (pre-commit): goimports and revive on the staged files"
+run = "vlint fast -fix"
+
+[tasks.lint]
+description = "Changed tier (pre-push): vlint and golangci-lint on the packages changed since origin/main"
+run = [
+  "git rev-parse -q --verify origin/main >/dev/null || git fetch -q origin main:refs/remotes/origin/main",
+  "vlint changed -baseline lint/vlint.baseline",
+]
+
+[tasks.lint-full]
+description = "Full tier: gofmt, go vet, vlint (baseline) and golangci-lint with the repository config on everything"
+run = [
+  "test -z \"$(gofmt -l .)\"",
+  "go vet ./...",
+  "vlint -baseline lint/vlint.baseline ./...",
+  "golangci-lint run ./...",
+]
+
+[tasks.test]
+description = "Race tests, layering, the console web typecheck and adapters check of both profiles"
+depends = ["layering"]
+run = '''
+go test -race -timeout 30m ./...
+if [ -d selfhosted/console/web ]; then (cd selfhosted/console/web && npm ci --no-audit --no-fund && npm run typecheck); fi
+go run ./cmd/connector-engine --config deploy/profiles/headless/connector-engine.yaml --adapters deploy/profiles/headless/adapters.yaml adapters check
+if [ -d selfhosted ]; then go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check; fi
+'''
+
+[tasks."check:stack"]
+description = "The person stack end to end on its own compose project (needs Docker)"
+depends = ["vendor"]
+run = "if [ -d selfhosted ]; then selfhosted/scripts/console-check.sh; fi"
+
+[tasks.semgrep]
+description = "Semgrep on the new findings since the merge base"
+run = """
+semgrep scan --metrics=off --disable-version-check --error --severity WARNING --severity ERROR \
+  --config p/default --config p/secrets --config p/golang --config p/typescript --config p/react --config p/dockerfile \
+  --config https://raw.githubusercontent.com/versatile-sh/semgrep-rules/v0.1.2/rules/versatile.yml \
+  --baseline-commit "$(git merge-base HEAD origin/main)"
+"""
+
+[tasks.check]
+description = "Local merge validation: full lint, race tests, Semgrep, then the person stack end to end (needs Docker)"
+run = [{ task = "lint-full" }, { task = "test" }, { task = "semgrep" }, { task = "check:stack" }]

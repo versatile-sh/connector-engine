@@ -37,7 +37,7 @@ With more than one console user, who may answer follows the connector's [credent
 | Surface | Set up |
 |---|---|
 | the console's **Approvals** page | nothing to set up |
-| a desktop popup | run `make notify` on the machine |
+| a desktop popup | run `mise run notify` on the machine |
 | Discord, Slack or Telegram, with buttons | **Notifications** in the console |
 | a webhook (ntfy, Discord or Slack incoming webhooks), with an "Open in console" link | **Notifications** in the console |
 | the AI app itself (MCP elicitation) | turned on per app in **Notifications**; off by default |
@@ -45,10 +45,10 @@ With more than one console user, who may answer follows the connector's [credent
 Nothing is sent until you add a surface.
 
 ```sh
-make notify
+mise run notify
 ```
 
-`make notify` runs `vsh notify --console http://127.0.0.1:<CONSOLE_PORT>`: it shows a desktop notification for each call waiting for you and opens a small approval page.
+`mise run notify` runs `vsh notify --console http://127.0.0.1:<CONSOLE_PORT>`: it shows a desktop notification for each call waiting for you and opens a small approval page.
 
 - Chat surfaces accept clicks only from the owner id you configure, and keep call arguments out of third-party messages.
 - Each console user has their own notifications: their channels, their paired computers and the elicitation setting of their own keys. Nobody else sees or changes them.

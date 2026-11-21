@@ -193,7 +193,7 @@ func (c *Console) ExportSetup(ctx context.Context) ([]byte, string, error) {
 	}
 	slices.Sort(s.Notifications)
 	var out bytes.Buffer
-	out.WriteString("# A connector-engine setup: what to install and how, without any credential. Import it from the console or with make import FILE=...\n")
+	out.WriteString("# A connector-engine setup: what to install and how, without any credential. Import it from the console or with mise run import -- ...\n")
 	enc := yaml.NewEncoder(&out)
 	enc.SetIndent(2)
 	if err := enc.Encode(s); err != nil {

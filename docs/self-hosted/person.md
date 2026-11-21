@@ -19,16 +19,16 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 
 | Command | What it does |
 |---|---|
-| `make up` / `make down` / `make logs` / `make ps` | start, stop, follow, list the stack |
-| `make unlock` | deliver the unlock key from the host keychain after a restart |
-| `make notify` | desktop popups for calls waiting for approval |
-| `make export` / `make import FILE=...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
-| `make reset-password` | set a new console password from this machine, even for the last Owner; `USER=<username>` names whose once there are several users |
+| `mise run up` / `mise run down` / `mise run logs` / `mise run ps` | start, stop, follow, list the stack |
+| `mise run unlock` | deliver the unlock key from the host keychain after a restart |
+| `mise run notify` | desktop popups for calls waiting for approval |
+| `mise run export` / `mise run import -- ...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
+| `mise run reset-password` | set a new console password from this machine, even for the last Owner; `RESET_USER=<username>` names whose once there are several users |
 | `vsh login`, then `vsh connectors`, `vsh access`, `vsh approvals`, … | manage the install from a terminal as a signed-in user, with or without Docker ([vsh](../reference/vsh.md#sign-in-and-manage)) |
-| `make cli ARGS="tools list"` | `vsh` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
-| `make admin ARGS="tenants create t2"` | `vsh admin` against the operator listener with the generated operator token |
-| `make keychain-status` / `keychain-migrate` / `keychain-revert` | report, move a plaintext root key under the keychain, or back ([keychain](keychain.md)) |
-| `make keychain-recovery` / `keychain-import` | print the unlock key for a password manager, or restore it from stdin |
+| `mise run cli -- tools list` | `vsh` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
+| `mise run admin -- tenants create t2` | `vsh admin` against the operator listener with the generated operator token |
+| `mise run keychain-status` / `keychain-migrate` / `keychain-revert` | report, move a plaintext root key under the keychain, or back ([keychain](keychain.md)) |
+| `mise run keychain-recovery` / `keychain-import` | print the unlock key for a password manager, or restore it from stdin |
 
 ## Without Docker
 
@@ -74,13 +74,13 @@ It is created with mode 0700, and `up` refuses one that group or others can open
 
 - The console listens on `127.0.0.1:7465` (`--port`). The engine's listeners take free ports on `127.0.0.1`; nothing listens on another interface.
 - The settings are those of the person profile, with the listeners on the loopback, the key stores in the data directory, no unlock socket and no `host.docker.internal`.
-- The unlock key is read from the OS keychain at start: no `make unlock`, no locked state after a restart. Its account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item ([keychain](keychain.md#without-docker)).
+- The unlock key is read from the OS keychain at start: no `mise run unlock`, no locked state after a restart. Its account is `local-` and 12 hex digits of the data directory's hash, so it never meets a Docker install's item ([keychain](keychain.md#without-docker)).
 - Without a keychain (or with `--no-keychain`) the root keys stay plaintext files and the console warns; a wrapped root key never falls back to plaintext, and a missing keychain item for a wrapped root key stops the start instead of minting a new key.
 
 ### Move a Docker install here
 
-1. On the Docker install: `make export`. Keep the `.cebak` file and its passphrase.
-2. `make down`: both installs use port 7465, and `down` keeps the Docker volumes.
+1. On the Docker install: `mise run export`. Keep the `.cebak` file and its passphrase.
+2. `mise run down`: both installs use port 7465, and `down` keeps the Docker volumes.
 3. `vsh up`.
 4. In another terminal: `vsh import ~/connector-engine-backups/connector-engine-backup-<stamp>.cebak`, and type the passphrase.
 
@@ -149,7 +149,7 @@ Each console user has a role: Owner, Admin or Member. Every console route declar
 Sign-up is off by default. After the first run, an Owner adds a person from Account, People, "Invite a person": pick the role and copy the link. The person opens it on the console's own address, picks a username and a password, and is signed in. A link works once, for 72 hours, and dies when its creator is no longer an Owner. At most 20 links wait at a time. The link carries its token after a `#`, so it never reaches a server log, and the console keeps only its SHA-256.
 
 - Set `CONSOLE_PUBLIC_URL` to the address people use, or a link points at `127.0.0.1` and nobody else can open it. When that address is `https`, the session cookie is `Secure`; put TLS in front through a reverse proxy ([VPS guide](vps.md#option-b-small-team-on-the-console)). The address needs no port when it is the default one.
-- A forgotten password: an Owner makes a reset link for anyone else, an Admin only for a Member, never for oneself. The person opens it, sets a new password and is signed in; their other sessions end, and their keys, sign-ins and activity stay. A new link for the same person replaces the old one. `make reset-password` stays the way back in for an Owner nobody above can reset.
+- A forgotten password: an Owner makes a reset link for anyone else, an Admin only for a Member, never for oneself. The person opens it, sets a new password and is signed in; their other sessions end, and their keys, sign-ins and activity stay. A new link for the same person replaces the old one. `mise run reset-password` stays the way back in for an Owner nobody above can reset.
 - An Owner changes a role or removes a person. Removing signs the person out, stops their keys at once, deletes their provider sign-ins, channels and computers, and keeps their past activity. The last Owner can be neither demoted nor removed, and nobody removes themselves.
 - **Open sign-up** (Grafana's `allow_sign_up`): an Owner turns on **Allow sign-up** in Account, People. The sign-in screen then offers **Create account**, a username, a password typed twice (10 characters or more, as for an invite) and nothing else; the new account is a Member, or an Admin if the Owner chose that, never an Owner, and the person is signed in at once. When it is off, the sign-in screen says to ask an Owner or Admin for an invite link. The first Owner is still made by the first-run screen, never by sign-up. Usernames here are free text, not email addresses, so there is no allowed-domains list, and a new account signs in at once: there is no approval step. **Leave sign-up off on any console reachable from the internet**; anyone who can open it could create an account and use the gateway. Each turn on or off is in the audit as `signup.changed`, and a sign-up as `user.created` with `via: signup`.
 - The People tab also lists the console's audit of these changes. The console keeps the newest 500 entries.
@@ -191,7 +191,7 @@ The profile is a pair of files in `selfhosted/deploy/profiles/person/`. What it 
 | operator token, Postgres passwords | the `secrets` volume, written on first boot |
 | owner account (PBKDF2-SHA256) | the `console-data` volume |
 | notifier tokens and other console secrets | sealed (envelope encryption, keys in `console-data/secrets`); the state file holds only sealed records |
-| the key that signs approval links | sealed the same way; while the console is locked, a link answers 503 until `make unlock` |
+| the key that signs approval links | sealed the same way; while the console is locked, a link answers 503 until `mise run unlock` |
 | engine and console root keys | wrapped by an unlock key in the OS keychain ([keychain](keychain.md)) |
 
 The console's design system (tokens, typography, components) is in [`selfhosted/console/web/DESIGN.md`](../../selfhosted/console/web/DESIGN.md). Code layout: [`selfhosted/README.md`](../../selfhosted/README.md).

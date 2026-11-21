@@ -300,6 +300,36 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 			t.Fatalf("%v %s", err, textOf(res))
 		}
 	})
+	t.Run("an installed skill without an icon gets the one its listing carries when the list is read, and keeps it", func(t *testing.T) {
+		const icon = "https://versatile.sh/avatars/later.png"
+		unlicensed := catalogBase + "pdf-unlicensed.yaml"
+		iconOf := func(list []console.SkillSummary) string {
+			i := slices.IndexFunc(list, func(s console.SkillSummary) bool { return s.Alias == "pdf-2" })
+			if i < 0 {
+				t.Fatalf("pdf-2 is not installed: %+v", list)
+			}
+			return list[i].Icon
+		}
+		before, err := c.Skills(context.Background())
+		if err != nil || iconOf(before) != "" {
+			t.Fatalf("%v, icon %q before the list is read", err, iconOf(before))
+		}
+		listing, err := os.ReadFile(filepath.Join(fixtureDir, "pdf-unlicensed.yaml"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		catalog.tampered[unlicensed] = string(listing) + "icon: " + icon + "\n"
+		var read struct{ Skills []console.SkillSummary }
+		b.ok("GET", "/api/skills", nil, &read)
+		if got := iconOf(read.Skills); got != icon {
+			t.Fatalf("the API lists %q", got)
+		}
+		delete(catalog.tampered, unlicensed)
+		after, err := c.Skills(context.Background())
+		if err != nil || iconOf(after) != icon {
+			t.Fatalf("%v, icon %q once the listing no longer has it", err, iconOf(after))
+		}
+	})
 	t.Run("a key minted for an app that cannot run the skill's scripts warns on the skill and in the preview, never blocks", func(t *testing.T) {
 		if status, _ := b.send("POST", "/api/agents", map[string]any{"name": "bad", "app": "no-such-app"}, nil); status != http.StatusBadRequest {
 			t.Fatalf("an unknown app: %d", status)

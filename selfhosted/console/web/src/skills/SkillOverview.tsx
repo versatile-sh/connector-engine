@@ -4,6 +4,7 @@ import { accessCounts } from "../connectors/summary";
 import { useT } from "../i18n/I18nProvider";
 import { CAPTION } from "../ui/styles";
 import { Tag } from "../ui/Tag";
+import { codeTag } from "./compat";
 import { shortCommit } from "./summary";
 
 type SkillOverviewProps = { skill: Skill; compact?: boolean };
@@ -12,6 +13,7 @@ type SkillOverviewProps = { skill: Skill; compact?: boolean };
 export function SkillOverview({ skill, compact = false }: SkillOverviewProps) {
   const t = useT();
   const counts = accessCounts(skill.access);
+  const code = codeTag(skill);
   return (
     <>
       <p className={`${CAPTION} truncate`} translate="no">
@@ -23,6 +25,7 @@ export function SkillOverview({ skill, compact = false }: SkillOverviewProps) {
         <AccessBar counts={counts} />
         <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-0.5">
           {skill.category ? <Tag>{skill.category}</Tag> : null}
+          {code ? <Tag tone="amber" dot title={t("compat.codeHint")}>{t(code === "runs" ? "compat.runsCode" : "compat.needsShell")}</Tag> : null}
           <Tag>{t("skills.keysOn", { count: counts.on + counts.ask, total: skill.access.length })}</Tag>
           {counts.on > 0 ? <Tag tone="paper">{t("access.count.on", { count: counts.on })}</Tag> : null}
           {counts.ask > 0 ? <Tag tone="lime">{t("access.count.ask", { count: counts.ask })}</Tag> : null}

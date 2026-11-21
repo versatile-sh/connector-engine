@@ -1,12 +1,12 @@
 connector-engine
-Copyright (c) 2026 Versatile (https://versatile.sh)
+Copyright (C) 2026 Versatile (versatile.sh)
 
-The Versatile-authored code in this repository is licensed under the
-PolyForm Shield License 1.0.0 with the Versatile additional terms, see LICENSE.
+The Versatile-authored code in this repository is licensed under the GNU
+General Public License, version 3 or (at your option) any later version, see
+LICENSE. Versatile also offers it under a commercial licence.
 
-The third-party components below are not covered by LICENSE. Each keeps its
-own license, found in its own directory, and the Versatile additional terms do
-not apply to them.
+The third-party components below keep their own licenses, found in their own
+directories; their notices must be kept.
 
 internal/plugkit
   Copied from github.com/agents-control/plugkit. MIT, see

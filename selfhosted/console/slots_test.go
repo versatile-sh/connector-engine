@@ -148,7 +148,6 @@ func TestASharedSetupBringsEachKeyAsAPermissionSetNeverBoundByName(t *testing.T)
 
 func TestAPermissionSetIsClaimedWhenAnAppConnects(t *testing.T) {
 	dst := importedSlots(t, slotSetup(t))
-	dst.b.trustReads(dst.conn, "lookup", "file")
 	agent := dst.consent("alpha")
 	dst.hasExactly(agent, console.ProfileCustom, map[string]console.Access{"lookup": console.AccessAsk})
 	if got := dst.effects(agent); got["lookup"] != console.AccessAsk || got["file"] != console.AccessOn {

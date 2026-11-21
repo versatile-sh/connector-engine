@@ -73,6 +73,8 @@ export const en = {
   "auth.username": "Username",
   "auth.password": "Password",
   "auth.passwordHint": "10 characters or more.",
+  "auth.setupToken": "Setup token",
+  "auth.setupTokenHint": "The secret set in CONSOLE_SETUP_TOKEN on the server.",
   "auth.setup.submit": "Create account",
   "auth.login.submit": "Sign in",
   "auth.working": "One moment…",

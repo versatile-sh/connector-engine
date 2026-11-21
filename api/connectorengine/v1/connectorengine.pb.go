@@ -9233,7 +9233,9 @@ type Skill struct {
 	Redistribution string                 `protobuf:"bytes,5,opt,name=redistribution,proto3" json:"redistribution,omitempty"`
 	HasScripts     bool                   `protobuf:"varint,6,opt,name=has_scripts,json=hasScripts,proto3" json:"has_scripts,omitempty"`
 	Requires       []string               `protobuf:"bytes,7,rep,name=requires,proto3" json:"requires,omitempty"`
-	Files          []*SkillFile           `protobuf:"bytes,8,rep,name=files,proto3" json:"files,omitempty"`
+	Needs          *SkillNeeds            `protobuf:"bytes,8,opt,name=needs,proto3" json:"needs,omitempty"`
+	Compat         []*SkillCompat         `protobuf:"bytes,9,rep,name=compat,proto3" json:"compat,omitempty"`
+	Files          []*SkillFile           `protobuf:"bytes,10,rep,name=files,proto3" json:"files,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -9317,11 +9319,93 @@ func (x *Skill) GetRequires() []string {
 	return nil
 }
 
+func (x *Skill) GetNeeds() *SkillNeeds {
+	if x != nil {
+		return x.Needs
+	}
+	return nil
+}
+
+func (x *Skill) GetCompat() []*SkillCompat {
+	if x != nil {
+		return x.Compat
+	}
+	return nil
+}
+
 func (x *Skill) GetFiles() []*SkillFile {
 	if x != nil {
 		return x.Files
 	}
 	return nil
+}
+
+type SkillCompat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Client        string                 `protobuf:"bytes,1,opt,name=client,proto3" json:"client,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Reasons       []string               `protobuf:"bytes,3,rep,name=reasons,proto3" json:"reasons,omitempty"`
+	Source        string                 `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillCompat) Reset() {
+	*x = SkillCompat{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillCompat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillCompat) ProtoMessage() {}
+
+func (x *SkillCompat) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillCompat.ProtoReflect.Descriptor instead.
+func (*SkillCompat) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{127}
+}
+
+func (x *SkillCompat) GetClient() string {
+	if x != nil {
+		return x.Client
+	}
+	return ""
+}
+
+func (x *SkillCompat) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *SkillCompat) GetReasons() []string {
+	if x != nil {
+		return x.Reasons
+	}
+	return nil
+}
+
+func (x *SkillCompat) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
 }
 
 type SkillFile struct {
@@ -9337,7 +9421,7 @@ type SkillFile struct {
 
 func (x *SkillFile) Reset() {
 	*x = SkillFile{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9349,7 +9433,7 @@ func (x *SkillFile) String() string {
 func (*SkillFile) ProtoMessage() {}
 
 func (x *SkillFile) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[127]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9362,7 +9446,7 @@ func (x *SkillFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillFile.ProtoReflect.Descriptor instead.
 func (*SkillFile) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{127}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *SkillFile) GetPath() string {
@@ -9411,7 +9495,7 @@ type SkillLicence struct {
 
 func (x *SkillLicence) Reset() {
 	*x = SkillLicence{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9423,7 +9507,7 @@ func (x *SkillLicence) String() string {
 func (*SkillLicence) ProtoMessage() {}
 
 func (x *SkillLicence) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[128]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9436,7 +9520,7 @@ func (x *SkillLicence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillLicence.ProtoReflect.Descriptor instead.
 func (*SkillLicence) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{128}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *SkillLicence) GetSpdx() string {
@@ -9460,6 +9544,74 @@ func (x *SkillLicence) GetRedistributable() bool {
 	return false
 }
 
+type SkillNeeds struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tools         []string               `protobuf:"bytes,1,rep,name=tools,proto3" json:"tools,omitempty"`
+	Runtimes      []string               `protobuf:"bytes,2,rep,name=runtimes,proto3" json:"runtimes,omitempty"`
+	Network       bool                   `protobuf:"varint,3,opt,name=network,proto3" json:"network,omitempty"`
+	Mcp           []string               `protobuf:"bytes,4,rep,name=mcp,proto3" json:"mcp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SkillNeeds) Reset() {
+	*x = SkillNeeds{}
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SkillNeeds) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SkillNeeds) ProtoMessage() {}
+
+func (x *SkillNeeds) ProtoReflect() protoreflect.Message {
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SkillNeeds.ProtoReflect.Descriptor instead.
+func (*SkillNeeds) Descriptor() ([]byte, []int) {
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{130}
+}
+
+func (x *SkillNeeds) GetTools() []string {
+	if x != nil {
+		return x.Tools
+	}
+	return nil
+}
+
+func (x *SkillNeeds) GetRuntimes() []string {
+	if x != nil {
+		return x.Runtimes
+	}
+	return nil
+}
+
+func (x *SkillNeeds) GetNetwork() bool {
+	if x != nil {
+		return x.Network
+	}
+	return false
+}
+
+func (x *SkillNeeds) GetMcp() []string {
+	if x != nil {
+		return x.Mcp
+	}
+	return nil
+}
+
 type SkillSource struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Repository    string                 `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
@@ -9472,7 +9624,7 @@ type SkillSource struct {
 
 func (x *SkillSource) Reset() {
 	*x = SkillSource{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9484,7 +9636,7 @@ func (x *SkillSource) String() string {
 func (*SkillSource) ProtoMessage() {}
 
 func (x *SkillSource) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[129]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9497,7 +9649,7 @@ func (x *SkillSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SkillSource.ProtoReflect.Descriptor instead.
 func (*SkillSource) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{129}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *SkillSource) GetRepository() string {
@@ -9541,7 +9693,7 @@ type SourceInfo struct {
 
 func (x *SourceInfo) Reset() {
 	*x = SourceInfo{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9553,7 +9705,7 @@ func (x *SourceInfo) String() string {
 func (*SourceInfo) ProtoMessage() {}
 
 func (x *SourceInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[130]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9566,7 +9718,7 @@ func (x *SourceInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceInfo.ProtoReflect.Descriptor instead.
 func (*SourceInfo) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{130}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *SourceInfo) GetRegistry() string {
@@ -9613,7 +9765,7 @@ type SourceRequest struct {
 
 func (x *SourceRequest) Reset() {
 	*x = SourceRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9625,7 +9777,7 @@ func (x *SourceRequest) String() string {
 func (*SourceRequest) ProtoMessage() {}
 
 func (x *SourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[131]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9638,7 +9790,7 @@ func (x *SourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceRequest.ProtoReflect.Descriptor instead.
 func (*SourceRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{131}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *SourceRequest) GetSource() string {
@@ -9658,7 +9810,7 @@ type SourceStatus struct {
 
 func (x *SourceStatus) Reset() {
 	*x = SourceStatus{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[132]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9670,7 +9822,7 @@ func (x *SourceStatus) String() string {
 func (*SourceStatus) ProtoMessage() {}
 
 func (x *SourceStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[132]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9683,7 +9835,7 @@ func (x *SourceStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceStatus.ProtoReflect.Descriptor instead.
 func (*SourceStatus) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{132}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *SourceStatus) GetName() string {
@@ -9713,7 +9865,7 @@ type SourceSync struct {
 
 func (x *SourceSync) Reset() {
 	*x = SourceSync{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[133]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9725,7 +9877,7 @@ func (x *SourceSync) String() string {
 func (*SourceSync) ProtoMessage() {}
 
 func (x *SourceSync) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[133]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9738,7 +9890,7 @@ func (x *SourceSync) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceSync.ProtoReflect.Descriptor instead.
 func (*SourceSync) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{133}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *SourceSync) GetSource() string {
@@ -9785,7 +9937,7 @@ type Sources struct {
 
 func (x *Sources) Reset() {
 	*x = Sources{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[134]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9797,7 +9949,7 @@ func (x *Sources) String() string {
 func (*Sources) ProtoMessage() {}
 
 func (x *Sources) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[134]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9810,7 +9962,7 @@ func (x *Sources) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sources.ProtoReflect.Descriptor instead.
 func (*Sources) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{134}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *Sources) GetItems() []*SourceStatus {
@@ -9831,7 +9983,7 @@ type StarterRequest struct {
 
 func (x *StarterRequest) Reset() {
 	*x = StarterRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[135]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9843,7 +9995,7 @@ func (x *StarterRequest) String() string {
 func (*StarterRequest) ProtoMessage() {}
 
 func (x *StarterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[135]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9856,7 +10008,7 @@ func (x *StarterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StarterRequest.ProtoReflect.Descriptor instead.
 func (*StarterRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{135}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *StarterRequest) GetOwner() string {
@@ -9891,7 +10043,7 @@ type StatusChange struct {
 
 func (x *StatusChange) Reset() {
 	*x = StatusChange{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[136]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9903,7 +10055,7 @@ func (x *StatusChange) String() string {
 func (*StatusChange) ProtoMessage() {}
 
 func (x *StatusChange) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[136]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9916,7 +10068,7 @@ func (x *StatusChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusChange.ProtoReflect.Descriptor instead.
 func (*StatusChange) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{136}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *StatusChange) GetListing() *Listing {
@@ -9955,7 +10107,7 @@ type Tenant struct {
 
 func (x *Tenant) Reset() {
 	*x = Tenant{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[137]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9967,7 +10119,7 @@ func (x *Tenant) String() string {
 func (*Tenant) ProtoMessage() {}
 
 func (x *Tenant) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[137]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9980,7 +10132,7 @@ func (x *Tenant) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tenant.ProtoReflect.Descriptor instead.
 func (*Tenant) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{137}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *Tenant) GetId() string {
@@ -10041,7 +10193,7 @@ type TenantRequest struct {
 
 func (x *TenantRequest) Reset() {
 	*x = TenantRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[138]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10053,7 +10205,7 @@ func (x *TenantRequest) String() string {
 func (*TenantRequest) ProtoMessage() {}
 
 func (x *TenantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[138]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10066,7 +10218,7 @@ func (x *TenantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TenantRequest.ProtoReflect.Descriptor instead.
 func (*TenantRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{138}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *TenantRequest) GetTenant() string {
@@ -10085,7 +10237,7 @@ type UI struct {
 
 func (x *UI) Reset() {
 	*x = UI{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[139]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[141]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10097,7 +10249,7 @@ func (x *UI) String() string {
 func (*UI) ProtoMessage() {}
 
 func (x *UI) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[139]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[141]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10110,7 +10262,7 @@ func (x *UI) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UI.ProtoReflect.Descriptor instead.
 func (*UI) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{139}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{141}
 }
 
 func (x *UI) GetMcpApps() bool {
@@ -10130,7 +10282,7 @@ type UpdateConnectorRequest struct {
 
 func (x *UpdateConnectorRequest) Reset() {
 	*x = UpdateConnectorRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[140]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[142]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10142,7 +10294,7 @@ func (x *UpdateConnectorRequest) String() string {
 func (*UpdateConnectorRequest) ProtoMessage() {}
 
 func (x *UpdateConnectorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[140]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[142]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10155,7 +10307,7 @@ func (x *UpdateConnectorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateConnectorRequest.ProtoReflect.Descriptor instead.
 func (*UpdateConnectorRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{140}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{142}
 }
 
 func (x *UpdateConnectorRequest) GetId() string {
@@ -10184,7 +10336,7 @@ type UpdateResult struct {
 
 func (x *UpdateResult) Reset() {
 	*x = UpdateResult{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[141]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[143]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10196,7 +10348,7 @@ func (x *UpdateResult) String() string {
 func (*UpdateResult) ProtoMessage() {}
 
 func (x *UpdateResult) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[141]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[143]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10209,7 +10361,7 @@ func (x *UpdateResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateResult.ProtoReflect.Descriptor instead.
 func (*UpdateResult) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{141}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{143}
 }
 
 func (x *UpdateResult) GetConnector() *Connector {
@@ -10250,7 +10402,7 @@ type VersionRef struct {
 
 func (x *VersionRef) Reset() {
 	*x = VersionRef{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[142]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[144]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10262,7 +10414,7 @@ func (x *VersionRef) String() string {
 func (*VersionRef) ProtoMessage() {}
 
 func (x *VersionRef) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[142]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[144]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10275,7 +10427,7 @@ func (x *VersionRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VersionRef.ProtoReflect.Descriptor instead.
 func (*VersionRef) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{142}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{144}
 }
 
 func (x *VersionRef) GetListing() *ListingRef {
@@ -10302,7 +10454,7 @@ type WatchApprovalsRequest struct {
 
 func (x *WatchApprovalsRequest) Reset() {
 	*x = WatchApprovalsRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[143]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[145]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10314,7 +10466,7 @@ func (x *WatchApprovalsRequest) String() string {
 func (*WatchApprovalsRequest) ProtoMessage() {}
 
 func (x *WatchApprovalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[143]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[145]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10327,7 +10479,7 @@ func (x *WatchApprovalsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchApprovalsRequest.ProtoReflect.Descriptor instead.
 func (*WatchApprovalsRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{143}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{145}
 }
 
 func (x *WatchApprovalsRequest) GetAfter() int64 {
@@ -10353,7 +10505,7 @@ type WorkspaceRequest struct {
 
 func (x *WorkspaceRequest) Reset() {
 	*x = WorkspaceRequest{}
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[144]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[146]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10365,7 +10517,7 @@ func (x *WorkspaceRequest) String() string {
 func (*WorkspaceRequest) ProtoMessage() {}
 
 func (x *WorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[144]
+	mi := &file_connectorengine_v1_connectorengine_proto_msgTypes[146]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10378,7 +10530,7 @@ func (x *WorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*WorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{144}
+	return file_connectorengine_v1_connectorengine_proto_rawDescGZIP(), []int{146}
 }
 
 func (x *WorkspaceRequest) GetWorkspace() string {
@@ -11209,7 +11361,7 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\tSignature\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x1a\n" +
 	"\bidentity\x18\x02 \x01(\tR\bidentity\x12\x16\n" +
-	"\x06issuer\x18\x03 \x01(\tR\x06issuer\"\xc6\x02\n" +
+	"\x06issuer\x18\x03 \x01(\tR\x06issuer\"\xb5\x03\n" +
 	"\x05Skill\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bcategory\x18\x02 \x01(\tR\bcategory\x127\n" +
@@ -11218,8 +11370,16 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\x0eredistribution\x18\x05 \x01(\tR\x0eredistribution\x12\x1f\n" +
 	"\vhas_scripts\x18\x06 \x01(\bR\n" +
 	"hasScripts\x12\x1a\n" +
-	"\brequires\x18\a \x03(\tR\brequires\x123\n" +
-	"\x05files\x18\b \x03(\v2\x1d.connectorengine.v1.SkillFileR\x05files\"y\n" +
+	"\brequires\x18\a \x03(\tR\brequires\x124\n" +
+	"\x05needs\x18\b \x01(\v2\x1e.connectorengine.v1.SkillNeedsR\x05needs\x127\n" +
+	"\x06compat\x18\t \x03(\v2\x1f.connectorengine.v1.SkillCompatR\x06compat\x123\n" +
+	"\x05files\x18\n" +
+	" \x03(\v2\x1d.connectorengine.v1.SkillFileR\x05files\"o\n" +
+	"\vSkillCompat\x12\x16\n" +
+	"\x06client\x18\x01 \x01(\tR\x06client\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
+	"\areasons\x18\x03 \x03(\tR\areasons\x12\x16\n" +
+	"\x06source\x18\x04 \x01(\tR\x06source\"y\n" +
 	"\tSkillFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x14\n" +
 	"\x05bytes\x18\x02 \x01(\x03R\x05bytes\x12\x16\n" +
@@ -11229,7 +11389,13 @@ const file_connectorengine_v1_connectorengine_proto_rawDesc = "" +
 	"\fSkillLicence\x12\x12\n" +
 	"\x04spdx\x18\x01 \x01(\tR\x04spdx\x12\x12\n" +
 	"\x04from\x18\x02 \x01(\tR\x04from\x12(\n" +
-	"\x0fredistributable\x18\x03 \x01(\bR\x0fredistributable\"k\n" +
+	"\x0fredistributable\x18\x03 \x01(\bR\x0fredistributable\"j\n" +
+	"\n" +
+	"SkillNeeds\x12\x14\n" +
+	"\x05tools\x18\x01 \x03(\tR\x05tools\x12\x1a\n" +
+	"\bruntimes\x18\x02 \x03(\tR\bruntimes\x12\x18\n" +
+	"\anetwork\x18\x03 \x01(\bR\anetwork\x12\x10\n" +
+	"\x03mcp\x18\x04 \x03(\tR\x03mcp\"k\n" +
 	"\vSkillSource\x12\x1e\n" +
 	"\n" +
 	"repository\x18\x01 \x01(\tR\n" +
@@ -11410,7 +11576,7 @@ func file_connectorengine_v1_connectorengine_proto_rawDescGZIP() []byte {
 	return file_connectorengine_v1_connectorengine_proto_rawDescData
 }
 
-var file_connectorengine_v1_connectorengine_proto_msgTypes = make([]protoimpl.MessageInfo, 152)
+var file_connectorengine_v1_connectorengine_proto_msgTypes = make([]protoimpl.MessageInfo, 154)
 var file_connectorengine_v1_connectorengine_proto_goTypes = []any{
 	(*AcceptFunctionRequest)(nil),     // 0: connectorengine.v1.AcceptFunctionRequest
 	(*AcceptFunctionsRequest)(nil),    // 1: connectorengine.v1.AcceptFunctionsRequest
@@ -11539,38 +11705,40 @@ var file_connectorengine_v1_connectorengine_proto_goTypes = []any{
 	(*SessionRequest)(nil),            // 124: connectorengine.v1.SessionRequest
 	(*Signature)(nil),                 // 125: connectorengine.v1.Signature
 	(*Skill)(nil),                     // 126: connectorengine.v1.Skill
-	(*SkillFile)(nil),                 // 127: connectorengine.v1.SkillFile
-	(*SkillLicence)(nil),              // 128: connectorengine.v1.SkillLicence
-	(*SkillSource)(nil),               // 129: connectorengine.v1.SkillSource
-	(*SourceInfo)(nil),                // 130: connectorengine.v1.SourceInfo
-	(*SourceRequest)(nil),             // 131: connectorengine.v1.SourceRequest
-	(*SourceStatus)(nil),              // 132: connectorengine.v1.SourceStatus
-	(*SourceSync)(nil),                // 133: connectorengine.v1.SourceSync
-	(*Sources)(nil),                   // 134: connectorengine.v1.Sources
-	(*StarterRequest)(nil),            // 135: connectorengine.v1.StarterRequest
-	(*StatusChange)(nil),              // 136: connectorengine.v1.StatusChange
-	(*Tenant)(nil),                    // 137: connectorengine.v1.Tenant
-	(*TenantRequest)(nil),             // 138: connectorengine.v1.TenantRequest
-	(*UI)(nil),                        // 139: connectorengine.v1.UI
-	(*UpdateConnectorRequest)(nil),    // 140: connectorengine.v1.UpdateConnectorRequest
-	(*UpdateResult)(nil),              // 141: connectorengine.v1.UpdateResult
-	(*VersionRef)(nil),                // 142: connectorengine.v1.VersionRef
-	(*WatchApprovalsRequest)(nil),     // 143: connectorengine.v1.WatchApprovalsRequest
-	(*WorkspaceRequest)(nil),          // 144: connectorengine.v1.WorkspaceRequest
-	nil,                               // 145: connectorengine.v1.AcceptFunctionsRequest.SeenEntry
-	nil,                               // 146: connectorengine.v1.Call.FindingsEntry
-	nil,                               // 147: connectorengine.v1.Connector.ConfigEntry
-	nil,                               // 148: connectorengine.v1.Document.ExtensionsEntry
-	nil,                               // 149: connectorengine.v1.InstallInput.ConfigEntry
-	nil,                               // 150: connectorengine.v1.Operation.CountsEntry
-	nil,                               // 151: connectorengine.v1.Tenant.CountsEntry
-	(*timestamppb.Timestamp)(nil),     // 152: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),           // 153: google.protobuf.Struct
-	(*structpb.Value)(nil),            // 154: google.protobuf.Value
-	(*emptypb.Empty)(nil),             // 155: google.protobuf.Empty
+	(*SkillCompat)(nil),               // 127: connectorengine.v1.SkillCompat
+	(*SkillFile)(nil),                 // 128: connectorengine.v1.SkillFile
+	(*SkillLicence)(nil),              // 129: connectorengine.v1.SkillLicence
+	(*SkillNeeds)(nil),                // 130: connectorengine.v1.SkillNeeds
+	(*SkillSource)(nil),               // 131: connectorengine.v1.SkillSource
+	(*SourceInfo)(nil),                // 132: connectorengine.v1.SourceInfo
+	(*SourceRequest)(nil),             // 133: connectorengine.v1.SourceRequest
+	(*SourceStatus)(nil),              // 134: connectorengine.v1.SourceStatus
+	(*SourceSync)(nil),                // 135: connectorengine.v1.SourceSync
+	(*Sources)(nil),                   // 136: connectorengine.v1.Sources
+	(*StarterRequest)(nil),            // 137: connectorengine.v1.StarterRequest
+	(*StatusChange)(nil),              // 138: connectorengine.v1.StatusChange
+	(*Tenant)(nil),                    // 139: connectorengine.v1.Tenant
+	(*TenantRequest)(nil),             // 140: connectorengine.v1.TenantRequest
+	(*UI)(nil),                        // 141: connectorengine.v1.UI
+	(*UpdateConnectorRequest)(nil),    // 142: connectorengine.v1.UpdateConnectorRequest
+	(*UpdateResult)(nil),              // 143: connectorengine.v1.UpdateResult
+	(*VersionRef)(nil),                // 144: connectorengine.v1.VersionRef
+	(*WatchApprovalsRequest)(nil),     // 145: connectorengine.v1.WatchApprovalsRequest
+	(*WorkspaceRequest)(nil),          // 146: connectorengine.v1.WorkspaceRequest
+	nil,                               // 147: connectorengine.v1.AcceptFunctionsRequest.SeenEntry
+	nil,                               // 148: connectorengine.v1.Call.FindingsEntry
+	nil,                               // 149: connectorengine.v1.Connector.ConfigEntry
+	nil,                               // 150: connectorengine.v1.Document.ExtensionsEntry
+	nil,                               // 151: connectorengine.v1.InstallInput.ConfigEntry
+	nil,                               // 152: connectorengine.v1.Operation.CountsEntry
+	nil,                               // 153: connectorengine.v1.Tenant.CountsEntry
+	(*timestamppb.Timestamp)(nil),     // 154: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),           // 155: google.protobuf.Struct
+	(*structpb.Value)(nil),            // 156: google.protobuf.Value
+	(*emptypb.Empty)(nil),             // 157: google.protobuf.Empty
 }
 var file_connectorengine_v1_connectorengine_proto_depIdxs = []int32{
-	145, // 0: connectorengine.v1.AcceptFunctionsRequest.seen:type_name -> connectorengine.v1.AcceptFunctionsRequest.SeenEntry
+	147, // 0: connectorengine.v1.AcceptFunctionsRequest.seen:type_name -> connectorengine.v1.AcceptFunctionsRequest.SeenEntry
 	57,  // 1: connectorengine.v1.AcceptResult.function:type_name -> connectorengine.v1.Function
 	64,  // 2: connectorengine.v1.AcceptResult.stale_grant:type_name -> connectorengine.v1.Grant
 	2,   // 3: connectorengine.v1.AcceptResults.items:type_name -> connectorengine.v1.AcceptResult
@@ -11580,83 +11748,83 @@ var file_connectorengine_v1_connectorengine_proto_depIdxs = []int32{
 	71,  // 7: connectorengine.v1.Answer.workspace:type_name -> connectorengine.v1.Level
 	71,  // 8: connectorengine.v1.Answer.people:type_name -> connectorengine.v1.Level
 	123, // 9: connectorengine.v1.Approval.arguments:type_name -> connectorengine.v1.Sealed
-	152, // 10: connectorengine.v1.Approval.created_at:type_name -> google.protobuf.Timestamp
-	152, // 11: connectorengine.v1.Approval.expires_at:type_name -> google.protobuf.Timestamp
-	152, // 12: connectorengine.v1.Approval.decided_at:type_name -> google.protobuf.Timestamp
-	152, // 13: connectorengine.v1.Approval.delivered_at:type_name -> google.protobuf.Timestamp
-	152, // 14: connectorengine.v1.Approval.execution_started_at:type_name -> google.protobuf.Timestamp
+	154, // 10: connectorengine.v1.Approval.created_at:type_name -> google.protobuf.Timestamp
+	154, // 11: connectorengine.v1.Approval.expires_at:type_name -> google.protobuf.Timestamp
+	154, // 12: connectorengine.v1.Approval.decided_at:type_name -> google.protobuf.Timestamp
+	154, // 13: connectorengine.v1.Approval.delivered_at:type_name -> google.protobuf.Timestamp
+	154, // 14: connectorengine.v1.Approval.execution_started_at:type_name -> google.protobuf.Timestamp
 	123, // 15: connectorengine.v1.Approval.result_ref:type_name -> connectorengine.v1.Sealed
-	152, // 16: connectorengine.v1.Approval.result_expires_at:type_name -> google.protobuf.Timestamp
-	152, // 17: connectorengine.v1.Approval.token_expires_at:type_name -> google.protobuf.Timestamp
+	154, // 16: connectorengine.v1.Approval.result_expires_at:type_name -> google.protobuf.Timestamp
+	154, // 17: connectorengine.v1.Approval.token_expires_at:type_name -> google.protobuf.Timestamp
 	10,  // 18: connectorengine.v1.ApprovalDetail.approval:type_name -> connectorengine.v1.Approval
-	152, // 19: connectorengine.v1.ApprovalDetail.session_until:type_name -> google.protobuf.Timestamp
+	154, // 19: connectorengine.v1.ApprovalDetail.session_until:type_name -> google.protobuf.Timestamp
 	10,  // 20: connectorengine.v1.Approvals.items:type_name -> connectorengine.v1.Approval
-	153, // 21: connectorengine.v1.AuthSpec.scopes_by_function:type_name -> google.protobuf.Struct
+	155, // 21: connectorengine.v1.AuthSpec.scopes_by_function:type_name -> google.protobuf.Struct
 	17,  // 22: connectorengine.v1.Bindings.items:type_name -> connectorengine.v1.Binding
-	152, // 23: connectorengine.v1.Call.started_at:type_name -> google.protobuf.Timestamp
-	152, // 24: connectorengine.v1.Call.deadline:type_name -> google.protobuf.Timestamp
-	152, // 25: connectorengine.v1.Call.finished_at:type_name -> google.protobuf.Timestamp
-	146, // 26: connectorengine.v1.Call.findings:type_name -> connectorengine.v1.Call.FindingsEntry
+	154, // 23: connectorengine.v1.Call.started_at:type_name -> google.protobuf.Timestamp
+	154, // 24: connectorengine.v1.Call.deadline:type_name -> google.protobuf.Timestamp
+	154, // 25: connectorengine.v1.Call.finished_at:type_name -> google.protobuf.Timestamp
+	148, // 26: connectorengine.v1.Call.findings:type_name -> connectorengine.v1.Call.FindingsEntry
 	20,  // 27: connectorengine.v1.Calls.items:type_name -> connectorengine.v1.Call
 	24,  // 28: connectorengine.v1.CatalogRules.items:type_name -> connectorengine.v1.CatalogRule
 	47,  // 29: connectorengine.v1.Change.effects:type_name -> connectorengine.v1.Effects
 	123, // 30: connectorengine.v1.ClientRegistration.secret:type_name -> connectorengine.v1.Sealed
-	152, // 31: connectorengine.v1.ClientRegistration.updated_at:type_name -> google.protobuf.Timestamp
-	142, // 32: connectorengine.v1.Connector.listing:type_name -> connectorengine.v1.VersionRef
-	147, // 33: connectorengine.v1.Connector.config:type_name -> connectorengine.v1.Connector.ConfigEntry
-	152, // 34: connectorengine.v1.Connector.last_relist_at:type_name -> google.protobuf.Timestamp
-	152, // 35: connectorengine.v1.Connector.relist_after:type_name -> google.protobuf.Timestamp
-	152, // 36: connectorengine.v1.Connector.removed_at:type_name -> google.protobuf.Timestamp
+	154, // 31: connectorengine.v1.ClientRegistration.updated_at:type_name -> google.protobuf.Timestamp
+	144, // 32: connectorengine.v1.Connector.listing:type_name -> connectorengine.v1.VersionRef
+	149, // 33: connectorengine.v1.Connector.config:type_name -> connectorengine.v1.Connector.ConfigEntry
+	154, // 34: connectorengine.v1.Connector.last_relist_at:type_name -> google.protobuf.Timestamp
+	154, // 35: connectorengine.v1.Connector.relist_after:type_name -> google.protobuf.Timestamp
+	154, // 36: connectorengine.v1.Connector.removed_at:type_name -> google.protobuf.Timestamp
 	34,  // 37: connectorengine.v1.ConnectorView.connector:type_name -> connectorengine.v1.Connector
 	57,  // 38: connectorengine.v1.ConnectorView.functions:type_name -> connectorengine.v1.Function
 	36,  // 39: connectorengine.v1.ConnectorViews.items:type_name -> connectorengine.v1.ConnectorView
 	90,  // 40: connectorengine.v1.CreateListingInput.manifest:type_name -> connectorengine.v1.Manifest
 	123, // 41: connectorengine.v1.Credential.secret:type_name -> connectorengine.v1.Sealed
-	152, // 42: connectorengine.v1.Credential.expires_at:type_name -> google.protobuf.Timestamp
-	152, // 43: connectorengine.v1.Credential.refresh_after:type_name -> google.protobuf.Timestamp
-	152, // 44: connectorengine.v1.Credential.created_at:type_name -> google.protobuf.Timestamp
-	152, // 45: connectorengine.v1.Credential.last_used_at:type_name -> google.protobuf.Timestamp
-	152, // 46: connectorengine.v1.Credential.last_refreshed_at:type_name -> google.protobuf.Timestamp
-	152, // 47: connectorengine.v1.CredentialInput.expires_at:type_name -> google.protobuf.Timestamp
+	154, // 42: connectorengine.v1.Credential.expires_at:type_name -> google.protobuf.Timestamp
+	154, // 43: connectorengine.v1.Credential.refresh_after:type_name -> google.protobuf.Timestamp
+	154, // 44: connectorengine.v1.Credential.created_at:type_name -> google.protobuf.Timestamp
+	154, // 45: connectorengine.v1.Credential.last_used_at:type_name -> google.protobuf.Timestamp
+	154, // 46: connectorengine.v1.Credential.last_refreshed_at:type_name -> google.protobuf.Timestamp
+	154, // 47: connectorengine.v1.CredentialInput.expires_at:type_name -> google.protobuf.Timestamp
 	39,  // 48: connectorengine.v1.Credentials.items:type_name -> connectorengine.v1.Credential
-	148, // 49: connectorengine.v1.Document.extensions:type_name -> connectorengine.v1.Document.ExtensionsEntry
+	150, // 49: connectorengine.v1.Document.extensions:type_name -> connectorengine.v1.Document.ExtensionsEntry
 	120, // 50: connectorengine.v1.Document.adapters:type_name -> connectorengine.v1.Row
-	152, // 51: connectorengine.v1.Event.time:type_name -> google.protobuf.Timestamp
-	153, // 52: connectorengine.v1.Event.data:type_name -> google.protobuf.Struct
-	153, // 53: connectorengine.v1.EventType.schema:type_name -> google.protobuf.Struct
+	154, // 51: connectorengine.v1.Event.time:type_name -> google.protobuf.Timestamp
+	155, // 52: connectorengine.v1.Event.data:type_name -> google.protobuf.Struct
+	155, // 53: connectorengine.v1.EventType.schema:type_name -> google.protobuf.Struct
 	50,  // 54: connectorengine.v1.EventTypes.types:type_name -> connectorengine.v1.EventType
-	154, // 55: connectorengine.v1.Function.definition:type_name -> google.protobuf.Value
-	152, // 56: connectorengine.v1.Function.accepted_at:type_name -> google.protobuf.Timestamp
-	154, // 57: connectorengine.v1.FunctionDef.input_schema:type_name -> google.protobuf.Value
-	154, // 58: connectorengine.v1.FunctionDef.output_schema:type_name -> google.protobuf.Value
+	156, // 55: connectorengine.v1.Function.definition:type_name -> google.protobuf.Value
+	154, // 56: connectorengine.v1.Function.accepted_at:type_name -> google.protobuf.Timestamp
+	156, // 57: connectorengine.v1.FunctionDef.input_schema:type_name -> google.protobuf.Value
+	156, // 58: connectorengine.v1.FunctionDef.output_schema:type_name -> google.protobuf.Value
 	8,   // 59: connectorengine.v1.FunctionDef.annotations:type_name -> connectorengine.v1.Annotations
 	91,  // 60: connectorengine.v1.FunctionDef.meta_ui:type_name -> connectorengine.v1.MetaUI
 	57,  // 61: connectorengine.v1.Functions.items:type_name -> connectorengine.v1.Function
 	45,  // 62: connectorengine.v1.GRPC.descriptor:type_name -> connectorengine.v1.Descriptor
 	62,  // 63: connectorengine.v1.GRPC.methods:type_name -> connectorengine.v1.GRPCFunction
-	154, // 64: connectorengine.v1.GRPCFunction.input_schema:type_name -> google.protobuf.Value
-	154, // 65: connectorengine.v1.GRPCFunction.output_schema:type_name -> google.protobuf.Value
+	156, // 64: connectorengine.v1.GRPCFunction.input_schema:type_name -> google.protobuf.Value
+	156, // 65: connectorengine.v1.GRPCFunction.output_schema:type_name -> google.protobuf.Value
 	85,  // 66: connectorengine.v1.Grant.listing:type_name -> connectorengine.v1.ListingRef
-	152, // 67: connectorengine.v1.Grant.expires_at:type_name -> google.protobuf.Timestamp
-	152, // 68: connectorengine.v1.Grant.created_at:type_name -> google.protobuf.Timestamp
+	154, // 67: connectorengine.v1.Grant.expires_at:type_name -> google.protobuf.Timestamp
+	154, // 68: connectorengine.v1.Grant.created_at:type_name -> google.protobuf.Timestamp
 	64,  // 69: connectorengine.v1.GrantResult.grant:type_name -> connectorengine.v1.Grant
 	64,  // 70: connectorengine.v1.GrantResult.replaced:type_name -> connectorengine.v1.Grant
 	64,  // 71: connectorengine.v1.Grants.items:type_name -> connectorengine.v1.Grant
 	68,  // 72: connectorengine.v1.GroupMembers.items:type_name -> connectorengine.v1.GroupMember
 	85,  // 73: connectorengine.v1.InstallInput.listing:type_name -> connectorengine.v1.ListingRef
-	149, // 74: connectorengine.v1.InstallInput.config:type_name -> connectorengine.v1.InstallInput.ConfigEntry
+	151, // 74: connectorengine.v1.InstallInput.config:type_name -> connectorengine.v1.InstallInput.ConfigEntry
 	90,  // 75: connectorengine.v1.LintListingRequest.manifest:type_name -> connectorengine.v1.Manifest
 	56,  // 76: connectorengine.v1.LintResult.findings:type_name -> connectorengine.v1.Finding
 	112, // 77: connectorengine.v1.LintResult.definitions:type_name -> connectorengine.v1.RawDefinition
-	152, // 78: connectorengine.v1.ListApprovalsRequest.since:type_name -> google.protobuf.Timestamp
-	152, // 79: connectorengine.v1.ListCallsRequest.since:type_name -> google.protobuf.Timestamp
+	154, // 78: connectorengine.v1.ListApprovalsRequest.since:type_name -> google.protobuf.Timestamp
+	154, // 79: connectorengine.v1.ListCallsRequest.since:type_name -> google.protobuf.Timestamp
 	85,  // 80: connectorengine.v1.Listing.ref:type_name -> connectorengine.v1.ListingRef
-	142, // 81: connectorengine.v1.ListingVersion.ref:type_name -> connectorengine.v1.VersionRef
+	144, // 81: connectorengine.v1.ListingVersion.ref:type_name -> connectorengine.v1.VersionRef
 	90,  // 82: connectorengine.v1.ListingVersion.manifest:type_name -> connectorengine.v1.Manifest
-	152, // 83: connectorengine.v1.ListingVersion.imported_at:type_name -> google.protobuf.Timestamp
+	154, // 83: connectorengine.v1.ListingVersion.imported_at:type_name -> google.protobuf.Timestamp
 	87,  // 84: connectorengine.v1.ListingVersions.items:type_name -> connectorengine.v1.ListingVersion
 	84,  // 85: connectorengine.v1.Listings.items:type_name -> connectorengine.v1.Listing
-	130, // 86: connectorengine.v1.Manifest.source:type_name -> connectorengine.v1.SourceInfo
+	132, // 86: connectorengine.v1.Manifest.source:type_name -> connectorengine.v1.SourceInfo
 	113, // 87: connectorengine.v1.Manifest.remote:type_name -> connectorengine.v1.Remote
 	14,  // 88: connectorengine.v1.Manifest.artifact:type_name -> connectorengine.v1.Artifact
 	110, // 89: connectorengine.v1.Manifest.rest:type_name -> connectorengine.v1.REST
@@ -11667,219 +11835,221 @@ var file_connectorengine_v1_connectorengine_proto_depIdxs = []int32{
 	31,  // 94: connectorengine.v1.Manifest.config:type_name -> connectorengine.v1.ConfigField
 	48,  // 95: connectorengine.v1.Manifest.egress:type_name -> connectorengine.v1.Egress
 	122, // 96: connectorengine.v1.Manifest.runtime:type_name -> connectorengine.v1.RuntimeNeeds
-	139, // 97: connectorengine.v1.Manifest.ui:type_name -> connectorengine.v1.UI
+	141, // 97: connectorengine.v1.Manifest.ui:type_name -> connectorengine.v1.UI
 	107, // 98: connectorengine.v1.Manifest.publisher:type_name -> connectorengine.v1.Publisher
 	114, // 99: connectorengine.v1.Manifest.review:type_name -> connectorengine.v1.Review
 	126, // 100: connectorengine.v1.Manifest.skill:type_name -> connectorengine.v1.Skill
 	92,  // 101: connectorengine.v1.Offers.items:type_name -> connectorengine.v1.Offer
-	150, // 102: connectorengine.v1.Operation.counts:type_name -> connectorengine.v1.Operation.CountsEntry
-	152, // 103: connectorengine.v1.Operation.created_at:type_name -> google.protobuf.Timestamp
-	152, // 104: connectorengine.v1.Operation.updated_at:type_name -> google.protobuf.Timestamp
+	152, // 102: connectorengine.v1.Operation.counts:type_name -> connectorengine.v1.Operation.CountsEntry
+	154, // 103: connectorengine.v1.Operation.created_at:type_name -> google.protobuf.Timestamp
+	154, // 104: connectorengine.v1.Operation.updated_at:type_name -> google.protobuf.Timestamp
 	85,  // 105: connectorengine.v1.Overlay.listing:type_name -> connectorengine.v1.ListingRef
-	152, // 106: connectorengine.v1.Overlay.at:type_name -> google.protobuf.Timestamp
+	154, // 106: connectorengine.v1.Overlay.at:type_name -> google.protobuf.Timestamp
 	97,  // 107: connectorengine.v1.Overlays.items:type_name -> connectorengine.v1.Overlay
-	152, // 108: connectorengine.v1.Pause.paused_at:type_name -> google.protobuf.Timestamp
-	152, // 109: connectorengine.v1.Pause.expires_at:type_name -> google.protobuf.Timestamp
+	154, // 108: connectorengine.v1.Pause.paused_at:type_name -> google.protobuf.Timestamp
+	154, // 109: connectorengine.v1.Pause.expires_at:type_name -> google.protobuf.Timestamp
 	101, // 110: connectorengine.v1.Pauses.items:type_name -> connectorengine.v1.Pause
 	111, // 111: connectorengine.v1.REST.functions:type_name -> connectorengine.v1.RESTFunction
-	154, // 112: connectorengine.v1.RESTFunction.input_schema:type_name -> google.protobuf.Value
-	154, // 113: connectorengine.v1.RESTFunction.output_schema:type_name -> google.protobuf.Value
-	154, // 114: connectorengine.v1.RawDefinition.raw:type_name -> google.protobuf.Value
-	152, // 115: connectorengine.v1.Review.at:type_name -> google.protobuf.Timestamp
+	156, // 112: connectorengine.v1.RESTFunction.input_schema:type_name -> google.protobuf.Value
+	156, // 113: connectorengine.v1.RESTFunction.output_schema:type_name -> google.protobuf.Value
+	156, // 114: connectorengine.v1.RawDefinition.raw:type_name -> google.protobuf.Value
+	154, // 115: connectorengine.v1.Review.at:type_name -> google.protobuf.Timestamp
 	115, // 116: connectorengine.v1.ReviewListingRequest.functions:type_name -> connectorengine.v1.ReviewFunction
 	117, // 117: connectorengine.v1.Roles.items:type_name -> connectorengine.v1.RoleAssignment
 	32,  // 118: connectorengine.v1.Row.conformance:type_name -> connectorengine.v1.Conformance
-	129, // 119: connectorengine.v1.Skill.source:type_name -> connectorengine.v1.SkillSource
-	128, // 120: connectorengine.v1.Skill.licence:type_name -> connectorengine.v1.SkillLicence
-	127, // 121: connectorengine.v1.Skill.files:type_name -> connectorengine.v1.SkillFile
-	152, // 122: connectorengine.v1.SourceInfo.imported_at:type_name -> google.protobuf.Timestamp
-	133, // 123: connectorengine.v1.SourceStatus.last_sync:type_name -> connectorengine.v1.SourceSync
-	152, // 124: connectorengine.v1.SourceSync.last_sync:type_name -> google.protobuf.Timestamp
-	132, // 125: connectorengine.v1.Sources.items:type_name -> connectorengine.v1.SourceStatus
-	84,  // 126: connectorengine.v1.StatusChange.listing:type_name -> connectorengine.v1.Listing
-	95,  // 127: connectorengine.v1.StatusChange.operation:type_name -> connectorengine.v1.Operation
-	152, // 128: connectorengine.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
-	152, // 129: connectorengine.v1.Tenant.removed_at:type_name -> google.protobuf.Timestamp
-	151, // 130: connectorengine.v1.Tenant.counts:type_name -> connectorengine.v1.Tenant.CountsEntry
-	34,  // 131: connectorengine.v1.UpdateResult.connector:type_name -> connectorengine.v1.Connector
-	26,  // 132: connectorengine.v1.UpdateResult.changes:type_name -> connectorengine.v1.Change
-	85,  // 133: connectorengine.v1.VersionRef.listing:type_name -> connectorengine.v1.ListingRef
-	154, // 134: connectorengine.v1.Document.ExtensionsEntry.value:type_name -> google.protobuf.Value
-	81,  // 135: connectorengine.v1.ConnectorEngine.ListListings:input_type -> connectorengine.v1.ListListingsRequest
-	63,  // 136: connectorengine.v1.ConnectorEngine.GetListing:input_type -> connectorengine.v1.GetListingRequest
-	155, // 137: connectorengine.v1.ConnectorEngine.ListOfferedListings:input_type -> google.protobuf.Empty
-	144, // 138: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:input_type -> connectorengine.v1.WorkspaceRequest
-	109, // 139: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:input_type -> connectorengine.v1.PutCatalogPolicyRequest
-	155, // 140: connectorengine.v1.ConnectorEngine.ListCatalogRules:input_type -> google.protobuf.Empty
-	24,  // 141: connectorengine.v1.ConnectorEngine.PutCatalogRule:input_type -> connectorengine.v1.CatalogRule
-	121, // 142: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:input_type -> connectorengine.v1.RuleRequest
-	54,  // 143: connectorengine.v1.ConnectorEngine.ExplainVisibility:input_type -> connectorengine.v1.ExplainVisibilityRequest
-	138, // 144: connectorengine.v1.ConnectorEngine.ListOffers:input_type -> connectorengine.v1.TenantRequest
-	93,  // 145: connectorengine.v1.ConnectorEngine.PutOffer:input_type -> connectorengine.v1.OfferRequest
-	38,  // 146: connectorengine.v1.ConnectorEngine.CreateListing:input_type -> connectorengine.v1.CreateListingInput
-	86,  // 147: connectorengine.v1.ConnectorEngine.QuarantineListing:input_type -> connectorengine.v1.ListingStatusRequest
-	86,  // 148: connectorengine.v1.ConnectorEngine.DeprecateListing:input_type -> connectorengine.v1.ListingStatusRequest
-	86,  // 149: connectorengine.v1.ConnectorEngine.WithdrawListing:input_type -> connectorengine.v1.ListingStatusRequest
-	86,  // 150: connectorengine.v1.ConnectorEngine.RestoreListing:input_type -> connectorengine.v1.ListingStatusRequest
-	135, // 151: connectorengine.v1.ConnectorEngine.SetListingStarter:input_type -> connectorengine.v1.StarterRequest
-	138, // 152: connectorengine.v1.ConnectorEngine.CreateTenant:input_type -> connectorengine.v1.TenantRequest
-	138, // 153: connectorengine.v1.ConnectorEngine.RemoveTenant:input_type -> connectorengine.v1.TenantRequest
-	73,  // 154: connectorengine.v1.ConnectorEngine.LintListing:input_type -> connectorengine.v1.LintListingRequest
-	116, // 155: connectorengine.v1.ConnectorEngine.ReviewListing:input_type -> connectorengine.v1.ReviewListingRequest
-	131, // 156: connectorengine.v1.ConnectorEngine.SyncSource:input_type -> connectorengine.v1.SourceRequest
-	70,  // 157: connectorengine.v1.ConnectorEngine.InstallConnector:input_type -> connectorengine.v1.InstallInput
-	35,  // 158: connectorengine.v1.ConnectorEngine.EnableConnector:input_type -> connectorengine.v1.ConnectorRequest
-	35,  // 159: connectorengine.v1.ConnectorEngine.DisableConnector:input_type -> connectorengine.v1.ConnectorRequest
-	35,  // 160: connectorengine.v1.ConnectorEngine.GetConnector:input_type -> connectorengine.v1.ConnectorRequest
-	144, // 161: connectorengine.v1.ConnectorEngine.ListConnectors:input_type -> connectorengine.v1.WorkspaceRequest
-	140, // 162: connectorengine.v1.ConnectorEngine.UpdateConnector:input_type -> connectorengine.v1.UpdateConnectorRequest
-	72,  // 163: connectorengine.v1.ConnectorEngine.SetConnectorLevel:input_type -> connectorengine.v1.LevelRequest
-	35,  // 164: connectorengine.v1.ConnectorEngine.RemoveConnector:input_type -> connectorengine.v1.ConnectorRequest
-	35,  // 165: connectorengine.v1.ConnectorEngine.ListFunctions:input_type -> connectorengine.v1.ConnectorRequest
-	0,   // 166: connectorengine.v1.ConnectorEngine.AcceptFunction:input_type -> connectorengine.v1.AcceptFunctionRequest
-	1,   // 167: connectorengine.v1.ConnectorEngine.AcceptFunctions:input_type -> connectorengine.v1.AcceptFunctionsRequest
-	35,  // 168: connectorengine.v1.ConnectorEngine.AcceptInstructions:input_type -> connectorengine.v1.ConnectorRequest
-	27,  // 169: connectorengine.v1.ConnectorEngine.ClassifyFunction:input_type -> connectorengine.v1.ClassifyFunctionRequest
-	105, // 170: connectorengine.v1.ConnectorEngine.SetProjection:input_type -> connectorengine.v1.ProjectionRequest
-	59,  // 171: connectorengine.v1.ConnectorEngine.DisableFunction:input_type -> connectorengine.v1.FunctionRequest
-	59,  // 172: connectorengine.v1.ConnectorEngine.EnableFunction:input_type -> connectorengine.v1.FunctionRequest
-	98,  // 173: connectorengine.v1.ConnectorEngine.ListOverlays:input_type -> connectorengine.v1.OverlayTargetRequest
-	98,  // 174: connectorengine.v1.ConnectorEngine.SuggestOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
-	106, // 175: connectorengine.v1.ConnectorEngine.ProposeOverlay:input_type -> connectorengine.v1.ProposeOverlayRequest
-	99,  // 176: connectorengine.v1.ConnectorEngine.AcceptOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
-	99,  // 177: connectorengine.v1.ConnectorEngine.RestoreOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
-	98,  // 178: connectorengine.v1.ConnectorEngine.ClearOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
-	108, // 179: connectorengine.v1.ConnectorEngine.PutBinding:input_type -> connectorengine.v1.PutBindingRequest
-	18,  // 180: connectorengine.v1.ConnectorEngine.DeleteBinding:input_type -> connectorengine.v1.BindingRequest
-	77,  // 181: connectorengine.v1.ConnectorEngine.ListBindings:input_type -> connectorengine.v1.ListBindingsRequest
-	6,   // 182: connectorengine.v1.ConnectorEngine.SetAgentLevel:input_type -> connectorengine.v1.AgentLevelRequest
-	64,  // 183: connectorengine.v1.ConnectorEngine.CreateGrant:input_type -> connectorengine.v1.Grant
-	65,  // 184: connectorengine.v1.ConnectorEngine.DeleteGrant:input_type -> connectorengine.v1.GrantRequest
-	80,  // 185: connectorengine.v1.ConnectorEngine.ListGrants:input_type -> connectorengine.v1.ListGrantsRequest
-	65,  // 186: connectorengine.v1.ConnectorEngine.ConfirmGrant:input_type -> connectorengine.v1.GrantRequest
-	53,  // 187: connectorengine.v1.ConnectorEngine.ExplainAccess:input_type -> connectorengine.v1.ExplainAccessRequest
-	75,  // 188: connectorengine.v1.ConnectorEngine.ListAgentFunctions:input_type -> connectorengine.v1.ListAgentFunctionsRequest
-	76,  // 189: connectorengine.v1.ConnectorEngine.ListApprovals:input_type -> connectorengine.v1.ListApprovalsRequest
-	12,  // 190: connectorengine.v1.ConnectorEngine.GetApproval:input_type -> connectorengine.v1.ApprovalRequest
-	43,  // 191: connectorengine.v1.ConnectorEngine.DecideApproval:input_type -> connectorengine.v1.DecideApprovalRequest
-	12,  // 192: connectorengine.v1.ConnectorEngine.CancelApproval:input_type -> connectorengine.v1.ApprovalRequest
-	155, // 193: connectorengine.v1.ConnectorEngine.ListPauses:input_type -> google.protobuf.Empty
-	102, // 194: connectorengine.v1.ConnectorEngine.ClearPause:input_type -> connectorengine.v1.PauseRequest
-	143, // 195: connectorengine.v1.ConnectorEngine.WatchApprovals:input_type -> connectorengine.v1.WatchApprovalsRequest
-	21,  // 196: connectorengine.v1.ConnectorEngine.GetCall:input_type -> connectorengine.v1.CallRequest
-	40,  // 197: connectorengine.v1.ConnectorEngine.CreateCredential:input_type -> connectorengine.v1.CredentialInput
-	16,  // 198: connectorengine.v1.ConnectorEngine.BeginConnect:input_type -> connectorengine.v1.BeginConnectRequest
-	30,  // 199: connectorengine.v1.ConnectorEngine.CompleteConnect:input_type -> connectorengine.v1.CompleteConnectRequest
-	79,  // 200: connectorengine.v1.ConnectorEngine.ListCredentials:input_type -> connectorengine.v1.ListCredentialsRequest
-	41,  // 201: connectorengine.v1.ConnectorEngine.RevokeCredential:input_type -> connectorengine.v1.CredentialRequest
-	29,  // 202: connectorengine.v1.ConnectorEngine.PutClientRegistration:input_type -> connectorengine.v1.ClientRegistrationInput
-	78,  // 203: connectorengine.v1.ConnectorEngine.ListCalls:input_type -> connectorengine.v1.ListCallsRequest
-	155, // 204: connectorengine.v1.ConnectorEngine.ListSources:input_type -> google.protobuf.Empty
-	119, // 205: connectorengine.v1.ConnectorEngine.RotateKey:input_type -> connectorengine.v1.RotateKeyRequest
-	124, // 206: connectorengine.v1.ConnectorEngine.EndSession:input_type -> connectorengine.v1.SessionRequest
-	7,   // 207: connectorengine.v1.ConnectorEngine.RemoveAgent:input_type -> connectorengine.v1.AgentRequest
-	104, // 208: connectorengine.v1.ConnectorEngine.RemovePerson:input_type -> connectorengine.v1.PersonRequest
-	104, // 209: connectorengine.v1.ConnectorEngine.RestorePerson:input_type -> connectorengine.v1.PersonRequest
-	83,  // 210: connectorengine.v1.ConnectorEngine.ListRoles:input_type -> connectorengine.v1.ListRolesRequest
-	117, // 211: connectorengine.v1.ConnectorEngine.PutRole:input_type -> connectorengine.v1.RoleAssignment
-	117, // 212: connectorengine.v1.ConnectorEngine.DeleteRole:input_type -> connectorengine.v1.RoleAssignment
-	82,  // 213: connectorengine.v1.ConnectorEngine.ListGroupMembers:input_type -> connectorengine.v1.ListMembersRequest
-	68,  // 214: connectorengine.v1.ConnectorEngine.PutGroupMember:input_type -> connectorengine.v1.GroupMember
-	68,  // 215: connectorengine.v1.ConnectorEngine.DeleteGroupMember:input_type -> connectorengine.v1.GroupMember
-	96,  // 216: connectorengine.v1.ConnectorEngine.GetOperation:input_type -> connectorengine.v1.OperationRequest
-	155, // 217: connectorengine.v1.ConnectorEngine.ListEventTypes:input_type -> google.protobuf.Empty
-	51,  // 218: connectorengine.v1.ConnectorEngine.GetEventType:input_type -> connectorengine.v1.EventTypeRequest
-	155, // 219: connectorengine.v1.ConnectorEngine.ListAdapters:input_type -> google.protobuf.Empty
-	88,  // 220: connectorengine.v1.ConnectorEngine.ListListings:output_type -> connectorengine.v1.ListingVersions
-	87,  // 221: connectorengine.v1.ConnectorEngine.GetListing:output_type -> connectorengine.v1.ListingVersion
-	89,  // 222: connectorengine.v1.ConnectorEngine.ListOfferedListings:output_type -> connectorengine.v1.Listings
-	23,  // 223: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
-	23,  // 224: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
-	25,  // 225: connectorengine.v1.ConnectorEngine.ListCatalogRules:output_type -> connectorengine.v1.CatalogRules
-	24,  // 226: connectorengine.v1.ConnectorEngine.PutCatalogRule:output_type -> connectorengine.v1.CatalogRule
-	155, // 227: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:output_type -> google.protobuf.Empty
-	9,   // 228: connectorengine.v1.ConnectorEngine.ExplainVisibility:output_type -> connectorengine.v1.Answer
-	94,  // 229: connectorengine.v1.ConnectorEngine.ListOffers:output_type -> connectorengine.v1.Offers
-	95,  // 230: connectorengine.v1.ConnectorEngine.PutOffer:output_type -> connectorengine.v1.Operation
-	87,  // 231: connectorengine.v1.ConnectorEngine.CreateListing:output_type -> connectorengine.v1.ListingVersion
-	136, // 232: connectorengine.v1.ConnectorEngine.QuarantineListing:output_type -> connectorengine.v1.StatusChange
-	136, // 233: connectorengine.v1.ConnectorEngine.DeprecateListing:output_type -> connectorengine.v1.StatusChange
-	136, // 234: connectorengine.v1.ConnectorEngine.WithdrawListing:output_type -> connectorengine.v1.StatusChange
-	136, // 235: connectorengine.v1.ConnectorEngine.RestoreListing:output_type -> connectorengine.v1.StatusChange
-	84,  // 236: connectorengine.v1.ConnectorEngine.SetListingStarter:output_type -> connectorengine.v1.Listing
-	137, // 237: connectorengine.v1.ConnectorEngine.CreateTenant:output_type -> connectorengine.v1.Tenant
-	95,  // 238: connectorengine.v1.ConnectorEngine.RemoveTenant:output_type -> connectorengine.v1.Operation
-	74,  // 239: connectorengine.v1.ConnectorEngine.LintListing:output_type -> connectorengine.v1.LintResult
-	87,  // 240: connectorengine.v1.ConnectorEngine.ReviewListing:output_type -> connectorengine.v1.ListingVersion
-	95,  // 241: connectorengine.v1.ConnectorEngine.SyncSource:output_type -> connectorengine.v1.Operation
-	36,  // 242: connectorengine.v1.ConnectorEngine.InstallConnector:output_type -> connectorengine.v1.ConnectorView
-	34,  // 243: connectorengine.v1.ConnectorEngine.EnableConnector:output_type -> connectorengine.v1.Connector
-	34,  // 244: connectorengine.v1.ConnectorEngine.DisableConnector:output_type -> connectorengine.v1.Connector
-	36,  // 245: connectorengine.v1.ConnectorEngine.GetConnector:output_type -> connectorengine.v1.ConnectorView
-	37,  // 246: connectorengine.v1.ConnectorEngine.ListConnectors:output_type -> connectorengine.v1.ConnectorViews
-	141, // 247: connectorengine.v1.ConnectorEngine.UpdateConnector:output_type -> connectorengine.v1.UpdateResult
-	67,  // 248: connectorengine.v1.ConnectorEngine.SetConnectorLevel:output_type -> connectorengine.v1.Grants
-	155, // 249: connectorengine.v1.ConnectorEngine.RemoveConnector:output_type -> google.protobuf.Empty
-	60,  // 250: connectorengine.v1.ConnectorEngine.ListFunctions:output_type -> connectorengine.v1.Functions
-	2,   // 251: connectorengine.v1.ConnectorEngine.AcceptFunction:output_type -> connectorengine.v1.AcceptResult
-	3,   // 252: connectorengine.v1.ConnectorEngine.AcceptFunctions:output_type -> connectorengine.v1.AcceptResults
-	34,  // 253: connectorengine.v1.ConnectorEngine.AcceptInstructions:output_type -> connectorengine.v1.Connector
-	57,  // 254: connectorengine.v1.ConnectorEngine.ClassifyFunction:output_type -> connectorengine.v1.Function
-	57,  // 255: connectorengine.v1.ConnectorEngine.SetProjection:output_type -> connectorengine.v1.Function
-	57,  // 256: connectorengine.v1.ConnectorEngine.DisableFunction:output_type -> connectorengine.v1.Function
-	57,  // 257: connectorengine.v1.ConnectorEngine.EnableFunction:output_type -> connectorengine.v1.Function
-	100, // 258: connectorengine.v1.ConnectorEngine.ListOverlays:output_type -> connectorengine.v1.Overlays
-	97,  // 259: connectorengine.v1.ConnectorEngine.SuggestOverlay:output_type -> connectorengine.v1.Overlay
-	97,  // 260: connectorengine.v1.ConnectorEngine.ProposeOverlay:output_type -> connectorengine.v1.Overlay
-	97,  // 261: connectorengine.v1.ConnectorEngine.AcceptOverlay:output_type -> connectorengine.v1.Overlay
-	97,  // 262: connectorengine.v1.ConnectorEngine.RestoreOverlay:output_type -> connectorengine.v1.Overlay
-	155, // 263: connectorengine.v1.ConnectorEngine.ClearOverlay:output_type -> google.protobuf.Empty
-	17,  // 264: connectorengine.v1.ConnectorEngine.PutBinding:output_type -> connectorengine.v1.Binding
-	155, // 265: connectorengine.v1.ConnectorEngine.DeleteBinding:output_type -> google.protobuf.Empty
-	19,  // 266: connectorengine.v1.ConnectorEngine.ListBindings:output_type -> connectorengine.v1.Bindings
-	67,  // 267: connectorengine.v1.ConnectorEngine.SetAgentLevel:output_type -> connectorengine.v1.Grants
-	66,  // 268: connectorengine.v1.ConnectorEngine.CreateGrant:output_type -> connectorengine.v1.GrantResult
-	155, // 269: connectorengine.v1.ConnectorEngine.DeleteGrant:output_type -> google.protobuf.Empty
-	67,  // 270: connectorengine.v1.ConnectorEngine.ListGrants:output_type -> connectorengine.v1.Grants
-	64,  // 271: connectorengine.v1.ConnectorEngine.ConfirmGrant:output_type -> connectorengine.v1.Grant
-	44,  // 272: connectorengine.v1.ConnectorEngine.ExplainAccess:output_type -> connectorengine.v1.Decision
-	5,   // 273: connectorengine.v1.ConnectorEngine.ListAgentFunctions:output_type -> connectorengine.v1.AgentFunctions
-	13,  // 274: connectorengine.v1.ConnectorEngine.ListApprovals:output_type -> connectorengine.v1.Approvals
-	11,  // 275: connectorengine.v1.ConnectorEngine.GetApproval:output_type -> connectorengine.v1.ApprovalDetail
-	10,  // 276: connectorengine.v1.ConnectorEngine.DecideApproval:output_type -> connectorengine.v1.Approval
-	10,  // 277: connectorengine.v1.ConnectorEngine.CancelApproval:output_type -> connectorengine.v1.Approval
-	103, // 278: connectorengine.v1.ConnectorEngine.ListPauses:output_type -> connectorengine.v1.Pauses
-	155, // 279: connectorengine.v1.ConnectorEngine.ClearPause:output_type -> google.protobuf.Empty
-	49,  // 280: connectorengine.v1.ConnectorEngine.WatchApprovals:output_type -> connectorengine.v1.Event
-	20,  // 281: connectorengine.v1.ConnectorEngine.GetCall:output_type -> connectorengine.v1.Call
-	39,  // 282: connectorengine.v1.ConnectorEngine.CreateCredential:output_type -> connectorengine.v1.Credential
-	33,  // 283: connectorengine.v1.ConnectorEngine.BeginConnect:output_type -> connectorengine.v1.ConnectStart
-	39,  // 284: connectorengine.v1.ConnectorEngine.CompleteConnect:output_type -> connectorengine.v1.Credential
-	42,  // 285: connectorengine.v1.ConnectorEngine.ListCredentials:output_type -> connectorengine.v1.Credentials
-	155, // 286: connectorengine.v1.ConnectorEngine.RevokeCredential:output_type -> google.protobuf.Empty
-	28,  // 287: connectorengine.v1.ConnectorEngine.PutClientRegistration:output_type -> connectorengine.v1.ClientRegistration
-	22,  // 288: connectorengine.v1.ConnectorEngine.ListCalls:output_type -> connectorengine.v1.Calls
-	134, // 289: connectorengine.v1.ConnectorEngine.ListSources:output_type -> connectorengine.v1.Sources
-	95,  // 290: connectorengine.v1.ConnectorEngine.RotateKey:output_type -> connectorengine.v1.Operation
-	155, // 291: connectorengine.v1.ConnectorEngine.EndSession:output_type -> google.protobuf.Empty
-	155, // 292: connectorengine.v1.ConnectorEngine.RemoveAgent:output_type -> google.protobuf.Empty
-	155, // 293: connectorengine.v1.ConnectorEngine.RemovePerson:output_type -> google.protobuf.Empty
-	155, // 294: connectorengine.v1.ConnectorEngine.RestorePerson:output_type -> google.protobuf.Empty
-	118, // 295: connectorengine.v1.ConnectorEngine.ListRoles:output_type -> connectorengine.v1.Roles
-	117, // 296: connectorengine.v1.ConnectorEngine.PutRole:output_type -> connectorengine.v1.RoleAssignment
-	155, // 297: connectorengine.v1.ConnectorEngine.DeleteRole:output_type -> google.protobuf.Empty
-	69,  // 298: connectorengine.v1.ConnectorEngine.ListGroupMembers:output_type -> connectorengine.v1.GroupMembers
-	68,  // 299: connectorengine.v1.ConnectorEngine.PutGroupMember:output_type -> connectorengine.v1.GroupMember
-	155, // 300: connectorengine.v1.ConnectorEngine.DeleteGroupMember:output_type -> google.protobuf.Empty
-	95,  // 301: connectorengine.v1.ConnectorEngine.GetOperation:output_type -> connectorengine.v1.Operation
-	52,  // 302: connectorengine.v1.ConnectorEngine.ListEventTypes:output_type -> connectorengine.v1.EventTypes
-	50,  // 303: connectorengine.v1.ConnectorEngine.GetEventType:output_type -> connectorengine.v1.EventType
-	46,  // 304: connectorengine.v1.ConnectorEngine.ListAdapters:output_type -> connectorengine.v1.Document
-	220, // [220:305] is the sub-list for method output_type
-	135, // [135:220] is the sub-list for method input_type
-	135, // [135:135] is the sub-list for extension type_name
-	135, // [135:135] is the sub-list for extension extendee
-	0,   // [0:135] is the sub-list for field type_name
+	131, // 119: connectorengine.v1.Skill.source:type_name -> connectorengine.v1.SkillSource
+	129, // 120: connectorengine.v1.Skill.licence:type_name -> connectorengine.v1.SkillLicence
+	130, // 121: connectorengine.v1.Skill.needs:type_name -> connectorengine.v1.SkillNeeds
+	127, // 122: connectorengine.v1.Skill.compat:type_name -> connectorengine.v1.SkillCompat
+	128, // 123: connectorengine.v1.Skill.files:type_name -> connectorengine.v1.SkillFile
+	154, // 124: connectorengine.v1.SourceInfo.imported_at:type_name -> google.protobuf.Timestamp
+	135, // 125: connectorengine.v1.SourceStatus.last_sync:type_name -> connectorengine.v1.SourceSync
+	154, // 126: connectorengine.v1.SourceSync.last_sync:type_name -> google.protobuf.Timestamp
+	134, // 127: connectorengine.v1.Sources.items:type_name -> connectorengine.v1.SourceStatus
+	84,  // 128: connectorengine.v1.StatusChange.listing:type_name -> connectorengine.v1.Listing
+	95,  // 129: connectorengine.v1.StatusChange.operation:type_name -> connectorengine.v1.Operation
+	154, // 130: connectorengine.v1.Tenant.created_at:type_name -> google.protobuf.Timestamp
+	154, // 131: connectorengine.v1.Tenant.removed_at:type_name -> google.protobuf.Timestamp
+	153, // 132: connectorengine.v1.Tenant.counts:type_name -> connectorengine.v1.Tenant.CountsEntry
+	34,  // 133: connectorengine.v1.UpdateResult.connector:type_name -> connectorengine.v1.Connector
+	26,  // 134: connectorengine.v1.UpdateResult.changes:type_name -> connectorengine.v1.Change
+	85,  // 135: connectorengine.v1.VersionRef.listing:type_name -> connectorengine.v1.ListingRef
+	156, // 136: connectorengine.v1.Document.ExtensionsEntry.value:type_name -> google.protobuf.Value
+	81,  // 137: connectorengine.v1.ConnectorEngine.ListListings:input_type -> connectorengine.v1.ListListingsRequest
+	63,  // 138: connectorengine.v1.ConnectorEngine.GetListing:input_type -> connectorengine.v1.GetListingRequest
+	157, // 139: connectorengine.v1.ConnectorEngine.ListOfferedListings:input_type -> google.protobuf.Empty
+	146, // 140: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:input_type -> connectorengine.v1.WorkspaceRequest
+	109, // 141: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:input_type -> connectorengine.v1.PutCatalogPolicyRequest
+	157, // 142: connectorengine.v1.ConnectorEngine.ListCatalogRules:input_type -> google.protobuf.Empty
+	24,  // 143: connectorengine.v1.ConnectorEngine.PutCatalogRule:input_type -> connectorengine.v1.CatalogRule
+	121, // 144: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:input_type -> connectorengine.v1.RuleRequest
+	54,  // 145: connectorengine.v1.ConnectorEngine.ExplainVisibility:input_type -> connectorengine.v1.ExplainVisibilityRequest
+	140, // 146: connectorengine.v1.ConnectorEngine.ListOffers:input_type -> connectorengine.v1.TenantRequest
+	93,  // 147: connectorengine.v1.ConnectorEngine.PutOffer:input_type -> connectorengine.v1.OfferRequest
+	38,  // 148: connectorengine.v1.ConnectorEngine.CreateListing:input_type -> connectorengine.v1.CreateListingInput
+	86,  // 149: connectorengine.v1.ConnectorEngine.QuarantineListing:input_type -> connectorengine.v1.ListingStatusRequest
+	86,  // 150: connectorengine.v1.ConnectorEngine.DeprecateListing:input_type -> connectorengine.v1.ListingStatusRequest
+	86,  // 151: connectorengine.v1.ConnectorEngine.WithdrawListing:input_type -> connectorengine.v1.ListingStatusRequest
+	86,  // 152: connectorengine.v1.ConnectorEngine.RestoreListing:input_type -> connectorengine.v1.ListingStatusRequest
+	137, // 153: connectorengine.v1.ConnectorEngine.SetListingStarter:input_type -> connectorengine.v1.StarterRequest
+	140, // 154: connectorengine.v1.ConnectorEngine.CreateTenant:input_type -> connectorengine.v1.TenantRequest
+	140, // 155: connectorengine.v1.ConnectorEngine.RemoveTenant:input_type -> connectorengine.v1.TenantRequest
+	73,  // 156: connectorengine.v1.ConnectorEngine.LintListing:input_type -> connectorengine.v1.LintListingRequest
+	116, // 157: connectorengine.v1.ConnectorEngine.ReviewListing:input_type -> connectorengine.v1.ReviewListingRequest
+	133, // 158: connectorengine.v1.ConnectorEngine.SyncSource:input_type -> connectorengine.v1.SourceRequest
+	70,  // 159: connectorengine.v1.ConnectorEngine.InstallConnector:input_type -> connectorengine.v1.InstallInput
+	35,  // 160: connectorengine.v1.ConnectorEngine.EnableConnector:input_type -> connectorengine.v1.ConnectorRequest
+	35,  // 161: connectorengine.v1.ConnectorEngine.DisableConnector:input_type -> connectorengine.v1.ConnectorRequest
+	35,  // 162: connectorengine.v1.ConnectorEngine.GetConnector:input_type -> connectorengine.v1.ConnectorRequest
+	146, // 163: connectorengine.v1.ConnectorEngine.ListConnectors:input_type -> connectorengine.v1.WorkspaceRequest
+	142, // 164: connectorengine.v1.ConnectorEngine.UpdateConnector:input_type -> connectorengine.v1.UpdateConnectorRequest
+	72,  // 165: connectorengine.v1.ConnectorEngine.SetConnectorLevel:input_type -> connectorengine.v1.LevelRequest
+	35,  // 166: connectorengine.v1.ConnectorEngine.RemoveConnector:input_type -> connectorengine.v1.ConnectorRequest
+	35,  // 167: connectorengine.v1.ConnectorEngine.ListFunctions:input_type -> connectorengine.v1.ConnectorRequest
+	0,   // 168: connectorengine.v1.ConnectorEngine.AcceptFunction:input_type -> connectorengine.v1.AcceptFunctionRequest
+	1,   // 169: connectorengine.v1.ConnectorEngine.AcceptFunctions:input_type -> connectorengine.v1.AcceptFunctionsRequest
+	35,  // 170: connectorengine.v1.ConnectorEngine.AcceptInstructions:input_type -> connectorengine.v1.ConnectorRequest
+	27,  // 171: connectorengine.v1.ConnectorEngine.ClassifyFunction:input_type -> connectorengine.v1.ClassifyFunctionRequest
+	105, // 172: connectorengine.v1.ConnectorEngine.SetProjection:input_type -> connectorengine.v1.ProjectionRequest
+	59,  // 173: connectorengine.v1.ConnectorEngine.DisableFunction:input_type -> connectorengine.v1.FunctionRequest
+	59,  // 174: connectorengine.v1.ConnectorEngine.EnableFunction:input_type -> connectorengine.v1.FunctionRequest
+	98,  // 175: connectorengine.v1.ConnectorEngine.ListOverlays:input_type -> connectorengine.v1.OverlayTargetRequest
+	98,  // 176: connectorengine.v1.ConnectorEngine.SuggestOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
+	106, // 177: connectorengine.v1.ConnectorEngine.ProposeOverlay:input_type -> connectorengine.v1.ProposeOverlayRequest
+	99,  // 178: connectorengine.v1.ConnectorEngine.AcceptOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
+	99,  // 179: connectorengine.v1.ConnectorEngine.RestoreOverlay:input_type -> connectorengine.v1.OverlayVersionRequest
+	98,  // 180: connectorengine.v1.ConnectorEngine.ClearOverlay:input_type -> connectorengine.v1.OverlayTargetRequest
+	108, // 181: connectorengine.v1.ConnectorEngine.PutBinding:input_type -> connectorengine.v1.PutBindingRequest
+	18,  // 182: connectorengine.v1.ConnectorEngine.DeleteBinding:input_type -> connectorengine.v1.BindingRequest
+	77,  // 183: connectorengine.v1.ConnectorEngine.ListBindings:input_type -> connectorengine.v1.ListBindingsRequest
+	6,   // 184: connectorengine.v1.ConnectorEngine.SetAgentLevel:input_type -> connectorengine.v1.AgentLevelRequest
+	64,  // 185: connectorengine.v1.ConnectorEngine.CreateGrant:input_type -> connectorengine.v1.Grant
+	65,  // 186: connectorengine.v1.ConnectorEngine.DeleteGrant:input_type -> connectorengine.v1.GrantRequest
+	80,  // 187: connectorengine.v1.ConnectorEngine.ListGrants:input_type -> connectorengine.v1.ListGrantsRequest
+	65,  // 188: connectorengine.v1.ConnectorEngine.ConfirmGrant:input_type -> connectorengine.v1.GrantRequest
+	53,  // 189: connectorengine.v1.ConnectorEngine.ExplainAccess:input_type -> connectorengine.v1.ExplainAccessRequest
+	75,  // 190: connectorengine.v1.ConnectorEngine.ListAgentFunctions:input_type -> connectorengine.v1.ListAgentFunctionsRequest
+	76,  // 191: connectorengine.v1.ConnectorEngine.ListApprovals:input_type -> connectorengine.v1.ListApprovalsRequest
+	12,  // 192: connectorengine.v1.ConnectorEngine.GetApproval:input_type -> connectorengine.v1.ApprovalRequest
+	43,  // 193: connectorengine.v1.ConnectorEngine.DecideApproval:input_type -> connectorengine.v1.DecideApprovalRequest
+	12,  // 194: connectorengine.v1.ConnectorEngine.CancelApproval:input_type -> connectorengine.v1.ApprovalRequest
+	157, // 195: connectorengine.v1.ConnectorEngine.ListPauses:input_type -> google.protobuf.Empty
+	102, // 196: connectorengine.v1.ConnectorEngine.ClearPause:input_type -> connectorengine.v1.PauseRequest
+	145, // 197: connectorengine.v1.ConnectorEngine.WatchApprovals:input_type -> connectorengine.v1.WatchApprovalsRequest
+	21,  // 198: connectorengine.v1.ConnectorEngine.GetCall:input_type -> connectorengine.v1.CallRequest
+	40,  // 199: connectorengine.v1.ConnectorEngine.CreateCredential:input_type -> connectorengine.v1.CredentialInput
+	16,  // 200: connectorengine.v1.ConnectorEngine.BeginConnect:input_type -> connectorengine.v1.BeginConnectRequest
+	30,  // 201: connectorengine.v1.ConnectorEngine.CompleteConnect:input_type -> connectorengine.v1.CompleteConnectRequest
+	79,  // 202: connectorengine.v1.ConnectorEngine.ListCredentials:input_type -> connectorengine.v1.ListCredentialsRequest
+	41,  // 203: connectorengine.v1.ConnectorEngine.RevokeCredential:input_type -> connectorengine.v1.CredentialRequest
+	29,  // 204: connectorengine.v1.ConnectorEngine.PutClientRegistration:input_type -> connectorengine.v1.ClientRegistrationInput
+	78,  // 205: connectorengine.v1.ConnectorEngine.ListCalls:input_type -> connectorengine.v1.ListCallsRequest
+	157, // 206: connectorengine.v1.ConnectorEngine.ListSources:input_type -> google.protobuf.Empty
+	119, // 207: connectorengine.v1.ConnectorEngine.RotateKey:input_type -> connectorengine.v1.RotateKeyRequest
+	124, // 208: connectorengine.v1.ConnectorEngine.EndSession:input_type -> connectorengine.v1.SessionRequest
+	7,   // 209: connectorengine.v1.ConnectorEngine.RemoveAgent:input_type -> connectorengine.v1.AgentRequest
+	104, // 210: connectorengine.v1.ConnectorEngine.RemovePerson:input_type -> connectorengine.v1.PersonRequest
+	104, // 211: connectorengine.v1.ConnectorEngine.RestorePerson:input_type -> connectorengine.v1.PersonRequest
+	83,  // 212: connectorengine.v1.ConnectorEngine.ListRoles:input_type -> connectorengine.v1.ListRolesRequest
+	117, // 213: connectorengine.v1.ConnectorEngine.PutRole:input_type -> connectorengine.v1.RoleAssignment
+	117, // 214: connectorengine.v1.ConnectorEngine.DeleteRole:input_type -> connectorengine.v1.RoleAssignment
+	82,  // 215: connectorengine.v1.ConnectorEngine.ListGroupMembers:input_type -> connectorengine.v1.ListMembersRequest
+	68,  // 216: connectorengine.v1.ConnectorEngine.PutGroupMember:input_type -> connectorengine.v1.GroupMember
+	68,  // 217: connectorengine.v1.ConnectorEngine.DeleteGroupMember:input_type -> connectorengine.v1.GroupMember
+	96,  // 218: connectorengine.v1.ConnectorEngine.GetOperation:input_type -> connectorengine.v1.OperationRequest
+	157, // 219: connectorengine.v1.ConnectorEngine.ListEventTypes:input_type -> google.protobuf.Empty
+	51,  // 220: connectorengine.v1.ConnectorEngine.GetEventType:input_type -> connectorengine.v1.EventTypeRequest
+	157, // 221: connectorengine.v1.ConnectorEngine.ListAdapters:input_type -> google.protobuf.Empty
+	88,  // 222: connectorengine.v1.ConnectorEngine.ListListings:output_type -> connectorengine.v1.ListingVersions
+	87,  // 223: connectorengine.v1.ConnectorEngine.GetListing:output_type -> connectorengine.v1.ListingVersion
+	89,  // 224: connectorengine.v1.ConnectorEngine.ListOfferedListings:output_type -> connectorengine.v1.Listings
+	23,  // 225: connectorengine.v1.ConnectorEngine.GetCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
+	23,  // 226: connectorengine.v1.ConnectorEngine.PutCatalogPolicy:output_type -> connectorengine.v1.CatalogPolicy
+	25,  // 227: connectorengine.v1.ConnectorEngine.ListCatalogRules:output_type -> connectorengine.v1.CatalogRules
+	24,  // 228: connectorengine.v1.ConnectorEngine.PutCatalogRule:output_type -> connectorengine.v1.CatalogRule
+	157, // 229: connectorengine.v1.ConnectorEngine.DeleteCatalogRule:output_type -> google.protobuf.Empty
+	9,   // 230: connectorengine.v1.ConnectorEngine.ExplainVisibility:output_type -> connectorengine.v1.Answer
+	94,  // 231: connectorengine.v1.ConnectorEngine.ListOffers:output_type -> connectorengine.v1.Offers
+	95,  // 232: connectorengine.v1.ConnectorEngine.PutOffer:output_type -> connectorengine.v1.Operation
+	87,  // 233: connectorengine.v1.ConnectorEngine.CreateListing:output_type -> connectorengine.v1.ListingVersion
+	138, // 234: connectorengine.v1.ConnectorEngine.QuarantineListing:output_type -> connectorengine.v1.StatusChange
+	138, // 235: connectorengine.v1.ConnectorEngine.DeprecateListing:output_type -> connectorengine.v1.StatusChange
+	138, // 236: connectorengine.v1.ConnectorEngine.WithdrawListing:output_type -> connectorengine.v1.StatusChange
+	138, // 237: connectorengine.v1.ConnectorEngine.RestoreListing:output_type -> connectorengine.v1.StatusChange
+	84,  // 238: connectorengine.v1.ConnectorEngine.SetListingStarter:output_type -> connectorengine.v1.Listing
+	139, // 239: connectorengine.v1.ConnectorEngine.CreateTenant:output_type -> connectorengine.v1.Tenant
+	95,  // 240: connectorengine.v1.ConnectorEngine.RemoveTenant:output_type -> connectorengine.v1.Operation
+	74,  // 241: connectorengine.v1.ConnectorEngine.LintListing:output_type -> connectorengine.v1.LintResult
+	87,  // 242: connectorengine.v1.ConnectorEngine.ReviewListing:output_type -> connectorengine.v1.ListingVersion
+	95,  // 243: connectorengine.v1.ConnectorEngine.SyncSource:output_type -> connectorengine.v1.Operation
+	36,  // 244: connectorengine.v1.ConnectorEngine.InstallConnector:output_type -> connectorengine.v1.ConnectorView
+	34,  // 245: connectorengine.v1.ConnectorEngine.EnableConnector:output_type -> connectorengine.v1.Connector
+	34,  // 246: connectorengine.v1.ConnectorEngine.DisableConnector:output_type -> connectorengine.v1.Connector
+	36,  // 247: connectorengine.v1.ConnectorEngine.GetConnector:output_type -> connectorengine.v1.ConnectorView
+	37,  // 248: connectorengine.v1.ConnectorEngine.ListConnectors:output_type -> connectorengine.v1.ConnectorViews
+	143, // 249: connectorengine.v1.ConnectorEngine.UpdateConnector:output_type -> connectorengine.v1.UpdateResult
+	67,  // 250: connectorengine.v1.ConnectorEngine.SetConnectorLevel:output_type -> connectorengine.v1.Grants
+	157, // 251: connectorengine.v1.ConnectorEngine.RemoveConnector:output_type -> google.protobuf.Empty
+	60,  // 252: connectorengine.v1.ConnectorEngine.ListFunctions:output_type -> connectorengine.v1.Functions
+	2,   // 253: connectorengine.v1.ConnectorEngine.AcceptFunction:output_type -> connectorengine.v1.AcceptResult
+	3,   // 254: connectorengine.v1.ConnectorEngine.AcceptFunctions:output_type -> connectorengine.v1.AcceptResults
+	34,  // 255: connectorengine.v1.ConnectorEngine.AcceptInstructions:output_type -> connectorengine.v1.Connector
+	57,  // 256: connectorengine.v1.ConnectorEngine.ClassifyFunction:output_type -> connectorengine.v1.Function
+	57,  // 257: connectorengine.v1.ConnectorEngine.SetProjection:output_type -> connectorengine.v1.Function
+	57,  // 258: connectorengine.v1.ConnectorEngine.DisableFunction:output_type -> connectorengine.v1.Function
+	57,  // 259: connectorengine.v1.ConnectorEngine.EnableFunction:output_type -> connectorengine.v1.Function
+	100, // 260: connectorengine.v1.ConnectorEngine.ListOverlays:output_type -> connectorengine.v1.Overlays
+	97,  // 261: connectorengine.v1.ConnectorEngine.SuggestOverlay:output_type -> connectorengine.v1.Overlay
+	97,  // 262: connectorengine.v1.ConnectorEngine.ProposeOverlay:output_type -> connectorengine.v1.Overlay
+	97,  // 263: connectorengine.v1.ConnectorEngine.AcceptOverlay:output_type -> connectorengine.v1.Overlay
+	97,  // 264: connectorengine.v1.ConnectorEngine.RestoreOverlay:output_type -> connectorengine.v1.Overlay
+	157, // 265: connectorengine.v1.ConnectorEngine.ClearOverlay:output_type -> google.protobuf.Empty
+	17,  // 266: connectorengine.v1.ConnectorEngine.PutBinding:output_type -> connectorengine.v1.Binding
+	157, // 267: connectorengine.v1.ConnectorEngine.DeleteBinding:output_type -> google.protobuf.Empty
+	19,  // 268: connectorengine.v1.ConnectorEngine.ListBindings:output_type -> connectorengine.v1.Bindings
+	67,  // 269: connectorengine.v1.ConnectorEngine.SetAgentLevel:output_type -> connectorengine.v1.Grants
+	66,  // 270: connectorengine.v1.ConnectorEngine.CreateGrant:output_type -> connectorengine.v1.GrantResult
+	157, // 271: connectorengine.v1.ConnectorEngine.DeleteGrant:output_type -> google.protobuf.Empty
+	67,  // 272: connectorengine.v1.ConnectorEngine.ListGrants:output_type -> connectorengine.v1.Grants
+	64,  // 273: connectorengine.v1.ConnectorEngine.ConfirmGrant:output_type -> connectorengine.v1.Grant
+	44,  // 274: connectorengine.v1.ConnectorEngine.ExplainAccess:output_type -> connectorengine.v1.Decision
+	5,   // 275: connectorengine.v1.ConnectorEngine.ListAgentFunctions:output_type -> connectorengine.v1.AgentFunctions
+	13,  // 276: connectorengine.v1.ConnectorEngine.ListApprovals:output_type -> connectorengine.v1.Approvals
+	11,  // 277: connectorengine.v1.ConnectorEngine.GetApproval:output_type -> connectorengine.v1.ApprovalDetail
+	10,  // 278: connectorengine.v1.ConnectorEngine.DecideApproval:output_type -> connectorengine.v1.Approval
+	10,  // 279: connectorengine.v1.ConnectorEngine.CancelApproval:output_type -> connectorengine.v1.Approval
+	103, // 280: connectorengine.v1.ConnectorEngine.ListPauses:output_type -> connectorengine.v1.Pauses
+	157, // 281: connectorengine.v1.ConnectorEngine.ClearPause:output_type -> google.protobuf.Empty
+	49,  // 282: connectorengine.v1.ConnectorEngine.WatchApprovals:output_type -> connectorengine.v1.Event
+	20,  // 283: connectorengine.v1.ConnectorEngine.GetCall:output_type -> connectorengine.v1.Call
+	39,  // 284: connectorengine.v1.ConnectorEngine.CreateCredential:output_type -> connectorengine.v1.Credential
+	33,  // 285: connectorengine.v1.ConnectorEngine.BeginConnect:output_type -> connectorengine.v1.ConnectStart
+	39,  // 286: connectorengine.v1.ConnectorEngine.CompleteConnect:output_type -> connectorengine.v1.Credential
+	42,  // 287: connectorengine.v1.ConnectorEngine.ListCredentials:output_type -> connectorengine.v1.Credentials
+	157, // 288: connectorengine.v1.ConnectorEngine.RevokeCredential:output_type -> google.protobuf.Empty
+	28,  // 289: connectorengine.v1.ConnectorEngine.PutClientRegistration:output_type -> connectorengine.v1.ClientRegistration
+	22,  // 290: connectorengine.v1.ConnectorEngine.ListCalls:output_type -> connectorengine.v1.Calls
+	136, // 291: connectorengine.v1.ConnectorEngine.ListSources:output_type -> connectorengine.v1.Sources
+	95,  // 292: connectorengine.v1.ConnectorEngine.RotateKey:output_type -> connectorengine.v1.Operation
+	157, // 293: connectorengine.v1.ConnectorEngine.EndSession:output_type -> google.protobuf.Empty
+	157, // 294: connectorengine.v1.ConnectorEngine.RemoveAgent:output_type -> google.protobuf.Empty
+	157, // 295: connectorengine.v1.ConnectorEngine.RemovePerson:output_type -> google.protobuf.Empty
+	157, // 296: connectorengine.v1.ConnectorEngine.RestorePerson:output_type -> google.protobuf.Empty
+	118, // 297: connectorengine.v1.ConnectorEngine.ListRoles:output_type -> connectorengine.v1.Roles
+	117, // 298: connectorengine.v1.ConnectorEngine.PutRole:output_type -> connectorengine.v1.RoleAssignment
+	157, // 299: connectorengine.v1.ConnectorEngine.DeleteRole:output_type -> google.protobuf.Empty
+	69,  // 300: connectorengine.v1.ConnectorEngine.ListGroupMembers:output_type -> connectorengine.v1.GroupMembers
+	68,  // 301: connectorengine.v1.ConnectorEngine.PutGroupMember:output_type -> connectorengine.v1.GroupMember
+	157, // 302: connectorengine.v1.ConnectorEngine.DeleteGroupMember:output_type -> google.protobuf.Empty
+	95,  // 303: connectorengine.v1.ConnectorEngine.GetOperation:output_type -> connectorengine.v1.Operation
+	52,  // 304: connectorengine.v1.ConnectorEngine.ListEventTypes:output_type -> connectorengine.v1.EventTypes
+	50,  // 305: connectorengine.v1.ConnectorEngine.GetEventType:output_type -> connectorengine.v1.EventType
+	46,  // 306: connectorengine.v1.ConnectorEngine.ListAdapters:output_type -> connectorengine.v1.Document
+	222, // [222:307] is the sub-list for method output_type
+	137, // [137:222] is the sub-list for method input_type
+	137, // [137:137] is the sub-list for extension type_name
+	137, // [137:137] is the sub-list for extension extendee
+	0,   // [0:137] is the sub-list for field type_name
 }
 
 func init() { file_connectorengine_v1_connectorengine_proto_init() }
@@ -11893,7 +12063,7 @@ func file_connectorengine_v1_connectorengine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_connectorengine_v1_connectorengine_proto_rawDesc), len(file_connectorengine_v1_connectorengine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   152,
+			NumMessages:   154,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

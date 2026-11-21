@@ -27,7 +27,7 @@ func record(d *stateFile, actor, action, target string, detail map[string]string
 func (s *State) Audit(n int) []AuditEntry {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	out := slices.Clone(s.data.Audit)
+	out := append([]AuditEntry{}, s.data.Audit...)
 	slices.Reverse(out)
 	return out[:min(n, len(out))]
 }

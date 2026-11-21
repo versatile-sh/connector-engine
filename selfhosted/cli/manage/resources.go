@@ -193,19 +193,17 @@ func keysCommand() *command.Command {
 			if err := e.args(0, ""); err != nil {
 				return err
 			}
-			var out struct {
-				Agents []console.AgentView `json:"agents"`
-			}
-			if err := e.Client.Do(ctx, http.MethodGet, "/api/agents", nil, &out); err != nil {
+			agents, err := e.Client.Keys(ctx)
+			if err != nil {
 				return err
 			}
-			return e.print(out.Agents, func(w io.Writer) {
-				if len(out.Agents) == 0 {
+			return e.print(agents, func(w io.Writer) {
+				if len(agents) == 0 {
 					fmt.Fprintln(w, "no access keys yet: vsh keys create <name>")
 					return
 				}
 				fmt.Fprintln(w, "NAME\tEXPIRES\tVIA")
-				for _, a := range out.Agents {
+				for _, a := range agents {
 					via := "key"
 					if a.ViaBrowser {
 						via = "browser sign-in"
@@ -220,18 +218,8 @@ func keysCommand() *command.Command {
 			if err := e.args(1, "a name for the key, such as the agent's"); err != nil {
 				return err
 			}
-			hours := int(ttl.Hours())
-			if hours == 0 {
-				var keys struct {
-					Max int `json:"max_ttl_hours"`
-				}
-				if err := e.Client.Do(ctx, http.MethodGet, "/api/agents", nil, &keys); err != nil {
-					return err
-				}
-				hours = keys.Max
-			}
-			var tok console.AgentToken
-			if err := e.Client.Do(ctx, http.MethodPost, "/api/agents", map[string]any{"name": e.X.Args[0], "ttl_hours": hours}, &tok); err != nil {
+			tok, err := e.Client.CreateKey(ctx, e.X.Args[0], ttl)
+			if err != nil {
 				return err
 			}
 			return e.print(tok, func(w io.Writer) {
@@ -248,12 +236,48 @@ func keysCommand() *command.Command {
 			if err := e.confirm("Revoke "+e.X.Args[0]+"? Agents using it lose access at once.", yes); err != nil {
 				return err
 			}
-			if err := e.Client.Do(ctx, http.MethodDelete, "/api/agents/"+esc(e.X.Args[0]), nil, nil); err != nil {
+			if err := e.Client.RevokeKey(ctx, e.X.Args[0]); err != nil {
 				return err
 			}
 			return e.print(map[string]string{"revoked": e.X.Args[0]}, func(w io.Writer) { fmt.Fprintf(w, "revoked %s\n", e.X.Args[0]) })
 		}, opts{}),
 	}}
+}
+
+// Keys lists the access keys.
+func (c *Client) Keys(ctx context.Context) ([]console.AgentView, error) {
+	var out struct {
+		Agents []console.AgentView `json:"agents"`
+	}
+	err := c.Do(ctx, http.MethodGet, "/api/agents", nil, &out)
+	return out.Agents, err
+}
+
+// CreateKey makes the access key name living ttl, or the longest the console allows when ttl is 0, and returns its token.
+func (c *Client) CreateKey(ctx context.Context, name string, ttl time.Duration) (console.AgentToken, error) {
+	hours := int(ttl.Hours())
+	if hours == 0 {
+		var keys struct {
+			Max int `json:"max_ttl_hours"`
+		}
+		if err := c.Do(ctx, http.MethodGet, "/api/agents", nil, &keys); err != nil {
+			return console.AgentToken{}, err
+		}
+		hours = keys.Max
+	}
+	var tok console.AgentToken
+	err := c.Do(ctx, http.MethodPost, "/api/agents", map[string]any{"name": name, "ttl_hours": hours}, &tok)
+	return tok, err
+}
+
+// RevokeKey revokes the access key name for good.
+func (c *Client) RevokeKey(ctx context.Context, name string) error {
+	return c.Do(ctx, http.MethodDelete, "/api/agents/"+esc(name), nil, nil)
+}
+
+// Decide approves or denies the waiting call id.
+func (c *Client) Decide(ctx context.Context, id string, approve bool) error {
+	return c.Do(ctx, http.MethodPost, "/api/approvals/"+esc(id), map[string]bool{"approve": approve}, nil)
 }
 
 func approvalsCommand() *command.Command {
@@ -262,7 +286,7 @@ func approvalsCommand() *command.Command {
 			if err := e.args(1, "the approval's id, from 'vsh approvals'"); err != nil {
 				return err
 			}
-			if err := e.Client.Do(ctx, http.MethodPost, "/api/approvals/"+esc(e.X.Args[0]), map[string]bool{"approve": approve}, nil); err != nil {
+			if err := e.Client.Decide(ctx, e.X.Args[0], approve); err != nil {
 				return err
 			}
 			return e.print(map[string]any{"id": e.X.Args[0], "approved": approve}, func(w io.Writer) { fmt.Fprintf(w, "%s %s\n", done, e.X.Args[0]) })
@@ -376,7 +400,7 @@ func activityCommand() *command.Command {
 				}
 			}
 			if len(calls) > 0 {
-				from = latest(from, calls[len(calls)-1].At.Add(-followOverlap))
+				from = latest(from, followFrom(calls))
 				for id := range seen {
 					if !slices.ContainsFunc(calls, func(c console.ActivityCall) bool { return c.ID == id }) {
 						delete(seen, id)
@@ -393,6 +417,15 @@ func activityCommand() *command.Command {
 }
 
 const followOverlap = time.Minute
+
+func followFrom(calls []console.ActivityCall) time.Time {
+	for _, c := range calls {
+		if c.Outcome == console.OutcomePending || c.Outcome == console.OutcomeRunning {
+			return c.At
+		}
+	}
+	return calls[len(calls)-1].At.Add(-followOverlap)
+}
 
 func latest(a, b time.Time) time.Time {
 	if b.After(a) {

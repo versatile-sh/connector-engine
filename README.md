@@ -81,7 +81,7 @@ vsh access github --kind read on
 vsh approvals
 ```
 
-Every command is in [the vsh reference](docs/reference/vsh.md).
+`vsh` alone opens the same in a full-screen terminal view. Every command is in [the vsh reference](docs/reference/vsh.md).
 
 
 <a id="how-it-works"></a>

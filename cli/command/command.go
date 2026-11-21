@@ -202,18 +202,23 @@ func (c *Command) groupHelp(path string, w io.Writer) {
 }
 
 func (c *Command) leafHelp(path string, fs *flag.FlagSet, w io.Writer) {
-	syn := c.synopsis(path)
+	summary := c.Summary
+	if c.Long != "" {
+		summary += "\n\n" + strings.TrimRight(c.Long, "\n")
+	}
+	WriteHelp(w, c.synopsis(path), summary, fs)
+}
+
+// WriteHelp writes a leaf's help: the usage line, with [flags] when fs has any, the summary and the flags.
+func WriteHelp(w io.Writer, usage, summary string, fs *flag.FlagSet) {
 	n := 0
 	fs.VisitAll(func(*flag.Flag) { n++ })
 	if n > 0 {
-		syn += " [flags]"
+		usage += " [flags]"
 	}
-	fmt.Fprintln(w, syn)
-	if c.Summary != "" {
-		fmt.Fprintln(w, "\n"+c.Summary)
-	}
-	if c.Long != "" {
-		fmt.Fprintln(w, "\n"+strings.TrimRight(c.Long, "\n"))
+	fmt.Fprintln(w, usage)
+	if summary != "" {
+		fmt.Fprintln(w, "\n"+summary)
 	}
 	if n == 0 {
 		return
@@ -221,15 +226,15 @@ func (c *Command) leafHelp(path string, fs *flag.FlagSet, w io.Writer) {
 	fmt.Fprintln(w, "\nFlags:")
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fs.VisitAll(func(f *flag.Flag) {
-		name, usage := flag.UnquoteUsage(f)
+		name, help := flag.UnquoteUsage(f)
 		left := "--" + f.Name
 		if name != "" {
 			left += " " + name
 		}
 		if f.DefValue != "" && f.DefValue != "false" && f.DefValue != "0" {
-			usage += " (default " + f.DefValue + ")"
+			help += " (default " + f.DefValue + ")"
 		}
-		fmt.Fprintf(tw, "  %s\t%s\n", left, usage)
+		fmt.Fprintf(tw, "  %s\t%s\n", left, help)
 	})
 	_ = tw.Flush()
 }

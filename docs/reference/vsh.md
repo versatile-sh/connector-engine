@@ -160,6 +160,21 @@ approved 18eb5f5700a4eb5f6bfadba9a5091f44
 
 `--follow` asks the console every `--every` (2s) and prints each new call, and a call again when its outcome changes, until interrupted.
 
+## The full-screen vsh
+
+`vsh` with no command in a terminal, or `vsh ui`, opens a full-screen view of the same console API, as the signed-in user (run `vsh login` first). It fits 80×24 and uses the extra room of a wider terminal.
+
+| Screen | Keys |
+|---|---|
+| all | `tab` / `shift+tab` or `1`–`4` switch screens, `q` quits, `esc` goes back or quits, `ctrl+c` quits |
+| Connectors | `↑` `↓` move, `/` filters, `enter` opens a connector |
+| a connector | its functions by read, write and destructive; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
+| Keys | `n` creates a key and shows it once, `d` revokes one after a `y` |
+| Approvals | `a` approves, `d` denies |
+| Activity | the calls of the last hour, newest last, every 2 seconds |
+
+A change shows at once and is sent to the console; when the console refuses it, the screen goes back to what it was and the footer gives the reason. Approvals and activity refresh every 2 seconds.
+
 ## Lifecycle without Docker
 
 `vsh up` runs the engine and the console in its own process, in the foreground, with a control socket in the data directory that `stop`, `status`, `export`, `import`, `reset-password` and `uninstall` talk to. See [the person profile](../self-hosted/person.md#without-docker).

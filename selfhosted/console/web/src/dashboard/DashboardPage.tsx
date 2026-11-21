@@ -94,7 +94,7 @@ export function DashboardPage() {
           <DashboardSkeleton />
         )
       ) : isQuiet(data) ? (
-        <EmptyState title={t("dashboard.empty.title")} body={t("dashboard.empty.body")}>
+        <EmptyState icon="dashboard" title={t("dashboard.empty.title")} body={t("dashboard.empty.body")}>
           <button type="button" className={button()} onClick={() => navigate("/access")}>
             {t("dashboard.empty.action")}
           </button>

@@ -28,7 +28,7 @@ describe("DashboardPage", () => {
 
     test("holds the page's one h1 in its header", () => {
       assert.equal(count(html, "<h1"), 1);
-      assert.match(html, /^<section aria-labelledby="page-title" class="flex flex-col gap-6"><header class="mb-2">/);
+      assert.match(html, /^<section aria-labelledby="page-title" class="flex flex-col gap-6"><header class="mb-2 text-center">/);
     });
 
     test("draws four stat cards as equal cells of one strip", () => {
@@ -118,7 +118,7 @@ describe("DashboardPage", () => {
   describe("for a viewer who may see everyone's calls", () => {
     test("offers Mine or Everyone in a toolbar over the page", () => {
       const html = draw(TEAM_OWNER);
-      assert.match(html, /<\/header><div class="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap"><div role="group" aria-label="Whose rows"/);
+      assert.match(html, /<\/header><div class="flex min-w-0 flex-wrap items-center justify-center gap-2 sm:flex-nowrap"><div role="group" aria-label="Whose rows"/);
     });
 
     test("reads the everyone summary once Everyone is asked for", () => {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/core/args"
 	"github.com/versatile-sh/connector-engine/core/evaluate"
 	"github.com/versatile-sh/connector-engine/core/names"
 	"github.com/versatile-sh/connector-engine/core/projection"
@@ -375,20 +376,24 @@ func (s *Service) Call(ctx context.Context, p port.Principal, req CallRequest) (
 	}
 }
 
-func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subject, req CallRequest, args json.RawMessage) (Outcome, error) {
+func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subject, req CallRequest, payload json.RawMessage) (Outcome, error) {
 	t, found, err := s.resolve(ctx, sub, req)
 	if err != nil || !found {
 		return unknown(port.ReasonUnknownFunction), err
 	}
 	if t.Args != nil {
-		args = t.Args
+		payload = t.Args
 	}
-	query := queryOf(sub, t, args)
+	query := queryOf(sub, t, payload)
+	parseErr := args.Parse(payload)
+	if parseErr != nil {
+		query.Arguments = nil
+	}
 	dec, err := s.d.Authorizer.Evaluate(ctx, query)
 	if err != nil {
 		return Outcome{}, err
 	}
-	if s.needRelist(t, dec.Mode) {
+	if parseErr == nil && s.needRelist(t, dec.Mode) {
 		if _, err := s.Relist(ctx, sub.Tenant, t.Conn.ID); err != nil {
 			return Outcome{}, err
 		}
@@ -404,15 +409,18 @@ func (s *Service) callOnce(ctx context.Context, p port.Principal, sub port.Subje
 		s.denied(ctx, sub, t.Conn.ID, t.Fn.Name, dec.Reason)
 		return unknown(dec.Reason), nil
 	}
-	if bad := s.checkArguments(p, t, req, args); bad != nil {
+	if parseErr != nil {
+		return toolError(port.CodeInvalidArgument, "%v", parseErr), nil
+	}
+	if bad := s.checkArguments(p, t, req, payload); bad != nil {
 		if bad.Code == port.CodeTokenInArguments {
 			s.denied(ctx, sub, t.Conn.ID, t.Fn.Name, bad.Code)
 		}
 		return *bad, nil
 	}
-	in := admitInput{Sub: sub, Exp: p.Claims.ExpiresAt, T: t, Args: args, Fields: req.Fields, Dec: dec}
+	in := admitInput{Sub: sub, Exp: p.Claims.ExpiresAt, T: t, Args: payload, Fields: req.Fields, Dec: dec}
 	if dec.Mode != port.ModeAllow || slices.Contains(dec.Notes, port.NoteSessionGrant) {
-		sealed, err := s.d.Secrets.Seal(ctx, sub.Tenant, args)
+		sealed, err := s.d.Secrets.Seal(ctx, sub.Tenant, payload)
 		if err != nil {
 			return Outcome{}, err
 		}
@@ -442,12 +450,12 @@ func queryOf(sub port.Subject, t target, args json.RawMessage) port.Query {
 		Session: sub.Session, Connector: t.Conn.ID, Function: t.Fn.Name, Class: t.Fn.Class, Arguments: args}
 }
 
-func (s *Service) checkArguments(p port.Principal, t target, req CallRequest, args json.RawMessage) *Outcome {
+func (s *Service) checkArguments(p port.Principal, t target, req CallRequest, payload json.RawMessage) *Outcome {
 	fail := func(o Outcome) *Outcome { return &o }
-	if s.cfg.ScanForToken && tokenscan.Contains(args, p.Token) {
+	if s.cfg.ScanForToken && tokenscan.Contains(payload, p.Token) {
 		return fail(toolError(port.CodeTokenInArguments, "the arguments carry the bearer token of this request"))
 	}
-	if err := schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), args); err != nil {
+	if err := schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), payload); err != nil {
 		return fail(toolError(port.CodeInvalidArgument, "%v", err))
 	}
 	if len(req.Fields) == 0 {

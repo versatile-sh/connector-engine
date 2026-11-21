@@ -29,7 +29,7 @@ in_set() {
 
 rm -rf -- "$dest"
 mkdir -p "$dest"
-cp "$work/src/LICENSE" "$dest/LICENSE"
+printf '%s\n' "Versatile's own code, GPL-3.0-or-later: see the LICENSE file at the root of this repository." >"$dest/LICENSE"
 dropped=()
 for p in "${packages[@]}"; do
   mkdir -p "$dest/$p"
@@ -55,7 +55,7 @@ left="$(grep -rnE "^[[:space:]]*(import[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*[[:s
 {
   echo "# plugkit, in-module copy"
   echo
-  echo "Upstream: \`$upstream\` (MIT, see LICENSE in this directory), a private repository. This copy is the public source of record."
+  echo "Upstream: \`$upstream\` (Versatile's own code, GPL-3.0-or-later like this repository), a private repository. This copy is the public source of record."
   echo
   echo "Commit: \`$commit\`"
   echo

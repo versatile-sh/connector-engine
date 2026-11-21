@@ -27,7 +27,7 @@ Scripts, `vsh` and apps that cannot sign in use an access key made on the **Acce
 
 ```sh
 export CN_AGENT_TOKEN=<the access key>
-make cli ARGS="tools list"
+mise run cli -- tools list
 ```
 
 ```text
@@ -35,7 +35,7 @@ make cli ARGS="tools list"
 full definitions in /tmp/vsh-tools-<random>.json
 ```
 
-`make cli` runs `vsh` from the image against `http://127.0.0.1:7465/mcp` and prints a summary of the functions this key may call. With `vsh` on your PATH, set `CN_ENDPOINT` and run `vsh tools list`. See [vsh](../reference/vsh.md).
+`mise run cli` runs `vsh` from the image against `http://127.0.0.1:7465/mcp` and prints a summary of the functions this key may call. With `vsh` on your PATH, set `CN_ENDPOINT` and run `vsh tools list`. See [vsh](../reference/vsh.md).
 
 ## Endpoints the app uses
 

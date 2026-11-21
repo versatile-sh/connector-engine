@@ -15,12 +15,12 @@ The installers and the published images are available after the first release (v
 
 ## Docker, from a clone
 
-Needs Docker with Compose 2.20 or newer, Git and Make. Go on the host is optional: with it, `make up` also stores the unlock key in your OS keychain ([keychain](../self-hosted/keychain.md)).
+Needs Docker with Compose 2.20 or newer, Git and [mise](https://mise.jdx.dev). Go on the host is optional: with it, `mise run up` also stores the unlock key in your OS keychain ([keychain](../self-hosted/keychain.md)).
 
 ```sh
 git clone https://github.com/versatile-sh/connector-engine
 cd connector-engine
-make up
+mise run up
 ```
 
 The last line of the output:
@@ -29,7 +29,7 @@ The last line of the output:
 console: http://127.0.0.1:7465   agent endpoint: http://127.0.0.1:7465/mcp
 ```
 
-Port 7465 taken? Run `make up CONSOLE_PORT=9123`. Next: [first run](first-run.md).
+Port 7465 taken? Run `CONSOLE_PORT=9123 mise run up`. Next: [first run](first-run.md).
 
 ## Linux and macOS
 

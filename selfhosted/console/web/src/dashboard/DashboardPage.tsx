@@ -50,7 +50,7 @@ export function DashboardPage() {
     return {
       key: count.connector ?? `alias:${count.alias ?? ""}`,
       label: title,
-      icon: <ConnectorIcon src={known && !known.skill ? known.icon : undefined} title={title} size="xs" />,
+      icon: <ConnectorIcon src={known?.icon} title={title} size="xs" />,
       total: count.total,
       failed: count.failed > 0 ? t("activity.connectors.failed", { count: count.failed }) : undefined,
       calls: t("activity.connectors.calls", { count: count.total }),

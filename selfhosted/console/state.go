@@ -68,6 +68,7 @@ type stateFile struct {
 	Sessions            map[string]StoredSession     `json:"sessions,omitempty"`
 	Revoked             map[string]time.Time         `json:"revoked,omitempty"`
 	OnboardingDismissed bool                         `json:"onboarding_dismissed,omitempty"`
+	ClassesRepaired     bool                         `json:"classes_repaired,omitempty"`
 	Clients             map[string]OAuthClient       `json:"oauth_clients,omitempty"`
 	Refresh             map[string]RefreshGrant      `json:"oauth_refresh,omitempty"`
 	Spent               map[string]RefreshGrant      `json:"oauth_refresh_spent,omitempty"`
@@ -89,6 +90,7 @@ type Origin struct {
 	Local        bool   `json:"local,omitempty"`
 	HeaderSecret bool   `json:"header_secret,omitempty"`
 	Digest       string `json:"digest,omitempty"`
+	Icon         string `json:"icon,omitempty"`
 }
 
 // State is the console's file in its volume: the users and their sessions, the connected agents and the revoked ones, written atomically with mode 0600.
@@ -374,6 +376,32 @@ func (s *State) DismissOnboarding() error {
 	})
 }
 
+// ClassesRepaired reports whether the one-time raise of lowered function classes has run.
+func (s *State) ClassesRepaired() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.ClassesRepaired
+}
+
+// MarkClassesRepaired records that the one-time raise of lowered function classes has run.
+func (s *State) MarkClassesRepaired() error {
+	return s.update(func(d *stateFile) error {
+		if d.ClassesRepaired {
+			return errUnchanged
+		}
+		d.ClassesRepaired = true
+		return nil
+	})
+}
+
+// RecordClassRaised records in the audit that the console raised a function of a connector back to the class its review or server declares.
+func (s *State) RecordClassRaised(actor, connector, function, from, to string) error {
+	return s.update(func(d *stateFile) error {
+		record(d, actor, "function.class_raised", connector+"/"+function, map[string]string{"connector": connector, "function": function, "from": from, "to": to})
+		return nil
+	})
+}
+
 // LastExport returns when the last full backup was exported, or the zero time when none was.
 func (s *State) LastExport() time.Time {
 	s.mu.Lock()
@@ -393,6 +421,19 @@ func (s *State) MarkExported(at time.Time) error {
 func (s *State) PutOrigin(id string, o Origin) error {
 	return s.update(func(d *stateFile) error {
 		put(&d.Origins, id, o)
+		return nil
+	})
+}
+
+// SetOriginIcon records the icon of the skill id, keeping the rest of what its origin says; it does nothing for an id with no origin.
+func (s *State) SetOriginIcon(id, icon string) error {
+	return s.update(func(d *stateFile) error {
+		o, ok := d.Origins[id]
+		if !ok || o.Icon == icon {
+			return errUnchanged
+		}
+		o.Icon = icon
+		d.Origins[id] = o
 		return nil
 	})
 }

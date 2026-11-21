@@ -13,8 +13,8 @@ func TestEveryTypeHasASchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(catalog.Published) != 44 || len(catalog.Consumed) != 3 || len(all) != 47 {
-		t.Fatalf("%d published, %d consumed, want 44 and 3", len(catalog.Published), len(catalog.Consumed))
+	if len(catalog.Published) != 45 || len(catalog.Consumed) != 3 || len(all) != 48 {
+		t.Fatalf("%d published, %d consumed, want 45 and 3", len(catalog.Published), len(catalog.Consumed))
 	}
 	seen := map[string]bool{}
 	for i, typ := range all {
@@ -38,7 +38,7 @@ func TestEveryTypeHasASchema(t *testing.T) {
 			t.Fatalf("arguments and results are never in an event: %s", typ.Name)
 		}
 	}
-	for _, name := range []string{"connector.overlay.changed", "connector.overlay.suggested", "connector.connector.blocked_changed", "connector.function.class_changed", "connector.function.state_changed", "connector.function.projection_changed", "connector.connector.instructions_accepted"} {
+	for _, name := range []string{"connector.overlay.changed", "connector.overlay.suggested", "connector.connector.blocked_changed", "connector.function.class_changed", "connector.function.state_changed", "connector.function.projection_changed", "connector.connector.instructions_accepted", "connector.snapshot.restored"} {
 		if !catalog.Known(name) {
 			t.Fatalf("%s missing", name)
 		}

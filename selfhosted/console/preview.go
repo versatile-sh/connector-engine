@@ -111,7 +111,7 @@ func (c *Console) previewSkill(src, host string, body []byte) (Preview, error) {
 		return Preview{}, err
 	}
 	sp := c.skillPreview(e)
-	return Preview{Kind: "skill", URL: src, Host: host, Name: e.ID, Title: firstOf(e.Title, e.Name), Description: e.Description, Publisher: skillcatalog.Publisher(e.Source.Repository, host),
+	return Preview{Kind: "skill", URL: src, Host: host, Name: e.ID, Title: firstOf(e.Title, e.Name), Description: e.Description, Icon: e.IconAt(src), Publisher: skillcatalog.Publisher(e.Source.Repository, host),
 		Version: e.Source.Commit, Tools: []ProbedTool{}, Items: []Item{}, Skill: &sp, entry: e}, nil
 }
 
@@ -253,5 +253,8 @@ func (c *Console) importOne(ctx context.Context, in importRequest) (string, Prev
 		return "", Preview{}, err
 	}
 	o := Origin{MCP: strings.TrimSpace(in.MCP), Listing: strings.TrimSpace(in.Listing), Local: in.Local, HeaderSecret: in.HeaderSecret, Digest: in.Digest}
+	if p.Kind == "skill" {
+		o.Icon = p.Icon
+	}
 	return id, p, c.State.PutOrigin(id, o)
 }

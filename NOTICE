@@ -9,8 +9,9 @@ The third-party components below keep their own licenses, found in their own
 directories; their notices must be kept.
 
 internal/plugkit
-  Copied from github.com/agents-control/plugkit. MIT, see
-  internal/plugkit/LICENSE.
+  Copied from github.com/agents-control/plugkit, Versatile's own code, under
+  the GPL-3.0-or-later licence of this repository. internal/plugkit/LICENSE
+  points to it.
 
 Go module dependencies (go.mod), compiled into the release binaries. Each
 module ships its own license files; `go mod vendor` puts them under
@@ -88,6 +89,9 @@ selfhosted/console/web (JavaScript bundled into the console binary)
   @fontsource/geist, @fontsource/instrument-serif, @fontsource/jetbrains-mono
                                   OFL-1.1
   Exact versions and licenses: selfhosted/console/web/package-lock.json.
+  AI app marks in src/ui/brandMarks.ts (Claude, Cursor, Google Gemini,
+  GitHub Copilot, opencode): path data from Simple Icons, CC0-1.0. The marks
+  are trademarks of their owners, shown only to name the app a skill works in.
 
 docs/assets (banner SVGs)
   The banners contain glyph outlines of Instrument Serif and JetBrains Mono,

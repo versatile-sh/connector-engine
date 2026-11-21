@@ -243,13 +243,20 @@ func (s *Service) grantOf(ctx context.Context, p port.Principal, id port.GrantID
 	return g, s.grantAuth(ctx, p, g)
 }
 
-// ConfirmGrant moves a stale fn: row to the function's current hash.
+// ConfirmGrant moves a stale fn: row to the function's current hash, re-reading the row in the write so a change made meanwhile is kept.
 func (s *Service) ConfirmGrant(ctx context.Context, p port.Principal, id port.GrantID) (port.Grant, error) {
 	g, err := s.grantOf(ctx, p, id)
 	if err != nil {
 		return g, err
 	}
+	key := g.Key()
 	err = s.write(ctx, port.Scope{Tenant: g.Tenant}, "ConfirmGrant", func(tx port.Tx) error {
+		if g, err = tx.GetGrant(id); err != nil {
+			return err
+		}
+		if g.Key() != key {
+			return port.Errorf(port.CodeConflict, "grant %s changed while it was being confirmed", id)
+		}
 		name := strings.TrimPrefix(g.Selector, port.SelectorFunction)
 		f, err := tx.GetFunction(g.Connector, name)
 		if err != nil {

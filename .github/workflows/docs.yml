@@ -8,8 +8,7 @@ on:
       - "scripts/install.sh"
       - "scripts/install.ps1"
       - "scripts/check-docs.sh"
-      - "Makefile"
-      - "selfhosted/selfhosted.mk"
+      - "mise.toml"
       - ".github/workflows/docs.yml"
   push:
     branches: [main]

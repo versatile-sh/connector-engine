@@ -28,9 +28,11 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 			return err
 		}
 		for name, sql := range map[string]string{
-			"audit":  `DELETE FROM audit WHERE tenant_id = ?3`,
-			"events": `DELETE FROM outbox WHERE tenant_id = ?3 AND delivered_at IS NOT NULL`,
-			"inbox":  `DELETE FROM inbox WHERE tenant_id = ?3`,
+			"audit":              `DELETE FROM audit WHERE tenant_id = ?3`,
+			"events":             `DELETE FROM outbox WHERE tenant_id = ?3 AND delivered_at IS NOT NULL`,
+			"inbox":              `DELETE FROM inbox WHERE tenant_id = ?3`,
+			"permission_changes": `DELETE FROM permission_changes WHERE tenant_id = ?3`,
+			"permission_head":    `DELETE FROM permission_head WHERE tenant_id = ?3`,
 		} {
 			n, err := t.exec(sql, string(tenant))
 			if err != nil {

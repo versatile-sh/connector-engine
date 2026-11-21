@@ -70,13 +70,20 @@ func TestNewRefusesRolesThatBypassRLS(t *testing.T) {
 
 func TestRowLevelSecurityBlocksCraftedQueries(t *testing.T) {
 	s, dsn := newStore(t)
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	for _, tenant := range []port.TenantID{"ta", "tb"} {
 		err := s.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 			if _, err := tx.PutConnector(port.Connector{ID: port.ConnectorID("c-" + tenant), Tenant: tenant, Workspace: "w"}, port.AnyRevision); err != nil {
 				return err
 			}
 			if err := tx.Audit(port.AuditRow{At: time.Now(), Tenant: tenant, Actor: "a", Action: "x"}); err != nil {
+				return err
+			}
+			if _, err := tx.LockPermissions(); err != nil {
+				return err
+			}
+			if _, err := tx.AppendPermissionChanges([]port.PermissionChange{{Kind: "grant", Key: "g", After: []byte(`{}`)}}); err != nil {
 				return err
 			}
 			_, err := tx.Emit(port.Event{Type: "t", Tenant: tenant})
@@ -110,7 +117,11 @@ func TestRowLevelSecurityBlocksCraftedQueries(t *testing.T) {
 		}
 		return n
 	}
-	for _, table := range []string{"records", "audit", "outbox", "streams"} {
+	var forced int
+	if err := begin("ta").QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relname LIKE 'permission_%' AND relrowsecurity AND relforcerowsecurity`).Scan(&forced); err != nil || forced != 2 {
+		t.Fatalf("forced row-level security on the permission tables: %d %v", forced, err)
+	}
+	for _, table := range []string{"records", "audit", "outbox", "streams", "permission_head", "permission_changes"} {
 		q := begin("ta")
 		if n := count(q, "SELECT count(*) FROM "+table); n != 1 {
 			t.Errorf("%s: tenant ta sees %d rows", table, n)
@@ -133,6 +144,48 @@ func TestRowLevelSecurityBlocksCraftedQueries(t *testing.T) {
 	q = begin("ta")
 	if _, err := q.Exec(ctx, `INSERT INTO records (kind, k, tenant_id, rev, doc) VALUES ('connector', 'x', 'tb', 1, '{}')`); err == nil {
 		t.Error("insert into another tenant succeeded")
+	}
+	q = begin("ta")
+	if _, err := q.Exec(ctx, `INSERT INTO permission_changes VALUES ('tb', 9, 1, now(), 'a', 'o', 'grant', 'g', NULL, '{}')`); err == nil {
+		t.Error("a change logged into another tenant")
+	}
+	q = begin("ta")
+	if _, err := q.Exec(ctx, `UPDATE permission_head SET tenant_id = 'tb'`); err == nil {
+		t.Error("moving a revision to another tenant succeeded")
+	}
+}
+
+func TestRerunningThePermissionLogMigrationKeepsTheLog(t *testing.T) {
+	s, dsn := newStore(t)
+	ctx := context.Background()
+	if err := s.Write(ctx, port.Scope{Tenant: "ta"}, func(tx port.Tx) error {
+		if _, err := tx.LockPermissions(); err != nil {
+			return err
+		}
+		_, err := tx.AppendPermissionChanges([]port.PermissionChange{{Kind: "grant", Key: "g", After: []byte(`{}`)}})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	conn, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(ctx)
+	if _, err := conn.Exec(ctx, `DELETE FROM schema_migrations WHERE version = 'migrations/0004_permission_log.sql'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Write(ctx, port.Scope{Tenant: "ta"}, func(tx port.Tx) error {
+		rev, err := tx.LockPermissions()
+		if rev != 1 {
+			t.Errorf("revision after the migration ran again: %d", rev)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

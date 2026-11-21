@@ -33,7 +33,7 @@ vsh login [--user NAME] [--password-stdin] | logout
 vsh connectors [list] | show NAME | import URL|FILE [--mcp] [--local] [--yes] | remove NAME [--yes]
 vsh keys [list] | create NAME [--ttl 720h] | revoke NAME [--yes]
 vsh people [list] | invite owner|admin|member | role USERNAME ROLE | remove USERNAME [--yes]
-vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive]
+vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive|undeclared]
 vsh access CONNECTOR --key NAME follow|custom
 vsh approvals [list] | approve ID | deny ID
 vsh activity [--connector NAME] [--key NAME] [--since 1h] [--follow]
@@ -96,7 +96,7 @@ vsh connectors show check-notes
 ```text
 Check notes (mcp) from 127.0.0.1:7999
   write        ask   create
-  destructive  ask   mystery
+  undeclared   on    mystery
   destructive  ask   purge
   read         on    search
 installed Check notes
@@ -180,7 +180,7 @@ approved 18eb5f5700a4eb5f6bfadba9a5091f44
 |---|---|
 | all | `tab` / `shift+tab` or `1`–`4` switch screens, `q` quits, `esc` goes back or quits, `ctrl+c` quits |
 | Connectors | `↑` `↓` move, `/` filters, `enter` opens a connector |
-| a connector | its functions by read, write and destructive; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
+| a connector | its functions by read, write, destructive and undeclared; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
 | Keys | `n` creates a key and shows it once, `d` revokes one after a `y` |
 | Approvals | `a` approves, `d` denies |
 | Activity | the calls of the last hour, newest last, every 2 seconds |
@@ -232,7 +232,7 @@ vsh admin tenants create t1
 
 `vsh admin --help` prints this list from the binary. `call <operationId>` reaches every operation of the [API](api.md), including those without a group.
 
-In the `person` profile, `make admin ARGS="tenants create t2"` runs it from the image with the generated operator token.
+In the `person` profile, `mise run admin -- tenants create t2` runs it from the image with the generated operator token.
 
 ## tools
 
@@ -246,7 +246,7 @@ vsh tools call github__create_issue --args '{"title":"Hello"}' --out result.json
 
 - It writes the full answer to `--out` and prints a summary.
 - A held call prints its `approval_id`; poll it with `vsh tools call approval_status --args '{"approval_id":"<id>"}'`.
-- In the `person` profile, `make cli ARGS="tools list"` runs it from the image.
+- In the `person` profile, `mise run cli -- tools list` runs it from the image.
 
 ## skills export
 
@@ -257,9 +257,9 @@ Writes every skill granted to the agent into `DIR/<skill>/`. See [skills](../usi
 | Command | Does |
 |---|---|
 | `vsh keychain ensure --name connector-engine` | creates the unlock key in the OS keychain if missing |
-| `vsh keychain get --name connector-engine` | prints it (used by `make unlock` on a pipe) |
+| `vsh keychain get --name connector-engine` | prints it (used by `mise run unlock` on a pipe) |
 | `vsh keychain import --name connector-engine` | reads it on stdin |
 | `vsh keychain delete --name connector-engine` | removes it |
-| `vsh notify` | desktop popups for calls waiting for approval (`make notify`) |
+| `vsh notify` | desktop popups for calls waiting for approval (`mise run notify`) |
 
 `--name` is the compose project (`PROJECT`, default `connector-engine`). See [the keychain](../self-hosted/keychain.md).

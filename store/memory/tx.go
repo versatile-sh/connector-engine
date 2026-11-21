@@ -12,9 +12,10 @@ import (
 )
 
 type tx struct {
-	d     *data
-	scope port.Scope
-	write bool
+	d      *data
+	scope  port.Scope
+	write  bool
+	locked bool
 }
 
 func (t *tx) reads(a access, owner port.TenantID) bool {
@@ -240,6 +241,7 @@ func (t *tx) PutGrant(g port.Grant) error {
 			return port.Errorf(port.CodeConflict, "grant %s has the key of %s", g.ID, id)
 		}
 	}
+	g.Uses = t.d.grants.rows[string(g.ID)].v.Uses
 	_, err := put(t, t.d.grants, string(g.ID), g.Tenant, g, port.AnyRevision)
 	return err
 }

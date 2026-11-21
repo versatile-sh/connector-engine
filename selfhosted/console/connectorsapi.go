@@ -25,6 +25,7 @@ func (c *Console) listSkills(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
+	c.backfillIcons(r.Context(), list)
 	writeJSON(w, http.StatusOK, map[string]any{"skills": nonNil(list)})
 }
 

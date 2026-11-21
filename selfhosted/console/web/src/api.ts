@@ -4,8 +4,8 @@ export type Access = "off" | "on" | "ask";
 /** The access modes an agent key can hold on a function: off, on or ask. */
 export const ACCESS: readonly Access[] = ["off", "on", "ask"];
 
-/** What a function does by its own description; it is shown, never chosen. */
-export type Kind = "read" | "write" | "destructive";
+/** What a function does by its own description, or undeclared when its server says neither read-only nor destructive; it is shown, never chosen. */
+export type Kind = "read" | "write" | "destructive" | "undeclared";
 
 /** A console user's role, in rank order: a Member uses the gateway, an Admin also manages connectors and policy, an Owner everything. */
 export type Role = "owner" | "admin" | "member";
@@ -55,7 +55,7 @@ export type Session = {
 /** How the root keys of the engine and the console rest: waiting for the host's unlock key, a plaintext file, or wrapped by a key in the OS keychain. */
 export type KeyProtection = "" | "locked" | "plaintext" | "wrapped";
 
-/** One function of a connector as the console shows it: its text, class and access. */
+/** One function of a connector as the console shows it: its text, class and access, and whether on still asks because a review or its server declares it destructive. */
 export type FunctionView = {
   name: string;
   title?: string;
@@ -64,6 +64,7 @@ export type FunctionView = {
   kind: Kind;
   state: string;
   access: Access;
+  capped?: boolean;
 };
 
 /** What a connector item is: the server's instructions, a prompt or a resource. */
@@ -181,6 +182,7 @@ export type Skill = SkillFacts & {
   alias: string;
   title: string;
   description?: string;
+  icon?: string;
   publisher?: string;
   version: string;
   state: string;

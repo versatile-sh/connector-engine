@@ -65,6 +65,7 @@ var Published = []Type{
 	{Number: 42, Name: "connector.function.state_changed", Payload: FunctionStateChanged{}},
 	{Number: 43, Name: "connector.function.projection_changed", Payload: FunctionProjectionChanged{}},
 	{Number: 44, Name: "connector.connector.instructions_accepted", Payload: InstructionsAccepted{}},
+	{Number: 45, Name: "connector.snapshot.restored", Payload: SnapshotRestored{}},
 }
 
 // Consumed are the three outside facts; a recipe maps a producer's own event to one of them through the inbox.
@@ -75,7 +76,7 @@ var Consumed = []Type{
 }
 
 // InstallationTypes are the published types on the installation stream; 34 and 35 also, for an installation listing.
-var InstallationTypes = []string{"connector.listing.imported", "connector.listing.reviewed", "connector.catalog.offer_changed", "connector.tenant.created", "connector.tenant.removed"}
+var InstallationTypes = []string{"connector.listing.imported", "connector.listing.reviewed", "connector.catalog.offer_changed", "connector.tenant.created", "connector.tenant.removed", "connector.snapshot.restored"}
 
 // SchemaID prefixes the $id of every event schema.
 const SchemaID = "https://agents-control.dev/connector-engine/events/v1/"

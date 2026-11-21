@@ -126,6 +126,7 @@ func (t *tx) ListGrants(f port.GrantFilter) ([]port.Grant, error) {
 }
 
 func (t *tx) PutGrant(g port.Grant) error {
+	g.Uses = 0
 	sum := sha256.Sum256([]byte(g.Key()))
 	uniq := hex.EncodeToString(sum[:])
 	_, err := t.put(kindGrant, string(g.ID), g.Tenant, &uniq, g, port.AnyRevision)

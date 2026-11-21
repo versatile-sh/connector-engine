@@ -23,7 +23,7 @@ A link opens the same review, after sign-in. Directories such as the versatile.s
 | `http://127.0.0.1:7465/import?listing=<https URL of a listing>` | a review of a listing in the Manifest format |
 | `http://127.0.0.1:7465/import?listing=<https URL of a skill catalog entry>` | a review of a skill (`kind: skill`) |
 
-The page shows the origin, title, icon, publisher and version (a skill's licence and short commit) at the top, the review below it, and a card with who may load it, the notice that nothing is installed yet, and the **Add** button. On a wide screen the card stays beside the review; on a narrow screen the **Add** button is in a bar at the bottom of the page.
+The page shows the origin, title, icon, publisher and version (a skill's licence and short commit), the review, who may load it, the notice that nothing is installed yet, and the **Add** button. On a wide screen the page is two columns: the title, icon and facts on the left, and on the right one card that holds the review, who may load it and the notice, with **Add** at its foot. The card is as tall as its content and never scrolls inside itself; a connector with a very long list of functions makes the page scroll and keeps **Add** in view at the bottom of the window. On a narrow screen the page is one column and the **Add** button is in a bar at the bottom of the page.
 
 ## What the engine does on import
 

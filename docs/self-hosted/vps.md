@@ -30,10 +30,10 @@ Or with Docker, from a clone, as on a laptop:
 ```sh
 git clone https://github.com/versatile-sh/connector-engine
 cd connector-engine
-make up
+mise run up
 ```
 
-The Docker console is published on `127.0.0.1:7465` only. After a reboot of the server, run `make unlock` in the clone.
+The Docker console is published on `127.0.0.1:7465` only. After a reboot of the server, run `mise run unlock` in the clone.
 
 ### 2. Run the binary as a service
 
@@ -143,7 +143,7 @@ auth:
 `publicURL` is the default `aud` of tokens; your IdP must issue that audience, or set `auth.audience` and `auth.manageAudience` ([OIDC](../enterprise/oidc.md)). Then:
 
 ```sh
-make up PROFILE=headless
+PROFILE=headless mise run up
 ```
 
 It starts `init` (it writes a random operator token and the Postgres passwords into the `secrets` volume), Postgres 16 and the engine. Check it:
@@ -174,10 +174,10 @@ Caddy gets and renews the certificate by itself. Only the public listener (`:808
 
 ### 4. Tenants, roles and the operator token
 
-The operator token lives in the `secrets` volume and never leaves the server. `make admin` reads it for you:
+The operator token lives in the `secrets` volume and never leaves the server. `mise run admin` reads it for you:
 
 ```sh
-make admin PROFILE=headless ARGS="tenants create acme"
+PROFILE=headless mise run admin -- tenants create acme
 ```
 
 Give your people roles at boot (`bootstrap.roles`) or through the API ([OIDC: roles](../enterprise/oidc.md#roles)). To reach the operator listener from your laptop, use a tunnel: `ssh -N -L 8081:127.0.0.1:8081 you@your-server`.
@@ -198,10 +198,10 @@ The database and the secrets directory go together: rows without the root key ca
 ```sh
 cd /root/connector-engine
 git pull
-make up PROFILE=headless
+PROFILE=headless mise run up
 ```
 
-Back up first. `make up` rebuilds the image; the engine applies its migrations at start. Pin a release with `git checkout v0.1.0` once tags exist.
+Back up first. `mise run up` rebuilds the image; the engine applies its migrations at start. Pin a release with `git checkout v0.1.0` once tags exist.
 
 ## Checklist
 

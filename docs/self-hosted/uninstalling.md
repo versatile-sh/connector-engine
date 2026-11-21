@@ -7,27 +7,27 @@ Stopping the stack keeps your data. Deleting the data is a separate, final step.
 ## Stop, keep the data
 
 ```sh
-make down
+mise run down
 ```
 
-The containers go; the volumes stay. `make up` brings everything back as it was.
+The containers go; the volumes stay. `mise run up` brings everything back as it was.
 
 ## Delete everything
 
-> This deletes every connector, credential, access key, skill, the account and the root keys. Nothing can bring them back. Run `make export` first if you might want any of it.
+> This deletes every connector, credential, access key, skill, the account and the root keys. Nothing can bring them back. Run `mise run export` first if you might want any of it.
 
 ```sh
-make export
+mise run export
 docker compose -f selfhosted/deploy/compose.yaml -p connector-engine --profile person down -v
 docker image rm connector-engine:local
 ```
 
-`-v` removes the four volumes (`pgdata`, `engine-data`, `console-data`, `secrets`); `docker image rm` removes the image `make up` built.
+`-v` removes the four volumes (`pgdata`, `engine-data`, `console-data`, `secrets`); `docker image rm` removes the image `mise run up` built.
 
-Then remove the unlock key from your OS keychain. `make vsh` builds `bin/vsh` if Go is installed:
+Then remove the unlock key from your OS keychain. `mise run vsh` builds `bin/vsh` if Go is installed:
 
 ```sh
-make vsh
+mise run vsh
 bin/vsh keychain delete --name connector-engine
 ```
 

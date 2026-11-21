@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { Access, Preview, ProbedTool } from "../api";
 import { AccessBar } from "../connectors/AccessBar";
 import { accessCounts } from "../connectors/summary";
@@ -32,16 +31,15 @@ type LandingSummaryProps = {
   accessOf(name: string, proposed: Access): Access;
   skillAccess: Access;
   onSkillAccess(next: Access): void;
-  actions: ReactNode;
 };
 
-/** The decision of an install link: who may load a skill, or the split of a connector's proposed access when it lists functions; always the notice that nothing is installed before the owner confirms, then the actions from `lg`, where the card stays beside the review. */
-export function LandingSummary({ preview, accessOf, skillAccess, onSkillAccess, actions }: LandingSummaryProps) {
+/** The decision of an install link: who may load a skill, or the split of a connector's proposed access when it lists functions; always the notice that nothing is installed before the owner confirms; set under the review, by a hairline, in the same card. */
+export function LandingSummary({ preview, accessOf, skillAccess, onSkillAccess }: LandingSummaryProps) {
   const t = useT();
   const skill = preview?.skill;
   const body = !preview ? null : skill ? <SkillAccess skill={skill} access={skillAccess} onChange={onSkillAccess} /> : preview.tools.length > 0 ? <Proposal tools={preview.tools} accessOf={accessOf} /> : null;
   return (
-    <div className="flex flex-col gap-5">
+    <div className="mt-6 flex flex-col gap-5 border-t border-line pt-6">
       {body ? (
         <section aria-labelledby="summary-title" className="swap-in">
           <h2 id="summary-title" className={TITLE}>
@@ -54,7 +52,6 @@ export function LandingSummary({ preview, accessOf, skillAccess, onSkillAccess, 
         <Icon name="shield" className="mt-0.5 size-4" />
         {t("import.untrusted")}
       </p>
-      {actions ? <div className="hidden lg:block">{actions}</div> : null}
     </div>
   );
 }

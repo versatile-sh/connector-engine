@@ -172,7 +172,7 @@ func connectorState(k console.ConnectorSummary) string {
 }
 
 // Kinds are the kinds of function in the order the console shows them.
-var Kinds = []port.Class{port.ClassRead, port.ClassWrite, port.ClassDestructive}
+var Kinds = []port.Class{port.ClassRead, port.ClassWrite, port.ClassDestructive, console.KindUndeclared}
 
 func showConnector(w io.Writer, k console.ConnectorSummary) {
 	fmt.Fprintf(w, "%s\t%s   %s\n", k.Alias, k.Title, connectorState(k))

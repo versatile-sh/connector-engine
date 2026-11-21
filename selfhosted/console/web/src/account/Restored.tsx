@@ -8,7 +8,7 @@ import { Display } from "../ui/Display";
 import { CAPTION, SURFACE } from "../ui/styles";
 import { restarted } from "./backup";
 
-/** The screen after a full backup is imported: it asks for `make unlock` and polls the console, through the errors of its restart, until it is ready; then every answer is read again and the console moves on to sign-in. */
+/** The screen after a full backup is imported: it asks for `mise run unlock` and polls the console, through the errors of its restart, until it is ready; then every answer is read again and the console moves on to sign-in. */
 export function Restored() {
   const t = useT();
   const client = useQueryClient();

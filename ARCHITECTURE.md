@@ -83,7 +83,7 @@ The strictest mode wins across layers. `core/evaluate` holds the steps and `core
 
 - Only a session row names an agent. A tenant, workspace or user row with `agent` set is refused with `row_refused`. An agent row may repeat its own id, and it is stored without it. A list filtered by `agent` therefore returns session rows only.
 - Removing a binding deletes the agent's session rows and agent rows on that connector, never a workspace or user row.
-- Stores from older releases are rewritten to this form by migration `0003_canonical_grants`, and every restore does the same. Evaluation never read `agent` outside session rows, so a rewritten row answers as before. Rows that come to share a key are replaced by the one that decides every instant (the strictest, without `max_uses`, living at least as long as the others). When no row does, they become one `deny` without expiry. Each merge leaves a `grant.merged` audit row naming the rows it replaced.
+- Stores from older releases are rewritten to this form by migration `0003_canonical_grants`, and every restore does the same. Evaluation never read `agent` outside session rows, so a rewritten row answers as before. Rows that come to share a key first lose those already expired or used up, since they can never apply again. The rest are replaced by the one that decides every instant: the strictest, without `max_uses`, that lives at least as long as the others. When no row does, they become one `deny` without expiry, created by `system` with reason `rows_conflicted`. Each merge leaves a `grant.merged` audit row that holds the original rows, so a person can restore them by hand. A tenant whose rows only lost their `agent` gets one `grant.agent_cleared` audit row with the count.
 
 ## Approvals
 

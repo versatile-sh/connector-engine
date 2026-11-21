@@ -19,9 +19,9 @@ const hostOf = (raw: string) => {
 };
 
 const FOOTER =
-  "sticky bottom-0 z-20 -mx-5 -mb-10 border-t border-line bg-ink px-5 py-3 sm:-mx-8 sm:-mb-14 sm:px-8 lg:static lg:z-auto lg:m-0 lg:shrink-0 lg:rounded-b-2xl lg:border lg:bg-ink-raised lg:px-6 lg:py-4";
+  "sticky bottom-0 z-20 -mx-5 -mb-10 border-t border-line bg-ink px-5 py-3 sm:-mx-8 sm:-mb-14 sm:px-8 lg:m-0 lg:rounded-b-2xl lg:border lg:bg-ink-raised lg:px-6 lg:py-4";
 
-/** An install link opened from outside: the link's identity on the left from `lg`, and on the right one sticky card that scrolls inside itself, holding the review, who may load it and the notice, with the actions as its foot; below `lg` one column, hero, review and decision in one panel, then the actions as a solid bar in the flow, so it never covers the end of the review. Nothing is installed before Add. */
+/** An install link opened from outside: the link's identity on the left from `lg`, and on the right one card as tall as its content, never scrolling inside itself, holding the review, who may load it and the notice, with the actions as its foot (stuck to the window's bottom only when a long list makes the card taller than the window); below `lg` one column, hero, review and decision in one panel, then the actions as a solid bar in the flow, so it never covers the end of the review. Nothing is installed before Add. */
 export function ImportLanding({ source }: { source: ImportSource }) {
   const t = useT();
   const { preview, install, request, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
@@ -55,8 +55,8 @@ export function ImportLanding({ source }: { source: ImportSource }) {
     <Frame width="split" home>
       <div className="flex w-full min-w-0 flex-1 flex-col justify-start gap-10 lg:grid lg:grid-cols-[minmax(0,1fr)_30rem] lg:content-start lg:items-start">
         {header}
-        <div className="contents lg:sticky lg:top-18 lg:flex lg:max-h-[calc(100dvh-9rem)] lg:flex-col">
-          <div className={`${PANEL} min-w-0 p-5 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain ${actions ? "lg:rounded-b-none lg:border-b-0" : ""}`}>
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col">
+          <div className={`${PANEL} min-w-0 p-5 sm:p-6 ${actions ? "lg:rounded-b-none lg:border-b-0" : ""}`}>
             {preview.isSuccess ? (
               <section aria-labelledby="review-title">
                 <LandingReview preview={preview.data} accessOf={accessOf} choose={choose} />

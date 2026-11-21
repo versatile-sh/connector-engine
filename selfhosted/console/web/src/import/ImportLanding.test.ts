@@ -70,6 +70,8 @@ const draw = (preview: Preview, source: ImportSource) => renderMarkup(createElem
 
 const textOf = (html: string) => html.replace(/<[^>]+>/g, "");
 
+const CARD = 'class="contents lg:flex lg:min-w-0 lg:flex-col"';
+
 const barOf = (html: string) => html.slice(html.indexOf("sticky bottom-0"), html.indexOf("</button></div></div></div>", html.indexOf("sticky bottom-0")));
 
 describe("ImportLanding", () => {
@@ -127,34 +129,43 @@ describe("ImportLanding", () => {
     describe("from lg", () => {
       test("is two columns from the top, the hero on the left and one card on the right", (t) => {
         t.assert.match(html, /class="flex w-full min-w-0 flex-1 flex-col justify-start gap-10 lg:grid lg:grid-cols-\[minmax\(0,1fr\)_30rem\] lg:content-start lg:items-start"/);
-        t.assert.ok(html.indexOf("<header") < html.indexOf('class="contents lg:sticky'));
-        t.assert.ok(html.indexOf("<h1") < html.indexOf('class="contents lg:sticky'));
+        t.assert.ok(html.indexOf(CARD) > 0);
+        t.assert.ok(html.indexOf("<header") < html.indexOf(CARD));
+        t.assert.ok(html.indexOf("<h1") < html.indexOf(CARD));
       });
 
       test("holds the review, who may load it and the notice in that one card", (t) => {
-        const card = html.indexOf('class="contents lg:sticky');
-        t.assert.ok(card < html.indexOf('<h2 id="review-title"'));
+        const card = html.indexOf(CARD);
+        t.assert.ok(card > 0 && card < html.indexOf('<h2 id="review-title"'));
         t.assert.ok(html.indexOf('<h2 id="review-title"') < html.indexOf('<h2 id="summary-title"'));
         t.assert.ok(html.indexOf('<h2 id="summary-title"') < html.indexOf("Nothing is installed until you confirm"));
         t.assert.match(html, /<h2 id="review-title"[^>]*>Review the skill</);
         t.assert.match(html, /<h2 id="summary-title"[^>]*>Who may load it</);
       });
 
-      test("keeps the card sticky, as tall as the screen allows and no taller", (t) => {
-        t.assert.match(html, /class="contents lg:sticky lg:top-18 lg:flex lg:max-h-\[calc\(100dvh-9rem\)\] lg:flex-col"/);
-        t.assert.doesNotMatch(html, /tall:/);
+      test("lets the card take the height of its content, with no sticky, no max height and no scroll of its own", (t) => {
+        const own = /overflow-y-auto|overflow-auto|overflow-y-scroll|overscroll|max-h-|lg:sticky|lg:top-|tall:/;
+        t.assert.doesNotMatch(html.slice(html.indexOf(CARD), html.indexOf('<h2 id="review-title"')), own);
+        t.assert.doesNotMatch(html.slice(html.indexOf('<h2 id="review-title"'), html.indexOf('<h2 id="summary-title"')), own);
+        t.assert.doesNotMatch(barOf(html).slice(0, barOf(html).indexOf(">")), /overflow|max-h-|lg:static/);
+        const connector = draw(CONNECTOR, CONNECTOR_SOURCE);
+        t.assert.doesNotMatch(connector.slice(connector.indexOf(CARD), connector.indexOf('<section aria-labelledby="review-title"')), own);
       });
 
-      test("scrolls the review inside the card and keeps the actions out of that scroll", (t) => {
-        t.assert.match(html, /lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:rounded-b-none lg:border-b-0/);
-        t.assert.ok(html.indexOf("lg:overflow-y-auto") < html.indexOf('class="sticky bottom-0'));
+      test("lets the card shrink inside its column, so nothing widens the page", (t) => {
+        t.assert.match(html, /class="contents lg:flex lg:min-w-0 lg:flex-col"><div class="[^"]*\bmin-w-0\b/);
+        t.assert.doesNotMatch(html, /overflow-x-auto|<table/);
+      });
+
+      test("keeps the actions after the whole review, as the foot", (t) => {
         t.assert.ok(html.indexOf('<h2 id="summary-title"') < html.indexOf('class="sticky bottom-0'));
+        t.assert.match(html, /lg:rounded-b-none lg:border-b-0/);
       });
 
       test("draws the actions once, as the foot of the card", (t) => {
         t.assert.equal(html.split("Add skill").length - 1, 1);
         t.assert.equal(html.split(">Cancel<").length - 1, 1);
-        t.assert.match(html, /class="sticky bottom-0[^"]*lg:static[^"]*lg:rounded-b-2xl lg:border lg:bg-ink-raised/);
+        t.assert.match(html, /class="sticky bottom-0[^"]*lg:m-0 lg:rounded-b-2xl lg:border lg:bg-ink-raised/);
       });
     });
 
@@ -170,7 +181,8 @@ describe("ImportLanding", () => {
       });
 
       test("becomes the card's foot from lg", (t) => {
-        t.assert.match(bar, /lg:static/);
+        t.assert.match(bar, /lg:rounded-b-2xl lg:border/);
+        t.assert.doesNotMatch(bar, /lg:static/);
         t.assert.doesNotMatch(bar, /lg:hidden/);
       });
 

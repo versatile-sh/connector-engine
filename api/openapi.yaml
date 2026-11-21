@@ -3764,6 +3764,7 @@ paths:
         - connector
   /v1/grants:
     get:
+      description: Lists grant rows. Only a session row names an agent, so a filter on agent returns session rows only.
       operationId: listGrants
       parameters:
         - in: query

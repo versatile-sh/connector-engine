@@ -101,8 +101,13 @@ vsh approvals
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/diagram-flow-dark.svg">
-  <img src="docs/assets/readme/diagram-flow-light.svg" alt="How a call flows. AI apps such as Claude Code, Cursor and Codex call connector-engine over MCP. The gateway checks each function's permission: off hides it, on runs it with the stored credential, ask waits for your approval in the self-hosted console. Allowed calls reach remote and local MCP servers, REST and gRPC connectors. The gateway also keeps approvals, activity and skills." width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/diagram-call-dark.svg">
+  <img src="docs/assets/readme/diagram-call-light.svg" alt="How one tool call runs. An AI app sends tools/call to the gateway, which verifies the token and hands the call to the service. The service asks the Authorizer, which answers allow, ask or deny. On ask the app gets pending_approval and the call waits for a person. On allow the service calls the connector runtime with the credential, gets a filtered result back and answers the app; the event goes to the outbox in the same transaction." width="100%">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/diagram-approval-dark.svg">
+  <img src="docs/assets/readme/diagram-approval-light.svg" alt="The life of an approval. It starts pending. A person approves or denies it, or it expires or is cancelled. An approved call runs once: executing ends executed, failed, or outcome_unknown when no answer came back." width="100%">
 </picture>
 
 1. An AI app lists and calls tools on one endpoint, `/mcp`.

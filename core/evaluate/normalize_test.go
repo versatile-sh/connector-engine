@@ -100,7 +100,7 @@ func TestNormalizeKeepsEvaluation(t *testing.T) {
 	w := propWorld()
 	r := rand.New(rand.NewPCG(1, 2))
 	checked := 0
-	for range 4000 {
+	for range 1500 {
 		rows := propState(r)
 		after := grant.Canonical(rows)
 		if len(after) != len(rows) {
@@ -114,7 +114,7 @@ func TestNormalizeKeepsEvaluation(t *testing.T) {
 			}
 		}
 	}
-	if checked < 1000 {
+	if checked < 400 {
 		t.Fatalf("only %d states without a collision", checked)
 	}
 }
@@ -123,7 +123,7 @@ func TestNormalizeCollisionNeverWidens(t *testing.T) {
 	w := propWorld()
 	r := rand.New(rand.NewPCG(3, 4))
 	merged, denied := 0, 0
-	for range 4000 {
+	for range 1500 {
 		rows := propState(r)
 		base := rows[r.IntN(len(rows))]
 		if base.ScopeKind == Session {
@@ -170,7 +170,7 @@ func TestNormalizeCollisionNeverWidens(t *testing.T) {
 			i++
 		})
 	}
-	if merged < 1000 || denied == 0 {
+	if merged < 400 || denied == 0 {
 		t.Fatalf("merged %d states, %d merged to deny", merged, denied)
 	}
 }

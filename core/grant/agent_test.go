@@ -85,3 +85,14 @@ func TestCanonicalNeverKeepsACountedRowOfACollision(t *testing.T) {
 		t.Errorf("got %+v", got)
 	}
 }
+
+func TestCanonicalKeepsOneOfTwoAskRowsAtDifferentHashes(t *testing.T) {
+	a := named(row(port.ScopeAgent, "fn:f", port.ModeAsk), "x")
+	a.ID = "g1"
+	b := row(port.ScopeAgent, "fn:f", port.ModeAsk)
+	b.ID, b.DefinitionHash = "g2", "h0"
+	got := grant.Canonical([]port.Grant{b, a})
+	if len(got) != 1 || got[0].ID != "g1" || got[0].Mode != port.ModeAsk {
+		t.Errorf("got %+v", got)
+	}
+}

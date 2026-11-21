@@ -3,6 +3,7 @@ package grant
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -248,6 +249,7 @@ func Canonical(rows []port.Grant) []port.Grant {
 }
 
 func merged(rows []port.Grant) port.Grant {
+	slices.SortFunc(rows, func(a, b port.Grant) int { return strings.Compare(string(a.ID), string(b.ID)) })
 	for _, r := range rows {
 		if len(rows) == 1 || decides(r, rows) {
 			return r
@@ -265,7 +267,7 @@ func decides(r port.Grant, rows []port.Grant) bool {
 	for _, s := range rows {
 		switch {
 		case strictness(s.Mode) < strictness(r.Mode),
-			strictness(s.Mode) == strictness(r.Mode) && s.DefinitionHash != r.DefinitionHash,
+			s.Mode == r.Mode && (r.Mode == port.ModeAllow || r.Mode == port.ModeAskOnce) && s.DefinitionHash != r.DefinitionHash,
 			!r.ExpiresAt.IsZero() && (s.ExpiresAt.IsZero() || s.ExpiresAt.After(r.ExpiresAt)):
 			return false
 		}
@@ -273,22 +275,25 @@ func decides(r port.Grant, rows []port.Grant) bool {
 	return true
 }
 
-// Rewrite stores Canonical of the rows tx lists, deleting the rows a merge drops before it writes the rows that changed.
-func Rewrite(tx port.Tx) error {
+// Rewrite stores Canonical of the rows tx lists, deleting merged rows before it writes changed ones; each merge leaves an audit row at now.
+func Rewrite(tx port.Tx, now time.Time) error {
 	rows, err := tx.ListGrants(port.GrantFilter{})
 	if err != nil {
 		return err
 	}
 	out := Canonical(rows)
-	kept := make(map[port.GrantID]port.Grant, len(out))
+	kept, byKey := make(map[port.GrantID]port.Grant, len(out)), make(map[string]port.Grant, len(out))
 	for _, g := range out {
-		kept[g.ID] = g
+		kept[g.ID], byKey[g.Key()] = g, g
 	}
+	replaced := map[port.GrantID][]port.GrantID{}
 	var changed []port.Grant
 	for _, g := range rows {
 		k, ok := kept[g.ID]
 		switch {
 		case !ok:
+			survivor := byKey[Normalize(g).Key()]
+			replaced[survivor.ID] = append(replaced[survivor.ID], g.ID)
 			if err := tx.DeleteGrant(g.ID); err != nil {
 				return err
 			}
@@ -299,6 +304,14 @@ func Rewrite(tx port.Tx) error {
 	for _, g := range changed {
 		if err := tx.PutGrant(g); err != nil {
 			return err
+		}
+	}
+	for _, g := range out {
+		if ids := replaced[g.ID]; len(ids) > 0 {
+			if err := tx.Audit(port.AuditRow{At: now, Tenant: g.Tenant, Actor: "system", Action: "grant.merged", Subject: string(g.ID),
+				Detail: map[string]any{"replaced": ids, "mode": string(g.Mode)}}); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

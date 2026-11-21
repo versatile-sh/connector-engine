@@ -44,7 +44,7 @@ const (
 	revisedSQL = `INSERT INTO records AS r (kind, k, tenant_id, uniq, rev, doc)
 		SELECT $1, $2, $3, $4::text, 1, $5::jsonb
 		WHERE $6::bigint <= 0 OR EXISTS (SELECT 1 FROM records WHERE kind = $1 AND k = $2 AND rev = $6)
-		ON CONFLICT (kind, k) DO UPDATE SET doc = excluded.doc, uniq = excluded.uniq, rev = r.rev + 1
+		ON CONFLICT (kind, k) DO UPDATE SET doc = CASE WHEN r.kind = 'grant' THEN excluded.doc || jsonb_strip_nulls(jsonb_build_object('uses', r.doc->'uses')) ELSE excluded.doc END, uniq = excluded.uniq, rev = r.rev + 1
 		WHERE ($6::bigint < 0 OR r.rev = $6) AND r.tenant_id = excluded.tenant_id
 		RETURNING rev`
 )
@@ -268,6 +268,7 @@ func (t *tx) ListGrants(f port.GrantFilter) ([]port.Grant, error) {
 }
 
 func (t *tx) PutGrant(g port.Grant) error {
+	g.Uses = 0
 	sum := sha256.Sum256([]byte(g.Key()))
 	uniq := hex.EncodeToString(sum[:])
 	_, err := t.put(kindGrant, string(g.ID), g.Tenant, &uniq, g, port.AnyRevision)

@@ -52,6 +52,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"grant key":                 grantKey,
 		"counted grant reservation": countedReservation,
 		"concurrent reservation":    concurrentReservation,
+		"grant row keeps use count": writingAGrantRowKeepsItsUseCount,
 		"due work":                  dueWork,
 		"inbox":                     inbox,
 		"scope validation":          scopeValidation,
@@ -536,6 +537,52 @@ func countedReservation(e *env) {
 	e.code(e.write(scopeB, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g2"}) }), port.CodeNotFound)
 }
 
+func writingAGrantRowKeepsItsUseCount(e *env) {
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "g1", "fn:f", 3)) }))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		g := agentGrant("ta", "g1", "fn:f", 3)
+		g.DefinitionHash = "h2"
+		if err := tx.PutGrant(g); err != nil {
+			return err
+		}
+		fresh := agentGrant("ta", "g2", "*", 3)
+		fresh.Uses = 2
+		return tx.PutGrant(fresh)
+	}))
+	e.must(e.read(scopeA, func(tx port.Tx) error {
+		g1, _ := tx.GetGrant("g1")
+		g2, err := tx.GetGrant("g2")
+		e.same([]any{"h2", 2, 0}, []any{g1.DefinitionHash, g1.Uses, g2.Uses})
+		return err
+	}))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
+	e.code(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }), port.CodeGrantExhausted)
+
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "g3", "class:read", 50)) }))
+	var wg sync.WaitGroup
+	for i := range 20 {
+		wg.Go(func() {
+			err := e.write(scopeA, func(tx port.Tx) error {
+				if i%2 == 0 {
+					return tx.ReserveGrants([]port.GrantID{"g3"})
+				}
+				return tx.PutGrant(agentGrant("ta", "g3", "class:read", 50))
+			})
+			if err != nil {
+				e.t.Errorf("a write of g3 failed: %v", err)
+			}
+		})
+	}
+	wg.Wait()
+	e.must(e.read(scopeA, func(tx port.Tx) error {
+		g, err := tx.GetGrant("g3")
+		e.same(10, g.Uses)
+		return err
+	}))
+}
+
 func concurrentReservation(e *env) {
 	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "g1", "fn:f", 3)) }))
 	var won atomic.Int32
@@ -923,7 +970,7 @@ func snapshotRestore(e *env) {
 			tx.PutListing(port.Listing{Ref: port.ListingRef{Name: "io.x/svc"}, Source: "own", Publisher: "x", Status: port.ListingActive}))
 	}))
 	e.must(e.write(scopeA, func(tx port.Tx) error {
-		g := agentGrant("ta", "g1", "*", 0)
+		g := agentGrant("ta", "g1", "*", 3)
 		g.ExpiresAt = t0.Add(time.Hour)
 		_, err := tx.PutConnector(connector("ta", "c1"), port.AnyRevision)
 		_, err2 := tx.MarkInbox("m1", t0)
@@ -932,6 +979,7 @@ func snapshotRestore(e *env) {
 		return errors.Join(err, err2, err3, err4, tx.PutGrant(g), tx.CreateApproval(pending("ta", "a1", "h1")),
 			tx.Audit(port.AuditRow{Tenant: "ta", Actor: "a", Action: "install", Subject: "c1", At: t0}))
 	}))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
 	e.must(e.write(scopeB, func(tx port.Tx) error {
 		_, err := tx.PutConnector(connector("tb", "c2"), port.AnyRevision)
 		return err
@@ -940,7 +988,7 @@ func snapshotRestore(e *env) {
 	e.must(err)
 	e.must(e.o.MarkDelivered(ctx, []string{first[0].ID}))
 	want := viewOf(e, e.s, e.o)
-	if want.Due == 0 || want.Pending != 1 || len(want.Audit) != 1 || !want.Seen || len(want.Events) != 2 {
+	if want.Due == 0 || want.Pending != 1 || len(want.Grants) != 1 || want.Grants[0].Uses != 1 || len(want.Audit) != 1 || !want.Seen || len(want.Events) != 2 {
 		e.t.Fatalf("the seed is not what the case checks: %+v", want)
 	}
 	snap, err := src.Snapshot(ctx)

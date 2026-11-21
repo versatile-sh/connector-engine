@@ -192,3 +192,55 @@ func TestUpgradeStoresGrantRowsInCanonicalForm(t *testing.T) {
 	}
 	storetest.CheckCanonicalGrants(t, s)
 }
+
+func TestUpgradeRewritesEveryTenantOnItsOwn(t *testing.T) {
+	s, dsn := newStore(t)
+	ctx := context.Background()
+	row := func(tenant port.TenantID, id string, agent port.AgentID, mode port.Mode) port.Grant {
+		return port.Grant{ID: port.GrantID(id), Tenant: tenant, ScopeKind: port.ScopeUser, ScopeID: "alice", Agent: agent, Connector: "c1", Selector: "*", Mode: mode, Origin: port.OriginSettings}
+	}
+	for tenant, rows := range map[port.TenantID][]port.Grant{
+		"ta": {row("ta", "a1", "x", port.ModeDeny)},
+		"tb": {row("tb", "b1", "y", port.ModeAllow)},
+		"to": {row("to", "o1", "x", port.ModeAsk), row("to", "o2", "", port.ModeDeny)},
+	} {
+		if tenant != "to" {
+			if err := s.Write(ctx, port.Scope{Installation: true}, func(tx port.Tx) error { return tx.PutTenant(port.Tenant{ID: tenant, State: port.TenantActive}) }); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := s.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+			for _, g := range rows {
+				if err := tx.PutGrant(g); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conn, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(ctx)
+	if _, err := conn.Exec(ctx, `DELETE FROM schema_migrations WHERE version = 'migrations/0003_canonical_grants.sql'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for tenant, want := range map[port.TenantID]port.Grant{"ta": row("ta", "a1", "", port.ModeDeny), "tb": row("tb", "b1", "", port.ModeAllow), "to": row("to", "o2", "", port.ModeDeny)} {
+		var got []port.Grant
+		if err := s.Read(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) (err error) {
+			got, err = tx.ListGrants(port.GrantFilter{})
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 1 || got[0] != want {
+			t.Fatalf("tenant %s: %+v", tenant, got)
+		}
+	}
+}

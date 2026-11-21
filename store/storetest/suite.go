@@ -1007,7 +1007,7 @@ func LegacyGrants(t *testing.T, s port.Store) {
 	}
 }
 
-// CheckCanonicalGrants fails unless tenant ta holds the canonical form of LegacyGrants: u1 and b1 without their agent, a2 alone, c1 as a deny, one audit row per merge.
+// CheckCanonicalGrants fails unless tenant ta holds the canonical form of LegacyGrants: u1 and b1 without their agent, a2 alone, c1 as the deny of a conflict, audited.
 func CheckCanonicalGrants(t *testing.T, s port.Store) {
 	t.Helper()
 	var got []port.Grant
@@ -1022,17 +1022,20 @@ func CheckCanonicalGrants(t *testing.T, s port.Store) {
 		t.Fatalf("grants %+v", got)
 	}
 	for i, id := range []port.GrantID{"a2", "b1", "c1", "u1"} {
-		if g := got[i]; g.ID != id || g.Agent != "" || g.Mode != port.ModeDeny || g.MaxUses != 0 || !g.ExpiresAt.IsZero() {
+		if g := got[i]; g.ID != id || g.Agent != "" || g.Mode != port.ModeDeny || g.MaxUses != 0 || !g.ExpiresAt.IsZero() || (id == "c1") != (g.Reason == "rows_conflicted") {
 			t.Fatalf("grants %+v", got)
 		}
 	}
-	for _, id := range []string{"a2", "b1", "c1"} {
+	for subject, action := range map[string]string{"a2": "grant.merged", "b1": "grant.merged", "c1": "grant.merged", "grants": "grant.agent_cleared"} {
 		var audit []port.AuditRow
 		if err := s.Read(ctx, scopeA, func(tx port.Tx) (err error) {
-			audit, err = tx.ListAudit(id)
+			audit, err = tx.ListAudit(subject)
 			return err
-		}); err != nil || len(audit) != 1 || audit[0].Action != "grant.merged" {
-			t.Fatalf("audit of %s: %+v %v", id, audit, err)
+		}); err != nil || len(audit) != 1 || audit[0].Action != action {
+			t.Fatalf("audit of %s: %+v %v", subject, audit, err)
+		}
+		if rows, _ := audit[0].Detail["rows"].([]any); action == "grant.merged" && len(rows) != 2 {
+			t.Fatalf("audit of %s names %d original rows", subject, len(rows))
 		}
 	}
 	if err := s.Write(ctx, scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "a3", "class:read", 0)) }); !port.IsCode(err, port.CodeConflict) {

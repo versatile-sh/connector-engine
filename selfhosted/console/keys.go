@@ -12,7 +12,6 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted/secrets/hostkey"
 )
 
-// keyProtection reports the weakest way the engine's and the console's root keys rest: locked, plaintext or wrapped; empty when neither says.
 func (c *Console) keyProtection(ctx context.Context) string {
 	console := c.Secrets.Protection()
 	if console == hostkey.Locked || console == string(local.Plaintext) {

@@ -5,5 +5,5 @@ mode: production
 acknowledge: [local_token_issuer, long_lived_agent_tokens, plaintext_root_key, private_egress]
 ports:
   store: {use: builtin:postgres, config: {databaseUrlRef: "file:/run/connector-engine/database-url"}}
-  secrets: {use: builtin:hostkey}
+  secrets: {use: builtin:hostkey, config: {unlockSocket: /run/connector-engine-unlock/unlock.sock}}
   auth: {use: builtin:local}

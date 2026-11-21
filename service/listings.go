@@ -405,16 +405,14 @@ func (s *Service) SetListingStarter(ctx context.Context, p port.Principal, ref p
 	return out, err
 }
 
-// StatusChange is the result of a listing status change: the listing, and either the operation of the operator's fan-out
-// or, for a private listing, the connectors it blocks.
+// StatusChange is the result of a listing status change: the listing, and either the operation of the operator's fan-out or, for a private listing, the connectors it blocks.
 type StatusChange struct {
 	Listing   port.Listing       `json:"listing"`
 	Operation *port.Operation    `json:"operation,omitempty"`
 	Blocked   []port.ConnectorID `json:"blocked,omitempty"`
 }
 
-// ChangeListingStatus is quarantineListing, deprecateListing, withdrawListing and restoreListing: the status maps to
-// quarantined, deprecated, deleted and active; version names one version, empty the listing.
+// ChangeListingStatus is quarantineListing, deprecateListing, withdrawListing and restoreListing: the status maps to quarantined, deprecated, deleted and active; version names one version, empty the listing.
 func (s *Service) ChangeListingStatus(ctx context.Context, p port.Principal, ref port.ListingRef, version string, status port.ListingStatus, reason string) (StatusChange, error) {
 	var out StatusChange
 	scope, action, resource := port.Scope{Installation: true}, authz.ListingStatusInst, authz.Installation

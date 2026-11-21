@@ -78,8 +78,7 @@ func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port
 		Hash: string(f.DefinitionHash), Class: string(f.Class), ClassSource: string(f.ClassSource), By: by})
 }
 
-// AcceptFunction clears a quarantine at the hash the admin saw and sets the class again; keepOverlay carries the
-// active overlay to that hash, else it is superseded.
+// AcceptFunction clears a quarantine at the hash the admin saw and sets the class again; keepOverlay carries the active overlay to that hash, else it is superseded.
 func (s *Service) AcceptFunction(ctx context.Context, p port.Principal, id port.ConnectorID, name string, seen port.Hash, keepOverlay bool) (AcceptResult, error) {
 	var out AcceptResult
 	err := s.functionTx(ctx, p, id, authz.FunctionManage, "AcceptFunction", func(tx port.Tx, c port.Connector) (err error) {

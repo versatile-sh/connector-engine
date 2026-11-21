@@ -20,6 +20,7 @@ Not verified. Read this before you try it:
 - **The relay** reads undelivered outbox rows without claiming them. Two replicas can deliver the same event twice. Delivery is at least once already, so consumers must deduplicate by the CloudEvent `id`; with replicas, duplicates become routine.
 - **The worker** has no leader election. Every replica runs the same timers and sweeps; each state change is a guarded transaction, but this path has no multi-replica test.
 - **The secrets directory** (`secrets.dir`) must be the same on every replica: each one that starts on an empty directory writes its own root key, and the others cannot open its records. Every secrets adapter keeps the root key in that directory ([keychain](../self-hosted/keychain.md)).
+- **Pending OAuth connects** live in a process map (`Service.connect`), not in the store. With two replicas the provider's callback can land on the replica that did not start the flow and answers "no authorization is waiting for this state"; a restart drops every pending connect and the person starts it again. Route the callback to the replica that began the flow, or keep one replica.
 
 Need more throughput today? Give the instance and Postgres more CPU and memory, and keep one engine.
 

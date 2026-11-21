@@ -28,6 +28,8 @@ var (
 
 	Verifiers   = Port[port.PrincipalVerifier]{config.PortAuth}
 	Authorizers = Port[port.Authorizer]{config.PortAuthz}
+	Scanners    = Port[port.DefinitionScanner]{config.PortScanner}
+	Suggesters  = Port[port.DescriptionSuggester]{config.PortSuggester}
 )
 
 // Adapter declares an adapter of a port; Register sets its Port.

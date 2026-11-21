@@ -16,7 +16,6 @@ type tokenClaims struct {
 	IssuedAt   float64 `json:"iat"`
 }
 
-// bearerClaims reads the agent, session, person and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse or to label a call it answered.
 func bearerClaims(header string) (tokenClaims, bool) {
 	scheme, raw, found := strings.Cut(header, " ")
 	parts := strings.Split(strings.TrimSpace(raw), ".")
@@ -83,7 +82,6 @@ func (c *Console) agentProxy() http.Handler {
 	}
 }
 
-// engineDown answers an agent request the engine did not take with 503, a Retry-After and a JSON-RPC error that says the gateway is locked or not answering.
 func (c *Console) engineDown(w http.ResponseWriter) {
 	message := "the gateway is not answering; after a restart it stays locked until you run make unlock on this computer, then retry"
 	if c.Secrets.Locked() {

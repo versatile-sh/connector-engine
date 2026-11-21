@@ -24,19 +24,15 @@ type Issuer struct {
 	URL  string
 }
 
-// Config configures a Verifier; zero durations take the defaults noted per field.
+// Config configures a Verifier; zero durations take the defaults: MaxLifetime (bound on exp - iat of an agent token) 3600 s, Leeway (clock skew on exp and nbf) 30 s, CacheTTL (trust of a fetched key set) 5 min, MinRefetch (gap between fetches for an unknown key id) 30 s.
 type Config struct {
-	Issuers []Issuer
-	// MaxLifetime bounds exp - iat of every agent token; 3600 s by default.
+	Issuers     []Issuer
 	MaxLifetime time.Duration
-	// Leeway is the clock skew tolerated on exp and nbf; 30 s by default.
-	Leeway time.Duration
-	// CacheTTL is how long a fetched key set is trusted; 5 min by default.
-	CacheTTL time.Duration
-	// MinRefetch is the shortest gap between two fetches for an unknown key id; 30 s by default.
-	MinRefetch time.Duration
-	Client     *http.Client
-	Now        func() time.Time
+	Leeway      time.Duration
+	CacheTTL    time.Duration
+	MinRefetch  time.Duration
+	Client      *http.Client
+	Now         func() time.Time
 }
 
 // Verifier verifies bearer tokens of the configured issuers.

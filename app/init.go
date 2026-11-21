@@ -36,7 +36,6 @@ func writeOnce(path, value string, mode os.FileMode) (bool, error) {
 	return true, f.Close()
 }
 
-// initSecrets writes the first-boot secrets of a compose install once: the operator token, the Postgres passwords and the database URL.
 func initSecrets(_ config.Config, args []string, _ io.Reader, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
 	fs.SetOutput(stderr)

@@ -413,3 +413,31 @@ func TestALocalIssuerTokenSurvivesAnEngineRestart(t *testing.T) {
 		t.Fatalf("a token minted before the restart is refused: %v", out)
 	}
 }
+
+type fixedSuggester struct{}
+
+func (fixedSuggester) Suggest(context.Context, port.RawDefinition) (port.Suggestion, error) {
+	return port.Suggestion{Description: "x"}, nil
+}
+
+type noScan struct{}
+
+func (noScan) Scan(context.Context, port.RawDefinition) ([]port.Finding, error) { return nil, nil }
+
+func TestAnAddedScannerAndSuggesterAreSelectableAndOpened(t *testing.T) {
+	r := app.Core()
+	var opened []string
+	app.Register(r, app.Suggesters, app.Adapter{Name: "fixed"}, func(context.Context, app.Env) (port.DescriptionSuggester, func(), error) {
+		opened = append(opened, "suggester")
+		return fixedSuggester{}, nil, nil
+	})
+	app.Register(r, app.Scanners, app.Adapter{Name: "noscan"}, func(context.Context, app.Env) (port.DefinitionScanner, func(), error) {
+		opened = append(opened, "scanner")
+		return noScan{}, nil, nil
+	})
+	adaptersYAML := strings.Replace(fmt.Sprintf(localAdapters, "", "memory", ""), "  auth: {use: builtin:local}", "  auth: {use: builtin:local}\n  suggester: {use: builtin:fixed}\n  scanner: {use: builtin:noscan}", 1)
+	e := bootWith(t, r, devConfig(t), adaptersYAML, map[string]string{"CN_OPERATOR_TOKEN": "op-secret"})
+	if doc := adaptersDocument(t, e); len(opened) != 2 || !strings.Contains(doc, `"fixed"`) || !strings.Contains(doc, `"noscan"`) {
+		t.Fatalf("opened %v, /v1/adapters: %s", opened, doc)
+	}
+}

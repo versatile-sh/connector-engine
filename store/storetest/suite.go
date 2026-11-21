@@ -606,10 +606,18 @@ func inbox(e *env) {
 		return err
 	}))
 	e.same([]bool{true, false}, []bool{first, second})
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.SetInboxPayload("m1", []byte(`{"hash":"h"}`)) }))
+	e.must(e.read(scopeA, func(tx port.Tx) error {
+		got, err := tx.InboxPayload("m1")
+		e.same(`{"hash":"h"}`, string(got))
+		return err
+	}))
 	e.must(e.read(scopeB, func(tx port.Tx) error {
 		seen, err := tx.SeenInbox("m1")
 		e.same(false, seen)
-		return err
+		got, err2 := tx.InboxPayload("m1")
+		e.same(0, len(got))
+		return errors.Join(err, err2)
 	}))
 }
 

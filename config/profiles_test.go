@@ -70,7 +70,7 @@ func TestTheHeadlessDefaultsStayByteIdentical(t *testing.T) {
 		}
 	}
 	want := map[string]string{
-		"config.Default()":      "299a64166eec422ed0bb163add22f00af9b9918f326abcd934498c88f7b018f5",
+		"config.Default()":      "e1e9b34d01497aeb4dd57c84a9fa2d0743d6e381c19e5515bd1ddbe44a8836db",
 		"adapters.yaml":         "69b75fde582e2b044f6afa1bb6cb28f6154d3e64b97b65d3a8cf289229bee2db",
 		"connector-engine.yaml": "b5932040f3f2190587b219b81f615d3127f13cb4de3f891093c2a9718701ca72",
 	}

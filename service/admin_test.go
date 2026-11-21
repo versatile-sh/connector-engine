@@ -129,7 +129,7 @@ func TestARefusedMutationLeavesNoEvent(t *testing.T) {
 
 func TestIdempotencyKeyRunsAMutationOnce(t *testing.T) {
 	w := newWorld(t, opts{reviewed: true})
-	ctx := service.WithIdempotencyKey(w.Ctx, "k1")
+	ctx := service.WithIdempotencyKey(w.Ctx, "k1", "h1")
 	g := port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: w.conn.ID, Selector: "class:read", Mode: port.ModeDeny}
 	before := len(w.Events())
 	st.Ok(w.Svc.CreateGrant(ctx, w.admin, g))
@@ -137,6 +137,27 @@ func TestIdempotencyKeyRunsAMutationOnce(t *testing.T) {
 	want(t, countOf(w.Types(before), "connector.grant.created"), 1, "one event for two identical requests")
 	rows := st.Ok(w.Svc.ListGrants(w.Ctx, w.admin, port.GrantFilter{ScopeKind: port.ScopeWorkspace}))
 	want(t, countOf(types(rows), "class:read"), 1, "one row")
+}
+
+func TestAnIdempotentRetryReplaysTheStoredResultAndRefusesAChangedRequest(t *testing.T) {
+	w := newWorld(t, opts{reviewed: true})
+	g := port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: string(workspace), Connector: w.conn.ID, Selector: "class:read", Mode: port.ModeDeny}
+	ctx := service.WithIdempotencyKey(w.Ctx, "k2", "h1")
+	st.Ok(w.Svc.CreateGrant(ctx, w.admin, g))
+	_, first, _ := service.Replay(ctx)
+	want(t, first, false, "the first run is no retry")
+	if err := w.Svc.Remember(ctx, map[string]string{"id": "g1"}); err != nil {
+		t.Fatal(err)
+	}
+	retry := service.WithIdempotencyKey(w.Ctx, "k2", "h1")
+	st.Ok(w.Svc.CreateGrant(retry, w.admin, g))
+	stored, replayed, err := service.Replay(retry)
+	want(t, string(stored), `{"id":"g1"}`, "the stored result")
+	want(t, replayed && err == nil, true, "a retry")
+	changed := service.WithIdempotencyKey(w.Ctx, "k2", "h2")
+	st.Ok(w.Svc.CreateGrant(changed, w.admin, g))
+	_, _, err = service.Replay(changed)
+	want(t, port.IsCode(err, port.CodeConflict), true, "another request under the same key")
 }
 
 func types(rows []port.Grant) []string {

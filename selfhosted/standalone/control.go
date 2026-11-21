@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/versatile-sh/connector-engine/selfhosted/console"
+	"github.com/versatile-sh/connector-engine/selfhosted/peer"
 )
 
 // Status is what a running install reports on its control socket.
@@ -46,26 +47,7 @@ func listenControl(path string) (net.Listener, error) {
 			return nil, err
 		}
 	}
-	return peerListener{Listener: lis, uid: os.Geteuid()}, nil
-}
-
-type peerListener struct {
-	net.Listener
-	uid int
-}
-
-// Accept returns the next connection whose peer runs as the owning user and closes the others; an OS without peer credentials relies on the 0700 data directory.
-func (l peerListener) Accept() (net.Conn, error) {
-	for {
-		c, err := l.Listener.Accept()
-		if err != nil {
-			return nil, err
-		}
-		if uid, err := peerUID(c); err == nil && (uid < 0 || uid == l.uid) {
-			return c, nil
-		}
-		c.Close()
-	}
+	return peer.Only(lis, os.Geteuid()), nil
 }
 
 func (in *Install) control() http.Handler {

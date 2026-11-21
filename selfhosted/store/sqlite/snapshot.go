@@ -45,9 +45,10 @@ type auditRow struct {
 }
 
 type inboxRow struct {
-	Tenant string    `json:"tenant_id"`
-	ID     string    `json:"id"`
-	At     time.Time `json:"at"`
+	Tenant  string    `json:"tenant_id"`
+	ID      string    `json:"id"`
+	At      time.Time `json:"at"`
+	Payload string    `json:"payload"`
 }
 
 type rows struct {
@@ -96,9 +97,9 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 		}); err != nil {
 			return err
 		}
-		r.inbox, err = scan(t, `SELECT tenant_id, id, at FROM inbox ORDER BY tenant_id, id`, func(q *sql.Rows) (v inboxRow, err error) {
+		r.inbox, err = scan(t, `SELECT tenant_id, id, at, coalesce(payload, '') FROM inbox ORDER BY tenant_id, id`, func(q *sql.Rows) (v inboxRow, err error) {
 			var at string
-			if err = q.Scan(&v.Tenant, &v.ID, &at); err == nil {
+			if err = q.Scan(&v.Tenant, &v.ID, &at, &v.Payload); err == nil {
 				v.At, err = time.Parse(time.RFC3339Nano, at)
 			}
 			return v, err
@@ -209,7 +210,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 			}
 		}
 		for _, v := range r.inbox {
-			if _, err := t.exec(`INSERT INTO inbox (tenant_id, id, at) VALUES (?3, ?4, ?5)`, v.Tenant, v.ID, stamp(v.At)); err != nil {
+			if _, err := t.exec(`INSERT INTO inbox (tenant_id, id, at, payload) VALUES (?3, ?4, ?5, ?6)`, v.Tenant, v.ID, stamp(v.At), v.Payload); err != nil {
 				return err
 			}
 		}

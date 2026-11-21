@@ -3,12 +3,15 @@ package console
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
+	"net/http"
 	"net/url"
 	"regexp"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -154,6 +157,26 @@ func Nature(f port.Function, m port.Manifest) (kind port.Class, estimated bool) 
 	return KindOf(f.Name, d.Annotations)
 }
 
+// ErrSignInRequired means the server answered 401: it lists its functions only to a signed-in client.
+var ErrSignInRequired = errors.New("asks you to sign in before it lists its functions")
+
+type signInGate struct {
+	next  http.RoundTripper
+	asked atomic.Bool
+}
+
+func (g *signInGate) RoundTrip(r *http.Request) (*http.Response, error) {
+	next := g.next
+	if next == nil {
+		next = http.DefaultTransport
+	}
+	res, err := next.RoundTrip(r)
+	if err == nil && res.StatusCode == http.StatusUnauthorized {
+		g.asked.Store(true)
+	}
+	return res, err
+}
+
 // Probe connects to an MCP server (server/discover for 2026-07-28, initialize before), reads its server info and lists its tools.
 func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 	u, err := reach.CheckURL(rawURL)
@@ -165,7 +188,12 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 	client := mcp.NewClient(&mcp.Implementation{Name: "connector-console", Version: "0"}, nil)
 	httpClient := reach.Client()
 	httpClient.Timeout = 0
+	gate := &signInGate{next: httpClient.Transport}
+	httpClient.Transport = gate
 	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: u.String(), HTTPClient: httpClient, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
+	if err != nil && gate.asked.Load() {
+		return Probed{}, unreachable(fmt.Errorf("%s: %w", u.Host, ErrSignInRequired))
+	}
 	if err != nil {
 		return Probed{}, unreachable(fmt.Errorf("could not connect to %s: %w", u.Host, err))
 	}

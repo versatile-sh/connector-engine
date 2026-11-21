@@ -132,9 +132,11 @@ func (c *Console) previewListing(ctx context.Context, src, host string, body []b
 			return Preview{}, invalid("the listing's server is on this computer; import it by its URL and tick \"local server\"")
 		}
 		pv.RemoteURL = m.Remote.URL
-		if p, err := Probe(ctx, m.Remote.URL, Reach{}); err != nil {
+		switch p, err := Probe(ctx, m.Remote.URL, Reach{}); {
+		case errors.Is(err, ErrSignInRequired):
+		case err != nil:
 			pv.Warning = "the server could not be reached to list its functions: " + err.Error()
-		} else {
+		default:
 			pv.Tools, pv.Items, pv.Protocol, pv.WebsiteURL, pv.Icon = nonNil(p.Tools), p.Items, p.Protocol, p.WebsiteURL, firstOf(pv.Icon, p.Icon)
 		}
 	}

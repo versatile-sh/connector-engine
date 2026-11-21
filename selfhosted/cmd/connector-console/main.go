@@ -63,6 +63,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 	servicePerson := fs.String("service-person", or(getenv, "CONSOLE_SERVICE_PERSON", "console"), "engine person the console reads and writes role rows as; a tenant admin in bootstrap.roles")
 	managersGroup := fs.String("managers-group", or(getenv, "CONSOLE_MANAGERS_GROUP", "managers"), "engine group holding every Owner and Admin")
 	loopbackHost := fs.String("loopback-host", getenv("CONSOLE_LOOPBACK_HOST"), "host a local server at localhost is dialled as, such as host.docker.internal in a container; empty dials loopback itself")
+	setupToken := fs.String("setup-token", getenv("CONSOLE_SETUP_TOKEN"), "secret the first visitor must type to create the Owner or restore a backup; empty lets the first visitor in")
 	agentTTL := fs.Duration("agent-ttl", 720*time.Hour, "longest agent token; at most auth.agentTokenMaxLifetime")
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -93,7 +94,7 @@ func serve(args []string, getenv func(string) string, stderr io.Writer) int {
 		}
 	}
 	c, closeConsole, err := console.Open(ctx, console.Options{PublicURL: *publicURL, EngineURL: *engineURL, OperatorURL: *operatorURL, Operator: strings.TrimSpace(string(token)),
-		StatePath: *statePath, Unlock: unlock, Tenant: *tenant, Workspace: *workspace, Person: *person, ServicePerson: *servicePerson, ManagersGroup: *managersGroup, LoopbackHost: *loopbackHost, AgentTTL: *agentTTL, Restart: stop, Log: log})
+		StatePath: *statePath, Unlock: unlock, Tenant: *tenant, Workspace: *workspace, Person: *person, ServicePerson: *servicePerson, ManagersGroup: *managersGroup, SetupToken: *setupToken, LoopbackHost: *loopbackHost, AgentTTL: *agentTTL, Restart: stop, Log: log})
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1

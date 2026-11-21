@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { errorText } from "./api";
+import { errorText, setSetupToken } from "./api";
 import { Frame } from "./Frame";
 import { useT } from "./i18n/I18nProvider";
 import { signIn } from "./mutations";
@@ -10,7 +10,7 @@ import { Display } from "./ui/Display";
 import { Arrow } from "./ui/Icon";
 import { CAPTION, SURFACE, button } from "./ui/styles";
 
-type AuthProps = { mode: "setup" | "login"; endpoint: string; waitingHost?: string };
+type AuthProps = { mode: "setup" | "login"; endpoint: string; waitingHost?: string; needsSetupToken?: boolean };
 
 const hostOf = (raw: string) => {
   try {
@@ -68,7 +68,7 @@ function Points({ endpoint }: { endpoint: string }) {
 }
 
 /** First-visit owner creation or sign-in as an editorial page: the serif headline with its lime answer, the form in a card beside it, and what the gateway does under the headline. An install link waiting in the address bar is named in the headline and opens once signed in. */
-export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
+export function Auth({ mode, endpoint, waitingHost, needsSetupToken }: AuthProps) {
   const t = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -88,6 +88,7 @@ export function Auth({ mode, endpoint, waitingHost }: AuthProps) {
           </h2>
           <p className="mt-2 mb-7 text-pretty text-muted">{t(mode === "setup" ? "auth.setup.intro" : "auth.login.intro")}</p>
           <Field label={t("auth.username")} className="mb-2" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
+          {needsSetupToken ? <Field label={t("auth.setupToken")} hint={t("auth.setupTokenHint")} className="mb-2" autoComplete="off" onChange={(e) => setSetupToken(e.target.value)} required /> : null}
           <Field
             label={t("auth.password")}
             hint={mode === "setup" ? t("auth.passwordHint") : undefined}

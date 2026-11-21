@@ -22,6 +22,12 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 
 **One live colour.** Inside one card or figure only one thing is lime. Lime is a word, a dot, a numeral or a hairline, never a fill. Selection is paper at 10%, never lime. The one exception, from the site: a filter list marks its chosen row with a short lime bar and a lime count. A bar or a chart draws its parts in paper tints, amber and red, never lime. `src/ui/vocabulary.test.ts` fails the build on a lime fill that is not a dot, the filter mark or the caret.
 
+## Themes
+
+Dark is the identity; light is the same tokens with other values, set on `:root[data-theme="light"]` in `src/styles.css`. In light `ink` is a warm off-white page, `ink-raised` is white and `ink-sunken` a step darker, `paper` is near-black ink (so the primary button is an ink pill), and `lime`, `amber-400`, `sky-400` and `red-400` become deeper values that keep 4.5:1 as text on both surfaces. The accent stays one solid colour; light draws no beam, vignette or lamp glow. No component names a hex or an `rgb()`: glows, scrollbars, focus rings and the lit headline read `--lime-glow`, `--edge-soft`, `--lit-from` and `--lit-to` or mix `paper`.
+
+`ThemeSwitch` (System, Light, Dark, a `Segmented`) sits above the language switch in the sidebar, in the rail's user menu and in the header of a `Frame` page. The choice is kept in `localStorage` (`console.theme`); System follows `prefers-color-scheme` live. `public/theme-init.js` runs before first paint (the CSP allows no inline script) so a reload never flashes the other theme.
+
 ## Typography
 
 | Role | How | Where |

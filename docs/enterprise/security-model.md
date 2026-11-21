@@ -22,7 +22,6 @@ The engine is a policy point between AI apps and tool servers. It assumes the ag
 
 - A compromised host, root on the host, or anyone with access to the Docker socket.
 - A running, unlocked install whose process memory is read.
-- An agent token holder approving its own call through MCP elicitation, when the owner has turned elicitation on for that app (off by default).
 
 ## Deploying safely
 

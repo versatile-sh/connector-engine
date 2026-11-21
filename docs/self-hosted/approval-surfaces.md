@@ -8,12 +8,11 @@ How a held call reaches the owner where they already are, and how the owner's an
 
 ## 1. The problem
 
-A function set to "ask" holds the call. Today the owner decides in the console's Approvals page at `127.0.0.1:<port>`. The agent gets `pending_approval` after the hold window (`approval.holdWindow`, 20 s) and polls `approval_status`. Opening the console for every call is tedious. The owner wants to answer in four places:
+A function set to "ask" holds the call. Today the owner decides in the console's Approvals page at `127.0.0.1:<port>`. The agent gets `pending_approval` after the hold window (`approval.holdWindow`, 20 s) and polls `approval_status`. Opening the console for every call is tedious. The owner wants to answer in three places:
 
-1. In the AI app itself, through MCP elicitation.
-2. In a desktop notification that opens a small approval page.
-3. In a chat app with real buttons: Discord, Slack and Telegram.
-4. Through notify-only pushes (ntfy, Discord or Slack incoming webhooks) with an "Open in console" link.
+1. In a desktop notification that opens a small approval page.
+2. In a chat app with real buttons: Discord, Slack and Telegram.
+3. Through notify-only pushes (ntfy, Discord or Slack incoming webhooks) with an "Open in console" link.
 
 The owner also wants fewer questions. Every surface offers three answers:
 
@@ -31,13 +30,12 @@ The owner also wants fewer questions. Every surface offers three answers:
 | `POST /v1/approvals/{id}:decide` with `approve`, `approve_for_session` or `deny`, and `channel` | every decision, recorded with the surface that made it |
 | mode `ask_once`: `approve_for_session` writes a session row | "Allow for this session" |
 | `Lookup` on (session, call_hash): an identical call attaches to the open record, or is answered by the terminal undelivered one | getting the result of exactly the call that was decided |
-| the `/mcp` endpoint and both MCP eras | elicitation, from the console's existing `/mcp` proxy |
 | the signed `connector.approval.requested` webhook | not used: the watch reaches the console without a sink configured in the engine. A product that runs a webhook sink can drive the same `selfhosted/surface` package from it |
 
 Everything new lives in three places:
 
 - `selfhosted/surface/`: the relay and the channel adapters. It does not import `service`, `core`, `store` or `gateway`.
-- `selfhosted/console/`: the decision use case, the settings, the `/approve` page API and the elicitation proxy.
+- `selfhosted/console/`: the decision use case, the settings and the `/approve` page API.
 - `selfhosted/cli/notify`: the `vsh notify` host helper.
 
 ## 3. Options considered
@@ -45,11 +43,10 @@ Everything new lives in three places:
 | Option | Verdict |
 |---|---|
 | A. An `ApprovalChannel` inside the engine (mapped as "form elicitation"), so the gateway elicits itself | Rejected for this work. It modifies the engine core, and this work keeps the engine core unchanged |
-| B. Lower `approval.holdWindow` in the person profile so `pending_approval` comes back at once, and elicit on it | Rejected. Clients without elicitation would lose the hold, so a quick answer from a popup or chat would no longer come back in the same call |
-| C. The console's `/mcp` proxy becomes MCP-aware for `tools/call` only, finds the approval of the in-flight call, elicits on the client, decides through the API, then re-sends the identical call | **Chosen** |
-| D. Chat bots in a separate `cmd/approval-relay` container | Rejected. The console already holds the owner's state, the person token and the decision rules. A second process would need copies of all three |
-| E. Chat bots inside the console, and a host helper for desktop popups | **Chosen**. The console runs in Docker and cannot show a host notification |
-| F. Chat through incoming webhooks plus a public callback URL | Rejected. It needs a public URL in front of the gateway |
+| B. Decide from the answer to an MCP elicitation on the agent's own session | Rejected. The answer comes from the client program, not from a person: a client that answers every prompt with "accept" would approve its own calls, in the name of the key's owner |
+| C. Chat bots in a separate `cmd/approval-relay` container | Rejected. The console already holds the owner's state, the person token and the decision rules. A second process would need copies of all three |
+| D. Chat bots inside the console, and a host helper for desktop popups | **Chosen**. The console runs in Docker and cannot show a host notification |
+| E. Chat through incoming webhooks plus a public callback URL | Rejected. It needs a public URL in front of the gateway |
 
 ## 4. The design
 
@@ -61,7 +58,6 @@ Everything new lives in three places:
   +--+------------+------------------+---------------+------------+
   | console (person profile, docker, 127.0.0.1:<port>)            |
   |                                                               |
-  |  elicit proxy --+                                             |
   |  /approve page -+--> Decide(id, choice, channel)  <---+       |
   |  approvals page-+        (console/decide.go)          |       |
   |                                                       |       |
@@ -79,7 +75,7 @@ Everything new lives in three places:
 
 ### 4.1 One decision use case
 
-`Console.DecideChoice(ctx, id, choice, channel, note)` is the only place that turns an answer into engine calls. The console Approvals page, the `/approve` page, the relay and the elicitation proxy all call it.
+`Console.DecideChoice(ctx, id, choice, channel, note)` is the only place that turns an answer into engine calls. The console Approvals page, the `/approve` page and the relay all call it.
 
 | Choice | Engine calls |
 |---|---|
@@ -94,7 +90,7 @@ From this change on, the console writes "Ask" as mode `ask_once` instead of `ask
 
 Skill loads are held like calls, with mode `ask_once` on the access key's agent row. A skill approval has the function `skill` on a skill-kind connector. Every surface shows the skill's name (the connector alias that the agent passes to `skill_load`) and its title, labelled "Skill". "Always allow" on a skill turns that one access key On for the skill (`SetSkillAccess`), not the whole workspace.
 
-A session is the `session` claim of the agent token. The console mints one per access key, and one per hourly OAuth access token. "Allow for this session" therefore lasts until the earlier of the token's expiry and `permission.sessionGrantMax` (8 hours by default): within an hour for an app signed in through the browser, and up to 8 hours for a key made in the console, across new MCP sessions of that key, since the key's `session` claim never changes. It is not one conversation. The engine reports that end as `session_until`, and every surface names it: the console's buttons, chat buttons and the elicitation say "Allow for up to N hours" (or minutes), falling back to "Allow for this session" only where the record does not say.
+A session is the `session` claim of the agent token. The console mints one per access key, and one per hourly OAuth access token. "Allow for this session" therefore lasts until the earlier of the token's expiry and `permission.sessionGrantMax` (8 hours by default): within an hour for an app signed in through the browser, and up to 8 hours for a key made in the console, across new MCP sessions of that key, since the key's `session` claim never changes. It is not one conversation. The engine reports that end as `session_until`, and every surface names it: the console's buttons and chat buttons say "Allow for up to N hours" (or minutes), falling back to "Allow for this session" only where the record does not say.
 
 ### 4.2 The relay and the universal channel interface (`selfhosted/surface/`)
 
@@ -153,21 +149,11 @@ The console cannot reach the host's notification service. The host helper connec
 4. A click opens `/approve/<id>?t=<token>` in the browser.
 5. The page shows the connector, its icon, the function, the app, the expiry and an argument summary, with Allow once, Allow for this session, Always allow and Deny.
 
-### 4.5 MCP elicitation in the `/mcp` proxy (`selfhosted/console/elicit.go`)
+### 4.5 No decision from the AI app
 
-It is off by default. The owner turns it on per app (access key or OAuth app) in Notifications. When it is off for the calling app, `/mcp` is today's `ReverseProxy`, unchanged behind `gateMCP` and `refuseRevoked`. The one exception is a session-era `initialize`, a POST with no `Mcp-Session-Id` and no 2026-07-28 protocol header. Its body is read without being changed, so the proxy remembers whether the session can elicit, and the owner can turn an app on after it has connected. Requests of the 2026-07-28 era from an app that is off, and bodies over 4 MiB, are never read.
+`/mcp` is a plain reverse proxy behind `gateMCP`, `refuseRevoked` and the activity capture. It sends no elicitation request and takes no answer on the agent's MCP session as a decision. Nothing the client program replies can approve a call: the engine also refuses a decision made with an agent token (`agent_principal_refused`).
 
-For a `tools/call` from an app that is turned on and that declared the `elicitation` form capability:
-
-1. The proxy forwards the call to the engine as usual, with the inbound request context.
-2. While the engine holds the call, the proxy looks for the call's approval: a pending record of the token's agent and session, of the called function, created after the call started, and not claimed by another in-flight call. Exactly one match binds. With none or several, it waits for the engine's `pending_approval` answer, which names the id exactly.
-3. It asks the client with the text of the engine's record for that id: "Allow <connector>: <function>?" with one field, Allow once, Allow for this session (only for `ask_once`) or Deny. Declining denies. Cancelling leaves the call pending for the other surfaces.
-   - Protocol before 2026-07-28: the console captured the `elicitation` capability from `initialize`, keyed by `Mcp-Session-Id`. It answers the POST as an SSE stream, writes `elicitation/create` with a console-issued id on it, and takes the client's JSON-RPC response POST itself (202, never forwarded). If the record is decided elsewhere first, it sends `notifications/cancelled`.
-   - Protocol 2026-07-28 and later: the console reads the capability from the request's `_meta` and answers `resultType: input_required` with the elicitation and a `requestState`. The `requestState` is an HMAC over the approval, agent, session and a digest of the call, and it expires with the approval. The client's retry carries `inputResponses`. The console checks the state, decides, and removes both fields before forwarding.
-4. The result is the engine's own answer to this call. Either the held request returns it, or the proxy re-sends the identical call, which `Lookup` attaches to the same record by call hash. A wrong match can therefore never return another call's result.
-5. Destructive functions, by their annotations, are never elicited. They stay on the console, popup and chat surfaces.
-
-**Verdict: elicitation lives outside the engine.** The proxy needs only the public `/mcp` contract, the approvals API and the approval `Lookup` by call hash. The evidence is in `selfhosted/console/elicit_test.go`: go-sdk clients of both eras answer the elicitation, the approval is decided, and the upstream runs once. The cost is two pieces of coupling, both stated here. First, the proxy parses MCP framing for `tools/call`, `initialize` and JSON-RPC responses. Second, binding before the hold window ends uses a list query, with the exact id as the fallback. If a future engine elicits by itself (option A, behind `approval.inChat`), the proxy feature is turned off and nothing else changes.
+A call that needs approval stays pending until a person decides on one of the surfaces above, or until `approval.timeout` expires it. The evidence is in `selfhosted/console/mcpanswer_test.go` and the engine's `TestAnAgentTokenCannotDecide`. A state file saved with the former per-app switch still loads; the key is ignored and dropped on the next write.
 
 ### 4.6 The `/approve` page and link tokens
 
@@ -183,11 +169,10 @@ For a `tools/call` from an app that is turned on and that declared the `elicitat
 |---|---|---|
 | `GET /api/approvals/{id}` | session or `?t=` | `ApprovalView` |
 | `POST /api/approvals/{id}/decide` | session + CSRF, or `token` | `{choice: once\|session\|always\|deny, token?}` returns `{outcome: ApprovalView, already_decided: bool}` |
-| `GET /api/notifications` | session | `{channels: [ChannelView], devices: [DeviceView], apps: [{name, elicit}]}`; never a secret |
+| `GET /api/notifications` | session | `{channels: [ChannelView], devices: [DeviceView]}`; never a secret |
 | `POST /api/notifications/channels` | session + CSRF | `{kind, label, settings}` returns `ChannelView` |
 | `DELETE /api/notifications/channels/{id}` | session + CSRF | removes the channel and its secret |
 | `POST /api/notifications/channels/{id}/test` | session + CSRF | sends a test message, returns `{ok, error?}` |
-| `PUT /api/notifications/apps/{name}` | session + CSRF | `{elicit: bool}` |
 | `POST /api/notifications/devices` | session + CSRF | `{name}` returns `{device: DeviceView, key, command}`; the key is shown once |
 | `DELETE /api/notifications/devices/{id}` | session + CSRF | revokes the device key at once |
 | `GET /api/notify/stream` | bearer device key | SSE: `prompt` and `settled` events for the helper |
@@ -209,8 +194,7 @@ Assets: the owner's decisions, the gateway, the bot tokens and webhook URLs, and
 | A forged or replayed popup link decides | The HMAC link token is bound to one approval and one device. It is single-use and expires with the approval. A GET never decides. It is never put in a third-party message |
 | A malicious web page posts a decision (CSRF) or rebinds DNS | The existing Guard (Host allowlist, Origin on every mutation), plus CSRF for session callers |
 | A stolen device key | It only receives prompts and their link tokens, and only for approvals made while it is connected. It is revocable at once, and the state keeps its hash only |
-| **An agent approves its own call through elicitation** | Whoever holds an agent token can declare `elicitation` and answer "accept": a script, a hook, or a non-interactive client. So elicitation is off by default and enabled per app by the owner. It never offers "Always", and never covers destructive functions. Each decision is recorded with channel `mcp-elicitation` and the app in the note. The UI warns that an app's hooks can auto-answer |
-| A wrong elicitation binding returns another call's result | The prompt comes from the engine's record for the decided id. The result comes from re-sending this call, matched by call hash |
+| **An agent approves its own call** | A decision needs a console session, a click from a configured chat owner id, or a device link token. The engine refuses an agent token on every decide operation, and the console takes no answer on the agent's MCP session as a decision |
 | Tokens or webhook URLs leak | They are sealed by the console's `sealed.Box` (envelope encryption under the console's own key store), so the state file holds only ciphertext. They are never returned by the API, which shows only the last 4 characters. They are never logged: adapter errors are scrubbed of the token and URL. Removing a channel deletes them |
 | Arguments leak to a chat platform | Chat and push messages carry connector, function, app and expiry only |
 | A pending approval lingers | Approvals expire (`approval.timeout`, 10 min). Expired and cancelled outcomes edit every message, so no stale Allow stays clickable. A late click answers "expired" |
@@ -224,5 +208,4 @@ Assets: the owner's decisions, the gateway, the bot tokens and webhook URLs, and
 - "Always allow this app" raises the function's workspace row to on, after it has pinned every other access key, and every key made later, at the function's former access. Replacing the row cancels the other pending approvals of that function (`DeleteGrant`), which their surfaces show as cancelled. When the write fails, the approval reports it (`always_error`) and its outcome reads "Allowed once".
 - "Allow once" on a skill covers one `skill_load` call. Loading another file of the same skill is a new call and asks again. "Allow for this session" covers them all.
 - The older console route `POST /api/approvals/{id}` (`approve: true`) approves that one call only, like "Allow once". The UI no longer calls it.
-- MCP URL-mode elicitation is not used, and Cursor's form-mode bugs are not worked around.
 - Claude Code, VS Code, Cursor and Codex were not driven against a real console. The tests use the go-sdk client.

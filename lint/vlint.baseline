@@ -1,0 +1,174 @@
+# vlint baseline: module-relative file, analyzer, hash of the reported source line, message.
+# Regenerate with vlint -baseline <file> -write. Lines are sorted; a repeated line counts one finding each.
+app/app_test.go	noskipenv	d02d51db	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+app/registry.go	doccomment	de3493bd	doc comment on unexported reporter: delete it, the name and the test carry the intent
+app/snapshot_test.go	noskipenv	d02d51db	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+auth/jwks/jwks.go	clockseam	d53facb0	time.Now: read time through the injected clock port
+auth/local/keyring.go	clockseam	33e851b0	time.Now: read time through the injected clock port
+auth/local/local.go	clockseam	33e851b0	time.Now: read time through the injected clock port
+cli/skills/skills.go	clockseam	121d62c7	time.Now: read time through the injected clock port
+cli/skills/skills.go	envroot	697cf1dc	os.Getenv: read configuration once in the composition root
+cli/tools/tools.go	envroot	697cf1dc	os.Getenv: read configuration once in the composition root
+config/config_test.go	layout	de90c808	config imports app: only cmd/ and main packages import the composition root app/
+core/approval/approval_test.go	noskipenv	1d87ac4f	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+core/restore/restore.go	layout	3e54bad6	core/restore imports catalog: core/ may import only core/, port/, schema/
+e2e/claude_test.go	noskipenv	7858edee	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+e2e/claude_test.go	noskipenv	9f0350e9	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+e2e/surfaces_test.go	noskipenv	a13f6174	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+gateway/call.go	clockseam	4d3ef379	time.Now: read time through the injected clock port
+gateway/call.go	clockseam	6f18c345	time.Now: read time through the injected clock port
+gateway/export_test.go	noskipenv	08b2f7aa	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+internal/atomicfile/atomicfile_test.go	noskipenv	21acf5d9	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+internal/egress/egress_test.go	noskipenv	4bea03ae	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+internal/importer/importer.go	clockseam	c787c150	time.Now: read time through the injected clock port
+internal/plugkit/adapters/check.go	doccomment	729ea2a1	exported String has no doc comment
+internal/plugkit/adapters/file.go	adrref	32c17111	design-record reference in code: state the behaviour, keep the record outside the repository
+internal/plugkit/api/acplug/v1/plugin.proto	adrref	caabb826	design-record reference in code: state the behaviour, keep the record outside the repository
+internal/plugkit/conform/conform.go	clockseam	06a7718b	time.Now: read time through the injected clock port
+internal/plugkit/conform/conform.go	clockseam	06a7718b	time.Now: read time through the injected clock port
+internal/plugkit/conform/conform.go	clockseam	08ab0fc4	time.Since: read time through the injected clock port
+internal/plugkit/conform/conform.go	clockseam	c90766ab	time.Since: read time through the injected clock port
+internal/plugkit/host/httpconn.go	clockseam	4d6c80bd	time.Until: read time through the injected clock port
+internal/plugkit/host/secrets.go	envroot	29793dbc	os.LookupEnv: read configuration once in the composition root
+internal/plugkit/outbox/webhook.go	clockseam	adbc597e	time.Now: read time through the injected clock port
+internal/plugkit/usage/usage.go	adrref	ccc2f512	design-record reference in code: state the behaviour, keep the record outside the repository
+relay/relay.go	clockseam	5bb434ea	time.Now: read time through the injected clock port
+selfhosted/cli/keychain/keychain_test.go	noskipenv	4e9b8199	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/cli/keychain/keychain_test.go	noskipenv	a96cd024	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/cli/manage/resources.go	clockseam	3c332a48	time.Now: read time through the injected clock port
+selfhosted/cli/manage/resources.go	clockseam	8aee5e13	time.Now: read time through the injected clock port
+selfhosted/cli/tui/model.go	clockseam	adc93a27	time.Now: read time through the injected clock port
+selfhosted/console/account.go	clockseam	38adad37	time.Now: read time through the injected clock port
+selfhosted/console/account.go	clockseam	3c358312	time.Now: read time through the injected clock port
+selfhosted/console/activity.go	clockseam	7f9d1a3e	time.Now: read time through the injected clock port
+selfhosted/console/activityapi.go	clockseam	aa57762f	time.Now: read time through the injected clock port
+selfhosted/console/activityapi.go	clockseam	aa57762f	time.Now: read time through the injected clock port
+selfhosted/console/activitysummary.go	clockseam	aa57762f	time.Now: read time through the injected clock port
+selfhosted/console/agentsapi.go	clockseam	dbe92287	time.Since: read time through the injected clock port
+selfhosted/console/approvalhistory.go	clockseam	152d91a0	time.Now: read time through the injected clock port
+selfhosted/console/approve.go	clockseam	ccd542de	time.Now: read time through the injected clock port
+selfhosted/console/audit.go	clockseam	289f608c	time.Now: read time through the injected clock port
+selfhosted/console/backup.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/backup_test.go	layout	de90c808	selfhosted/console imports app: only cmd/ and main packages import the composition root app/
+selfhosted/console/capture.go	clockseam	5a360bda	time.Now: read time through the injected clock port
+selfhosted/console/capture.go	clockseam	5a360bda	time.Now: read time through the injected clock port
+selfhosted/console/capture.go	clockseam	aa57762f	time.Now: read time through the injected clock port
+selfhosted/console/capture.go	doccomment	45c108a6	doc comment on unexported Close: delete it, the name and the test carry the intent
+selfhosted/console/capture.go	doccomment	aaef20cd	doc comment on unexported Read: delete it, the name and the test carry the intent
+selfhosted/console/connectorsapi.go	clockseam	9e9dd10d	time.Now: read time through the injected clock port
+selfhosted/console/connectorsapi.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/console_test.go	layout	de90c808	selfhosted/console imports app: only cmd/ and main packages import the composition root app/
+selfhosted/console/console_test.go	noskipenv	cfe42797	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/console/decide.go	clockseam	e2d8241f	time.Now: read time through the injected clock port
+selfhosted/console/elicit.go	clockseam	1613e7d9	time.Now: read time through the injected clock port
+selfhosted/console/elicit.go	clockseam	8e8e5d51	time.Now: read time through the injected clock port
+selfhosted/console/elicitcall.go	clockseam	4837d7f6	time.Now: read time through the injected clock port
+selfhosted/console/elicitcall.go	clockseam	6aef0083	time.Now: read time through the injected clock port
+selfhosted/console/elicitcall.go	clockseam	c6432b59	time.Until: read time through the injected clock port
+selfhosted/console/elicitcall.go	clockseam	f6b8eccc	time.Now: read time through the injected clock port
+selfhosted/console/elicitcall.go	doccomment	d5a2862b	doc comment on unexported engineAccepts: delete it, the name and the test carry the intent
+selfhosted/console/engine.go	clockseam	102d9dee	time.Until: read time through the injected clock port
+selfhosted/console/engine.go	clockseam	498178ea	time.Now: read time through the injected clock port
+selfhosted/console/engine.go	clockseam	eaff8ea6	time.Now: read time through the injected clock port
+selfhosted/console/feed.go	clockseam	426d8de3	time.Now: read time through the injected clock port
+selfhosted/console/fetch.go	doccomment	f09e1991	doc comment on unexported RoundTrip: delete it, the name and the test carry the intent
+selfhosted/console/guard.go	clockseam	6005a15a	time.Now: read time through the injected clock port
+selfhosted/console/hub.go	clockseam	5d231784	time.Now: read time through the injected clock port
+selfhosted/console/invites.go	clockseam	09589f02	time.Now: read time through the injected clock port
+selfhosted/console/invites.go	clockseam	292e8902	time.Now: read time through the injected clock port
+selfhosted/console/invites.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/invites.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/links.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/links.go	clockseam	e97a1685	time.Now: read time through the injected clock port
+selfhosted/console/notifications.go	clockseam	5b4dd00a	time.Now: read time through the injected clock port
+selfhosted/console/notifications.go	clockseam	67f6968e	time.Now: read time through the injected clock port
+selfhosted/console/notifications.go	clockseam	936bc9b8	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	0339182a	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	53887db5	time.Until: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	9491dedb	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	9bd202d1	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	aa57762f	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	c859cbad	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	d45177df	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	e831e47f	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/oauth.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/oauthstate.go	clockseam	85c66083	time.Now: read time through the injected clock port
+selfhosted/console/oauthstate.go	clockseam	aa57762f	time.Now: read time through the injected clock port
+selfhosted/console/oauthstate.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/oauthstate.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/ops.go	clockseam	29b1bce9	time.Until: read time through the injected clock port
+selfhosted/console/ops.go	clockseam	8811beb1	time.Now: read time through the injected clock port
+selfhosted/console/ops.go	clockseam	d2754453	time.Now: read time through the injected clock port
+selfhosted/console/peopleapi.go	clockseam	383e3a5c	time.Now: read time through the injected clock port
+selfhosted/console/peopleapi.go	clockseam	d067fd75	time.Now: read time through the injected clock port
+selfhosted/console/profiles.go	clockseam	724d6043	time.Now: read time through the injected clock port
+selfhosted/console/proxy.go	doccomment	95b12de3	doc comment on unexported bearerClaims: delete it, the name and the test carry the intent
+selfhosted/console/seed_test.go	noskipenv	48d7b52a	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/console/setup.go	clockseam	7c5f80a4	time.Now: read time through the injected clock port
+selfhosted/console/signup.go	clockseam	7031cee9	time.Now: read time through the injected clock port
+selfhosted/console/signup.go	clockseam	a8e1e09a	time.Now: read time through the injected clock port
+selfhosted/console/signup.go	clockseam	e6606008	time.Now: read time through the injected clock port
+selfhosted/console/skills.go	clockseam	e72d1f2e	time.Now: read time through the injected clock port
+selfhosted/console/state.go	clockseam	1fdc50c4	time.Now: read time through the injected clock port
+selfhosted/console/state.go	clockseam	233be647	time.Now: read time through the injected clock port
+selfhosted/console/surfaces.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/surfaces.go	clockseam	e90cca94	time.Now: read time through the injected clock port
+selfhosted/console/surfaces.go	clockseam	fbf58fe4	time.Since: read time through the injected clock port
+selfhosted/console/users.go	clockseam	89b90448	time.Now: read time through the injected clock port
+selfhosted/peer/peer_test.go	noskipenv	0d23f4dd	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/secrets/hostkey/hostkey.go	clockseam	99467caf	time.Now: read time through the injected clock port
+selfhosted/selfhosted.go	envroot	e9df0020	os.Getenv: read configuration once in the composition root
+selfhosted/selfhosted.go	layout	de90c808	selfhosted imports app: only cmd/ and main packages import the composition root app/
+selfhosted/selfhosted_test.go	layout	de90c808	selfhosted imports app: only cmd/ and main packages import the composition root app/
+selfhosted/standalone/commands.go	clockseam	c3c92e5a	time.Now: read time through the injected clock port
+selfhosted/standalone/commands.go	envroot	777ae63a	os.Getenv: read configuration once in the composition root
+selfhosted/standalone/commands.go	envroot	974b57b8	os.Getenv: read configuration once in the composition root
+selfhosted/standalone/migrate_test.go	layout	de90c808	selfhosted/standalone imports app: only cmd/ and main packages import the composition root app/
+selfhosted/standalone/migrate_test.go	noskipenv	08b2f7aa	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/standalone/profile.go	layout	de90c808	selfhosted/standalone imports app: only cmd/ and main packages import the composition root app/
+selfhosted/standalone/standalone.go	layout	de90c808	selfhosted/standalone imports app: only cmd/ and main packages import the composition root app/
+selfhosted/store/sqlite/snapshot.go	clockseam	65cfb23e	time.Now: read time through the injected clock port
+selfhosted/store/sqlite/snapshot.go	clockseam	b0c95a48	time.Now: read time through the injected clock port
+selfhosted/store/sqlite/sqlite_test.go	noskipenv	d02d51db	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+selfhosted/store/sqlite/store.go	clockseam	17cdc918	time.Now: read time through the injected clock port
+selfhosted/surface/relay.go	clockseam	33b5a4d6	time.Since: read time through the injected clock port
+selfhosted/surface/relay.go	clockseam	9e7db61a	time.Now: read time through the injected clock port
+selfhosted/surface/surface.go	clockseam	643fe041	time.Until: read time through the injected clock port
+selfhosted/surface/telegram/telegram.go	errstring	c062bf8d	error matched by its message text: use a sentinel with errors.Is or errors.As
+server/lists.go	doccomment	0b47a375	exported Credentials has no doc comment
+server/lists.go	doccomment	140f8051	exported Roles has no doc comment
+server/lists.go	doccomment	52085bfa	exported Listings has no doc comment
+server/lists.go	doccomment	59483892	exported Pauses has no doc comment
+server/lists.go	doccomment	59af85f8	exported GroupMembers has no doc comment
+server/lists.go	doccomment	5e898511	exported Sources has no doc comment
+server/lists.go	doccomment	6310b348	exported ConnectorViews has no doc comment
+server/lists.go	doccomment	955d0128	exported ListingVersions has no doc comment
+server/lists.go	doccomment	a6db8997	exported AcceptResults has no doc comment
+server/lists.go	doccomment	b2769dd5	exported Bindings has no doc comment
+server/lists.go	doccomment	b8ccce61	exported Functions has no doc comment
+server/lists.go	doccomment	bc33b930	exported Grants has no doc comment
+server/lists.go	doccomment	c3b6b620	exported Offers has no doc comment
+server/lists.go	doccomment	c49414bd	exported Calls has no doc comment
+server/lists.go	doccomment	c8cfc576	exported Approvals has no doc comment
+server/lists.go	doccomment	dd5b1dc4	exported Overlays has no doc comment
+server/lists.go	doccomment	de1a0411	exported CatalogRules has no doc comment
+service/postgres_test.go	noskipenv	def36b58	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+source/bsr/bsr.go	clockseam	d53facb0	time.Now: read time through the injected clock port
+source/registry/registry.go	clockseam	d53facb0	time.Now: read time through the injected clock port
+source/skillcatalog/real_catalog_test.go	noskipenv	c77789d6	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+store/memory/snapshot.go	clockseam	e6da3a84	time.Now: read time through the injected clock port
+store/memory/tx.go	doccomment	aa6653f4	doc comment on unexported DueWork: delete it, the name and the test carry the intent
+store/postgres/postgres_test.go	noskipenv	d02d51db	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+store/postgres/postgres_test.go	noskipenv	d02d51db	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+store/postgres/snapshot.go	clockseam	9dfa529c	time.Now: read time through the injected clock port
+store/postgres/snapshot.go	clockseam	cdea9b3a	time.Now: read time through the injected clock port
+store/storetest/crosstenant.go	noskipenv	fe7c8533	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+store/storetest/restore.go	errstring	ad754642	error matched by its message text: use a sentinel with errors.Is or errors.As
+store/storetest/restore.go	errstring	ad754642	error matched by its message text: use a sentinel with errors.Is or errors.As
+store/storetest/restore.go	noskipenv	fe7c8533	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+store/storetest/suite.go	noskipenv	fe7c8533	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+store/storetest/suite.go	noskipenv	fe7c8533	silent test skip: fail instead, or guard the skip with testing.Short, a *_SKIP_* opt-out variable or runtime.GOOS
+telemetry/telemetry.go	clockseam	06a7718b	time.Now: read time through the injected clock port
+telemetry/telemetry.go	clockseam	7dc1c3d0	time.Since: read time through the injected clock port

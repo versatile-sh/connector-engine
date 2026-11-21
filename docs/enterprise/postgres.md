@@ -41,6 +41,8 @@ The engine applies its embedded migrations at start, serialised by an advisory l
 
 Stop every older instance before a new release starts. Migration `0003_canonical_grants` rewrites the grant rows once, and an older instance still writes and deletes them the old way.
 
+Migration `0004_permission_log` adds the tables of the access setting change log, `permission_head` and `permission_changes`, empty and under the same row-level security as the other tables.
+
 ## Tenants
 
 Each tenant has its own key-encryption key; removing a tenant destroys the key, so its sealed data cannot be opened again.

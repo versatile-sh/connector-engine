@@ -101,7 +101,7 @@ export function DashboardPage() {
         </EmptyState>
       ) : (
         <div aria-busy={summary.isPlaceholderData} className={`@container flex flex-col gap-6 transition-opacity duration-250 ${summary.isPlaceholderData ? "opacity-60" : ""}`}>
-          <Kpis summary={data} waiting={approvals.data?.length} connectors={connectors.data ? activeConnectors(connectors.data) : undefined} keys={keys.data ? liveKeys(keys.data.agents, Date.parse(data.at)) : undefined} />
+          <Kpis summary={data} scope={scope} waiting={approvals.data?.length} connectors={connectors.data ? activeConnectors(connectors.data) : undefined} keys={keys.data ? liveKeys(keys.data.agents, Date.parse(data.at)) : undefined} />
           <div className={COLUMNS}>
             <CallsChart summary={data} />
             <Ranking id="top-connectors" title={t("dashboard.topConnectors")} caption={t("dashboard.top.period")} rows={connectorRows} />

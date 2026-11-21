@@ -217,14 +217,22 @@ type TenantPurger interface {
 	PurgeTenant(ctx context.Context, tenant TenantID) (map[string]int, error)
 }
 
-// Snapshot is every row of a store in the store's own encoding, tagged with the kind of store that wrote it.
+// Snapshot is every row of a store in the store's own encoding, tagged with the kind of store and the schema version that wrote it; zero is an unversioned snapshot.
 type Snapshot struct {
 	Store  string                       `json:"store"`
+	Schema int                          `json:"schema,omitempty"`
 	Tables map[string][]json.RawMessage `json:"tables"`
 }
 
-// Snapshotter is the capability of a Store to copy every row in one consistent read and to replace every row with a Snapshot of its kind in one transaction.
+// Restored is what an applied restore holds: its rows per kind, how many kept rows name something it lacks, and the first of them.
+type Restored struct {
+	Counts       map[string]int `json:"counts"`
+	WarningCount int            `json:"warning_count"`
+	Warnings     []string       `json:"warnings,omitempty"`
+}
+
+// Snapshotter copies every row of a Store in one read and replaces them all with a checked Snapshot, recording who restored it.
 type Snapshotter interface {
 	Snapshot(ctx context.Context) (Snapshot, error)
-	Restore(ctx context.Context, s Snapshot) error
+	Restore(ctx context.Context, s Snapshot, by string) (Restored, error)
 }

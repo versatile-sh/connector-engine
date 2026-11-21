@@ -13,6 +13,9 @@ export const commonAccess = (choices: readonly { access: Access }[]): Access | u
   return first && choices.every((choice) => choice.access === first) ? first : undefined;
 };
 
+/** Whether a function's row says on still asks once a session: set on, with a class its review or its server declares destructive. */
+export const asksOnce = (fn: { capped?: boolean }, access: Access) => access === "on" && fn.capped === true;
+
 /** Whether a stored credential, written `kind:status`, is the one that works. */
 export const isActive = (credential: string) => credential.endsWith(":active");
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/versatile-sh/connector-engine/core/listing"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -108,10 +109,10 @@ func KindOf(readOnly, destructive bool) port.Class {
 	return port.ClassWrite
 }
 
-// Nature is what an installed function does: its reviewed class when it has one, else what its MCP hints say.
-func Nature(f port.Function) port.Class {
-	if f.ClassSource == port.ClassSourceReviewed && f.Class != port.ClassNone {
-		return f.Class
+// Nature is what an installed function does: its reviewed class in the pinned manifest m when it has one, else what its MCP hints say.
+func Nature(f port.Function, m port.Manifest) port.Class {
+	if class, source := listing.Base(f, m); source == port.ClassSourceReviewed {
+		return class
 	}
 	var d struct {
 		Annotations *mcp.ToolAnnotations `json:"annotations"`

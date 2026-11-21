@@ -10,6 +10,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -208,8 +209,12 @@ func (e *Engine) Snapshot(ctx context.Context) ([]byte, error) {
 	return e.sendWith(ctx, e.backupClient(), e.OperatorURL, e.Operator, http.MethodGet, "/v1/snapshot", nil, maxBackupBytes)
 }
 
-// Restore replaces the engine's rows and keys with a snapshot; the engine then stops so that it starts again on them.
+// Restore replaces the engine's rows and keys with a snapshot, recorded as restored by the context's actor or the system; the engine then stops.
 func (e *Engine) Restore(ctx context.Context, snapshot []byte) error {
-	_, err := e.sendWith(ctx, e.backupClient(), e.OperatorURL, e.Operator, http.MethodPut, "/v1/snapshot", snapshot, 1<<16)
+	path := "/v1/snapshot"
+	if person := actorOf(ctx); person != "" {
+		path += "?by=" + url.QueryEscape(person)
+	}
+	_, err := e.sendWith(ctx, e.backupClient(), e.OperatorURL, e.Operator, http.MethodPut, path, snapshot, 1<<16)
 	return err
 }

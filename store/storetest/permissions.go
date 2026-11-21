@@ -223,15 +223,23 @@ func restoreKeepsTheLivePermissionLog(e *env) {
 	live := &env{t: e.t, s: s}
 	live.appendChanges(scopeB, change("b-live", `1`))
 	live.appendChanges(scopeB, change("b-live2", `1`))
-	e.must(dst.Restore(ctx, snap))
+	_, err = dst.Restore(ctx, snap, "ops")
+	e.must(err)
 	e.same([]string{"taa1", "taa2", "taa3"}, keysOf(live.changes(scopeA, 0, 0, 0)))
 	e.same([]string{"tbb-live", "tbb-live2"}, keysOf(live.changes(scopeB, 0, 0, 0)))
 	e.same(int64(2), live.lockedRevision(scopeA))
 	e.same(int64(2), live.lockedRevision(scopeB))
 	e.same(int64(3), live.appendChanges(scopeA, change("a4", `4`)))
 
+	broken := cloneSnapshot(snap)
+	broken.Tables["permission_changes"] = append(broken.Tables["permission_changes"], broken.Tables["permission_changes"][0])
+	_, err = dst.Restore(ctx, broken, "ops")
+	e.code(err, port.CodeInvalidArgument)
+	e.same([]string{"taa1", "taa2", "taa3", "taa4"}, keysOf(live.changes(scopeA, 0, 0, 0)))
+
 	e.appendChanges(scopeA, change("a-new", `1`))
-	e.must(src.Restore(ctx, snap))
+	_, err = src.Restore(ctx, snap, "ops")
+	e.must(err)
 	e.same([]string{"taa1", "taa2", "taa3", "taa-new"}, keysOf(e.changes(scopeA, 0, 0, 0)))
 	e.same(int64(3), e.lockedRevision(scopeA))
 }

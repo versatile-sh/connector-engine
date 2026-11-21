@@ -19,7 +19,7 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/keychain"
 	"github.com/versatile-sh/connector-engine/selfhosted/cli/notify"
 	"github.com/versatile-sh/connector-engine/selfhosted/secrets/hostkey"
-	"github.com/versatile-sh/connector-engine/store/sqlite"
+	"github.com/versatile-sh/connector-engine/selfhosted/store/sqlite"
 )
 
 // PersonUnlockSocket is where the person profile's engine waits for the unlock key; unlock reads CN_UNLOCK_SOCKET first, and --socket overrides both.

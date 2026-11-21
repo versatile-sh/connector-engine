@@ -18,10 +18,10 @@ function Asked({ state }: { state: string | undefined }) {
   return <Tag title={key ? t(key) : undefined}>{t("activity.asked")}</Tag>;
 }
 
-type CallListProps = { calls: readonly ActivityCall[]; named: ReadonlyMap<string, Named>; onOpen(id: string): void };
+type CallListProps = { calls: readonly ActivityCall[]; named: ReadonlyMap<string, Named>; owners?: boolean; onOpen(id: string): void };
 
-/** The calls newest first, a new one sliding in at the top, one row each: the icon, the function or the skill with its class and approval, when, through which connector or file and from which app, then the outcome and the duration. */
-export function CallList({ calls, named, onOpen }: CallListProps) {
+/** The calls newest first, a new one sliding in at the top, one row each: the icon, the function or the skill with its class and approval, when, through which connector or file and from which app, then the outcome and the duration; with `owners`, whose call it was. */
+export function CallList({ calls, named, owners = false, onOpen }: CallListProps) {
   const t = useT();
   const locale = useLocale();
   const drawn = useKept(calls, (call) => call.id);
@@ -44,6 +44,7 @@ export function CallList({ calls, named, onOpen }: CallListProps) {
                   {call.skill ? <Tag>{t("activity.skill")}</Tag> : null}
                   {kind && !call.skill ? <KindLabel kind={kind} /> : null}
                   {call.approval ? <Asked state={call.approval_state} /> : null}
+                  {owners && call.owner ? <Tag>{call.owner.username || t("people.gone")}</Tag> : null}
                 </span>
                 <span className={`${CAPTION} mt-1 flex flex-wrap gap-x-2`}>
                   <time dateTime={call.at}>{when}</time>

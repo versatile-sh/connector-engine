@@ -1,4 +1,4 @@
-import type { Agent } from "../api";
+import type { Agent, RowOwner } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { InlineConfirm } from "../ui/InlineConfirm";
 import { rowMotion, type RowPhase } from "../ui/kept";
@@ -7,10 +7,10 @@ import { Tag } from "../ui/Tag";
 import { button } from "../ui/styles";
 import type { RevokeEvent, RevokeState } from "./revoke";
 
-type KeyRowProps = { entry: Agent; flow: RevokeState; error?: string; phase?: RowPhase; dispatch(event: RevokeEvent): void; onConfirm(): void };
+type KeyRowProps = { entry: Agent; owner?: RowOwner | undefined; flow: RevokeState; error?: string; phase?: RowPhase; dispatch(event: RevokeEvent): void; onConfirm(): void };
 
-/** One access key: its name and expiry, whether an app connected it through the browser sign-in (new until the owner has seen it), its mode on each connector, a visible Revoke, and in place of it the inline question that revokes the key for good. In a list narrower than 28rem the name takes its own line. */
-export function KeyRow({ entry, flow, error, phase, dispatch, onConfirm }: KeyRowProps) {
+/** One access key: its name and expiry, whether an app connected it through the browser sign-in (new until the owner has seen it), its owner when the list shows everyone's keys, its mode on each connector, a visible Revoke, and in place of it the inline question that revokes the key for good. In a list narrower than 28rem the name takes its own line. */
+export function KeyRow({ entry, owner, flow, error, phase, dispatch, onConfirm }: KeyRowProps) {
   const t = useT();
   const locale = useLocale();
   const expired = new Date(entry.expires_at) < new Date();
@@ -24,6 +24,7 @@ export function KeyRow({ entry, flow, error, phase, dispatch, onConfirm }: KeyRo
           {entry.name}
         </code>
         <span className="font-mono text-xs text-muted @max-md:ml-5.5 @max-md:min-w-0 @max-md:grow @max-md:basis-0">{t("keys.until", { date: new Date(entry.expires_at).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) })}</span>
+        {owner ? <Tag title={t("keys.owner")}>{owner.username || t("people.gone")}</Tag> : null}
         {expired ? <Tag tone="amber">{t("keys.expired")}</Tag> : null}
         {entry.signed_out_at ? <Tag tone="amber">{t("keys.signedOut")}</Tag> : null}
         {asking ? null : (

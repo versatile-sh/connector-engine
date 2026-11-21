@@ -9,7 +9,7 @@ Every function of every connector is **off**, **on** or **ask**, for each access
 | Choice | The AI app |
 |---|---|
 | Off | does not see the function; a call answers like an unknown tool |
-| On | calls it directly |
+| On | calls it directly, unless a review or its server declares it destructive (see [function classes](#function-classes)) |
 | Ask | the call waits until you decide; see [approvals](approvals.md) |
 
 A denied function looks exactly like one that does not exist, so an app cannot probe what is there.
@@ -18,11 +18,23 @@ A denied function looks exactly like one that does not exist, so an app cannot p
 
 | Rule | Effect |
 |---|---|
-| destructive functions | "on" becomes "ask once" (or "ask"): you approve it once per session |
+| destructive functions | "on" becomes "ask once" (or "ask"): you approve it once per session; the row says "asks once a session" |
 | exposure check | a key that holds private data, reads untrusted content and has an outbound path is forced to "ask" |
 | catalog ceiling | a listing's visibility caps what any key gets |
 
 The full evaluation order is in [ARCHITECTURE.md](../../ARCHITECTURE.md#grants).
+
+## Function classes
+
+The engine treats each function as read, write or destructive.
+
+| Where the class comes from | Turning it on or asking |
+|---|---|
+| a review of the listing at the function's hash | keeps the reviewed class |
+| the server declares `destructiveHint: true` | keeps destructive: on asks once a session, and the row says "asks once a session" |
+| neither | sets read when the server's `readOnlyHint` says so, else write |
+
+- On the first start after this version, every class below a reviewed or declared class is raised once, including one set through the engine API; lower it again through the API if that was intended. Each raise drops the session answers of that function and is listed under **Changes** on the People page. A connector the console cannot read then is skipped with a warning in its log, and later starts raise nothing.
 
 ## Per-key profiles
 

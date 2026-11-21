@@ -166,18 +166,10 @@ func (s *Service) functionOf(c port.Connector, m port.Manifest, def port.RawDefi
 }
 
 func classOf(f port.Function, m port.Manifest) (port.Class, port.ClassSource) {
-	if port.ItemKind(f.Name) != "" {
-		return port.ClassRead, port.ClassSourceItem
-	}
-	if f.ClassSource == port.ClassSourceAdmin && f.Class != port.ClassNone {
+	if port.ItemKind(f.Name) == "" && f.ClassSource == port.ClassSourceAdmin && f.Class != port.ClassNone {
 		return f.Class, port.ClassSourceAdmin
 	}
-	in := listing.ClassInput{Hash: f.DefinitionHash, Review: m.Review, Annotations: viewOf(f.Definition).Annotations}
-	if i := slices.IndexFunc(m.Functions, func(d port.FunctionDef) bool { return d.Name == f.Name }); i >= 0 {
-		in.ReviewedClass = m.Functions[i].Class
-	}
-	class, source, _ := listing.Class(in)
-	return class, source
+	return listing.Base(f, m)
 }
 
 func (s *Service) captureFunctions(ctx context.Context, c port.Connector, m port.Manifest) ([]port.Function, port.ListMeta, error) {

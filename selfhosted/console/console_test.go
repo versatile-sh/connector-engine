@@ -295,7 +295,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 			t.Fatalf("access read back: %v, want %v", got, want)
 		}
 	}
-	if classes["search"] != port.ClassRead || classes["create"] != port.ClassWrite || classes["purge"] != port.ClassWrite {
+	if classes["search"] != port.ClassRead || classes["create"] != port.ClassWrite || classes["purge"] != port.ClassDestructive {
 		t.Fatalf("classes by nature: %v", classes)
 	}
 
@@ -360,12 +360,15 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 
 	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/purge", map[string]string{"access": "on"}, nil)
-	for _, n := range []string{"search", "create", "purge"} {
+	for _, n := range []string{"search", "create"} {
 		before := up.count(n)
 		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{"round": 2}})
 		if err != nil || res.IsError || up.count(n) != before+1 {
 			t.Fatalf("%s on, with a bound agent: %v %v", n, res, err)
 		}
+	}
+	if res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + "purge", Arguments: map[string]any{"round": 2}}); err != nil || up.count("purge") != 1 {
+		t.Fatalf("a declared destructive function on ran without asking: %v %v", res, err)
 	}
 
 	raw, err := os.ReadFile("../../source/files/testdata/notes.yaml")

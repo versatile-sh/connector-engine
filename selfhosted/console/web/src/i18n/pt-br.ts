@@ -433,7 +433,6 @@ export const ptBR: Record<MessageKey, string> = {
   "activity.to": "Até",
   "activity.filters": "Filtros",
   "activity.connector": "Conector",
-  "activity.connector.clear": "Mostrar todos os conectores, não só {name}",
   "activity.search": "Buscar uma função ou um conector",
   "activity.outcome": "Resultado",
   "activity.outcome.all": "Qualquer resultado",

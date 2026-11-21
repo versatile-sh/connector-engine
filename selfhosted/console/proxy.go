@@ -16,6 +16,8 @@ type tokenClaims struct {
 	IssuedAt   float64 `json:"iat"`
 }
 
+// bearerClaims reads a bearer token's claims without checking its signature: only to refuse a revoked key, which the engine would reject anyway,
+// and to key per-app settings. It never labels activity; a label needs a request the engine accepted.
 func bearerClaims(header string) (tokenClaims, bool) {
 	scheme, raw, found := strings.Cut(header, " ")
 	parts := strings.Split(strings.TrimSpace(raw), ".")

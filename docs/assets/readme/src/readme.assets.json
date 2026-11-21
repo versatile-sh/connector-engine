@@ -1,0 +1,30 @@
+{
+  "name": "connector-engine",
+  "pitch": ["Every MCP connector, ", "one gateway you control", "."],
+  "sub": "You decide what each AI app may run, and see every call it makes.",
+  "badge": "open source  ·  GPL-3.0-or-later",
+  "tags": ["MCP gateway", "Connector catalog", "Permissions & approvals", "Self-hosted", "Headless engine"],
+  "heroLabel": "connector-engine: every MCP connector, one gateway you control. You decide what each AI app may run, and see every call it makes.",
+  "sections": [
+    ["install", "start here", "Install ", "in one line"],
+    ["use", "start here", "Use it with ", "any AI app"],
+    ["how-it-works", "overview", "How it ", "works"],
+    ["features", "overview", "What you ", "get"],
+    ["docs", "read", "Read the ", "docs"],
+    ["other-ways-to-deploy", "start here", "Other ways ", "to deploy"],
+    ["license", "project", "", "License"]
+  ],
+  "diagrams": [
+    {
+      "slug": "flow",
+      "label": "How a call flows. AI apps such as Claude Code, Cursor and Codex call connector-engine over MCP. The gateway checks each function's permission: off hides it, on runs it with the stored credential, ask waits for your approval in the self-hosted console. Allowed calls reach remote and local MCP servers, REST and gRPC connectors. The gateway also keeps approvals, activity and skills.",
+      "cards": [
+        { "title": "AI apps", "sub": "OAuth 2.1 sign-in", "rows": ["Claude Code", "Cursor", "Codex", "VS Code", ["any MCP client", "muted"]] },
+        { "title": "connector-engine", "sub": "/mcp, per function", "weight": 1.4, "rows": [["off: hidden", "muted"], "on: runs with the key", ["ask: waits for you", "accent"], ["approvals, activity, skills", "muted"]] },
+        { "title": "Connectors", "sub": "pinned by hash", "rows": ["remote MCP", "local MCP", "REST (OpenAPI)", "gRPC (reflection)", ["import by URL", "muted"]] }
+      ],
+      "arrows": [{ "label": "MCP" }, { "label": "allowed", "accent": true }],
+      "footer": { "title": "Self-hosted console", "sub": "permissions, approvals", "under": 1, "label": "ask" }
+    }
+  ]
+}

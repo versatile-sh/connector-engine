@@ -1,19 +1,20 @@
 import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
-import type { SessionUser } from "../api";
+import type { Role, SessionUser } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
 import { navigate } from "../router";
 import { Icon } from "../ui/Icon";
 import { place, within } from "../ui/popup";
 import { PRESS, TOUCH } from "../ui/styles";
+import { Tag } from "../ui/Tag";
 import { initialOf } from "./shell";
 
-type UserMenuProps = { user: SessionUser | undefined; rail: boolean; signingOut: boolean; onSignOut(): void; onNavigate(): void };
+type UserMenuProps = { user: SessionUser | undefined; role: Role | undefined; rail: boolean; signingOut: boolean; onSignOut(): void; onNavigate(): void };
 
 const ITEM = `relative flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm text-muted hover:bg-paper/10 hover:text-paper focus-visible:bg-paper/10 focus-visible:text-paper disabled:opacity-50 ${TOUCH} ${PRESS}`;
 
 /** The signed-in user at the foot of the sidebar: a round mark with their name and role, opening a small panel with Account and Sign out, and, in the rail, the language too. It closes on Escape, giving focus back to its button, and on a press or focus outside it. */
-export function UserMenu({ user, rail, signingOut, onSignOut, onNavigate }: UserMenuProps) {
+export function UserMenu({ user, role, rail, signingOut, onSignOut, onNavigate }: UserMenuProps) {
   const t = useT();
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -79,7 +80,7 @@ export function UserMenu({ user, rail, signingOut, onSignOut, onNavigate }: User
           <span className="truncate text-sm leading-tight text-paper" translate="no">
             {name}
           </span>
-          {user ? <span className="truncate font-mono text-xs leading-tight text-muted">{t(`role.${user.role}`)}</span> : null}
+          {role ? <Tag title={t("shell.role")} className="leading-tight">{t(`role.${role}`)}</Tag> : null}
         </span>
         <Icon name="chevron" className="size-4 text-muted transition-[rotate,opacity] duration-250 ease-(--ease-glide) group-aria-expanded/user:rotate-180 group-data-rail/side:hidden" />
       </button>
@@ -101,7 +102,7 @@ export function UserMenu({ user, rail, signingOut, onSignOut, onNavigate }: User
             <p className="truncate text-sm text-paper" translate="no">
               {name}
             </p>
-            {user ? <p className="font-mono text-xs text-muted">{t(`role.${user.role}`)}</p> : null}
+            {role ? <Tag title={t("shell.role")}>{t(`role.${role}`)}</Tag> : null}
             <LanguageSwitch className="mt-1.5 w-full" />
           </div>
         ) : null}

@@ -4,6 +4,8 @@ import { Footer } from "./Footer";
 import type { MessageKey } from "./i18n";
 import { useT } from "./i18n/I18nProvider";
 import { signOut } from "./mutations";
+import { useViewer } from "./people/useViewer";
+import { roleBadgeOf } from "./people/viewer";
 import { approvalsQuery, sessionQuery } from "./queries";
 import { navigate, useLocation } from "./router";
 import { Sidebar } from "./shell/Sidebar";
@@ -43,6 +45,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
   const { path, query } = useLocation();
   const waiting = useQuery(approvalsQuery).data?.length ?? 0;
   const user = useQuery(sessionQuery).data?.user;
+  const role = roleBadgeOf(useViewer());
   const logout = useMutation(signOut);
   const shell = useShell(`${path}?${query}`);
   const sidebarId = useId();
@@ -95,6 +98,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
         section={section}
         waiting={waiting}
         user={user}
+        role={role}
         rail={shell.rail}
         modal={shell.drawer}
         signingOut={logout.isPending}

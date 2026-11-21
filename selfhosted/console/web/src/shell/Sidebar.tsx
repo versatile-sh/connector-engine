@@ -1,5 +1,5 @@
 import type { Ref } from "react";
-import type { SessionUser } from "../api";
+import type { Role, SessionUser } from "../api";
 import { Logotype, Mark } from "../Brand";
 import { useT } from "../i18n/I18nProvider";
 import { LanguageSwitch } from "../LanguageSwitch";
@@ -16,6 +16,7 @@ type SidebarProps = {
   section: Section;
   waiting: number;
   user: SessionUser | undefined;
+  role: Role | undefined;
   rail: boolean;
   modal: boolean;
   signingOut: boolean;
@@ -31,7 +32,7 @@ const FRAME =
 const HANDLE = `absolute top-5 -right-3 z-10 hidden size-6 place-items-center rounded-full border border-line-strong bg-ink-raised text-muted hover:text-paper lg:grid ${TOUCH} ${PRESS}`;
 
 /** The console's left sidebar, on the page's own ground: the logotype with its collapse handle, the links, and at the foot the user's menu and the language. On a wide screen it stays beside the page and can shrink to an icon rail; on a narrow one it is a drawer, a modal dialog that traps Tab, closes on Escape and gives focus back to the button that opened it. */
-export function Sidebar({ id, ref, section, waiting, user, rail, modal, signingOut, onToggleRail, onNavigate, onClose, onSignOut }: SidebarProps) {
+export function Sidebar({ id, ref, section, waiting, user, role, rail, modal, signingOut, onToggleRail, onNavigate, onClose, onSignOut }: SidebarProps) {
   const t = useT();
   return (
     <div
@@ -85,7 +86,7 @@ export function Sidebar({ id, ref, section, waiting, user, rail, modal, signingO
       </button>
       <SideNav section={section} waiting={waiting} rail={rail} onNavigate={onNavigate} />
       <div className="shrink-0 border-t border-line px-3 py-3">
-        <UserMenu user={user} rail={rail} signingOut={signingOut} onSignOut={onSignOut} onNavigate={onNavigate} />
+        <UserMenu user={user} role={role} rail={rail} signingOut={signingOut} onSignOut={onSignOut} onNavigate={onNavigate} />
         <div className="mt-2 group-data-rail/side:hidden">
           <LanguageSwitch className="w-full" />
         </div>

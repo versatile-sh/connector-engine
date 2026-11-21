@@ -103,7 +103,7 @@ func (c *Console) callsIn(r *http.Request, body []byte) *inflight {
 		if !captured || len(m.ID) == 0 || json.Unmarshal(m.Params, &p) != nil {
 			continue
 		}
-		cp := &Capture{ID: newCaptureID(now), At: now, Agent: claims.Agent, Tool: firstOf(p.Name, p.URI), Item: item, CallPayload: CallPayload{Session: claims.Session, MCPSession: r.Header.Get("Mcp-Session-Id"), RPCID: m.ID}}
+		cp := &Capture{ID: newCaptureID(now), At: now, Agent: claims.Agent, Person: claims.OnBehalfOf, Tool: firstOf(p.Name, p.URI), Item: item, CallPayload: CallPayload{Session: claims.Session, MCPSession: r.Header.Get("Mcp-Session-Id"), RPCID: m.ID}}
 		switch {
 		case item != "":
 		case p.Name == port.ToolFind, p.Name == port.ToolApprovalCancel, p.Name == port.ToolSkillList:

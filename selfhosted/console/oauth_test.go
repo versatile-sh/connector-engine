@@ -279,24 +279,26 @@ func TestAnMCPClientConnectsWithTheURLOnlyThroughOAuth(t *testing.T) {
 	if names, err := o.listTools(access); err != nil || !slices.Contains(names, o.alias+"__search") {
 		t.Fatalf("tools/list with the OAuth token: %v %v", names, err)
 	}
-	var agents struct{ Agents []console.Agent }
+	var agents struct{ Agents []console.AgentView }
 	o.b.ok("GET", "/api/agents", nil, &agents)
-	mine := slices.IndexFunc(agents.Agents, func(a console.Agent) bool { return a.ClientID == clientID && strings.HasPrefix(a.Name, "claude-code") })
+	mine := slices.IndexFunc(agents.Agents, func(a console.AgentView) bool {
+		return a.ClientID == clientID && strings.HasPrefix(a.Name, "claude-code")
+	})
 	if mine < 0 {
 		t.Fatalf("the approved app is not an access key: %+v", agents.Agents)
 	}
 	key := agents.Agents[mine].Name
 	signedOut := func() bool {
-		var list struct{ Agents []console.Agent }
+		var list struct{ Agents []console.AgentView }
 		o.b.ok("GET", "/api/agents", nil, &list)
-		i := slices.IndexFunc(list.Agents, func(a console.Agent) bool { return a.Name == key })
+		i := slices.IndexFunc(list.Agents, func(a console.AgentView) bool { return a.Name == key })
 		return i >= 0 && !list.Agents[i].SignedOutAt.IsZero()
 	}
 	if signedOut() {
 		t.Fatal("a connected app is listed as signed out")
 	}
 
-	near := agents.Agents[mine]
+	near, _ := o.c.State.Agent(key)
 	near.ExpiresAt = time.Now().Add(time.Hour).UTC().Truncate(time.Second)
 	if err := o.c.State.PutAgent(near); err != nil {
 		t.Fatal(err)

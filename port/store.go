@@ -121,6 +121,7 @@ type Tx interface {
 
 	GetGrant(id GrantID) (Grant, error)
 	ListGrants(f GrantFilter) ([]Grant, error)
+	// PutGrant writes every field but Uses: a new row starts at zero and an existing row keeps its count, which only ReserveGrants and a restore change.
 	PutGrant(g Grant) error
 	DeleteGrant(id GrantID) error
 	ReserveGrants(ids []GrantID) error

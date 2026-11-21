@@ -75,6 +75,8 @@ export const ptBR: Record<MessageKey, string> = {
   "auth.username": "Usuário",
   "auth.password": "Senha",
   "auth.passwordHint": "10 caracteres ou mais.",
+  "auth.setupToken": "Token de configuração",
+  "auth.setupTokenHint": "O segredo definido em CONSOLE_SETUP_TOKEN no servidor.",
   "auth.setup.submit": "Criar conta",
   "auth.login.submit": "Entrar",
   "auth.working": "Um instante…",

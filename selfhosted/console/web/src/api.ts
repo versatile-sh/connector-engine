@@ -43,6 +43,7 @@ export type Session = {
   signed_in: boolean;
   csrf?: string;
   mcp_url: string;
+  setup_token_required?: boolean;
   onboarding_dismissed?: boolean;
   key_protection?: KeyProtection;
   user?: SessionUser;
@@ -295,6 +296,12 @@ export type PruneResult = { count: number; deleted: boolean };
 export type ApiError = { status: number; message: string; code?: string | undefined };
 
 let csrfToken = "";
+let setupToken = "";
+
+/** Sets the setup token the first-run requests carry as `X-Setup-Token`. */
+export const setSetupToken = (token: string) => {
+  setupToken = token;
+};
 
 /** Sets the CSRF token every mutating request carries. */
 export const setCsrf = (token: string | undefined) => {
@@ -320,6 +327,7 @@ async function send(method: string, path: string, body?: unknown): Promise<Respo
   const form = body instanceof FormData;
   if (body !== undefined && !form) headers["Content-Type"] = "application/json";
   if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+  if (setupToken) headers["X-Setup-Token"] = setupToken;
   const response = await fetch(path, {
     method,
     headers,

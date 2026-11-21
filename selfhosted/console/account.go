@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"net/http"
 	"strings"
@@ -26,6 +27,9 @@ func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 func (c *Console) session(w http.ResponseWriter, r *http.Request) {
 	u, csrf, ok := c.Sessions.Current(r)
 	out := map[string]any{"owner_exists": c.State.HasOwner(), "signed_in": ok, "mcp_url": c.MCPURL}
+	if c.SetupToken != "" && !c.State.HasOwner() {
+		out["setup_token_required"] = true
+	}
 	if ok {
 		out["csrf"] = csrf
 		out["user"] = map[string]any{"person": u.Person, "username": u.Username, "role": u.Role}
@@ -43,6 +47,10 @@ type credentials struct {
 }
 
 func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
+	if !c.setupTokenOK(r) {
+		writeJSON(w, http.StatusForbidden, apiError{Error: "the setup token is missing or wrong", Code: "setup_token"})
+		return
+	}
 	var in credentials
 	if !readJSON(w, r, &in) {
 		return
@@ -59,6 +67,14 @@ func (c *Console) setup(w http.ResponseWriter, r *http.Request) {
 		}
 		c.signIn(w, http.StatusCreated, u.Person)
 	}
+}
+
+// setupTokenOK reports whether r carries the setup token, or none is configured or an Owner exists already.
+func (c *Console) setupTokenOK(r *http.Request) bool {
+	if c.SetupToken == "" || c.State.HasOwner() {
+		return true
+	}
+	return subtle.ConstantTimeCompare([]byte(c.SetupToken), []byte(r.Header.Get("X-Setup-Token"))) == 1
 }
 
 func (c *Console) signIn(w http.ResponseWriter, status int, person string) {

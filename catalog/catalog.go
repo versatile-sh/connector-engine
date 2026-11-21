@@ -61,6 +61,10 @@ var Published = []Type{
 	{Number: 38, Name: "connector.tenant.removed", Payload: TenantRemoved{}},
 	{Number: 39, Name: "connector.overlay.changed", Payload: OverlayChanged{}},
 	{Number: 40, Name: "connector.overlay.suggested", Payload: OverlaySuggested{}},
+	{Number: 41, Name: "connector.function.class_changed", Payload: FunctionClassChanged{}},
+	{Number: 42, Name: "connector.function.state_changed", Payload: FunctionStateChanged{}},
+	{Number: 43, Name: "connector.function.projection_changed", Payload: FunctionProjectionChanged{}},
+	{Number: 44, Name: "connector.connector.instructions_accepted", Payload: InstructionsAccepted{}},
 }
 
 // Consumed are the three outside facts; a recipe maps a producer's own event to one of them through the inbox.

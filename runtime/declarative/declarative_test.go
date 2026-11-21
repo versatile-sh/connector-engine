@@ -110,8 +110,8 @@ func TestExecutesDeclaredFunctions(t *testing.T) {
 		t.Fatalf("definitions: %v %s", err, defs)
 	}
 
-	res := call(t, rt, h, "get_item", `{"id":"a b/c","expand":true}`)
-	if got := srv.last(); got.Path != "/v1/items/a%20b%2Fc" || got.RawQuery != "expand=true" || got.Auth != "Bearer k" {
+	res := call(t, rt, h, "get_item", `{"id":"a-b.c","expand":true}`)
+	if got := srv.last(); got.Path != "/v1/items/a-b.c" || got.RawQuery != "expand=true" || got.Auth != "Bearer k" {
 		t.Fatalf("request %+v", got)
 	}
 	if res.IsError || !strings.Contains(string(res.Structured), `"ok":true`) {

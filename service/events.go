@@ -40,5 +40,9 @@ const (
 	evTenantRemoved       = "connector.tenant.removed"
 	evOverlayChanged      = "connector.overlay.changed"
 	evOverlaySuggested    = "connector.overlay.suggested"
+	evFunctionClass       = "connector.function.class_changed"
+	evFunctionState       = "connector.function.state_changed"
+	evFunctionProjection  = "connector.function.projection_changed"
+	evInstructionsAccept  = "connector.connector.instructions_accepted"
 	evExposureWarning     = "connector.agent.exposure_warning"
 )

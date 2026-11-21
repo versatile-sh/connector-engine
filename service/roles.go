@@ -97,7 +97,12 @@ func (s *Service) PutGroupMember(ctx context.Context, p port.Principal, m port.G
 	if err := port.CheckIDs("person", string(m.Person), "group", string(m.Group)); err != nil {
 		return m, err
 	}
-	return m, s.write(ctx, scope, "PutGroupMember", func(tx port.Tx) error { return tx.PutMember(m) })
+	return m, s.write(ctx, scope, "PutGroupMember", func(tx port.Tx) error {
+		if err := tx.PutMember(m); err != nil {
+			return err
+		}
+		return tx.Audit(port.AuditRow{At: s.now(), Tenant: m.Tenant, Actor: actor(p), Action: "group.put", Subject: string(m.Person), Detail: map[string]any{"group": m.Group}})
+	})
 }
 
 // DeleteGroupMember removes a person from a group of the caller's tenant.
@@ -107,7 +112,12 @@ func (s *Service) DeleteGroupMember(ctx context.Context, p port.Principal, m por
 	if err != nil || m.Tenant == port.Installation {
 		return orRefused(err)
 	}
-	return s.write(ctx, scope, "DeleteGroupMember", func(tx port.Tx) error { return tx.DeleteMember(m) })
+	return s.write(ctx, scope, "DeleteGroupMember", func(tx port.Tx) error {
+		if err := tx.DeleteMember(m); err != nil {
+			return err
+		}
+		return tx.Audit(port.AuditRow{At: s.now(), Tenant: m.Tenant, Actor: actor(p), Action: "group.delete", Subject: string(m.Person), Detail: map[string]any{"group": m.Group}})
+	})
 }
 
 // ListGroupMembers returns the memberships of the caller's tenant.

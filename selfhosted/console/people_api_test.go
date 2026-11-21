@@ -228,12 +228,18 @@ func TestAResetLinkFollowsTheRoleLadderAndASpentOneEndsTheTargetsSessions(t *tes
 		if facts.Purpose != console.PurposeReset || facts.Username != "bob" || facts.InvitedBy != "ann" {
 			t.Fatalf("facts %+v", facts)
 		}
+		if err := r.c.State.PutAgent(console.Agent{Name: "bobkey", Owner: memberP, ExpiresAt: time.Now().Add(time.Hour)}); err != nil {
+			t.Fatal(err)
+		}
 		bobBefore, _ := r.signIn("bob", "a brand new password")
 		annOther, _ := r.signIn("ann", "a brand new password")
 		var out struct{ CSRF string }
 		stranger.ok("POST", "/api/invite/accept", map[string]string{"token": second.token(t), "username": "ignored", "password": "bob's new long password"}, &out)
 		if isSignedIn(bobBefore) {
 			t.Error("the target's older session survived the reset")
+		}
+		if a, ok := r.c.State.Agent("bobkey"); !ok || a.Owner != memberP {
+			t.Errorf("the reset took the target's key: %+v %v", a, ok)
 		}
 		if !isSignedIn(annOther) || !isSignedIn(owner) {
 			t.Error("another user's session ended with the reset")

@@ -791,6 +791,7 @@ export const en = {
   "link.gone.action": "Go to sign-in",
   "approvals.waitingFor": "waiting for {name}",
   "approvals.cancel": "Cancel this call",
+  "approvals.open": "Open the call",
   "approvals.decidesAlone": "{name} decides: it uses the own sign-in of {name}.",
   "keys.owner": "Owner of the key",
   "activity.person": "Person",

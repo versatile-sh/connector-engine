@@ -50,11 +50,16 @@ function Held({ approval, view, owner, connector, skill, deciding, cancelling, p
             <span title={new Date(approval.expires_at).toLocaleString(locale)}>{t("approvals.expires", { when: fromNow(approval.expires_at, locale) })}</span>
           </p>
         </div>
-        <div className={view.cancel || view.decidesAlone ? "flex min-w-0 flex-col gap-2 @3xl:max-w-md @3xl:items-end" : "min-w-0 @3xl:max-w-md"}>
+        <div className={view.cancel || view.decidesAlone || view.open ? "flex min-w-0 flex-col gap-2 @3xl:max-w-md @3xl:items-end" : "min-w-0 @3xl:max-w-md"}>
           {view.decide.length > 0 ? <DecisionButtons choices={view.decide} deciding={deciding} onChoose={onDecide} /> : null}
           {view.cancel ? (
             <button type="button" disabled={cancelling || deciding !== undefined} className={`${button({ variant: "secondary", size: "sm" })} self-start @3xl:self-end ${cancelling ? "pulse" : ""}`} onClick={onCancel}>
               {t("approvals.cancel")}
+            </button>
+          ) : null}
+          {view.open ? (
+            <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => navigate(`/approve/${encodeURIComponent(approval.id)}`)}>
+              {t("approvals.open")}
             </button>
           ) : null}
           {view.decidesAlone ? <p className={`${CAPTION} max-w-xs text-pretty`}>{t("approvals.decidesAlone", { name: view.decidesAlone })}</p> : null}

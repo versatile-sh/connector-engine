@@ -205,6 +205,7 @@ export type Approval = {
   expires_at: string;
   mode?: string;
   owner?: RowOwner;
+  on_behalf_of?: string;
   choices?: string[];
 };
 

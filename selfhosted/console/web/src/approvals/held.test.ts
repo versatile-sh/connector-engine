@@ -48,8 +48,12 @@ describe("heldViewOf", () => {
     });
 
     test("offers nothing on someone else's call", () => {
-      assert.deepEqual(heldViewOf({ ...APPROVAL, choices: undefined }, viewerOf(TEAM_MEMBER), undefined), { waitingFor: "alice", decide: [], cancel: false, decidesAlone: undefined });
+      assert.deepEqual(heldViewOf({ ...APPROVAL, choices: undefined }, viewerOf(TEAM_MEMBER), undefined), { waitingFor: "alice", decide: [], cancel: false, decidesAlone: undefined, open: true });
     });
+  });
+
+  test("reads the owner from on_behalf_of without one", () => {
+    assert.equal(heldViewOf({ ...APPROVAL, owner: undefined, on_behalf_of: "p-bob" }, owner, "shared").waitingFor, "p-bob");
   });
 
   test("names a removed owner by their id", () => {

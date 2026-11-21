@@ -793,6 +793,7 @@ export const ptBR: Record<MessageKey, string> = {
   "link.gone.action": "Ir para o login",
   "approvals.waitingFor": "esperando {name}",
   "approvals.cancel": "Cancelar esta chamada",
+  "approvals.open": "Abrir a chamada",
   "approvals.decidesAlone": "{name} decide: ela usa o login próprio de {name}.",
   "keys.owner": "Dono da chave",
   "activity.person": "Pessoa",

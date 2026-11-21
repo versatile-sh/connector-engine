@@ -793,6 +793,7 @@ export const es: Record<MessageKey, string> = {
   "link.gone.action": "Ir al inicio de sesión",
   "approvals.waitingFor": "esperando a {name}",
   "approvals.cancel": "Cancelar esta llamada",
+  "approvals.open": "Abrir la llamada",
   "approvals.decidesAlone": "{name} decide: usa el inicio de sesión propio de {name}.",
   "keys.owner": "Propietario de la clave",
   "activity.person": "Persona",

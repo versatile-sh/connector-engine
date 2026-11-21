@@ -169,8 +169,34 @@ func TestMigrationOverTheSocketKeepsEveryRecordAndRunsAgain(t *testing.T) {
 	if got, err := again.Open(ctx, "ta", sealed); err != nil || string(got) != "secret" {
 		t.Fatalf("after restart: %q %v", got, err)
 	}
-	if r, err := send(t, socket, hostkey.OpRevert, ""); err != nil || r.Protection != "plaintext" {
+	if r, err := send(t, socket, hostkey.OpRevert, ""); err == nil && r.Error == "" {
+		t.Fatalf("a keyless revert unwrapped the root key: %+v", r)
+	}
+	if again.Form() != local.Wrapped {
+		t.Fatalf("a keyless revert changed the form to %s", again.Form())
+	}
+	if r, err := send(t, socket, hostkey.OpRevert, key); err != nil || r.Protection != "plaintext" {
 		t.Fatalf("revert: %+v %v", r, err)
+	}
+}
+
+func TestListenTightensALooseDirectoryAndOpensTheSocketAt0600(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "run")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	lis, err := hostkey.Listen(filepath.Join(dir, "s"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lis.Close()
+	di, _ := os.Stat(dir)
+	si, _ := os.Stat(filepath.Join(dir, "s"))
+	if di.Mode().Perm() != 0o700 || si.Mode().Perm() != 0o600 {
+		t.Fatalf("directory %v, socket %v", di.Mode().Perm(), si.Mode().Perm())
 	}
 }
 

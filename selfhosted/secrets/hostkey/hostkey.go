@@ -16,6 +16,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/secrets/local"
+	"github.com/versatile-sh/connector-engine/selfhosted/peer"
 )
 
 // Op names a request on the unlock socket.
@@ -33,7 +34,7 @@ const (
 // Locked is the protection reported before the store is open.
 const Locked = "locked"
 
-// Request is one request on the unlock socket; Key is the hex unlock key of unlock and migrate.
+// Request is one request on the unlock socket; Key is the hex unlock key of unlock, migrate and revert.
 type Request struct {
 	Op  Op     `json:"op"`
 	Key string `json:"key,omitempty"`
@@ -82,21 +83,31 @@ func Open(ctx context.Context, dir, socket string, log *slog.Logger) (*Store, er
 	}
 }
 
-// Listen opens the unix socket at path with mode 0600 in a 0700 directory, replacing a stale socket left by a crash.
+// Listen opens the unix socket at path in a directory made 0700 before the socket exists, replacing a stale socket left by a crash, and serves only the running user or root.
 func Listen(path string) (net.Listener, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
+	}
+	if info, err := os.Stat(dir); err != nil {
+		return nil, err
+	} else if info.Mode().Perm()&0o077 != 0 {
+		if err := os.Chmod(dir, 0o700); err != nil {
+			return nil, fmt.Errorf("the socket directory %s is open to other users and cannot be tightened: %w", dir, err)
+		}
 	}
 	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSocket != 0 {
 		_ = os.Remove(path)
 	}
 	lis, err := net.Listen("unix", path)
-	if err == nil {
-		if err = os.Chmod(path, 0o600); err != nil {
-			lis.Close()
-		}
+	if err != nil {
+		return nil, err
 	}
-	return lis, err
+	if err = os.Chmod(path, 0o600); err != nil {
+		lis.Close()
+		return nil, err
+	}
+	return peer.Only(lis, os.Geteuid()), nil
 }
 
 // Close stops the unlock socket, if the store has one.
@@ -141,7 +152,7 @@ func (s *Store) handle(req Request) Reply {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var key []byte
-	if req.Op == OpUnlock || req.Op == OpMigrate {
+	if req.Op == OpUnlock || req.Op == OpMigrate || req.Op == OpRevert && s.Store != nil && s.Form() == local.Wrapped {
 		var err error
 		if key, err = local.ParseUnlockKey(req.Key); err != nil {
 			return s.reply(err)
@@ -158,6 +169,9 @@ func (s *Store) handle(req Request) Reply {
 	case OpMigrate:
 		return s.reply(s.Migrate(key))
 	case OpRevert:
+		if s.Form() == local.Wrapped && !s.WrappedBy(key) {
+			return s.reply(errors.New("this is not the unlock key the root key is wrapped with"))
+		}
 		return s.reply(s.Revert())
 	case OpPlaintext, OpStatus:
 	default:

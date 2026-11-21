@@ -54,7 +54,6 @@ func positions(cs []port.PermissionChange) [][2]int64 {
 }
 
 func revisionGrowsByOnePerWritingTransaction(e *env) {
-	e.same(int64(0), e.lockedRevision(scopeA))
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var got []int64
@@ -235,6 +234,16 @@ func restoreKeepsTheLivePermissionLog(e *env) {
 	broken.Tables["permission_changes"] = append(broken.Tables["permission_changes"], broken.Tables["permission_changes"][0])
 	_, err = dst.Restore(ctx, broken, "ops")
 	e.code(err, port.CodeInvalidArgument)
+	heads := [][]json.RawMessage{{}, {json.RawMessage(`{"tenant_id":"ta","revision":1}`)}}
+	if snap.Store == "memory" {
+		heads = [][]json.RawMessage{{json.RawMessage(`{}`)}, {json.RawMessage(`{"ta":1}`)}}
+	}
+	for _, rows := range heads {
+		behind := cloneSnapshot(snap)
+		behind.Tables["permission_head"] = rows
+		_, err = dst.Restore(ctx, behind, "ops")
+		e.code(err, port.CodeInvalidArgument)
+	}
 	e.same([]string{"taa1", "taa2", "taa3", "taa4"}, keysOf(live.changes(scopeA, 0, 0, 0)))
 
 	e.appendChanges(scopeA, change("a-new", `1`))

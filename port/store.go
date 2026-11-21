@@ -7,7 +7,7 @@ import (
 )
 
 // Scope is what a unit of work may touch: the rows of one tenant, the installation tables, or both.
-// A Consistent Read sees every statement at one point in time, as a Write and the memory and SQLite stores always do.
+// A Consistent Read sees all its statements at one point in time; memory and SQLite reads always do, Postgres reads then run at repeatable read.
 type Scope struct {
 	Tenant       TenantID
 	Installation bool

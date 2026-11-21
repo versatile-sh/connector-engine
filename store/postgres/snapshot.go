@@ -218,16 +218,19 @@ func CheckRows(snap port.Snapshot, schema int) error {
 }
 
 func checkPermissionRows(snap port.Snapshot) error {
-	heads := map[port.TenantID]bool{}
+	heads := map[port.TenantID]int64{}
 	for _, raw := range snap.Tables["permission_head"] {
 		var h struct {
 			Tenant   *port.TenantID `json:"tenant_id"`
 			Revision int64          `json:"revision"`
 		}
-		if json.Unmarshal(raw, &h) != nil || h.Tenant == nil || h.Revision < 0 || heads[*h.Tenant] {
-			return port.Errorf(port.CodeInvalidArgument, "snapshot permission_head: a row does not decode or repeats a tenant")
+		if json.Unmarshal(raw, &h) != nil || h.Tenant == nil || h.Revision < 0 {
+			return port.Errorf(port.CodeInvalidArgument, "snapshot permission_head: a row does not decode")
 		}
-		heads[*h.Tenant] = true
+		if _, twice := heads[*h.Tenant]; twice {
+			return port.Errorf(port.CodeInvalidArgument, "snapshot permission_head: tenant %s is there twice", restore.Quote(string(*h.Tenant)))
+		}
+		heads[*h.Tenant] = h.Revision
 	}
 	changes := make([]port.PermissionChange, len(snap.Tables["permission_changes"]))
 	for i, raw := range snap.Tables["permission_changes"] {
@@ -235,7 +238,7 @@ func checkPermissionRows(snap port.Snapshot) error {
 			return port.Errorf(port.CodeInvalidArgument, "snapshot permission_changes: a row does not decode")
 		}
 	}
-	return port.CheckPermissionLog(changes)
+	return port.CheckPermissionLog(heads, changes)
 }
 
 func (t *tx) insertRows(tbs []snapshotTable, tables map[string][]json.RawMessage) error {

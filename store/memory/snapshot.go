@@ -187,7 +187,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	if work.permHeads == nil {
 		work.permHeads = map[port.TenantID]int64{}
 	}
-	if err := port.CheckPermissionLog(work.permChanges); err != nil {
+	if err := port.CheckPermissionLog(work.permHeads, work.permChanges); err != nil {
 		return port.Restored{}, err
 	}
 	keepLivePermissions(&work, s.d)

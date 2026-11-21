@@ -51,13 +51,14 @@ func PermissionChanges(tenant TenantID, changes []PermissionChange) ([]Permissio
 	return out, nil
 }
 
-// CheckPermissionLog refuses logged changes, as a restore reads them, without a position, kind or key, or repeating a position of their tenant.
-func CheckPermissionLog(changes []PermissionChange) error {
+// CheckPermissionLog refuses logged changes, as a restore reads them, without a position, kind or key, repeating a position of their tenant,
+// or past the revision heads holds for their tenant.
+func CheckPermissionLog(heads map[TenantID]int64, changes []PermissionChange) error {
 	seen := map[[3]any]bool{}
 	for _, c := range changes {
 		at := [3]any{c.Tenant, c.Revision, c.Seq}
-		if c.Revision <= 0 || c.Seq <= 0 || c.Kind == "" || c.Key == "" || seen[at] {
-			return Errorf(CodeInvalidArgument, "snapshot permission_changes: a row has no position, kind or key, or repeats a position")
+		if c.Revision <= 0 || c.Seq <= 0 || c.Kind == "" || c.Key == "" || seen[at] || c.Revision > heads[c.Tenant] {
+			return Errorf(CodeInvalidArgument, "snapshot permission_changes: a row has no position, kind or key, repeats a position or is past its revision")
 		}
 		seen[at] = true
 	}

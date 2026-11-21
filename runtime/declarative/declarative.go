@@ -197,9 +197,26 @@ func expandPath(path string, args map[string]json.RawMessage) (string, error) {
 			missing = port.Errorf(port.CodeInvalidArgument, "path parameter %s is one scalar", name)
 			return m
 		}
-		return url.PathEscape(vs[0])
+		if !unreserved(vs[0]) {
+			missing = port.Errorf(port.CodeInvalidArgument, "path parameter %s accepts letters, digits and - . _ ~ only", name)
+			return m
+		}
+		return vs[0]
 	})
 	return out, missing
+}
+
+func unreserved(v string) bool {
+	if strings.Trim(v, ".") == "" {
+		return false
+	}
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && strings.IndexByte("-._~", c) < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func splitArguments(f port.RESTFunction, args map[string]json.RawMessage) (query, body map[string]json.RawMessage) {

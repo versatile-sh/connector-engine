@@ -10,8 +10,8 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 
 | Token | Use |
 | --- | --- |
-| `ink` | page background; the sidebar's ground; a card on the shell's surface |
-| `ink-raised` | the shell's content surface, the current-link pill, cards and panels on a page, dialogs |
+| `ink` | page background; the sidebar's ground |
+| `ink-raised` | the shell's content surface, the current-link pill, cards, panels on a page, dialogs |
 | `ink-sunken` | footer band, code and copy boxes, a panel's tray on the shell's surface |
 | `paper` | text and the primary button |
 | `muted`, `muted-light` | secondary text, placeholders, counts |
@@ -37,7 +37,7 @@ All recipes live in `src/ui/styles.ts`; the components in `src/ui/`.
 ## Components
 
 - **Button** (`button({ variant, size })`): a pill. `primary` paper on ink for the main action of a view, `secondary` outlined, `quiet` text only, `danger` amber outlined for removal. Sizes `xs` (in rows), `sm`, `md`. Every button presses in.
-- **Surfaces**: `SURFACE` is the one card (strong hairline, light on the top edge, 12px). `PANEL` is the one large panel a page holds its content in (16px, soft hairline). Both take their fill from the surface they sit on (`--card-fill`, `--tray-fill`): raised ink on a page of `ink`, and, inside the shell's content surface, an ink card and a sunken `ink-sunken` tray, so a card is never raised ink on raised ink. `WELL` is the sunken box inside a panel or card: a list of rows, a block of text. `LIT_EDGE` is a grid card inside a panel whose top edge lights lime on hover and focus. `HAIRLINE` lights the top edge of the box that holds the next step.
+- **Surfaces**: `SURFACE` is the one card (strong hairline, light on the top edge, 12px). `PANEL` is the one large panel a page holds its content in (16px, soft hairline). A panel takes its fill from the surface it sits on (`--tray-fill`): raised ink on a page of `ink`, and a sunken `ink-sunken` tray inside the shell's raised content surface. A card stays raised ink with its strong hairline there, as it does in a dialog, so the fields and wells inside it keep their step. `WELL` is the sunken box inside a panel or card: a list of rows, a block of text. `LIT_EDGE` is a grid card inside a panel whose top edge lights lime on hover and focus. `HAIRLINE` lights the top edge of the box that holds the next step.
 - **Field** (`Field`, `FIELD`, `CONTROL`): ink fill, strong hairline, paper on focus, amber when invalid; the note under it keeps its height. `CONTROL` is the field at 36px for filter rows, `SearchBox` and `Select`.
 - **Choices**: `CHIP` for one pressed choice, `Segmented` for one of a few (the language switch, access off/on/ask, ranges), `Select` for one of many or where a `Segmented` has no room, `Choice` for one of a few that fits its container (a `Segmented` where the container has room, else a `Select` of the options that can be taken), `OPTION_CARD` for one of a few that each need a line, `Switch` for on/off (on is paper), `Checkbox` for picking rows of a list (paper, with a mixed state for a select-all).
 - **Tabs** (`Tabs`): a row of text tabs over a hairline that switch the view of one panel. The chosen tab is paper with a 2px paper underline that glides to it on transform alone; the others are muted. The arrows wrap, Home and End go to the ends, and the tab that gets focus is the one shown (automatic activation), so a tab only holds a view that shows at once. Past six tabs the row scrolls sideways with faded edges and a `Select` of every tab sits at its end. A machine name (an access key) is set in mono. `<Tabs label value options onChange panel />` with `options` of `{ value, text, hint?, mono? }`; the panel is `<div id={panel} role="tabpanel" aria-labelledby={tabId(panel, value)}>`.

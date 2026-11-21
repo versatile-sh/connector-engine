@@ -70,12 +70,10 @@
 }
 
 :root {
-  --card-fill: var(--color-ink-raised);
   --tray-fill: var(--color-ink-raised);
 }
 
 .shell-surface {
-  --card-fill: var(--color-ink);
   --tray-fill: var(--color-ink-sunken);
 }
 

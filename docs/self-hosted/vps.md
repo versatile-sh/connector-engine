@@ -104,7 +104,7 @@ The console on the server's loopback, with a TLS reverse proxy (Caddy, nginx) in
 1. Install as in option A and bind the console to `127.0.0.1` (the default).
 2. Set `CONSOLE_PUBLIC_URL=https://console.example.com` (the address people type; add `:port` only if it is not 443). The Host allowlist, the `Secure` cookie, the OAuth redirects and the invite links all follow it. Requests for any other `Host` get `421`, and a mutation whose `Origin` is not that address gets `403`.
 3. Proxy `console.example.com` to `127.0.0.1:7465`. Do not publish port 7465.
-4. Open the address yourself first: whoever reaches a new console first becomes its Owner. Then invite the others from Account, People ([roles](person.md#roles-and-ownership)).
+4. Set `CONSOLE_SETUP_TOKEN` (or `--setup-token`) to a long random secret. While no Owner exists, creating the Owner and restoring a backup then need that token, which the first screen asks for. Without it, open the address yourself first: whoever reaches a new console first becomes its Owner. Then invite the others from Account, People ([roles](person.md#roles-and-ownership)).
 
 The console does not read `X-Forwarded-For`, so every proxied client looks like the proxy to its login limit; see [person](person.md#people).
 

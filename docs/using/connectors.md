@@ -13,7 +13,21 @@ A connector is one tool server behind the gateway. AI apps never reach it direct
 | `grpc` | a gRPC service, through reflection or the Buf Schema Registry |
 | `skill` | a skill package (files, no server); see [skills](skills.md) |
 
-A connector keeps **one credential** that every access key shares. Keys differ only in permissions ([functions and permissions](permissions.md)).
+Keys differ only in permissions ([functions and permissions](permissions.md)). Whose credential a call uses is the connector's credential mode.
+
+## Credential mode
+
+In the console, an Owner or Admin sets each connector's mode (`PUT /api/connectors/{id}/credential-mode` with `{"mode": "shared"}` or `{"mode": "per_person"}`). The same setting decides who approves its held calls.
+
+| Mode | The call uses | Engine binding | Who approves |
+|---|---|---|---|
+| `shared` (default) | the one workspace credential an Owner or Admin signs in with | `credential_policy: shared`, `ask_requester: true`, `approvers: [<managers group>]` | the key's owner, or any Owner or Admin |
+| `per_person` | the signed-in user's own credential | `credential_policy: per_user`, `ask_requester: true`, no other approvers | the key's owner only |
+
+- The listing's `owner_kinds_allowed` limits the choice: without `user`, only `shared` is offered; without `workspace`, only `per_person`, and a new connector starts there. Connectors made from a plain MCP address with a header secret allow both.
+- In `per_person` mode, "Sign in" and a header secret are stored for the signed-in user only (`owner_kind: user`). Nobody can store a credential for another person. A call from a key whose owner has not signed in gets `credential_required`.
+- Changing the mode rebinds every key of the connector at once. A call already held keeps the approvers it was held with. Switching to `per_person` keeps the shared credential stored, unused; switching back uses it again.
+- Owners and Admins see how many people signed in (`signed_in_count` of `people_count`).
 
 ## Names an app sees
 

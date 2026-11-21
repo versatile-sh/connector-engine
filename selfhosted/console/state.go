@@ -1,6 +1,7 @@
 package console
 
 import (
+	"cmp"
 	"crypto/pbkdf2"
 	"crypto/sha256"
 	"encoding/json"
@@ -73,6 +74,7 @@ type stateFile struct {
 	Pending             map[string][]Profile         `json:"pending_profiles,omitempty"`
 	NewKeyLimits        map[string]map[string]Access `json:"new_key_limits,omitempty"`
 	Slots               map[string]KeySlot           `json:"key_slots,omitempty"`
+	Credentials         map[string]CredentialMode    `json:"credential_modes,omitempty"`
 }
 
 // Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
@@ -378,11 +380,31 @@ func (s *State) NewKeysOff(conn string) bool {
 	return s.data.NewKeysOff[conn]
 }
 
-// ForgetConnector drops the new-key default and the new-key limits of a removed connector and its profile from every permission set, and a set left empty.
+// SetCredentialMode records whose credential the connector's calls use; shared, the default, is not stored.
+func (s *State) SetCredentialMode(conn string, mode CredentialMode) error {
+	return s.update(func(d *stateFile) error {
+		if mode == CredentialShared {
+			delete(d.Credentials, conn)
+			return nil
+		}
+		put(&d.Credentials, conn, mode)
+		return nil
+	})
+}
+
+// CredentialMode returns whose credential the connector's calls use, shared when nobody chose otherwise.
+func (s *State) CredentialMode(conn string) CredentialMode {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return cmp.Or(s.data.Credentials[conn], CredentialShared)
+}
+
+// ForgetConnector drops the new-key default, the new-key limits and the credential mode of a removed connector and its profile from every permission set, and a set left empty.
 func (s *State) ForgetConnector(conn string) error {
 	return s.update(func(d *stateFile) error {
 		delete(d.NewKeysOff, conn)
 		delete(d.NewKeyLimits, conn)
+		delete(d.Credentials, conn)
 		for name, slot := range d.Slots {
 			delete(slot.Profiles, conn)
 			if len(slot.Profiles) == 0 {

@@ -22,6 +22,10 @@ An approved call runs once. A repeated identical call in the same session attach
 | Always allow this app | the function is allowed for the calling key only: every other key keeps its former access as its own override, then the default rises to "on" ([details](permissions.md#always-allow-this-app)) |
 | Deny | the call is refused |
 
+### Who decides
+
+With more than one console user, who may answer follows the connector's [credential mode](connectors.md#credential-mode): on a `shared` connector the key's owner or any Owner or Admin, on a `per_person` connector the key's owner only, since the call uses their own sign-in. The engine enforces it and refuses anyone else with `not_an_approver`. Owners and Admins may cancel anyone's held call (`POST /api/approvals/{id}/cancel`); the console offers it as the `cancel` choice.
+
 ## Where you can answer
 
 | Surface | Set up |

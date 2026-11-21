@@ -19,6 +19,9 @@ const (
 	ChoiceDeny    Choice = "deny"
 )
 
+// ChoiceCancel is the console's offer to an Owner or Admin to cancel someone else's held call; no surface sends it as an answer.
+const ChoiceCancel Choice = "cancel"
+
 // Valid reports whether c is one of the four answers.
 func (c Choice) Valid() bool {
 	return c == ChoiceOnce || c == ChoiceSession || c == ChoiceAlways || c == ChoiceDeny

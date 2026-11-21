@@ -131,7 +131,7 @@ func (c *Console) InstallSkill(ctx context.Context, m port.Manifest, a Access) (
 }
 
 func (c *Console) bindSkill(ctx context.Context, conn string, a Agent, access Access) error {
-	if err := c.Engine.bind(ctx, conn, a.Name, a.Owner); err != nil {
+	if err := c.Engine.bind(ctx, conn, a.Name, a.Owner, c.ruleFor(conn)); err != nil {
 		return err
 	}
 	return c.setKeyRow(ctx, conn, a, access)

@@ -263,6 +263,11 @@ func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"url": to})
 }
 
+func (c *Console) otherUser(r *http.Request, person string) bool {
+	u, _, ok := c.Sessions.Current(r)
+	return ok && u.Person != person
+}
+
 func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	qv := r.URL.Query()
 	state := qv.Get("state")
@@ -273,6 +278,8 @@ func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		back("unknown_state")
 	case qv.Get("error") != "":
 		back("refused")
+	case c.otherUser(r, pend.person):
+		back("wrong_user")
 	case qv.Has("iss") && strings.TrimRight(qv.Get("iss"), "/") != strings.TrimRight(pend.issuer, "/"):
 		back("issuer_mismatch")
 	default:

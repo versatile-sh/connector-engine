@@ -183,6 +183,7 @@ func profiledStack(t *testing.T) profiled {
 	s := freshOwner(t, personRelays, func(c *config.Config) { c.Approval.HoldWindow = 10 * time.Second })
 	var imported struct{ Connector string }
 	s.b.ok("POST", "/api/import", map[string]any{"mcp": newPromptServer(t).URL + "/mcp", "local": true, "choices": map[string]string{"lookup": "on", "file": "on", "prompt:summarise": "on"}}, &imported)
+	s.b.trustReads(imported.Connector, "lookup", "file")
 	return profiled{stack: s, conn: imported.Connector}
 }
 
@@ -337,6 +338,7 @@ func TestAKeyThatHadExpiredFollowsAConnectorAddedMeanwhile(t *testing.T) {
 	}
 	var imported struct{ Connector string }
 	p.b.ok("POST", "/api/import", map[string]any{"mcp": newToolServer(t, "maps", "route").URL + "/mcp", "local": true}, &imported)
+	p.b.trustReads(imported.Connector, "route")
 	p.mint("old")
 	p.conn = imported.Connector
 	if pr := p.profile("old"); pr.Mode != console.ProfileFollow {

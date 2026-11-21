@@ -277,6 +277,7 @@ func TestAChatButtonDecidesAHeldCallAndTheCallResumes(t *testing.T) {
 	})
 
 	t.Run("always allow flips the function on", func(t *testing.T) {
+		r.engineClass("create", port.ClassWrite)
 		pending := r.call(cs, "create", map[string]any{"title": "second"})
 		p := within(t, r.fake.prompts, 5*time.Second)
 		if o, err := r.fake.press(context.Background(), surface.Click{Key: p.Key, Choice: surface.ChoiceAlways, User: "42"}); err != nil || o.State != surface.StateAlways {

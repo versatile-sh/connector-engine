@@ -101,6 +101,7 @@ func TestEachConnectorDecidesWhoseCredentialItsCallsUseAndWhoApprovesThem(t *tes
 	s := freshOwner(t, personRelays, func(c *config.Config) { c.Approval.HoldWindow = 10 * time.Second })
 	var imported struct{ Connector string }
 	s.b.ok("POST", "/api/import", map[string]any{"mcp": newKeyEchoServer(t).URL + "/mcp", "local": true, "header_secret": true, "choices": map[string]string{"whoami": "on", "send": "ask"}}, &imported)
+	s.b.trustReads(imported.Connector, "whoami", "send")
 	conn := imported.Connector
 	s.b.ok("POST", "/api/connectors/"+conn+"/headers", map[string]any{"headers": map[string]string{"X-Api-Key": "org"}}, nil)
 	owner := viewer{profiled{stack: s, conn: conn}}

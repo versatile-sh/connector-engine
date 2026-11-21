@@ -625,6 +625,7 @@ func newRealRig(t *testing.T, tweaks ...func(*config.Config)) *realRig {
 	b.ok("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true}, nil)
 	var list struct{ Connectors []console.ConnectorSummary }
 	b.ok("GET", "/api/connectors", nil, &list)
+	b.trustReads(list.Connectors[0].ID, "search")
 	var tok console.AgentToken
 	b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
 	client := mcp.NewClient(&mcp.Implementation{Name: "agent", Version: "1"}, nil)

@@ -26,6 +26,13 @@ func (r *rig) function(name string) console.FunctionView {
 	return console.FunctionView{}
 }
 
+func (b *browser) trustReads(conn string, names ...string) {
+	b.t.Helper()
+	for _, name := range names {
+		b.ok("PUT", "/api/connectors/"+conn+"/read-only", map[string]string{"name": name}, nil)
+	}
+}
+
 func (r *rig) engineClass(name string, class port.Class) {
 	r.t.Helper()
 	if err := r.eng.Call(console.WithActor(context.Background(), "owner"), "PUT", "/v1/connectors/"+r.conn.ID+"/functions/"+name+"/class", map[string]any{"class": class}, nil); err != nil {

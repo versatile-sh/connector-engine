@@ -82,10 +82,17 @@ func (a *App) putSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var out port.Restored
+	by := r.URL.Query().Get("by")
+	if by == "" {
+		by = string(port.PrincipalSystem)
+	}
 	store, err := a.snapshotter()
 	if err == nil {
+		err = port.CheckIDs("person", by)
+	}
+	if err == nil {
 		restore := func() (err error) {
-			out, err = store.Restore(r.Context(), snap.Store, string(port.PrincipalSystem))
+			out, err = store.Restore(r.Context(), snap.Store, by)
 			return err
 		}
 		ks, ok := a.secrets.(keyStore)

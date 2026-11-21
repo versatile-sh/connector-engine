@@ -68,7 +68,10 @@ func TestASnapshotMovesAnEngineWithItsKeysAndStopsTheEngineItRestores(t *testing
 	if code, body := raw(t, http.MethodPut, fresh.operator+"/v1/snapshot", "op-secret", []byte(`{"store":{"store":"memory"}}`)); code != http.StatusBadRequest {
 		t.Fatalf("a snapshot of another store: %d %s", code, body)
 	}
-	if code, body := raw(t, http.MethodPut, fresh.operator+"/v1/snapshot", "op-secret", snap); code != http.StatusOK || !strings.Contains(string(body), `"counts"`) {
+	if code, body := raw(t, http.MethodPut, fresh.operator+"/v1/snapshot?by=bad%20name", "op-secret", snap); code != http.StatusBadRequest {
+		t.Fatalf("a restore by a malformed person: %d %s", code, body)
+	}
+	if code, body := raw(t, http.MethodPut, fresh.operator+"/v1/snapshot?by=ana", "op-secret", snap); code != http.StatusOK || !strings.Contains(string(body), `"counts"`) {
 		t.Fatalf("restore: %d %s", code, body)
 	}
 	select {

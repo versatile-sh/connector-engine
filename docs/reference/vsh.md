@@ -25,6 +25,22 @@ vsh keychain get|ensure|import|delete [--name NAME]
 vsh notify [--console URL] [--key-file FILE]
 ```
 
+Management, as the signed-in user of the console:
+
+```text
+vsh status [--data DIR]
+vsh login [--user NAME] [--password-stdin] | logout
+vsh connectors [list] | show NAME | import URL [--mcp] [--local] [--yes] | remove NAME [--yes]
+vsh keys [list] | create NAME [--ttl 720h] | revoke NAME [--yes]
+vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive]
+vsh access CONNECTOR --key NAME follow|custom
+vsh approvals [list] | approve ID | deny ID
+vsh activity [--connector NAME] [--key NAME] [--since 1h] [--follow]
+vsh skills list
+```
+
+Every management command takes `--json` and `--url`.
+
 The headless archive ships a core-only `vsh` (admin, tools, skills) with no self-hosted code, next to the `connector-engine` engine.
 
 ## Help and exit codes
@@ -36,7 +52,113 @@ The headless archive ships a core-only `vsh` (admin, tools, skills) with no self
 | 0 | done |
 | 1 | the command failed |
 | 2 | wrong usage: an unknown command, flag or argument |
-| 3 | nothing to talk to: no install runs on the data directory, or no OS keychain for `vsh keychain` |
+| 3 | nothing to talk to: no install runs on the data directory, the console does not answer, or no OS keychain for `vsh keychain` |
+| 4 | not allowed: not signed in, the session ended, a wrong password, or the signed-in user may not do this |
+
+## Sign in and manage
+
+The management commands talk to the console's HTTP API, the one the web console uses, so its checks, roles, locks and audit apply unchanged. `vsh` acts as the user who signed in: a user whose role does not allow a change gets exit code 4 and the console's reason.
+
+The console is found in this order: `--url`, `$VSH_URL`, the install without Docker running on the default data directory (`$CN_DATA_DIR`), then `http://127.0.0.1:7465`.
+
+```sh
+vsh login
+```
+
+```text
+Username: me
+Password:
+signed in to http://127.0.0.1:7465 as me; the session is kept in /home/me/.config/vsh/sessions/session-f448b069f1615604.json
+```
+
+- `vsh login` takes the username and password of the web console and opens an ordinary console session. The password is typed with echo off, or read from the first line of stdin with `--password-stdin`; it is never an argument.
+- The session is kept in the OS keychain (service `vsh`, one item per console address; never the `connector-engine` items of the unlock keys), or, without a keychain or with `$VSH_NO_KEYCHAIN` set, in a file readable only by you under `$VSH_CONFIG_DIR` or the user config directory (`~/.config/vsh/sessions/` on Linux). `vsh` never prints it.
+- `vsh logout` ends the session on the console and forgets it here. `vsh reset-password` signs out every session of that user, `vsh`'s included.
+- `vsh keys create` prints the new access key once, on stdout, because that key is what you give to the agent. The session itself is never printed.
+
+`vsh status` shows the install, the console and who is signed in:
+
+```text
+install  running   pid: 41907   version: dev   data: /home/me/.local/share/connector-engine
+console  http://127.0.0.1:7465   agent endpoint: http://127.0.0.1:7465/mcp
+user     me
+```
+
+### connectors
+
+```sh
+vsh connectors import --mcp --local http://127.0.0.1:7999/mcp --yes
+vsh connectors
+vsh connectors show check-notes
+```
+
+```text
+Check notes (mcp) from 127.0.0.1:7999
+  write        ask   create
+  destructive  ask   mystery
+  destructive  ask   purge
+  read         on    search
+installed Check notes
+NAME         TITLE        FUNCTIONS  KEYS  STATE
+check-notes  Check notes  4          0     enabled
+```
+
+`import` reads a listing URL, or an MCP server's address with `--mcp` (`--local` allows one on this machine or its network). It shows what the console proposes and asks before it installs, unless `--yes`. A connector that needs a sign-in is signed in to from the console's Connectors page. `remove` asks before it deletes the connector and its credentials.
+
+### keys
+
+```sh
+vsh keys create claude-code
+vsh keys
+vsh keys revoke claude-code --yes
+```
+
+```text
+access key of claude-code, shown this once; give it to the agent as CN_AGENT_TOKEN with CN_ENDPOINT=http://127.0.0.1:7465/mcp
+eyJhbGciOi…
+NAME         EXPIRES           VIA
+claude-code  2026-12-20 20:45  key
+```
+
+### access
+
+```sh
+vsh access check-notes --kind write ask
+vsh access check-notes search ask
+vsh access check-notes --key claude-code custom
+vsh access check-notes purge off --key claude-code
+vsh access check-notes --key claude-code follow
+```
+
+```text
+check-notes: ask
+check-notes search: ask
+check-notes for claude-code: custom
+check-notes purge for claude-code: off
+check-notes for claude-code: follow
+```
+
+- Without `--key`, it sets the connector's own access, which every key that follows the connector gets.
+- With `--key`, it sets that key's override, or with `follow` or `custom` the key's profile on the connector.
+- Without a function it sets every function, or with `--kind` every function of that kind, in one request.
+
+### approvals and activity
+
+```sh
+vsh approvals
+vsh approvals approve 18eb5f5700a4eb5f6bfadba9a5091f44
+vsh activity --since 10m
+vsh activity --follow --key claude-code
+```
+
+```text
+ID                                KEY          CONNECTOR    FUNCTION  EXPIRES
+18eb5f5700a4eb5f6bfadba9a5091f44  claude-code  check-notes  search    20:55:15
+approved 18eb5f5700a4eb5f6bfadba9a5091f44
+2026-11-20 20:45:15  claude-code  check-notes  search  ok  1ms
+```
+
+`--follow` asks the console every `--every` (2s) and prints each new call, and a call again when its outcome changes, until interrupted.
 
 ## Lifecycle without Docker
 

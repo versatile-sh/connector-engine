@@ -156,3 +156,26 @@ func TestTheSecretServiceOfThisSession(t *testing.T) {
 		t.Fatalf("after delete: %v", err)
 	}
 }
+
+func TestAnotherServiceNeverTouchesTheUnlockKeys(t *testing.T) {
+	for name, kc := range map[string]func(r runner) Keychain{
+		"macOS":          func(r runner) Keychain { return macOS{run: r, service: "vsh"} },
+		"secret service": func(r runner) Keychain { return secretService{run: r, service: "vsh"} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			var calls []recorded
+			k := kc(recorder(&calls, nil))
+			if err := k.Set(context.Background(), "session-1", "s"); err != nil {
+				t.Fatal(err)
+			}
+			_, _ = k.Get(context.Background(), "session-1")
+			_ = k.Delete(context.Background(), "session-1")
+			for _, c := range calls {
+				all := c.stdin + " " + strings.Join(c.args, " ")
+				if strings.Contains(all, Service) || !strings.Contains(all, "vsh") {
+					t.Fatalf("a call outside service vsh: %q", all)
+				}
+			}
+		})
+	}
+}

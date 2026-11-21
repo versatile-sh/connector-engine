@@ -3,6 +3,7 @@ package console
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"slices"
 	"time"
 
@@ -253,16 +254,11 @@ func (c *Console) allowForKey(ctx context.Context, conn, agent, name string) err
 	return c.writeAccess(ctx, conn, name, AccessOn)
 }
 
-func (c *Console) asKeyOwner(ctx context.Context, id string) (context.Context, error) {
-	a, err := c.record(ctx, id)
-	if err != nil {
-		return ctx, err
-	}
-	owner, ok := c.State.KeyOwner(string(a.Agent))
-	if !ok {
-		owner = string(a.OnBehalfOf)
-	}
-	return WithActor(ctx, owner), nil
+var errNotApprover = errors.New("this call is not yours to answer: it waits for its key's owner")
+
+func notApprover(err error) bool {
+	var ee *EngineError
+	return errors.As(err, &ee) && ee.Code == string(port.CodeNotAnApprover)
 }
 
 // Outcome is the surface outcome of a decided, expired or cancelled approval view.

@@ -101,7 +101,7 @@ func TestEachEngineWriteRunsAsTheActingUserAndEachReadAsTheServicePerson(t *test
 	if _, err := c.Approvals(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := (desk{c: c}).Decide(context.Background(), "a1", surface.ChoiceOnce, "telegram", "telegram:me"); err != nil {
+	if _, err := (desk{c: c}).Decide(WithActor(context.Background(), "p-bob"), "a1", surface.ChoiceOnce, "telegram", "telegram:me"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := c.agentToken(context.Background(), "bobkey", time.Hour); err != nil {

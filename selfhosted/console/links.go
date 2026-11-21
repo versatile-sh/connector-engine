@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -113,15 +112,19 @@ func (c *Console) LinkToken(approval, device string, expires time.Time) (string,
 	return c.sign(linkKind, expires, approval, device)
 }
 
-func (c *Console) checkLink(token, approval string) (device string, nonce string, err error) {
+func (c *Console) checkLink(token, approval string) (Device, string, error) {
 	nonce, f, err := c.open(linkKind, token)
 	if err != nil {
-		return "", "", err
+		return Device{}, "", err
 	}
-	if len(f) != 2 || f[0] != approval || c.surf.spent(nonce) || !slices.ContainsFunc(c.State.Devices(), func(d Device) bool { return d.ID == f[1] }) {
-		return "", "", errBadToken
+	if len(f) != 2 || f[0] != approval || c.surf.spent(nonce) {
+		return Device{}, "", errBadToken
 	}
-	return f[1], nonce, nil
+	d, ok := c.State.Device(f[1])
+	if !ok {
+		return Device{}, "", errBadToken
+	}
+	return d, nonce, nil
 }
 
 type spentSet struct {

@@ -93,6 +93,35 @@ func TestAStateFileFromBeforeMultiUserBecomesItsOwnerAndKeepsItsSession(t *testi
 	}
 }
 
+func TestALegacyStatesChannelsAndDevicesBelongToTheFirstOwner(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.json")
+	creds, err := newCredentials("me", userPassword)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := map[string]any{
+		"owner": map[string]any{"username": creds.Username, "salt": creds.Salt, "hash": creds.Hash, "iterations": creds.Iterations},
+		"notifications": map[string]any{
+			"channels": map[string]any{"ch1": map[string]any{"id": "ch1", "kind": "ntfy", "label": "phone"}},
+			"devices":  map[string]any{"dev1": map[string]any{"id": "dev1", "name": "laptop", "key_hash": "abc"}},
+		},
+	}
+	raw, _ := json.Marshal(legacy)
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state, err := OpenState(path, "alice-person")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if chans := state.Channels(); len(chans) != 1 || chans[0].Owner != "alice-person" {
+		t.Fatalf("the legacy channels: %+v", chans)
+	}
+	if dev, ok := state.Device("dev1"); !ok || dev.Owner != "alice-person" {
+		t.Fatalf("the legacy device: %+v %v", dev, ok)
+	}
+}
+
 func TestTheLastOwnerCanBeNeitherDemotedNorRemoved(t *testing.T) {
 	c := userConsole(t, filepath.Join(t.TempDir(), "state.json"))
 	if _, err := c.State.CreateFirstOwner("me", userPassword); err != nil {

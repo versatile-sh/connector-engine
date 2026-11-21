@@ -78,16 +78,22 @@ func within[T any](t *testing.T, ch <-chan T, d time.Duration) T {
 }
 
 type rig struct {
-	t    *testing.T
-	base string
-	b    *browser
-	up   *upstream
-	conn console.ConnectorSummary
-	tok  console.AgentToken
-	fake *fakeChannel
-	eng  *console.Engine
-	path string
-	keys port.SecretStore
+	t     *testing.T
+	base  string
+	b     *browser
+	up    *upstream
+	conn  console.ConnectorSummary
+	tok   console.AgentToken
+	fake  *fakeChannel
+	eng   *console.Engine
+	path  string
+	keys  port.SecretStore
+	c     *console.Console
+	fakes map[string]*fakeChannel
+}
+
+func newFake() *fakeChannel {
+	return &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}
 }
 
 func newRig(t *testing.T) *rig {
@@ -115,10 +121,14 @@ func newRig(t *testing.T) *rig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fake := &fakeChannel{kind: "telegram", prompts: make(chan surface.Prompt, 8), settled: make(chan surface.Outcome, 8), listened: make(chan struct{})}
+	fake := newFake()
+	fakes := map[string]*fakeChannel{"1": newFake(), "2": newFake()}
 	c := &console.Console{Engine: eng, State: state, Sessions: console.NewSessions(state), Guard: console.Guard{Hosts: []string{lis.Addr().String()}},
 		MCPURL: base + "/mcp", OAuthRedirect: base + "/oauth/callback", MaxAgentTTL: 24 * time.Hour, Activity: act, Secrets: box,
 		NewChannel: func(_ string, s map[string]string) (surface.Channel, error) {
+			if f, ok := fakes[s["owner_user_id"]]; ok {
+				return f, nil
+			}
 			fake.mu.Lock()
 			fake.settings = s
 			fake.mu.Unlock()
@@ -131,7 +141,7 @@ func newRig(t *testing.T) *rig {
 	go func() { c.RunNotifications(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done; srv.Close() })
 	jar, _ := cookiejar.New(nil)
-	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake, eng: eng, path: statePath, keys: keys}
+	r := &rig{t: t, base: base, b: &browser{t: t, base: base, client: &http.Client{Jar: jar}}, up: up, fake: fake, eng: eng, path: statePath, keys: keys, c: c, fakes: fakes}
 	var setup struct{ CSRF string }
 	r.b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
 	r.b.csrf = setup.CSRF
@@ -145,12 +155,17 @@ func newRig(t *testing.T) *rig {
 
 func (r *rig) connect(version string, elicit func(context.Context, *mcp.ElicitRequest) (*mcp.ElicitResult, error)) *mcp.ClientSession {
 	r.t.Helper()
+	return r.connectAs(r.tok, version, elicit)
+}
+
+func (r *rig) connectAs(tok console.AgentToken, version string, elicit func(context.Context, *mcp.ElicitRequest) (*mcp.ElicitResult, error)) *mcp.ClientSession {
+	r.t.Helper()
 	var opts *mcp.ClientOptions
 	if elicit != nil {
 		opts = &mcp.ClientOptions{ElicitationHandler: elicit}
 	}
 	client := mcp.NewClient(&mcp.Implementation{Name: "agent", Version: "1"}, opts)
-	cs, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: r.tok.MCPURL, HTTPClient: &http.Client{Transport: bearer(r.tok.Token)}},
+	cs, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: tok.MCPURL, HTTPClient: &http.Client{Transport: bearer(tok.Token)}},
 		&mcp.ClientSessionOptions{ProtocolVersion: version})
 	if err != nil {
 		r.t.Fatal(err)

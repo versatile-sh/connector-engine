@@ -67,11 +67,13 @@ func (h *deviceHub) drop(device string) {
 	}
 }
 
-func (h *deviceHub) each(fn func(*hubSub)) {
+func (h *deviceHub) each(approval string, surf *surfaces, fn func(*hubSub)) {
 	h.mu.Lock()
 	subs := make([]*hubSub, 0, len(h.subs))
 	for s := range h.subs {
-		subs = append(subs, s)
+		if surf.reaches(approval, s.device.Owner) {
+			subs = append(subs, s)
+		}
 	}
 	h.mu.Unlock()
 	for _, s := range subs {
@@ -100,12 +102,12 @@ func (h hubChannel) prompt(s *hubSub, p surface.Prompt) {
 }
 
 func (h hubChannel) Notify(_ context.Context, p surface.Prompt) (surface.Ref, error) {
-	h.c.surf.hub.each(func(s *hubSub) { h.prompt(s, p) })
+	h.c.surf.hub.each(p.Approval, &h.c.surf, func(s *hubSub) { h.prompt(s, p) })
 	return "hub", nil
 }
 
 func (h hubChannel) Settle(_ context.Context, _ surface.Ref, p surface.Prompt, o surface.Outcome) error {
-	h.c.surf.hub.each(func(s *hubSub) { s.send(HubEvent{Type: "settled", Approval: p.Approval, Outcome: &o}) })
+	h.c.surf.hub.each(p.Approval, &h.c.surf, func(s *hubSub) { s.send(HubEvent{Type: "settled", Approval: p.Approval, Outcome: &o}) })
 	return nil
 }
 
@@ -134,7 +136,9 @@ func (c *Console) notifyStream(w http.ResponseWriter, r *http.Request) {
 	defer c.surf.hub.remove(sub)
 	h := hubChannel{c: c}
 	for _, p := range c.surf.pending() {
-		h.prompt(sub, p)
+		if c.surf.reaches(p.Approval, d.Owner) {
+			h.prompt(sub, p)
+		}
 	}
 	tick := time.NewTicker(hubKeepAlive)
 	defer tick.Stop()

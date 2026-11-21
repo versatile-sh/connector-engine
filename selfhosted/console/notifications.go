@@ -168,8 +168,13 @@ func (c *Console) surfaceRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/notify/stream", c.notifyStream)
 }
 
+func me(r *http.Request) string {
+	u, _ := signedInUser(r.Context())
+	return u.Person
+}
+
 func (c *Console) listNotifications(w http.ResponseWriter, r *http.Request) {
-	chans := c.State.Channels()
+	chans := c.ownChannels(me(r))
 	slices.SortFunc(chans, func(a, b StoredChannel) int { return a.CreatedAt.Compare(b.CreatedAt) })
 	views := make([]ChannelView, 0, len(chans))
 	for _, sc := range chans {
@@ -177,6 +182,9 @@ func (c *Console) listNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 	devices := []DeviceView{}
 	for _, d := range c.State.Devices() {
+		if d.Owner != me(r) {
+			continue
+		}
 		devices = append(devices, DeviceView{ID: d.ID, Name: d.Name, CreatedAt: d.CreatedAt, LastSeen: d.LastSeen})
 	}
 	slices.SortFunc(devices, func(a, b DeviceView) int { return a.CreatedAt.Compare(b.CreatedAt) })
@@ -187,7 +195,9 @@ func (c *Console) listNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 	apps := []app{}
 	for _, a := range c.State.Agents() {
-		apps = append(apps, app{Name: a.Name, Elicit: elicit[a.Name]})
+		if a.Owner == me(r) {
+			apps = append(apps, app{Name: a.Name, Elicit: elicit[a.Name]})
+		}
 	}
 	slices.SortFunc(apps, func(a, b app) int { return strings.Compare(a.Name, b.Name) })
 	writeJSON(w, http.StatusOK, map[string]any{"channels": views, "devices": devices, "apps": apps})
@@ -218,7 +228,7 @@ func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {
 		label = string([]rune(label)[:maxLabel])
 	}
 	plain, secret := splitSecrets(in.Kind, settings)
-	sc := StoredChannel{ID: randomID()[:12], Kind: in.Kind, Label: label, Settings: plain, CreatedAt: time.Now().UTC().Truncate(time.Second)}
+	sc := StoredChannel{ID: randomID()[:12], Owner: me(r), Kind: in.Kind, Label: label, Settings: plain, CreatedAt: time.Now().UTC().Truncate(time.Second)}
 	if err := c.secrets().put(r.Context(), sc.ID, secret); err != nil {
 		c.fail(w, err)
 		return
@@ -231,8 +241,12 @@ func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, c.channelView(r.Context(), sc))
 }
 
-func (c *Console) storedChannel(id string) (StoredChannel, bool) {
-	all := c.State.Channels()
+func (c *Console) ownChannels(person string) []StoredChannel {
+	return slices.DeleteFunc(c.State.Channels(), func(sc StoredChannel) bool { return sc.Owner != person || person == "" })
+}
+
+func (c *Console) storedChannel(owner, id string) (StoredChannel, bool) {
+	all := c.ownChannels(owner)
 	i := slices.IndexFunc(all, func(sc StoredChannel) bool { return sc.ID == id })
 	if i < 0 {
 		return StoredChannel{}, false
@@ -241,10 +255,7 @@ func (c *Console) storedChannel(id string) (StoredChannel, bool) {
 }
 
 func (c *Console) removeChannel(w http.ResponseWriter, r *http.Request) {
-	ok, err := c.State.DeleteChannel(r.PathValue("id"))
-	if err == nil {
-		err = c.secrets().remove(r.PathValue("id"))
-	}
+	ok, err := c.State.DeleteChannel(me(r), r.PathValue("id"))
 	switch {
 	case err != nil:
 		c.fail(w, err)
@@ -257,7 +268,7 @@ func (c *Console) removeChannel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Console) testChannel(w http.ResponseWriter, r *http.Request) {
-	sc, ok := c.storedChannel(r.PathValue("id"))
+	sc, ok := c.storedChannel(me(r), r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "no such channel")
 		return
@@ -291,7 +302,7 @@ func (c *Console) setElicit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.PathValue("name")
-	if !slices.ContainsFunc(c.State.Agents(), func(a Agent) bool { return a.Name == name }) {
+	if owner, ok := c.State.KeyOwner(name); !ok || owner != me(r) {
 		writeError(w, http.StatusNotFound, "no such app")
 		return
 	}
@@ -317,8 +328,12 @@ func (c *Console) pairDevice(w http.ResponseWriter, r *http.Request) {
 	}
 	key := "cnk_" + randomID()
 	d, again := c.State.Device(in.ID)
+	if again && d.Owner != me(r) {
+		writeError(w, http.StatusNotFound, "no such device")
+		return
+	}
 	if !again {
-		d = Device{ID: randomID()[:12], Name: name, CreatedAt: time.Now().UTC().Truncate(time.Second)}
+		d = Device{ID: randomID()[:12], Owner: me(r), Name: name, CreatedAt: time.Now().UTC().Truncate(time.Second)}
 	}
 	d.KeyHash, d.LastSeen = keyHash(key), time.Time{}
 	if err := c.State.PutDevice(d); err != nil {
@@ -354,7 +369,7 @@ func (c *Console) renameDevice(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("give the computer a name of at most %d characters", maxLabel))
 		return
 	}
-	found, err := c.State.RenameDevice(r.PathValue("id"), name)
+	found, err := c.State.RenameDevice(me(r), r.PathValue("id"), name)
 	switch {
 	case err != nil:
 		c.fail(w, err)
@@ -367,7 +382,7 @@ func (c *Console) renameDevice(w http.ResponseWriter, r *http.Request) {
 
 func (c *Console) revokeDevice(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	ok, err := c.State.DeleteDevice(id)
+	ok, err := c.State.DeleteDevice(me(r), id)
 	switch {
 	case err != nil:
 		c.fail(w, err)

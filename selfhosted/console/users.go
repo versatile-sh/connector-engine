@@ -116,6 +116,18 @@ func migrateUsers(d *stateFile, person string) {
 			d.Agents[k] = a
 		}
 	}
+	for k, ch := range d.Notify.Channels {
+		if ch.Owner == "" {
+			ch.Owner = firstOf(d.LegacyPerson, person)
+			d.Notify.Channels[k] = ch
+		}
+	}
+	for k, dev := range d.Notify.Devices {
+		if dev.Owner == "" {
+			dev.Owner = firstOf(d.LegacyPerson, person)
+			d.Notify.Devices[k] = dev
+		}
+	}
 	for k, v := range d.Sessions {
 		if v.Person == "" {
 			v.Person = d.LegacyPerson

@@ -15,6 +15,7 @@ const font = (pkg, file) => {
 const serif = font("instrument-serif", "instrument-serif-latin-400-normal.woff");
 const italic = font("instrument-serif", "instrument-serif-latin-400-italic.woff");
 const mono = font("jetbrains-mono", "jetbrains-mono-latin-400-normal.woff");
+const monoMedium = font("jetbrains-mono", "jetbrains-mono-latin-500-normal.woff");
 
 const INK = "#0e1116";
 const PAPER = "#f5f5f2";
@@ -130,14 +131,14 @@ const diagram = () => {
   const card = (x, bw, title, sub, rows) =>
     [
       box(x, top, bw, boxH),
-      text(serif, fit(serif, title, 32, bw - 2 * pad), x + pad, top + 52, 32, PAPER),
-      text(mono, fit(mono, sub, 16, bw - 2 * pad), x + pad, top + 80, 16, MUTED),
+      text(monoMedium, fit(monoMedium, title, 26, bw - 2 * pad), x + pad, top + 50, 26, PAPER),
+      text(monoMedium, fit(monoMedium, sub, 16, bw - 2 * pad), x + pad, top + 80, 16, MUTED),
       `<path d="M${x + pad} ${top + 104}H${x + bw - pad}" stroke="${LINE}" stroke-opacity="0.1"/>`,
-      ...rows.map(([s, fill], i) => text(mono, fit(mono, s, 18, bw - 2 * pad), x + pad, top + 146 + i * 38, 18, fill)),
+      ...rows.map(([s, fill], i) => text(monoMedium, fit(monoMedium, s, 18, bw - 2 * pad), x + pad, top + 146 + i * 38, 18, fill)),
     ].join("");
   const arrow = (x1, x2, y, color, label) =>
     `<path d="M${x1 + 12} ${y}H${x2 - 14}" stroke="${color}" stroke-width="1.5"/><path d="M${x2 - 22} ${y - 5}L${x2 - 12} ${y}L${x2 - 22} ${y + 5}Z" fill="${color}"/>` +
-    text(mono, label, (x1 + x2) / 2 - width(mono, label, 16) / 2, y - 14, 16, color);
+    text(monoMedium, label, (x1 + x2) / 2 - width(monoMedium, label, 16) / 2, y - 14, 16, color);
   const modes = [
     ["off", "hidden from the app"],
     ["on", "runs, credential injected"],
@@ -145,14 +146,14 @@ const diagram = () => {
   ]
     .map(([m, d], i) => {
       const y = top + 146 + i * 38;
-      return `<rect x="${gw + pad}" y="${y - 20}" width="56" height="28" rx="14" fill="none" stroke="${LINE}" stroke-opacity="0.25"/>${text(mono, m, gw + pad + 28 - width(mono, m, 16) / 2, y - 1, 16, PAPER)}${text(mono, fit(mono, d, 18, mid - 2 * pad - 72), gw + pad + 72, y, 18, PAPER)}`;
+      return `<rect x="${gw + pad}" y="${y - 20}" width="56" height="28" rx="14" fill="none" stroke="${LINE}" stroke-opacity="0.25"/>${text(monoMedium, m, gw + pad + 28 - width(monoMedium, m, 16) / 2, y - 1, 16, PAPER)}${text(monoMedium, fit(monoMedium, d, 18, mid - 2 * pad - 72), gw + pad + 72, y, 18, PAPER)}`;
     })
     .join("");
   let px = gw + pad;
   const pills = ["approvals", "activity", "skills"]
     .map((t) => {
-      const tw = width(mono, t, 16);
-      const p = `<rect x="${px}" y="${top + 268}" width="${r(tw + 28)}" height="32" rx="16" fill="none" stroke="${LINE}" stroke-opacity="0.18"/>${text(mono, t, px + 14, top + 289, 16, MUTED)}`;
+      const tw = width(monoMedium, t, 16);
+      const p = `<rect x="${px}" y="${top + 268}" width="${r(tw + 28)}" height="32" rx="16" fill="none" stroke="${LINE}" stroke-opacity="0.18"/>${text(monoMedium, t, px + 14, top + 289, 16, MUTED)}`;
       px += tw + 38;
       return p;
     })
@@ -169,11 +170,11 @@ const diagram = () => {
     arrow(apps + side, gw, top + boxH / 2, MUTED, "MCP"),
     arrow(gw + mid, conn, top + boxH / 2, LIME, "allowed"),
     `<path d="M${cx} ${top + boxH + 8}V${cy - 14}" stroke="${MUTED}" stroke-width="1.5" stroke-dasharray="4 4"/><path d="M${cx - 5} ${cy - 18}L${cx} ${cy - 8}L${cx + 5} ${cy - 18}Z" fill="${MUTED}"/>`,
-    text(mono, "ask", cx + 14, top + boxH + 30, 16, MUTED),
+    text(monoMedium, "ask", cx + 14, top + boxH + 30, 16, MUTED),
     box(gw, cy, mid, 96),
     `<circle cx="${gw + pad + 5}" cy="${cy + 35}" r="5" fill="${LIME}"/>`,
-    text(serif, fit(serif, "Self-hosted console", 32, mid - 2 * pad - 22), gw + pad + 22, cy + 46, 32, PAPER),
-    text(mono, fit(mono, "set permissions · answer approvals", 16, mid - 2 * pad - 22), gw + pad + 22, cy + 76, 16, MUTED),
+    text(monoMedium, fit(monoMedium, "Self-hosted console", 26, mid - 2 * pad - 22), gw + pad + 22, cy + 44, 26, PAPER),
+    text(monoMedium, fit(monoMedium, "set permissions · answer approvals", 16, mid - 2 * pad - 22), gw + pad + 22, cy + 76, 16, MUTED),
   ].join("");
   return frame(
     w,

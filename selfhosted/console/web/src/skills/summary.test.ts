@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { formatBytes, shortCommit, skillWarnings, sourceLink, totalBytes } from "./summary.ts";
+import { formatBytes, hasLicence, shortCommit, skillWarnings, sourceLink, totalBytes } from "./summary.ts";
 
 const commit = "0123456789abcdef0123456789abcdef01234567";
 
@@ -12,6 +12,18 @@ describe("formatBytes", () => {
 
 describe("shortCommit", () => {
   test("keeps seven characters", () => assert.equal(shortCommit(commit), "0123456"));
+});
+
+describe("hasLicence", () => {
+  describe("with an SPDX id", () => {
+    test("is true", () => assert.equal(hasLicence({ spdx: "MIT", redistributable: true }), true));
+  });
+  describe("with NONE", () => {
+    test("is false", () => assert.equal(hasLicence({ spdx: "NONE", redistributable: false }), false));
+  });
+  describe("without an id", () => {
+    test("is false", () => assert.equal(hasLicence({ redistributable: false }), false));
+  });
 });
 
 describe("totalBytes", () => {

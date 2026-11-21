@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/versatile-sh/connector-engine/actions/workflows/ci.yml"><img src="https://github.com/versatile-sh/connector-engine/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0%20%2B%20terms-blue" alt="License: PolyForm Shield 1.0.0 with additional terms (source-available)"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
   <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/versatile-sh/connector-engine" alt="Go version"></a>
 </p>
 
@@ -126,8 +126,12 @@ Community templates for Render, Railway and Fly.io, not tested by maintainers: [
 
 ## License
 
-connector-engine is source-available under the PolyForm Shield License 1.0.0 with Versatile's additional terms, see [LICENSE](LICENSE). Third-party components keep their own licenses, see [NOTICE](NOTICE).
-Anyone, people and companies alike, may use and change it free of charge, including in production inside their own organisation.
-Nobody but Versatile may sell it, offer it as a paid service, or build a competing product with it; for a commercial license, see [versatile.sh/contact](https://versatile.sh/contact).
+Copyright (C) 2026 Versatile (versatile.sh)
 
-Versions published up to and including commit 3858237 (2026-11-20) were released under the MIT License.
+connector-engine is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See [LICENSE](LICENSE). Third-party components keep their own licences, see [NOTICE](NOTICE).
+
+For a commercial licence without the GPL's obligations, contact Versatile through [versatile.sh/contact](https://versatile.sh/contact).
+
+Contributions are accepted under the CLA, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Versions published up to and including commit 3858237 (2026-11-20) were released under the MIT License, and later versions before this change under the PolyForm Shield License 1.0.0 with Versatile's additional terms; copies already received keep those terms.

@@ -38,8 +38,8 @@ type Console struct {
 	Restart       func()
 	LoopbackHost  string
 	ManagersGroup string
+	SetupToken    string
 
-	loginMu       sync.Mutex
 	inviteMu      sync.Mutex
 	restoring     sync.Mutex
 	reconciling   sync.Mutex

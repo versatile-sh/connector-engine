@@ -194,6 +194,10 @@ func (c *Console) gate(pattern string, next http.HandlerFunc) http.HandlerFunc {
 			checked(w, r)
 			return
 		}
+		if !c.setupTokenOK(r) {
+			writeJSON(w, http.StatusForbidden, apiError{Error: "the setup token is missing or wrong", Code: "setup_token"})
+			return
+		}
 		next(w, r)
 	}
 }

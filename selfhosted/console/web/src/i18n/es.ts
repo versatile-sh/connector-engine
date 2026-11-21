@@ -75,6 +75,8 @@ export const es: Record<MessageKey, string> = {
   "auth.username": "Usuario",
   "auth.password": "Contraseña",
   "auth.passwordHint": "10 caracteres o más.",
+  "auth.setupToken": "Token de configuración",
+  "auth.setupTokenHint": "El secreto definido en CONSOLE_SETUP_TOKEN en el servidor.",
   "auth.setup.submit": "Crear cuenta",
   "auth.login.submit": "Entrar",
   "auth.working": "Un momento…",

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -155,5 +156,21 @@ func TestReadsAcrossTenantsReturnNothing(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestMigrateRefusesAnUnknownNewerMigration(t *testing.T) {
+	s, dsn := newStore(t)
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(ctx)
+	if _, err := conn.Exec(ctx, `INSERT INTO schema_migrations VALUES ('migrations/9999_future.sql')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Migrate(ctx); err == nil || !strings.Contains(err.Error(), "9999_future") {
+		t.Fatalf("Migrate = %v; want refusal naming the unknown migration", err)
 	}
 }

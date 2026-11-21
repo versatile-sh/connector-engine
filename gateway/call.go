@@ -22,7 +22,7 @@ func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Resul
 	params, d := req.Params, deliveriesOf(req)
 	if g.isMeta(params.Name) {
 		if err := args.Parse(params.Arguments); err != nil {
-			return toolError(port.CodeInvalidArgument, err.Error()), nil
+			return g.answer(params.Name, service.Outcome{Status: service.OutcomeError, Code: port.CodeInvalidArgument, Detail: err.Error()}, p.Token)
 		}
 	}
 	switch params.Name {

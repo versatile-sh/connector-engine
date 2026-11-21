@@ -544,3 +544,23 @@ func TestMetaToolArgumentsAreStrict(t *testing.T) {
 		}
 	})
 }
+
+func TestMetaToolsRefuseABadPayloadAndNeverEchoTheToken(t *testing.T) {
+	w := newWorld(t, options{cfg: skillsOn})
+	w.bind("x")
+	cs, tok := w.agent("x", "s1", "2026-07-28")
+	for tool, args := range map[string]string{
+		"approval_status": `{"approval_id":"a","approval_id":"b"}`,
+		"approval_cancel": `{"approval_id":"a","approval_id":"b"}`,
+		"skill_list":      `{"x":1,"x":2}`,
+		"skill_load":      `{"skill":"a","skill":"b"}`,
+		"find":            `{"query":"a","query":"b"}`,
+		"call":            `{"` + tok + `":1,"` + tok + `":2}`,
+	} {
+		res, err := callTool(cs, tool, json.RawMessage(args))
+		raw, _ := json.Marshal(res)
+		if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeInvalidArgument) || strings.Contains(string(raw), tok) {
+			t.Fatalf("%s: %s %v", tool, raw, err)
+		}
+	}
+}

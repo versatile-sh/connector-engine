@@ -114,3 +114,13 @@ func TestEmptySchemaTakesAnObjectOrNothing(t *testing.T) {
 		want(t, w.call(x, "s__search", args).Status != service.OutcomeError, true, "accepted: "+args)
 	}
 }
+
+func TestABadPayloadOnAnAskFunctionOpensNoApproval(t *testing.T) {
+	w, x := askWorld(t)
+	before := len(w.Events())
+	out := w.call(x, "s__search", duplicated)
+	want(t, out.Status, service.OutcomeError, "refused")
+	want(t, out.Code, port.CodeInvalidArgument, "code")
+	want(t, out.Approval == nil, true, "no approval attached")
+	want(t, len(w.Types(before)), 0, "nothing recorded")
+}

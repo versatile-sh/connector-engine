@@ -57,7 +57,11 @@ AI app ──MCP──▶ gateway (/mcp)
 
 - `tools/list` follows the same path with `Authorizer.Search`, so an agent sees only functions it may call.
 - A denied function answers exactly like an unknown one: an agent cannot probe what exists.
-- Before the authorizer, the token scan, the schema check and the call hash see them, arguments that repeat an object key at any depth are refused with `invalid_argument` and never forwarded; the authorizer is asked without arguments to keep a denied function answering like an unknown one. `core/args` holds the rule.
+- The authorizer is asked first, without arguments when they fail the parse, so a denied function still answers like an unknown one; only an allowed function answers `invalid_argument`, and nothing is forwarded or re-listed.
+- Arguments are read once by `core/args` before the token scan, the schema check and the call hash. It refuses an object that repeats a key at any depth.
+- It refuses a top-level value that is not an object; `null` and absent arguments are accepted.
+- It refuses data after the top-level value.
+- The gateway's own tools (`find`, `call`, approval and skill tools) apply the same parse to their parameters, and `call` also refuses wrapper keys that differ from `name`, `arguments` and `fields` only by case.
 - Every event is written to the outbox inside the use case's transaction. `relay/` delivers it at least once, in order. Schema URIs (`https://agents-control.dev/...`) are stable wire identifiers.
 
 ## Grants

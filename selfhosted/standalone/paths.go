@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/versatile-sh/connector-engine/selfhosted/peer"
 )
 
 // Name is the directory every install keeps its data in, under the per-user data directory of the OS.
@@ -73,7 +75,7 @@ func prepare(root string) (paths, error) {
 		if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
 			return p, fmt.Errorf("%s is open to other users; run chmod 700 on it", d)
 		}
-		if uid := ownerUID(info); uid >= 0 && uid != os.Geteuid() {
+		if uid := peer.OwnerUID(info); uid >= 0 && uid != os.Geteuid() {
 			return p, fmt.Errorf("%s belongs to another user; an install keeps its data in a directory of its own user", d)
 		}
 	}

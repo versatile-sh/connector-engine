@@ -288,6 +288,9 @@ func TestTransitions(t *testing.T) {
 	if v := approval.Lookup(nil, never); v.Rule != approval.HoldAfterUnknown {
 		t.Fatalf("R3 after C12, a call that was never held: %v", v.Rule)
 	}
+	if v := approval.Lookup(nil, &port.Call{State: port.CallStarted, StartedAt: now}); v.Rule != approval.HoldAfterUnknown {
+		t.Fatalf("R3 while a call that was never held is still started: %v", v.Rule)
+	}
 	if v := approval.Lookup(nil, &port.Call{State: port.CallFinished, StartedAt: now}); v.Rule != approval.NewCall {
 		t.Fatalf("R4: %v", v.Rule)
 	}

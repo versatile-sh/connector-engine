@@ -100,3 +100,26 @@ func TestAnApprovedCallWhoseResultCouldNotBeRecordedRunsOnce(t *testing.T) {
 	want(t, w.call(x, "s__search", `{"q":"1"}`).Code, service.CodeOutcomeUnknown, "a repeat answers from the record")
 	want(t, w.Runtime.CallsTo("search"), 1, "the repeat is not forwarded")
 }
+
+func TestARepeatOfAStartedCallIsHeld(t *testing.T) {
+	w, f := settleWorld(t, port.CodeUnavailable)
+	w.acceptAll()
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "fn:create_issue", port.ModeAskOnce)
+	x := w.agent("x", "s1")
+	held := w.call(x, "s__create_issue", `{"q":"1"}`)
+	w.decide(held.Approval.ID, port.DecisionApproveForSession)
+	w.sweep()
+	if err := w.Svc.MarkDelivered(w.Ctx, x, held.Approval.ID); err != nil {
+		t.Fatal(err)
+	}
+	w.Clock.Advance(time.Second)
+	f.left.Store(1)
+	want(t, w.call(x, "s__create_issue", `{"q":"1"}`).Code, service.CodeOutcomeUnknown, "the session row forwarded it")
+	want(t, w.Runtime.CallsTo("create_issue"), 2, "forwarded under the session row")
+	again := w.call(x, "s__create_issue", `{"q":"1"}`)
+	want(t, again.Status, service.OutcomePending, "a repeat of a call still started is held for a person")
+	want(t, w.Runtime.CallsTo("create_issue"), 2, "the repeat is not forwarded")
+}

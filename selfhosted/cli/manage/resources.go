@@ -400,7 +400,7 @@ func activityCommand() *command.Command {
 				}
 			}
 			if len(calls) > 0 {
-				from = latest(from, calls[len(calls)-1].At.Add(-followOverlap))
+				from = latest(from, followFrom(calls))
 				for id := range seen {
 					if !slices.ContainsFunc(calls, func(c console.ActivityCall) bool { return c.ID == id }) {
 						delete(seen, id)
@@ -417,6 +417,15 @@ func activityCommand() *command.Command {
 }
 
 const followOverlap = time.Minute
+
+func followFrom(calls []console.ActivityCall) time.Time {
+	for _, c := range calls {
+		if c.Outcome == console.OutcomePending || c.Outcome == console.OutcomeRunning {
+			return c.At
+		}
+	}
+	return calls[len(calls)-1].At.Add(-followOverlap)
+}
 
 func latest(a, b time.Time) time.Time {
 	if b.After(a) {

@@ -127,6 +127,27 @@ describe("DashboardPage", () => {
     });
   });
 
+  describe("for a viewer looking at everyone's calls", () => {
+    const html = draw(TEAM_OWNER, [], "/?scope=everyone");
+
+    test("opens the activity, the approvals and the keys on everyone's too", () => {
+      assert.match(html, /<a href="\/activity\?scope=everyone"/);
+      assert.match(html, /<a href="\/approvals\?scope=everyone"/);
+      assert.match(html, /<a href="\/access\?scope=everyone"/);
+    });
+
+    test("leaves the connectors link as it is, for connectors are not scoped", () => {
+      assert.match(html, /<a href="\/connectors"/);
+    });
+  });
+
+  describe("for a viewer looking at their own calls", () => {
+    test("opens each page with no scope in the address", () => {
+      const html = draw(TEAM_OWNER);
+      assert.doesNotMatch(html, /scope=everyone"/);
+    });
+  });
+
   describe("for a Member", () => {
     const html = draw(TEAM_MEMBER);
 

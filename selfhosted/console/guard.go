@@ -31,21 +31,22 @@ func sessionKey(id string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Sessions is the users' sessions as the state file keeps them, keyed by the SHA-256 of their cookie, so a restart does not sign anyone out.
+// Sessions is the users' sessions as the state file keeps them, keyed by the SHA-256 of their cookie, so a restart does not sign anyone out; Secure marks their cookie for a console reached over https.
 type Sessions struct {
-	state *State
+	state  *State
+	Secure bool
 }
 
 // NewSessions returns the sessions kept in state.
 func NewSessions(state *State) *Sessions { return &Sessions{state: state} }
 
-// Start opens a new session of person, sets its HttpOnly SameSite=Strict cookie and returns its CSRF token.
+// Start opens a new session of person, sets its HttpOnly SameSite=Strict cookie, Secure when s.Secure, and returns its CSRF token.
 func (s *Sessions) Start(w http.ResponseWriter, person string) (string, error) {
 	id, csrf := randomID(), randomID()
 	if err := s.state.putSession(sessionKey(id), StoredSession{Person: person, CSRF: csrf, Expires: time.Now().Add(sessionTTL)}); err != nil {
 		return "", err
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: int(sessionTTL.Seconds())})
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: id, Path: "/", HttpOnly: true, Secure: s.Secure, SameSite: http.SameSiteStrictMode, MaxAge: int(sessionTTL.Seconds())})
 	return csrf, nil
 }
 
@@ -83,7 +84,7 @@ func (s *Sessions) End(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", HttpOnly: true, Secure: s.Secure, SameSite: http.SameSiteStrictMode, MaxAge: -1})
 	return nil
 }
 

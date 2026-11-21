@@ -230,7 +230,7 @@ func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string,
 	if err != nil {
 		return append(results, Result{Name: "keys", Err: err}), nil
 	}
-	for _, k := range c.liveAgents() {
+	for _, k := range live(c.allAgents()) {
 		if !bound[k.Name] {
 			continue
 		}
@@ -242,7 +242,7 @@ func (c *Console) SetAccessAll(ctx context.Context, conn string, names []string,
 }
 
 func (c *Console) bindAll(ctx context.Context, conn string, bind func(context.Context, string, Agent) error) error {
-	for _, a := range c.liveAgents() {
+	for _, a := range live(c.allAgents()) {
 		if err := bind(ctx, conn, a); err != nil {
 			return err
 		}

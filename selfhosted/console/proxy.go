@@ -10,12 +10,13 @@ import (
 )
 
 type tokenClaims struct {
-	Agent    string  `json:"agent"`
-	Session  string  `json:"session"`
-	IssuedAt float64 `json:"iat"`
+	Agent      string  `json:"agent"`
+	Session    string  `json:"session"`
+	OnBehalfOf string  `json:"on_behalf_of"`
+	IssuedAt   float64 `json:"iat"`
 }
 
-// bearerClaims reads the agent, session and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse or to label a call it answered.
+// bearerClaims reads the agent, session, person and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse or to label a call it answered.
 func bearerClaims(header string) (tokenClaims, bool) {
 	scheme, raw, found := strings.Cut(header, " ")
 	parts := strings.Split(strings.TrimSpace(raw), ".")

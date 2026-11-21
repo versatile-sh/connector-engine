@@ -628,7 +628,7 @@ func TestARevokedAccessKeyStopsAtOnceAndStaysRevokedAfterARestart(t *testing.T) 
 	if got := initialize(t, h, host, kept.Token); got != http.StatusOK {
 		t.Fatalf("another key after a revoke: %d", got)
 	}
-	var agents struct{ Agents []console.Agent }
+	var agents struct{ Agents []console.AgentView }
 	b.ok("GET", "/api/agents", nil, &agents)
 	if len(agents.Agents) != 1 || agents.Agents[0].Name != "codex" {
 		t.Fatalf("keys after a revoke: %+v", agents.Agents)

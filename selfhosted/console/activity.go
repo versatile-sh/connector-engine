@@ -46,12 +46,13 @@ type ActivitySettings struct {
 	ClearedAt       time.Time `json:"cleared_at,omitzero"`
 }
 
-// Capture is what the console saw of one tools/call on its /mcp proxy; a Late capture is the answer approval_status gave for an earlier held call.
+// Capture is what the console saw of one tools/call on its /mcp proxy, owned by the token's on_behalf_of person; a Late capture is the answer approval_status gave for an earlier held call.
 type Capture struct {
 	ID       string      `json:"id"`
 	At       time.Time   `json:"at"`
 	Done     time.Time   `json:"done,omitzero"`
 	Agent    string      `json:"agent"`
+	Person   string      `json:"person,omitempty"`
 	Tool     string      `json:"tool"`
 	Skill    string      `json:"skill,omitempty"`
 	Path     string      `json:"path,omitempty"`

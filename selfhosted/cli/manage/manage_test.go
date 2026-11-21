@@ -222,3 +222,40 @@ func TestUnreachableConsole(t *testing.T) {
 		t.Fatalf("status: %d %s %s", code, out.String(), errw.String())
 	}
 }
+
+func TestManagePeopleInvitesChangesAndRemoves(t *testing.T) {
+	w := newWorld(t)
+	w.ok(password+"\n", "login", "--user", "me", "--password-stdin")
+	if out := w.ok("", "people"); !strings.Contains(out, "me") || !strings.Contains(out, "owner") {
+		t.Fatalf("people: %s", out)
+	}
+	link := strings.TrimSpace(w.ok("", "people", "invite", "member"))
+	_, token, ok := strings.Cut(link, "/invite#")
+	if !ok || token == "" {
+		t.Fatalf("invite printed %q", link)
+	}
+	w.fails(command.ExitFailure, "role", "people", "invite", "root")
+	body := `{"token":"` + token + `","username":"bob","password":"` + password + `"}`
+	req, _ := http.NewRequest(http.MethodPost, w.url+"/api/invite/accept", strings.NewReader(body))
+	req.Header.Set("Origin", w.url)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		t.Fatalf("accept: %v %v", err, resp)
+	}
+	resp.Body.Close()
+	if out := w.ok("", "people"); !strings.Contains(out, "bob") || !strings.Contains(out, "member") {
+		t.Fatalf("people after the join: %s", out)
+	}
+	w.ok("", "people", "role", "BOB", "admin")
+	if out := w.ok("", "people", "--json"); !strings.Contains(out, `"admin"`) {
+		t.Fatalf("people --json: %s", out)
+	}
+	w.fails(command.ExitFailure, "at least one owner", "people", "role", "me", "member")
+	w.fails(command.ExitFailure, "nobody is named", "people", "remove", "zed", "--yes")
+	w.fails(command.ExitUsage, "--yes", "people", "remove", "bob")
+	w.ok("", "people", "remove", "bob", "--yes")
+	if out := w.ok("", "people"); strings.Contains(out, "bob") {
+		t.Fatalf("people after the removal: %s", out)
+	}
+}

@@ -60,6 +60,8 @@ type stateFile struct {
 	Owner               *Owner                       `json:"owner,omitempty"`
 	Users               map[string]User              `json:"users,omitempty"`
 	LegacyPerson        string                       `json:"legacy_person,omitempty"`
+	Invites             map[string]Invite            `json:"invites,omitempty"`
+	Audit               []AuditEntry                 `json:"audit,omitempty"`
 	Agents              map[string]Agent             `json:"agents,omitempty"`
 	Sessions            map[string]StoredSession     `json:"sessions,omitempty"`
 	Revoked             map[string]time.Time         `json:"revoked,omitempty"`

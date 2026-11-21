@@ -13,14 +13,16 @@ import (
 )
 
 type accountRig struct {
-	t   *testing.T
-	c   *console.Console
-	srv *httptest.Server
+	t    *testing.T
+	c    *console.Console
+	srv  *httptest.Server
+	path string
 }
 
 func newAccountRig(t *testing.T) *accountRig {
 	t.Helper()
-	state, err := console.OpenState(t.TempDir()+"/state.json", "owner")
+	path := t.TempDir() + "/state.json"
+	state, err := console.OpenState(path, "owner")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +32,7 @@ func newAccountRig(t *testing.T) *accountRig {
 	srv.Config.Handler = c.Handler()
 	srv.Start()
 	t.Cleanup(srv.Close)
-	r := &accountRig{t: t, c: c, srv: srv}
+	r := &accountRig{t: t, c: c, srv: srv, path: path}
 	r.browser().ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, nil)
 	return r
 }

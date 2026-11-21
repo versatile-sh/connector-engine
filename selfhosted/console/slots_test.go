@@ -62,20 +62,30 @@ func importedSlots(t *testing.T, file []byte, before ...string) profiled {
 
 func (p profiled) consent(slot string) string {
 	p.t.Helper()
+	return p.consentWith(p.register(), slot)
+}
+
+func (p profiled) register() string {
+	p.t.Helper()
 	raw, _ := json.Marshal(map[string]any{"client_name": "Claude Code", "redirect_uris": []string{"http://127.0.0.1:33418/callback"}})
 	resp, err := http.Post(p.base+"/oauth/register", "application/json", bytes.NewReader(raw))
 	if err != nil {
 		p.t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	var reg struct {
 		ClientID string `json:"client_id"`
 	}
 	_ = json.NewDecoder(resp.Body).Decode(&reg)
-	resp.Body.Close()
-	q := url.Values{"response_type": {"code"}, "client_id": {reg.ClientID}, "redirect_uri": {"http://127.0.0.1:33418/callback"}, "state": {"s1"},
+	return reg.ClientID
+}
+
+func (p profiled) consentWith(client, slot string) string {
+	p.t.Helper()
+	q := url.Values{"response_type": {"code"}, "client_id": {client}, "redirect_uri": {"http://127.0.0.1:33418/callback"}, "state": {"s1"},
 		"code_challenge": {challengeOf(strings.Repeat("v", 50))}, "code_challenge_method": {"S256"}}
 	noRedo := &http.Client{Jar: p.b.client.Jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	resp, err = noRedo.Get(p.base + "/oauth/authorize?" + q.Encode())
+	resp, err := noRedo.Get(p.base + "/oauth/authorize?" + q.Encode())
 	if err != nil {
 		p.t.Fatal(err)
 	}
@@ -85,7 +95,20 @@ func (p profiled) consent(slot string) string {
 		p.t.Fatalf("authorize: %d %s", resp.StatusCode, loc)
 	}
 	p.b.ok("POST", "/api/oauth/requests/"+loc.Query().Get("request"), map[string]any{"approve": true, "password": ownerPassword, "slot": slot}, nil)
-	return "claude-code"
+	var keys struct {
+		Agents []struct {
+			Name     string `json:"name"`
+			ClientID string `json:"client_id"`
+		} `json:"agents"`
+	}
+	p.b.ok("GET", "/api/agents", nil, &keys)
+	for _, a := range keys.Agents {
+		if a.ClientID == client {
+			return a.Name
+		}
+	}
+	p.t.Fatalf("no key for client %s in %+v", client, keys.Agents)
+	return ""
 }
 
 func TestASharedSetupBringsEachKeyAsAPermissionSetNeverBoundByName(t *testing.T) {

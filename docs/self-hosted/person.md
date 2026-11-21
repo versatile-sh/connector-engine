@@ -23,7 +23,7 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 | `make unlock` | deliver the unlock key from the host keychain after a restart |
 | `make notify` | desktop popups for calls waiting for approval |
 | `make export` / `make import FILE=...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
-| `make reset-password` | set a new console password from this machine; `USER=<username>` names whose once there are several users |
+| `make reset-password` | set a new console password from this machine, even for the last Owner; `USER=<username>` names whose once there are several users |
 | `vsh login`, then `vsh connectors`, `vsh access`, `vsh approvals`, … | manage the install from a terminal as a signed-in user, with or without Docker ([vsh](../reference/vsh.md#sign-in-and-manage)) |
 | `make cli ARGS="tools list"` | `vsh` from the image against the console's `/mcp`; set `CN_AGENT_TOKEN` |
 | `make admin ARGS="tenants create t2"` | `vsh admin` against the operator listener with the generated operator token |
@@ -121,6 +121,49 @@ The console acts on the engine as engine persons, never as one shared account:
 - At every start, and after a restore, the console writes each user's engine role as the service person: `tenant_admin` over `t/<tenant>` for an Owner or Admin, `agent_configurer` over `t/<tenant>/w/<workspace>` for a Member, and membership of the managers group for Owners and Admins. It removes the rows of its users that should not be there and the old `owner` row once no user is `owner`; rows of other persons stay.
 - Upgrading with your own `connector-engine.yaml`: add the service person's row to `bootstrap.roles`, or the console logs "waiting for the engine" and every page stays empty. The old `owner` row can stay; the console then manages it.
 - Each access key has one owner, the user who made it; its agent tokens and bindings carry that person as `on_behalf_of` and `agent_owner`. Keys from an earlier console belong to the first Owner. A key name another user's key has is refused with "this name is taken".
+
+## Roles and ownership
+
+Each console user has a role: Owner, Admin or Member. Every console route declares one capability, and a role either holds it or gets `403` with `code: forbidden`. A route that declares none is refused for everyone.
+
+| Capability | Owner | Admin | Member |
+|---|---|---|---|
+| `people.manage`, `backup.full`, `activity.delete` | yes | | |
+| `people.read`, `people.reset`, `connectors.manage`, `skills.manage`, `setup.manage`, `activity.settings` | yes | yes | |
+| `keys.any`, `approvals.any`, `activity.any` | yes | yes | |
+| `keys.own`, `approvals.own`, `activity.own`, `notifications.own`, `signin.own`, `account.own` | yes | yes | yes |
+
+- `GET /api/session` returns the signed-in `user` (`person`, `username`, `role`), the capabilities they hold as `can`, and `people`, the number of users.
+- A request naming someone else's access key, approval or activity row answers `404`, as an unknown one does, unless the user holds the matching `*.any` capability. Lists, connector profiles and batches show a Member only their own keys.
+- `GET /api/agents`, `GET /api/approvals` and `GET /api/activity` list the user's own rows, or everyone's with `scope=everyone` for a user with the `*.any` capability. `GET /api/activity` also takes `person=<person id>` with `scope=everyone`. Every row carries `owner: {person, username}`; the username is empty for a removed person.
+- An activity row belongs to the person its agent token acted for when the call was captured. Rows captured before multi-user belong to the first Owner.
+- "Always allow this app" is offered only to a user with `keys.any`, and refused for anyone else on every surface. A decision from a chat channel, a desktop link or an elicitation decides as the key's owner, so a Member's key never gets it there.
+- `keys.any` narrows and revokes anyone's key, but no one mints a token for another person's key: renewing a key whose name another user's key has is refused with "this name is taken".
+- An app that connects through the browser reuses a key only when the consenting user owns it; another user's consent makes their own key with a suffixed name.
+- A permission set applies to an own key with `keys.own`, and to anyone's with `keys.any`; discarding one needs `keys.any`.
+- Every row of `GET /api/approvals` also carries the `choices` open to the viewer, as the single approval view does.
+- A provider sign-in or a header secret needs `connectors.manage` on a `shared` connector; on a `per_person` connector every user signs in as themselves with `signin.own`. Registering an issuer's OAuth client always needs `connectors.manage`.
+
+## People
+
+There is no sign-up screen. After the first run, an Owner adds a person from Account, People, "Invite a person": pick the role and copy the link. The person opens it on the console's own address, picks a username and a password, and is signed in. A link works once, for 72 hours, and dies when its creator is no longer an Owner. At most 20 links wait at a time. The link carries its token after a `#`, so it never reaches a server log, and the console keeps only its SHA-256.
+
+- Set `CONSOLE_PUBLIC_URL` to the address people use, or a link points at `127.0.0.1` and nobody else can open it. When that address is `https`, the session cookie is `Secure`; put TLS in front through a reverse proxy.
+- A forgotten password: an Owner makes a reset link for anyone else, an Admin only for a Member, never for oneself. The person opens it, sets a new password and is signed in; their other sessions end, and their keys, sign-ins and activity stay. A new link for the same person replaces the old one. `make reset-password` stays the way back in for an Owner nobody above can reset.
+- An Owner changes a role or removes a person. Removing signs the person out, stops their keys at once, deletes their provider sign-ins, channels and computers, and keeps their past activity. The last Owner can be neither demoted nor removed, and nobody removes themselves.
+- The People tab also lists the console's audit of these changes. The console keeps the newest 500 entries.
+- Wrong passwords are counted per username (5 a minute) with a ceiling of 30 a minute for the console; a wrong or used link counts 10 a minute for the whole console. A lock always expires.
+
+| Route | Needs | Does |
+|---|---|---|
+| `GET /api/people` | `people.read` | `{people, invites, audit}`; each person has `keys`, `you` and `may_reset` for the viewer; `audit` has at most 50 entries, newest first |
+| `POST /api/invites` `{role}` | `people.manage` | `201 {id, link, expires_at}` |
+| `POST /api/people/{person}/reset` | `people.reset` and the ladder | `201 {id, link, expires_at}` |
+| `DELETE /api/invites/{id}` | `people.reset` | `204`; a join link needs `people.manage`, a reset link its creator or `people.manage` |
+| `POST /api/invite/inspect` `{token}` | none | `200 {purpose, role, invited_by, username, expires_at}` or `410 link_gone`; `429` after 10 wrong links a minute |
+| `POST /api/invite/accept` `{token, username, password}` | none | `201 {csrf}` and the session cookie; `username` is ignored for a reset |
+| `PUT /api/people/{person}/role` `{role}` | `people.manage` | `204`; `409 last_owner` |
+| `DELETE /api/people/{person}` | `people.manage` | `204`; `409 last_owner`, `409 remove_self` |
 
 ## Profile settings
 

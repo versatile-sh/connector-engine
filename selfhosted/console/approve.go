@@ -15,12 +15,18 @@ func (c *Console) approvalPage(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	ctx := r.Context()
 	if u, _, ok := c.Sessions.Current(r); ok {
-		ctx = WithActor(ctx, u.Person)
-	} else if _, _, err := c.checkLink(r.URL.Query().Get("t"), id); err != nil {
+		ctx = WithActor(withUser(ctx, u), u.Person)
+	} else if d, _, err := c.checkLink(r.URL.Query().Get("t"), id); err != nil {
 		refuseLink(w, err, "sign in first")
 		return
+	} else {
+		ctx = WithActor(ctx, d.Owner)
 	}
-	v, err := c.Approval(ctx, id)
+	err := c.seeApproval(ctx, id)
+	var v ApprovalView
+	if err == nil {
+		v, err = c.Approval(ctx, id)
+	}
 	if err != nil {
 		c.fail(w, err)
 		return
@@ -71,7 +77,11 @@ func (c *Console) decideChoice(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, "missing or wrong CSRF token")
 			return
 		}
-		ctx = WithActor(ctx, u.Person)
+		ctx = WithActor(withUser(ctx, u), u.Person)
+		if err := c.seeApproval(ctx, id); err != nil {
+			c.fail(w, err)
+			return
+		}
 	}
 	v, lost, err := c.DecideChoice(ctx, id, in.Choice, channel, note)
 	if notApprover(err) {

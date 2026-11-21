@@ -24,10 +24,13 @@ func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func (c *Console) session(w http.ResponseWriter, r *http.Request) {
-	csrf, ok := c.Sessions.Get(r)
+	u, csrf, ok := c.Sessions.Current(r)
 	out := map[string]any{"owner_exists": c.State.HasOwner(), "signed_in": ok, "mcp_url": c.MCPURL}
 	if ok {
 		out["csrf"] = csrf
+		out["user"] = map[string]any{"person": u.Person, "username": u.Username, "role": u.Role}
+		out["can"] = u.Capabilities()
+		out["people"] = len(c.State.Users())
 		out["onboarding_dismissed"] = c.State.OnboardingDismissed()
 		out["key_protection"] = c.keyProtection(r.Context())
 	}
@@ -80,7 +83,7 @@ func (c *Console) login(w http.ResponseWriter, r *http.Request) {
 func (c *Console) verify(w http.ResponseWriter, username, password string) (User, bool) {
 	c.loginMu.Lock()
 	now := time.Now()
-	if c.passwordFails.full(now, passwordFailsPerMin) {
+	if c.passwordFails.locked(now, username) {
 		c.loginMu.Unlock()
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
@@ -88,7 +91,7 @@ func (c *Console) verify(w http.ResponseWriter, username, password string) (User
 	}
 	u, ok, err := c.State.CheckLogin(username, password)
 	if !ok && err == nil {
-		c.passwordFails.hit(now)
+		c.passwordFails.fail(now, username)
 		time.Sleep(500 * time.Millisecond)
 	}
 	c.loginMu.Unlock()

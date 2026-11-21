@@ -200,6 +200,9 @@ func (c *Console) setHeaders(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "give at least one header")
 		return
 	}
+	if c.State.CredentialMode(r.PathValue("id")) != CredentialPerPerson && !c.holds(w, r, CapConnectorsManage) {
+		return
+	}
 	if err := c.SetHeaderSecret(r.Context(), r.PathValue("id"), in.Headers); err != nil {
 		c.fail(w, err)
 		return
@@ -243,6 +246,9 @@ func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	conn := r.PathValue("id")
+	if (in.ClientID != "" || c.State.CredentialMode(conn) != CredentialPerPerson) && !c.holds(w, r, CapConnectorsManage) {
+		return
+	}
 	issuer, err := c.OAuthIssuer(r.Context(), conn)
 	if err != nil {
 		c.fail(w, err)

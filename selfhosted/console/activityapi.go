@@ -18,11 +18,12 @@ const (
 	engineRowPrefix = "e-"
 )
 
-// ActivityCall is one row of the activity page: a captured call joined with the engine's audit row, or an engine row alone.
+// ActivityCall is one row of the activity page, with its owner: a captured call joined with the engine's audit row, or an engine row alone.
 type ActivityCall struct {
 	ID            string      `json:"id"`
 	At            time.Time   `json:"at"`
 	Agent         string      `json:"agent"`
+	Owner         OwnerRef    `json:"owner"`
 	Connector     string      `json:"connector,omitempty"`
 	Alias         string      `json:"alias,omitempty"`
 	Function      string      `json:"function"`
@@ -223,7 +224,7 @@ func join(captures []Capture, f engineFacts, sep string) []joined {
 		if call != nil {
 			used[call.ID] = true
 		}
-		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Connector: conn, Alias: alias, Function: fn, Skill: skill, Path: cp.Path, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
+		row := ActivityCall{ID: cp.ID, At: cp.At, Agent: cp.Agent, Owner: OwnerRef{Person: cp.Person}, Connector: conn, Alias: alias, Function: fn, Skill: skill, Path: cp.Path, Outcome: cp.Outcome, Code: cp.Code, Approval: cp.Approval, Captured: true}
 		if cp.Outcome != OutcomePending && !cp.Done.IsZero() {
 			ms := cp.Done.Sub(cp.At).Milliseconds()
 			row.DurationMS = &ms
@@ -233,7 +234,7 @@ func join(captures []Capture, f engineFacts, sep string) []joined {
 	for i := range f.calls {
 		call := &f.calls[i]
 		if !used[call.ID] {
-			row := ActivityCall{ID: engineRowPrefix + string(call.ID), At: call.StartedAt, Agent: string(call.Agent), Approval: string(call.Approval)}
+			row := ActivityCall{ID: engineRowPrefix + string(call.ID), At: call.StartedAt, Agent: string(call.Agent), Owner: OwnerRef{Person: string(call.OnBehalfOf)}, Approval: string(call.Approval)}
 			out = append(out, joined{row: f.settle(row, call), call: call})
 		}
 	}
@@ -362,7 +363,7 @@ func pageOf(rows []joined, f activityFilter) ActivityPage {
 	return p
 }
 
-var activityParams = []string{"from", "to", "connector", "agent", "search", "outcome"}
+var activityParams = []string{"from", "to", "connector", "agent", "search", "outcome", "scope", "person"}
 
 func parseActivityFilter(r *http.Request, floor time.Time) (activityFilter, error) {
 	qv := r.URL.Query()
@@ -435,7 +436,26 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, pageOf(join(captures, facts, c.separator(r.Context(), firstAgent(f.agent, captures))), f))
+	all, err := everyone(r, CapActivityAny)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
+	u, _ := signedInUser(r.Context())
+	person := r.URL.Query().Get("person")
+	rows := c.owned(join(captures, facts, c.separator(r.Context(), firstAgent(f.agent, captures))))
+	rows = slices.DeleteFunc(rows, func(j joined) bool {
+		p := j.row.Owner.Person
+		return !all && p != u.Person || all && person != "" && p != person
+	})
+	writeJSON(w, http.StatusOK, pageOf(rows, f))
+}
+
+func (c *Console) owned(rows []joined) []joined {
+	for i := range rows {
+		rows[i].row.Owner = c.ownerRef(rows[i].row.Owner.Person)
+	}
+	return rows
 }
 
 func detailOf(j joined) ActivityDetail {
@@ -490,8 +510,9 @@ func (c *Console) activityDetail(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	for _, j := range join(captures, facts, c.separator(r.Context(), agent)) {
-		if j.row.ID == id {
+	u, _ := signedInUser(r.Context())
+	for _, j := range c.owned(join(captures, facts, c.separator(r.Context(), agent))) {
+		if j.row.ID == id && may(u, CapActivityOwn, CapActivityAny, j.row.Owner.Person) {
 			writeJSON(w, http.StatusOK, detailOf(j))
 			return
 		}

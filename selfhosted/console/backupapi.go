@@ -25,6 +25,9 @@ func (c *Console) exportBackup(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
+	if in.Mode != "setup" && !c.holds(w, r, CapBackupFull) {
+		return
+	}
 	if in.Mode == "setup" {
 		body, name, err := c.ExportSetup(r.Context())
 		if err != nil {
@@ -47,17 +50,6 @@ func (c *Console) exportBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	download(w, "application/octet-stream", name, body)
-}
-
-func (c *Console) ownerOrFirstRun(next http.HandlerFunc) http.HandlerFunc {
-	authed := c.authed(next)
-	return func(w http.ResponseWriter, r *http.Request) {
-		if c.State.HasOwner() {
-			authed(w, r)
-			return
-		}
-		next(w, r)
-	}
 }
 
 func readUpload(w http.ResponseWriter, r *http.Request) ([]byte, []byte, bool) {
@@ -86,6 +78,9 @@ func (c *Console) inspectUpload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if isBackup(raw) && !c.holds(w, r, CapBackupFull) {
+		return
+	}
 	_, signedIn := c.Sessions.Get(r)
 	s, err := c.InspectBackup(r.Context(), raw, passphrase, signedIn)
 	if err != nil {
@@ -98,6 +93,9 @@ func (c *Console) inspectUpload(w http.ResponseWriter, r *http.Request) {
 func (c *Console) importUpload(w http.ResponseWriter, r *http.Request) {
 	raw, passphrase, ok := readUpload(w, r)
 	if !ok {
+		return
+	}
+	if isBackup(raw) && !c.holds(w, r, CapBackupFull) {
 		return
 	}
 	_, signedIn := c.Sessions.Get(r)

@@ -26,6 +26,7 @@ type apiError struct {
 
 type statusError struct {
 	status int
+	code   string
 	err    error
 }
 
@@ -75,7 +76,7 @@ func (c *Console) refusal(err error) (int, apiError) {
 		}
 		return status, apiError{Error: ee.Detail, Code: ee.Code}
 	case errors.As(err, &se):
-		return se.status, apiError{Error: err.Error()}
+		return se.status, apiError{Error: err.Error(), Code: se.code}
 	case errors.Is(err, sealed.ErrLocked):
 		return http.StatusServiceUnavailable, apiError{Error: err.Error()}
 	case codeStatus[port.CodeOf(err)] != 0:

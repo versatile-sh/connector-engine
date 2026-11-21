@@ -80,7 +80,7 @@ func (c *Console) profiles(ctx context.Context, conn string, agentRows []port.Gr
 	}
 	rows := slices.DeleteFunc(slices.Clone(agentRows), func(g port.Grant) bool { return string(g.Connector) != conn })
 	out := []Profile{}
-	for _, a := range c.knownAgents() {
+	for _, a := range c.knownAgents(ctx) {
 		p := Profile{Agent: a.Name, Mode: ProfileOff, Expired: !a.ExpiresAt.After(time.Now())}
 		if bound[a.Name] {
 			p.Mode = ProfileFollow
@@ -126,7 +126,7 @@ func (c *Console) SetProfileMode(ctx context.Context, conn string, names []strin
 		return nil, err
 	}
 	defer unlock()
-	return eachKey(c.knownAgents(), names, func(a Agent) error { return set(ctx, conn, a) }), nil
+	return eachKey(c.knownAgents(ctx), names, func(a Agent) error { return set(ctx, conn, a) }), nil
 }
 
 func (c *Console) unbind(ctx context.Context, conn string, a Agent) error {
@@ -167,7 +167,7 @@ func (c *Console) SetProfileAccessAll(ctx context.Context, conn, agent string, n
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	a, err := agentNamed(c.knownAgents(), agent)
+	a, err := agentNamed(c.knownAgents(ctx), agent)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func (c *Console) CopyProfile(ctx context.Context, conn, from string, names []st
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	if _, err := agentNamed(c.knownAgents(), from); err != nil {
+	if _, err := agentNamed(c.knownAgents(ctx), from); err != nil {
 		return nil, err
 	}
 	unlock, err := c.lockConnector(ctx, conn)
@@ -260,7 +260,7 @@ func (c *Console) CopyProfile(ctx context.Context, conn, from string, names []st
 		return nil, err
 	}
 	src := all[slices.IndexFunc(all, func(p Profile) bool { return p.Agent == from })]
-	return eachKey(c.knownAgents(), names, func(a Agent) error {
+	return eachKey(c.knownAgents(ctx), names, func(a Agent) error {
 		if a.Name == from {
 			return nil
 		}
@@ -313,7 +313,7 @@ func (c *Console) ProfileEffects(ctx context.Context, conn, agent string) ([]Eff
 	if err := c.plainConnector(ctx, conn); err != nil {
 		return nil, err
 	}
-	key, err := agentNamed(c.knownAgents(), agent)
+	key, err := agentNamed(c.knownAgents(ctx), agent)
 	if err != nil {
 		return nil, err
 	}

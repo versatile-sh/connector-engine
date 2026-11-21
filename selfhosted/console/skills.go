@@ -258,7 +258,8 @@ func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
 		}
 		s := m.Skill
 		needs, compat := installedNeeds(s)
-		sum := SkillSummary{ID: string(conn.ID), Alias: conn.Alias, Title: firstOf(m.Title, s.Name), Description: m.Description, Icon: httpsOnly(m.Icon), Publisher: skillcatalog.Publisher(s.Source.Repository, m.Publisher.Name), Version: conn.Listing.Version,
+		origin, _ := c.State.OriginOf(string(conn.ID))
+		sum := SkillSummary{ID: string(conn.ID), Alias: conn.Alias, Title: firstOf(m.Title, s.Name), Description: m.Description, Icon: httpsOnly(firstOf(m.Icon, origin.Icon)), Publisher: skillcatalog.Publisher(s.Source.Repository, m.Publisher.Name), Version: conn.Listing.Version,
 			SkillPreview: SkillPreview{Name: s.Name, Category: s.Category, Source: safeSource(s.Source), Licence: s.Licence, Redistribution: s.Redistribution, HasScripts: s.HasScripts,
 				Files: fileViews(s.Files), Keys: []string{},
 				Needs: needs, Compat: compatViews(compat), Warnings: CompatWarnings(compat, c.appsOf(agents))}, Access: []KeyAccess{}}

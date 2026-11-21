@@ -253,5 +253,8 @@ func (c *Console) importOne(ctx context.Context, in importRequest) (string, Prev
 		return "", Preview{}, err
 	}
 	o := Origin{MCP: strings.TrimSpace(in.MCP), Listing: strings.TrimSpace(in.Listing), Local: in.Local, HeaderSecret: in.HeaderSecret, Digest: in.Digest}
+	if p.Kind == "skill" {
+		o.Icon = p.Icon
+	}
 	return id, p, c.State.PutOrigin(id, o)
 }

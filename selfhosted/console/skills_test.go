@@ -152,6 +152,9 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 		if raw.Skills[0]["icon"] != icon {
 			t.Fatalf("the API does not return the icon: %v", raw.Skills[0]["icon"])
 		}
+		if o, _ := state.OriginOf(imported.Skill); o.Icon != icon {
+			t.Fatalf("the console state keeps %q", o.Icon)
+		}
 	})
 	t.Run("an entry without an icon has none in the preview", func(t *testing.T) {
 		var bare console.Preview

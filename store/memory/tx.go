@@ -12,9 +12,10 @@ import (
 )
 
 type tx struct {
-	d     *data
-	scope port.Scope
-	write bool
+	d      *data
+	scope  port.Scope
+	write  bool
+	locked bool
 }
 
 func (t *tx) reads(a access, owner port.TenantID) bool {

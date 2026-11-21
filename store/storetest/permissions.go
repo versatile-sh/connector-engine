@@ -19,6 +19,9 @@ func (e *env) appendChanges(scope port.Scope, changes ...port.PermissionChange) 
 	e.t.Helper()
 	var rev int64
 	e.must(e.write(scope, func(tx port.Tx) (err error) {
+		if _, err = tx.LockPermissions(); err != nil {
+			return err
+		}
 		rev, err = tx.AppendPermissionChanges(changes)
 		return err
 	}))
@@ -83,17 +86,39 @@ func revisionGrowsByOnePerWritingTransaction(e *env) {
 		}
 	}
 	if err := e.write(scopeA, func(tx port.Tx) error {
-		_, err := tx.AppendPermissionChanges([]port.PermissionChange{change("g", `{}`)})
-		return errors.Join(err, errOK)
+		_, err := tx.LockPermissions()
+		_, err2 := tx.AppendPermissionChanges([]port.PermissionChange{change("g", `{}`)})
+		return errors.Join(err, err2, errOK)
 	}); !errors.Is(err, errOK) {
 		e.t.Fatalf("a rolled back append: %v", err)
 	}
 	e.same(int64(20), e.lockedRevision(scopeA))
 	e.same(int64(0), e.lockedRevision(scopeB))
 	for _, bad := range [][]port.PermissionChange{nil, {change("", `{}`)}, {change("g", `{not json`)}, {change("g", `null`)}} {
-		e.code(e.write(scopeA, func(tx port.Tx) error { _, err := tx.AppendPermissionChanges(bad); return err }), port.CodeInvalidArgument)
+		e.code(e.write(scopeA, func(tx port.Tx) error {
+			if _, err := tx.LockPermissions(); err != nil {
+				return err
+			}
+			_, err := tx.AppendPermissionChanges(bad)
+			return err
+		}), port.CodeInvalidArgument)
 	}
+	e.code(e.write(scopeA, func(tx port.Tx) error {
+		_, err := tx.AppendPermissionChanges([]port.PermissionChange{change("g", `{}`)})
+		return err
+	}), port.CodeInternal)
 	e.same(int64(20), e.lockedRevision(scopeA))
+	var revs []int64
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		_, err := tx.LockPermissions()
+		r1, err1 := tx.AppendPermissionChanges([]port.PermissionChange{change("first", `1`)})
+		r2, err2 := tx.AppendPermissionChanges([]port.PermissionChange{change("second", `2`)})
+		revs = []int64{r1, r2}
+		return errors.Join(err, err1, err2)
+	}))
+	e.same([]int64{21, 22}, revs)
+	e.same([]string{"tafirst", "tasecond"}, keysOf(e.changes(scopeA, 20, 1, 0)))
+	e.same([][2]int64{{21, 1}, {22, 1}}, positions(e.changes(scopeA, 20, 1, 0)))
 	if err := e.read(scopeA, func(tx port.Tx) error { _, err := tx.LockPermissions(); return err }); err == nil {
 		e.t.Fatal("a read transaction locked the revision")
 	}

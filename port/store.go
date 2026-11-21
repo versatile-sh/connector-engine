@@ -128,7 +128,8 @@ type Tx interface {
 	DeleteGrant(id GrantID) error
 	ReserveGrants(ids []GrantID) error
 
-	// LockPermissions holds the scope tenant's access setting revision until the Write ends and returns it; zero before any change.
+	// LockPermissions holds the scope tenant's revision until the Write ends and returns it, zero before any change.
+	// It is the first statement of a transaction that will append; an append without it is refused.
 	LockPermissions() (int64, error)
 	// AppendPermissionChanges logs changes, checked by PermissionChanges, under the next revision of the scope tenant and returns it.
 	AppendPermissionChanges(changes []PermissionChange) (int64, error)

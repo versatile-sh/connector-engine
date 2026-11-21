@@ -166,6 +166,9 @@ func TestMigratesALivePostgresStore(t *testing.T) {
 		if _, err := tx.MarkInbox("m1", t0); err != nil {
 			return err
 		}
+		if _, err := tx.LockPermissions(); err != nil {
+			return err
+		}
 		if _, err := tx.AppendPermissionChanges([]port.PermissionChange{{At: t0, Actor: "a", Op: "createGrant", Kind: "grant", Key: "g1", Before: json.RawMessage(`{"b":[1,{"k":null}],"a":"é"}`)}}); err != nil {
 			return err
 		}

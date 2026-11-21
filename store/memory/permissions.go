@@ -11,10 +11,14 @@ func (t *tx) LockPermissions() (int64, error) {
 	if !t.write {
 		return 0, port.Errorf(port.CodeInternal, "write in a read transaction")
 	}
+	t.locked = true
 	return t.d.permHeads[t.scope.Tenant], nil
 }
 
 func (t *tx) AppendPermissionChanges(changes []port.PermissionChange) (int64, error) {
+	if !t.locked {
+		return 0, port.Errorf(port.CodeInternal, "access setting changes are appended after LockPermissions in the same transaction")
+	}
 	if !t.write {
 		return 0, port.Errorf(port.CodeInternal, "write in a read transaction")
 	}

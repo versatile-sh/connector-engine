@@ -7,11 +7,16 @@ import (
 )
 
 func (t *tx) LockPermissions() (int64, error) {
-	return one[int64](t, `INSERT INTO permission_head AS h (tenant_id, revision) VALUES ($1, 0)
+	rev, err := one[int64](t, `INSERT INTO permission_head AS h (tenant_id, revision) VALUES ($1, 0)
 		ON CONFLICT (tenant_id) DO UPDATE SET revision = h.revision RETURNING revision`, string(t.scope.Tenant))
+	t.locked = err == nil
+	return rev, err
 }
 
 func (t *tx) AppendPermissionChanges(changes []port.PermissionChange) (int64, error) {
+	if !t.locked {
+		return 0, port.Errorf(port.CodeInternal, "access setting changes are appended after LockPermissions in the same transaction")
+	}
 	stamped, err := port.PermissionChanges(t.scope.Tenant, changes)
 	if err != nil {
 		return 0, err

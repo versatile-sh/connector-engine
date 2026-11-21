@@ -70,13 +70,17 @@ func TestNewRefusesRolesThatBypassRLS(t *testing.T) {
 
 func TestRowLevelSecurityBlocksCraftedQueries(t *testing.T) {
 	s, dsn := newStore(t)
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	for _, tenant := range []port.TenantID{"ta", "tb"} {
 		err := s.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 			if _, err := tx.PutConnector(port.Connector{ID: port.ConnectorID("c-" + tenant), Tenant: tenant, Workspace: "w"}, port.AnyRevision); err != nil {
 				return err
 			}
 			if err := tx.Audit(port.AuditRow{At: time.Now(), Tenant: tenant, Actor: "a", Action: "x"}); err != nil {
+				return err
+			}
+			if _, err := tx.LockPermissions(); err != nil {
 				return err
 			}
 			if _, err := tx.AppendPermissionChanges([]port.PermissionChange{{Kind: "grant", Key: "g", After: []byte(`{}`)}}); err != nil {
@@ -113,6 +117,10 @@ func TestRowLevelSecurityBlocksCraftedQueries(t *testing.T) {
 		}
 		return n
 	}
+	var forced int
+	if err := begin("ta").QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relname LIKE 'permission_%' AND relrowsecurity AND relforcerowsecurity`).Scan(&forced); err != nil || forced != 2 {
+		t.Fatalf("forced row-level security on the permission tables: %d %v", forced, err)
+	}
 	for _, table := range []string{"records", "audit", "outbox", "streams", "permission_head", "permission_changes"} {
 		q := begin("ta")
 		if n := count(q, "SELECT count(*) FROM "+table); n != 1 {
@@ -145,17 +153,15 @@ func TestRowLevelSecurityBlocksCraftedQueries(t *testing.T) {
 	if _, err := q.Exec(ctx, `UPDATE permission_head SET tenant_id = 'tb'`); err == nil {
 		t.Error("moving a revision to another tenant succeeded")
 	}
-	q = begin("ta")
-	var forced int
-	if err := q.QueryRow(ctx, `SELECT count(*) FROM pg_class WHERE relname LIKE 'permission_%' AND relrowsecurity AND relforcerowsecurity`).Scan(&forced); err != nil || forced != 2 {
-		t.Errorf("row-level security on the permission tables: %d %v", forced, err)
-	}
 }
 
 func TestRerunningThePermissionLogMigrationKeepsTheLog(t *testing.T) {
 	s, dsn := newStore(t)
 	ctx := context.Background()
 	if err := s.Write(ctx, port.Scope{Tenant: "ta"}, func(tx port.Tx) error {
+		if _, err := tx.LockPermissions(); err != nil {
+			return err
+		}
 		_, err := tx.AppendPermissionChanges([]port.PermissionChange{{Kind: "grant", Key: "g", After: []byte(`{}`)}})
 		return err
 	}); err != nil {

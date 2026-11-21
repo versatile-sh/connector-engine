@@ -157,8 +157,9 @@ func crossTenantMatrix(e *env) {
 		func(tx port.Tx) error { return tx.Audit(port.AuditRow{At: t0, Tenant: "ta", Action: "x"}) },
 		func(tx port.Tx) error { _, err := tx.LockPermissions(); return err },
 		func(tx port.Tx) error {
-			_, err := tx.AppendPermissionChanges([]port.PermissionChange{{Tenant: "ta", Kind: "grant", Key: "ta-x", After: json.RawMessage(`1`)}})
-			return err
+			_, err := tx.LockPermissions()
+			_, err2 := tx.AppendPermissionChanges([]port.PermissionChange{{Tenant: "ta", Kind: "grant", Key: "ta-x", After: json.RawMessage(`1`)}})
+			return errors.Join(err, err2)
 		},
 	} {
 		_ = e.write(scopeB, attack)

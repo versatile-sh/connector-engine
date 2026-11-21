@@ -109,6 +109,7 @@ type data struct {
 	events      []event
 	streams     map[string]int64
 	inbox       map[string]time.Time
+	inboxData   map[string][]byte
 }
 
 func (d data) clone() data {
@@ -120,7 +121,7 @@ func (d data) clone() data {
 	d.exposures, d.operations, d.fanouts = d.exposures.clone(), d.operations.clone(), d.fanouts.clone()
 	d.roles, d.members = d.roles.clone(), d.members.clone()
 	d.audit, d.events = slices.Clone(d.audit), slices.Clone(d.events)
-	d.streams, d.inbox = maps.Clone(d.streams), maps.Clone(d.inbox)
+	d.streams, d.inbox, d.inboxData = maps.Clone(d.streams), maps.Clone(d.inbox), maps.Clone(d.inboxData)
 	return d
 }
 
@@ -144,7 +145,7 @@ func New() *Store {
 		overlays: newTable[port.Overlay](tenantRows), calls: newTable[port.Call](tenantRows), clients: newTable[port.ClientRegistration](tenantRows), syncs: newTable[port.SourceSync](sharedRows),
 		exposures: newTable[port.Exposure](tenantRows), operations: newTable[port.Operation](tenantRows),
 		fanouts: newTable[port.FanOut](tenantRows), roles: newTable[port.RoleAssignment](tenantRows),
-		members: newTable[port.GroupMember](tenantRows), streams: map[string]int64{}, inbox: map[string]time.Time{},
+		members: newTable[port.GroupMember](tenantRows), streams: map[string]int64{}, inbox: map[string]time.Time{}, inboxData: map[string][]byte{},
 	}}
 }
 

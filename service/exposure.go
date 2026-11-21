@@ -146,7 +146,7 @@ func (s *Service) RefreshExposure(ctx context.Context, tenant port.TenantID, age
 	}
 	next := exposure.Check(entries)
 	next.Tenant, next.Agent = tenant, agent
-	ctx = WithIdempotencyKey(ctx, "")
+	ctx = WithIdempotencyKey(ctx, "", "")
 	err = s.write(ctx, port.Scope{Tenant: tenant}, "RefreshExposure", func(tx port.Tx) error {
 		prev, _, err := tx.GetExposure(agent)
 		if err != nil {

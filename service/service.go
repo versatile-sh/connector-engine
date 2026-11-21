@@ -65,25 +65,90 @@ func (s *Service) now() time.Time { return s.d.Clock.Now() }
 
 type idemKey struct{}
 
-// WithIdempotencyKey marks the mutation run with ctx as a retry-safe one: a second run with the key does nothing and returns zero values.
-func WithIdempotencyKey(ctx context.Context, key string) context.Context {
-	return context.WithValue(ctx, idemKey{}, key)
+type idem struct {
+	key, hash string
+	id        string
+	scope     port.Scope
+	replayed  bool
+	stored    idemPayload
+}
+
+type idemPayload struct {
+	Hash   string          `json:"hash"`
+	Result json.RawMessage `json:"result,omitempty"`
+}
+
+// WithIdempotencyKey marks the mutation run with ctx as a retry-safe one: a second run with the key and the same requestHash runs nothing and Replay returns the first result, one with another hash is a conflict.
+func WithIdempotencyKey(ctx context.Context, key, requestHash string) context.Context {
+	if key == "" {
+		return context.WithValue(ctx, idemKey{}, (*idem)(nil))
+	}
+	return context.WithValue(ctx, idemKey{}, &idem{key: key, hash: requestHash})
+}
+
+// Replay reports whether the mutation run with ctx was a retry; it returns the stored JSON result (empty when none was kept) or a conflict when the key was first used for another request.
+func Replay(ctx context.Context) (result []byte, replayed bool, err error) {
+	st, _ := ctx.Value(idemKey{}).(*idem)
+	if st == nil || !st.replayed {
+		return nil, false, nil
+	}
+	if st.stored.Hash != "" && st.stored.Hash != st.hash {
+		return nil, true, port.Errorf(port.CodeConflict, "the idempotency key was used for a different request")
+	}
+	return st.stored.Result, true, nil
+}
+
+// Remember keeps the JSON of result for the retries of the mutation run with ctx; it does nothing without a key or on a retry.
+func (s *Service) Remember(ctx context.Context, result any) error {
+	st, _ := ctx.Value(idemKey{}).(*idem)
+	if st == nil || st.id == "" || st.replayed {
+		return nil
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	payload, err := json.Marshal(idemPayload{Hash: st.hash, Result: raw})
+	if err != nil {
+		return err
+	}
+	return s.d.Store.Write(ctx, st.scope, func(tx port.Tx) error { return tx.SetInboxPayload(st.id, payload) })
 }
 
 func (s *Service) write(ctx context.Context, scope port.Scope, op string, fn func(port.Tx) error) error {
-	key, _ := ctx.Value(idemKey{}).(string)
+	st, _ := ctx.Value(idemKey{}).(*idem)
 	var seen *touched
 	err := s.d.Store.Write(ctx, scope, func(tx port.Tx) error {
-		if key != "" {
-			fresh, err := tx.MarkInbox("idem:"+op+":"+key, s.now())
-			if err != nil || !fresh {
+		if st != nil {
+			id := "idem:" + op + ":" + st.key
+			fresh, err := tx.MarkInbox(id, s.now())
+			if err != nil {
 				return err
 			}
+			if !fresh {
+				raw, err := tx.InboxPayload(id)
+				if err != nil {
+					return err
+				}
+				st.replayed, st.stored = true, idemPayload{}
+				if len(raw) > 0 {
+					_ = json.Unmarshal(raw, &st.stored)
+				}
+				return nil
+			}
+			first, err := json.Marshal(idemPayload{Hash: st.hash})
+			if err != nil {
+				return err
+			}
+			if err := tx.SetInboxPayload(id, first); err != nil {
+				return err
+			}
+			st.id, st.scope = id, scope
 		}
 		seen = newTouched(tx, slices.Contains(catalogOps, op))
 		return fn(seen)
 	})
-	if err == nil && scope.Tenant != "" && slices.Contains(exposureOps, op) {
+	if err == nil && !(st != nil && st.replayed) && scope.Tenant != "" && slices.Contains(exposureOps, op) {
 		s.refreshExposures(ctx, scope.Tenant, seen)
 	}
 	return err

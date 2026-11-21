@@ -78,6 +78,19 @@ func (t *tx) MarkInbox(id string, at time.Time) (bool, error) {
 	return n == 1, err
 }
 
+func (t *tx) SetInboxPayload(id string, payload []byte) error {
+	_, err := t.exec(`UPDATE inbox SET payload = ?3 WHERE tenant_id = ?1 AND id = ?4`, string(payload), id)
+	return err
+}
+
+func (t *tx) InboxPayload(id string) ([]byte, error) {
+	v, err := many[string](t, `SELECT coalesce(payload, '') FROM inbox WHERE tenant_id = ?1 AND id = ?3`, id)
+	if err != nil || len(v) == 0 {
+		return nil, err
+	}
+	return []byte(v[0]), nil
+}
+
 func uuid() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)

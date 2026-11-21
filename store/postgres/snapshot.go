@@ -18,6 +18,8 @@ var snapshotTables = []struct{ name, order, serial string }{
 	{"records", "kind, k", ""}, {"streams", "stream", ""}, {"outbox", "pos", "pos"}, {"audit", "id", "id"}, {"inbox", "tenant_id, id", ""},
 }
 
+var permissionTables = []struct{ name, order, serial string }{{"permission_head", "tenant_id", ""}, {"permission_changes", "revision, seq", ""}}
+
 func (s *Store) inAll(ctx context.Context, opts pgx.TxOptions, fn func(t *tx, tenants []string) error) error {
 	q, err := s.pool.BeginTx(ctx, opts)
 	if err != nil {
@@ -51,7 +53,7 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 			if err := t.as(tenant); err != nil {
 				return err
 			}
-			for _, tb := range snapshotTables {
+			for _, tb := range append(slices.Clone(snapshotTables), permissionTables...) {
 				rows, err := many[json.RawMessage](t, `SELECT to_jsonb(x) FROM `+tb.name+` x WHERE tenant_id = $1 ORDER BY `+tb.order, tenant)
 				if err != nil {
 					return err
@@ -71,7 +73,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 	}
 	byTenant := map[string]map[string][]json.RawMessage{}
 	serials := map[string]int64{}
-	for _, tb := range snapshotTables {
+	for _, tb := range append(slices.Clone(snapshotTables), permissionTables...) {
 		for _, raw := range snap.Tables[tb.name] {
 			var r struct {
 				Tenant string `json:"tenant_id"`
@@ -94,7 +96,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 		}
 	}
 	return s.inAll(ctx, pgx.TxOptions{}, func(t *tx, tenants []string) error {
-		if _, err := t.exec(`LOCK TABLE records, streams, outbox, audit, inbox, due_work IN EXCLUSIVE MODE`); err != nil {
+		if _, err := t.exec(`LOCK TABLE permission_head, records, streams, outbox, audit, inbox, due_work, permission_changes IN EXCLUSIVE MODE`); err != nil {
 			return err
 		}
 		for tenant := range byTenant {
@@ -114,16 +116,11 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 			if err := t.as(tenant); err != nil {
 				return err
 			}
-			for _, tb := range snapshotTables {
-				if rows := tables[tb.name]; len(rows) > 0 {
-					raw, err := json.Marshal(rows)
-					if err != nil {
-						return err
-					}
-					if _, err := t.exec(`INSERT INTO `+tb.name+` SELECT * FROM jsonb_populate_recordset(NULL::`+tb.name+`, $1::jsonb)`, string(raw)); err != nil {
-						return err
-					}
-				}
+			if err := t.insertRows(snapshotTables, tables); err != nil {
+				return err
+			}
+			if err := t.importPermissions(tenant, tables); err != nil {
+				return err
 			}
 		}
 		for _, tb := range snapshotTables {
@@ -140,6 +137,32 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 		slices.Sort(owners)
 		return t.canonicalGrants(owners)
 	})
+}
+
+func (t *tx) insertRows(tbs []struct{ name, order, serial string }, tables map[string][]json.RawMessage) error {
+	for _, tb := range tbs {
+		if rows := tables[tb.name]; len(rows) > 0 {
+			raw, err := json.Marshal(rows)
+			if err != nil {
+				return err
+			}
+			if _, err := t.exec(`INSERT INTO `+tb.name+` SELECT * FROM jsonb_populate_recordset(NULL::`+tb.name+`, $1::jsonb)`, string(raw)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (t *tx) importPermissions(tenant string, tables map[string][]json.RawMessage) error {
+	if _, err := t.exec(`DELETE FROM permission_head WHERE tenant_id = $1 AND revision = 0`, tenant); err != nil {
+		return err
+	}
+	live, err := one[bool](t, `SELECT EXISTS (SELECT 1 FROM permission_head WHERE tenant_id = $1)`, tenant)
+	if err != nil || live {
+		return err
+	}
+	return t.insertRows(permissionTables, tables)
 }
 
 const canonicalGrantsMigration = "migrations/0003_canonical_grants.sql"

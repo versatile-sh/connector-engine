@@ -37,33 +37,39 @@ type env struct {
 // Run executes the whole suite, each case on a fresh store from newStore.
 func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 	cases := map[string]func(*env){
-		"tenant isolation":          isolation,
-		"cross-tenant matrix":       crossTenantMatrix,
-		"installation rows":         installationRows,
-		"unit of work":              unitOfWork,
-		"read only":                 readOnly,
-		"outbox order per stream":   outboxOrder,
-		"concurrent emit":           concurrentEmit,
-		"conditional approval":      conditionalApproval,
-		"one open record per call":  oneOpenRecord,
-		"concurrent decisions":      concurrentDecisions,
-		"conditional call":          conditionalCall,
-		"revisions":                 revisions,
-		"grant key":                 grantKey,
-		"counted grant reservation": countedReservation,
-		"concurrent reservation":    concurrentReservation,
-		"grant row keeps use count": writingAGrantRowKeepsItsUseCount,
-		"due work":                  dueWork,
-		"inbox":                     inbox,
-		"scope validation":          scopeValidation,
-		"records":                   records,
-		"skill version":             skillVersion,
-		"roles and groups":          rolesAndGroups,
-		"calls clients and syncs":   callsClientsAndSyncs,
-		"purge tenant":              purgeTenant,
-		"prune history":             pruneHistory,
-		"snapshot and restore":      snapshotRestore,
-		"restore normalizes agent":  restoreNormalizesAgent,
+		"tenant isolation":           isolation,
+		"cross-tenant matrix":        crossTenantMatrix,
+		"installation rows":          installationRows,
+		"unit of work":               unitOfWork,
+		"read only":                  readOnly,
+		"outbox order per stream":    outboxOrder,
+		"concurrent emit":            concurrentEmit,
+		"conditional approval":       conditionalApproval,
+		"one open record per call":   oneOpenRecord,
+		"concurrent decisions":       concurrentDecisions,
+		"conditional call":           conditionalCall,
+		"revisions":                  revisions,
+		"grant key":                  grantKey,
+		"counted grant reservation":  countedReservation,
+		"concurrent reservation":     concurrentReservation,
+		"grant row keeps use count":  writingAGrantRowKeepsItsUseCount,
+		"due work":                   dueWork,
+		"inbox":                      inbox,
+		"scope validation":           scopeValidation,
+		"records":                    records,
+		"skill version":              skillVersion,
+		"roles and groups":           rolesAndGroups,
+		"calls clients and syncs":    callsClientsAndSyncs,
+		"purge tenant":               purgeTenant,
+		"prune history":              pruneHistory,
+		"snapshot and restore":       snapshotRestore,
+		"restore normalizes agent":   restoreNormalizesAgent,
+		"permission revision":        revisionGrowsByOnePerWritingTransaction,
+		"permission values":          permissionValuesAsGiven,
+		"permission paging":          permissionChangesPage,
+		"permission tenant scope":    permissionLogIsTenantScoped,
+		"permission consistent read": consistentReadSeesOneRevision,
+		"permission log on restore":  restoreKeepsTheLivePermissionLog,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -837,12 +843,15 @@ func purgeTenant(e *env) {
 				tx.PutRole(port.RoleAssignment{Tenant: tenant, Person: "p", Role: "approver", Scope: "t/" + string(tenant)}),
 				tx.PutListing(port.Listing{Ref: port.ListingRef{Owner: tenant, Name: "io.x/own"}}))
 		}))
+		e.appendChanges(scope, change("g", `{}`))
 	}
 	fill(scopeA)
 	fill(scopeB)
 	counts, err := purger.PurgeTenant(ctx, "ta")
 	e.must(err)
-	e.same([]int{1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"]})
+	e.same([]int{1, 1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"], counts["permission_changes"]})
+	e.same([]string{"tbg"}, append(keysOf(e.changes(scopeA, 0, 0, 0)), keysOf(e.changes(scopeB, 0, 0, 0))...))
+	e.same(int64(0), e.lockedRevision(scopeA))
 	for scope, want := range map[port.Scope]int{scopeA: 0, scopeB: 1} {
 		e.must(e.read(port.Scope{Tenant: scope.Tenant, Installation: true}, func(tx port.Tx) error {
 			conns, err1 := tx.ListConnectors(port.ConnectorFilter{})

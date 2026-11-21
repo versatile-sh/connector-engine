@@ -48,7 +48,7 @@ export function SkillDialog({ skill, origin, onClose }: SkillDialogProps) {
         <div className="grid gap-x-10 gap-y-6 @3xl:grid-cols-2">
           <div className="min-w-0">
             <h3 className={`${SUBTITLE} mb-3`}>{t("skills.about")}</h3>
-            <SkillFactsView skill={skill} unbound={skill.unbound} />
+            <SkillFactsView skill={skill} unbound={skill.unbound} details />
           </div>
           <div className="min-w-0">
             <h3 className={SUBTITLE}>{t("skills.perKey")}</h3>

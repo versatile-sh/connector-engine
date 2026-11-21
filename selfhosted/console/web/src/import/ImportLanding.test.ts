@@ -1,12 +1,25 @@
 import { describe, test } from "node:test";
 import { createElement } from "react";
-import type { ImportSource, Preview } from "../api";
+import type { ClientCompat, ImportSource, Preview, SkillFacts } from "../api";
 import { renderMarkup } from "../testing/render.ts";
 import { ImportLanding } from "./ImportLanding.tsx";
 
 const COMMIT = "57217cf86ba38148a57af9e90d14a4c049558330";
 const SKILL_SOURCE: ImportSource = { listing: "https://versatile.sh/skills/catalog/find-skills.yaml" };
 const CONNECTOR_SOURCE: ImportSource = { listing: "https://versatile.sh/connectors/catalog/mail.yaml" };
+
+const FACTS: SkillFacts = {
+  name: "find-skills",
+  source: { repository: "https://github.com/vercel-labs/skills", path: "skills/find-skills", commit: COMMIT },
+  licence: { spdx: "MIT", redistributable: true },
+  redistribution: "bundled",
+  has_scripts: false,
+  files: [{ path: "SKILL.md", bytes: 1200 }],
+  keys: ["claude"],
+  needs: { tools: [], runtimes: [], network: false, mcp: [] },
+  compat: [],
+  warnings: [],
+};
 
 const SKILL: Preview = {
   kind: "skill",
@@ -19,19 +32,21 @@ const SKILL: Preview = {
   version: COMMIT,
   tools: [],
   items: [],
-  skill: {
-    name: "find-skills",
-    source: { repository: "https://github.com/vercel-labs/skills", path: "skills/find-skills", commit: COMMIT },
-    licence: { spdx: "MIT", redistributable: true },
-    redistribution: "bundled",
-    has_scripts: false,
-    files: [{ path: "SKILL.md", bytes: 1200 }],
-    keys: ["claude"],
-    needs: { tools: [], runtimes: [], network: false, mcp: [] },
-    compat: [],
-    warnings: [],
-  },
+  skill: FACTS,
 };
+
+const APPS: readonly (readonly [string, string])[] = [
+  ["claude-code", "Claude Code"],
+  ["codex-cli", "Codex CLI"],
+  ["cursor", "Cursor"],
+  ["gemini-cli", "Gemini CLI"],
+  ["vscode-copilot", "VS Code Copilot"],
+  ["opencode", "opencode / oh-my-pi"],
+  ["claude-desktop", "Claude Desktop"],
+  ["chat-mcp", "ChatGPT and other chat-only MCP clients"],
+];
+
+const COMPAT: ClientCompat[] = APPS.map(([client, name]) => ({ client, name, status: "full", reasons: ["ok"], source: "derived" }));
 
 const CONNECTOR: Preview = {
   kind: "listing",
@@ -175,6 +190,31 @@ describe("ImportLanding", () => {
 
     test("stacks the access choice under its note until its container has 28rem", (t) => {
       t.assert.match(html, /<div class="@container"><div class="grid grid-cols-1 items-center gap-3 @md:grid-cols-\[minmax\(0,1fr\)_auto\]/);
+    });
+  });
+
+  describe("with a skill every app can use", () => {
+    const html = draw({ ...SKILL, skill: { ...FACTS, compat: COMPAT } }, SKILL_SOURCE);
+
+    test("draws one compatibility line and one mark per app, each with an accessible name", (t) => {
+      t.assert.match(html, />Works in every AI app</);
+      t.assert.equal(html.match(/role="img"/g)?.length, APPS.length);
+      for (const [, name] of APPS) t.assert.match(html, new RegExp(`aria-label="${name.replace(/[/.]/g, "\\$&")}: Works\\.`));
+    });
+
+    test("draws no table and no disclosure for it", (t) => {
+      t.assert.doesNotMatch(html, /<table|>Details</);
+    });
+  });
+
+  describe("with a skill some apps cannot run", () => {
+    const mixed = COMPAT.map((entry) => (entry.client === "claude-desktop" ? { ...entry, status: "instructions" as const, reasons: ["runs-bundled-code"] } : entry));
+    const html = draw({ ...SKILL, skill: { ...FACTS, compat: mixed } }, SKILL_SOURCE);
+
+    test("groups the marks by status, still one mark per app", (t) => {
+      t.assert.match(html, />Works in<[^]*>Instructions only</);
+      t.assert.equal(html.match(/role="img"/g)?.length, APPS.length);
+      t.assert.match(html, /aria-label="Claude Desktop: Instructions only\. Ships scripts and has no shell to run them"/);
     });
   });
 

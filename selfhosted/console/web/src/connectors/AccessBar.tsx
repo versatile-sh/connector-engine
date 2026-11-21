@@ -1,8 +1,8 @@
 import type { Access } from "../api";
 
-const FILL = { on: "bg-paper/60", ask: "bg-amber-400/50" } as const;
+const FILL = { on: "bg-paper/40", ask: "bg-amber-400/50" } as const;
 
-/** How a set of choices splits between on, in paper at 60%, and ask, in amber at 50%, as a 2px hairline whose empty track, in line, is off. */
+/** How a set of choices splits between on, in paper at 40%, and ask, in amber at 50%, as a 2px hairline whose empty track, in line, is off. */
 export function AccessBar({ counts, className = "" }: { counts: Record<Access, number>; className?: string }) {
   const total = counts.off + counts.on + counts.ask;
   return (

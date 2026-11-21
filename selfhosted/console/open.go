@@ -74,6 +74,7 @@ func unlockBox(ctx context.Context, box *sealed.Box, unlock func(context.Context
 func (c *Console) prepareEngine(ctx context.Context) {
 	if c.untilReady(ctx, "tenant", c.Engine.EnsureTenant) {
 		c.untilReady(ctx, "roles", func(ctx context.Context) error { return c.ReconcileRoles(ctx) })
+		c.untilReady(ctx, "classes", func(ctx context.Context) error { return c.RepairClasses(WithActor(ctx, c.Engine.service())) })
 	}
 }
 

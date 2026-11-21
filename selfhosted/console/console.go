@@ -89,6 +89,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("POST /api/preview", c.preview)
 	rt.handle("POST /api/import", c.doImport)
 	rt.handle("PUT /api/connectors/{id}/functions/{name}", c.setAccess)
+	rt.handle("PUT /api/connectors/{id}/read-only", c.trustReadOnly)
 	rt.handle("PUT /api/connectors/{id}/items", c.setItemAccess)
 	rt.handle("PUT /api/connectors/{id}/functions", c.setAccessAll)
 	rt.handle("POST /api/connectors/{id}/profiles:copy", c.copyProfile)

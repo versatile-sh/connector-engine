@@ -95,7 +95,8 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		}
 		s := ConnectorSummary{ID: string(conn.ID), Alias: conn.Alias, Enabled: conn.Enabled, Blocked: v.Blocked, Listing: conn.Listing.Listing.Name, Version: conn.Listing.Version, Title: conn.Alias,
 			Mode: c.State.CredentialMode(string(conn.ID)), Modes: []CredentialMode{}}
-		if m, err := c.Engine.manifest(ctx, conn); err == nil {
+		m, err := c.Engine.manifest(ctx, conn)
+		if err == nil {
 			s.Modes = credentialModes(m)
 			if m.Kind == port.KindSkill {
 				continue
@@ -127,7 +128,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 				continue
 			}
 			title, desc := describe(f.Definition)
-			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f), State: string(f.State), Access: functionAccess(f, rows)})
+			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f, m), State: string(f.State), Access: functionAccess(f, rows)})
 		}
 		if s.Profiles, err = c.profiles(ctx, string(conn.ID), agentRows); err != nil {
 			return nil, err
@@ -177,7 +178,7 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature (write for destructive, so on is never capped to ask), replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every bound key the item rows of the connector.
+// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, keeps the function's class, replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every bound key the item rows of the connector.
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
 	results, err := c.SetAccessAll(ctx, conn, []string{name}, a)
 	if err != nil {
@@ -267,15 +268,6 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 			return err
 		}
 		if err := c.confirmOverrides(ctx, conn, f); err != nil {
-			return err
-		}
-	}
-	class := port.ClassWrite
-	if Nature(f) == port.ClassRead {
-		class = port.ClassRead
-	}
-	if !item && class != f.Class {
-		if f, err = c.Engine.setClass(ctx, conn, name, class); err != nil {
 			return err
 		}
 	}

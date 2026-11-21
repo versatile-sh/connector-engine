@@ -94,7 +94,7 @@ func (c *Console) present(ctx context.Context, a port.Approval) (presented, erro
 	if m.Kind == port.KindSkill {
 		pr.skill, pr.kind, pr.title, pr.known = true, port.ClassRead, firstOf(m.Title, ref.Alias), true
 	} else if f, err := c.function(ctx, string(a.Connector), a.Function); err == nil {
-		pr.kind, pr.known = Nature(f), true
+		pr.kind, pr.known = Nature(f, m), true
 		pr.title, _ = describe(f.Definition)
 	}
 	if pr.known {
@@ -152,7 +152,7 @@ func (c *Console) choices(ctx context.Context, a port.Approval, known bool) (off
 	if a.Mode == port.ModeAskOnce {
 		offered = append(offered, surface.ChoiceSession)
 	}
-	if known && c.mayAlways(ctx, a) {
+	if known && a.Class.Effective() != port.ClassDestructive && c.mayAlways(ctx, a) {
 		offered = append(offered, surface.ChoiceAlways)
 	}
 	offered = append(offered, surface.ChoiceDeny)

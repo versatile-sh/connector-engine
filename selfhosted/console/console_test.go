@@ -295,9 +295,10 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 			t.Fatalf("access read back: %v, want %v", got, want)
 		}
 	}
-	if classes["search"] != port.ClassRead || classes["create"] != port.ClassWrite || classes["purge"] != port.ClassWrite {
-		t.Fatalf("classes by nature: %v", classes)
+	if classes["search"] != port.ClassNone || classes["create"] != port.ClassNone || classes["purge"] != port.ClassDestructive {
+		t.Fatalf("classes kept on import: %v", classes)
 	}
+	b.ok("PUT", "/api/connectors/"+conn.ID+"/read-only", map[string]string{"name": "search"}, nil)
 
 	var tok console.AgentToken
 	b.ok("POST", "/api/agents", map[string]any{"name": "Claude Code"}, &tok)
@@ -327,7 +328,7 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	if slices.Contains(names, a+"mystery") {
 		t.Fatalf("an off function is listed: %v", names)
 	}
-	for _, n := range []string{"search", "create"} {
+	for _, n := range []string{"search"} {
 		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{}})
 		if err != nil || res.IsError || textOf(res) != "ran "+n {
 			var d map[string]any
@@ -360,11 +361,14 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	}
 
 	b.ok("PUT", "/api/connectors/"+conn.ID+"/functions/purge", map[string]string{"access": "on"}, nil)
-	for _, n := range []string{"search", "create", "purge"} {
+	before := up.count("search")
+	if res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + "search", Arguments: map[string]any{"round": 2}}); err != nil || res.IsError || up.count("search") != before+1 {
+		t.Fatalf("search on, with a bound agent: %v %v", res, err)
+	}
+	for _, n := range []string{"create", "purge"} {
 		before := up.count(n)
-		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{"round": 2}})
-		if err != nil || res.IsError || up.count(n) != before+1 {
-			t.Fatalf("%s on, with a bound agent: %v %v", n, res, err)
+		if res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: a + n, Arguments: map[string]any{"round": 2}}); err != nil || up.count(n) != before {
+			t.Fatalf("%s on without a review ran without asking: %v %v", n, res, err)
 		}
 	}
 

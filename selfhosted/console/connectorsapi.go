@@ -156,6 +156,20 @@ func (c *Console) setAccess(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (c *Console) trustReadOnly(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Name string `json:"name"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if err := c.TrustReadOnly(r.Context(), r.PathValue("id"), in.Name); err != nil {
+		c.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (c *Console) setItemAccess(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Name   string `json:"name"`

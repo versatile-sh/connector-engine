@@ -79,6 +79,7 @@ type stateFile struct {
 	NewKeyLimits        map[string]map[string]Access `json:"new_key_limits,omitempty"`
 	Slots               map[string]KeySlot           `json:"key_slots,omitempty"`
 	Credentials         map[string]CredentialMode    `json:"credential_modes,omitempty"`
+	Signup              SignupSettings               `json:"signup,omitzero"`
 }
 
 // Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
@@ -121,13 +122,14 @@ func OpenState(path, person string) (*State, error) {
 	return s, nil
 }
 
-const stateFormat = 1
+const stateFormat = 2
 
 var stateSteps = []func(d *stateFile, person string){
 	func(d *stateFile, person string) {
 		migrateSlots(d)
 		migrateUsers(d, person)
 	},
+	func(d *stateFile, _ string) { d.Signup = SignupSettings{Role: RoleMember} },
 }
 
 func upgradeState(d *stateFile, person string) error {

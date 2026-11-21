@@ -63,7 +63,7 @@ func (c *Console) listPeople(w http.ResponseWriter, r *http.Request) {
 	for _, inv := range c.State.Links() {
 		links = append(links, LinkRow{ID: inv.ID, Purpose: inv.Purpose, Role: inv.Role, Person: inv.Person, CreatedBy: inv.CreatedBy, CreatedAt: inv.CreatedAt, ExpiresAt: inv.ExpiresAt, MayRevoke: mayRevokeFor(viewer, inv)})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"people": people, "invites": links, "audit": c.State.Audit(auditPageSize)})
+	writeJSON(w, http.StatusOK, map[string]any{"people": people, "invites": links, "audit": c.State.Audit(auditPageSize), "signup": c.State.Signup()})
 }
 
 func (c *Console) linkJSON(w http.ResponseWriter, l NewLink, err error) {

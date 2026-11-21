@@ -46,6 +46,7 @@ type Console struct {
 	keying        sync.Mutex
 	passwordFails lockout
 	inviteFails   minuteWindow
+	signupHits    lockout
 	icons         iconCache
 	connects      connectStates
 	as            authServer
@@ -68,6 +69,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("POST /api/invites", c.createInvite)
 	rt.handle("DELETE /api/invites/{id}", c.revokeInvite)
 	rt.handle("POST /api/people/{person}/reset", c.createReset)
+	rt.handle("PUT /api/people/signup", c.setSignup)
 	rt.handle("PUT /api/people/{person}/role", c.setRole)
 	rt.handle("DELETE /api/people/{person}", c.removePerson)
 	rt.handle("POST /api/invite/inspect", c.inspectInvite)
@@ -75,6 +77,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("GET /api/ready", c.ready)
 	rt.handle("POST /api/setup", c.setup)
 	rt.handle("POST /api/login", c.login)
+	rt.handle("POST /api/signup", c.signup)
 	rt.handle("POST /api/logout", c.logout)
 	rt.handle("GET /api/account", c.account)
 	rt.handle("PUT /api/account/password", c.changePassword)

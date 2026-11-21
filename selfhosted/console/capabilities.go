@@ -87,6 +87,7 @@ var routeCapabilities = map[string]Capability{
 	"POST /api/invites":                          CapPeopleManage,
 	"DELETE /api/invites/{id}":                   CapPeopleReset,
 	"POST /api/people/{person}/reset":            CapPeopleReset,
+	"PUT /api/people/signup":                     CapPeopleManage,
 	"PUT /api/people/{person}/role":              CapPeopleManage,
 	"DELETE /api/people/{person}":                CapPeopleManage,
 	"GET /api/account":                           CapAccountOwn,
@@ -147,7 +148,7 @@ var routeCapabilities = map[string]Capability{
 }
 
 var publicRoutes = []string{
-	"GET /api/session", "GET /api/ready", "POST /api/setup", "POST /api/login",
+	"GET /api/session", "GET /api/ready", "POST /api/setup", "POST /api/login", "POST /api/signup",
 	"GET /oauth/callback", "GET /oauth/authorize",
 	"GET /mcp", "POST /mcp", "DELETE /mcp",
 	"GET /.well-known/oauth-protected-resource", "OPTIONS /.well-known/oauth-protected-resource",

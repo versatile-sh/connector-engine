@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -159,7 +160,7 @@ func (t *tx) canonicalGrants() error {
 		if err := t.as(tenant); err != nil {
 			return err
 		}
-		if err := grant.Rewrite(t); err != nil {
+		if err := grant.Rewrite(t, time.Now().UTC()); err != nil {
 			return err
 		}
 	}

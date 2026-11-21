@@ -978,7 +978,7 @@ func snapshotRestore(e *env) {
 	e.same(want, viewOf(e, e.s, e.o))
 }
 
-// LegacyGrants writes, in tenant ta, rows an older release could store: a user row naming an agent and two agent rows whose keys differ only by agent.
+// LegacyGrants writes, in tenant ta, rows an older release could store: a user row naming an agent and three pairs of agent rows whose keys differ only by agent.
 func LegacyGrants(t *testing.T, s port.Store) {
 	t.Helper()
 	err := s.Write(ctx, inst, func(tx port.Tx) error {
@@ -992,7 +992,14 @@ func LegacyGrants(t *testing.T, s port.Store) {
 			named.Agent, named.ExpiresAt = "x", t0.Add(time.Hour)
 			bare := agentGrant("ta", "a2", "class:read", 0)
 			bare.Mode = port.ModeDeny
-			return errors.Join(tx.PutGrant(user), tx.PutGrant(named), tx.PutGrant(bare))
+			survivor := agentGrant("ta", "b1", "class:write", 0)
+			survivor.Agent, survivor.Mode = "x", port.ModeDeny
+			dropped := agentGrant("ta", "b2", "class:write", 0)
+			dropped.ExpiresAt = t0.Add(time.Hour)
+			counted := agentGrant("ta", "c1", "class:destructive", 1)
+			counted.Agent = "x"
+			twin := agentGrant("ta", "c2", "class:destructive", 1)
+			return errors.Join(tx.PutGrant(user), tx.PutGrant(named), tx.PutGrant(bare), tx.PutGrant(survivor), tx.PutGrant(dropped), tx.PutGrant(counted), tx.PutGrant(twin))
 		})
 	}
 	if err != nil {
@@ -1000,7 +1007,7 @@ func LegacyGrants(t *testing.T, s port.Store) {
 	}
 }
 
-// CheckCanonicalGrants fails unless tenant ta holds the canonical form of LegacyGrants: u1 without its agent, and a2 alone for the two agent rows.
+// CheckCanonicalGrants fails unless tenant ta holds the canonical form of LegacyGrants: u1 and b1 without their agent, a2 alone, c1 as a deny, one audit row per merge.
 func CheckCanonicalGrants(t *testing.T, s port.Store) {
 	t.Helper()
 	var got []port.Grant
@@ -1011,8 +1018,22 @@ func CheckCanonicalGrants(t *testing.T, s port.Store) {
 		t.Fatal(err)
 	}
 	slices.SortFunc(got, func(a, b port.Grant) int { return strings.Compare(string(a.ID), string(b.ID)) })
-	if len(got) != 2 || got[0].ID != "a2" || got[0].Mode != port.ModeDeny || got[1].ID != "u1" || got[1].Agent != "" || got[1].Mode != port.ModeDeny {
+	if len(got) != 4 {
 		t.Fatalf("grants %+v", got)
+	}
+	for i, id := range []port.GrantID{"a2", "b1", "c1", "u1"} {
+		if g := got[i]; g.ID != id || g.Agent != "" || g.Mode != port.ModeDeny || g.MaxUses != 0 || !g.ExpiresAt.IsZero() {
+			t.Fatalf("grants %+v", got)
+		}
+	}
+	for _, id := range []string{"a2", "b1", "c1"} {
+		var audit []port.AuditRow
+		if err := s.Read(ctx, scopeA, func(tx port.Tx) (err error) {
+			audit, err = tx.ListAudit(id)
+			return err
+		}); err != nil || len(audit) != 1 || audit[0].Action != "grant.merged" {
+			t.Fatalf("audit of %s: %+v %v", id, audit, err)
+		}
 	}
 	if err := s.Write(ctx, scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "a3", "class:read", 0)) }); !port.IsCode(err, port.CodeConflict) {
 		t.Fatalf("a row with the canonical key of a2: %v", err)

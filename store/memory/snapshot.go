@@ -177,7 +177,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 		tenants[r.tenant] = true
 	}
 	for tenant := range tenants {
-		if err := grant.Rewrite(&tx{d: &work, scope: port.Scope{Tenant: tenant}, write: true}); err != nil {
+		if err := grant.Rewrite(&tx{d: &work, scope: port.Scope{Tenant: tenant}, write: true}, time.Now().UTC()); err != nil {
 			return err
 		}
 	}

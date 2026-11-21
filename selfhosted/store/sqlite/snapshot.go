@@ -227,7 +227,7 @@ func canonicalGrants(ctx context.Context, q *sql.Tx) error {
 		return err
 	}
 	for _, tenant := range tenants {
-		if err := grant.Rewrite(&tx{ctx: ctx, q: q, scope: port.Scope{Tenant: port.TenantID(tenant)}}); err != nil {
+		if err := grant.Rewrite(&tx{ctx: ctx, q: q, scope: port.Scope{Tenant: port.TenantID(tenant)}}, time.Now().UTC()); err != nil {
 			return err
 		}
 	}

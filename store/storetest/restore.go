@@ -3,6 +3,7 @@ package storetest
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -112,6 +113,15 @@ func restoreRefusesBrokenSnapshots(e *env) {
 			snap.Tables[table] = append(snap.Tables[table], marshalRow(copyRow, copyDoc))
 		}
 	}
+	installation := func(snap *port.Snapshot, table string, i int, row, doc map[string]any) {
+		doc["tenant"] = ""
+		for _, k := range []string{"tenant", "tenant_id"} {
+			if _, ok := row[k]; ok {
+				row[k] = ""
+			}
+		}
+		snap.Tables[table][i] = marshalRow(row, doc)
+	}
 	cases := map[string]struct {
 		snap port.Snapshot
 		name string
@@ -123,6 +133,8 @@ func restoreRefusesBrokenSnapshots(e *env) {
 		"the same row twice":              {edited(e, snap, isGrant("g1"), twin("")), "g1"},
 		"two rows with one key":           {edited(e, snap, isGrant("g1"), twin("g9")), "g9"},
 		"a mode of the wrong type":        {edited(e, snap, isGrant("g1"), editDoc(map[string]any{"mode": 5})), ""},
+		"a grant of the installation":     {edited(e, snap, isGrant("g1"), installation), "g1"},
+		"a binding of the installation":   {edited(e, snap, isBinding, installation), "c1"},
 		"a binding without its connector": {edited(e, snap, isBinding, editDoc(map[string]any{"connector": "c-gone"})), "c-gone"},
 	}
 	future := cloneSnapshot(snap)
@@ -151,7 +163,8 @@ func restoreRecordsItself(e *env) {
 	e.must(err)
 	e.same(map[string]int{"bindings": 1, "connectors": 1, "functions": 0, "grants": 3, "tenants": 1}, out.Counts)
 	slices.Sort(out.Warnings)
-	e.same([]string{"grant g2 names connector c-gone, which the snapshot lacks", "grant g3 names function gone, which the snapshot lacks"}, out.Warnings)
+	e.same([]any{2, []string{`grant "g2" names connector "c-gone", which the snapshot lacks`, `grant "g3" names function "gone", which the snapshot lacks`}},
+		[]any{out.WarningCount, out.Warnings})
 	var audit []port.AuditRow
 	var events []port.Event
 	e.must(s.Read(ctx, inst, func(tx port.Tx) (err error) {
@@ -173,5 +186,32 @@ func restoreRecordsItself(e *env) {
 	future.Schema = snap.Schema + 1
 	if _, err := s.(port.Snapshotter).Restore(ctx, future, "ops"); !port.IsCode(err, port.CodeInvalidArgument) {
 		e.t.Fatalf("a snapshot of a newer schema: %v", err)
+	}
+}
+
+func restoreKeepsTheFirstWarnings(e *env) {
+	src := seedRestore(e)
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		var err error
+		for i := range 30 {
+			g := agentGrant("ta", fmt.Sprintf("w%02d", i), fmt.Sprintf("fn:gone%02d", i), 0)
+			g.DefinitionHash = "h"
+			err = errors.Join(err, tx.PutGrant(g))
+		}
+		return err
+	}))
+	snap, err := src.Snapshot(ctx)
+	e.must(err)
+	s, _ := e.fresh()
+	out, err := s.(port.Snapshotter).Restore(ctx, snap, "ops")
+	e.must(err)
+	e.same([]int{32, 20}, []int{out.WarningCount, len(out.Warnings)})
+	var audit []port.AuditRow
+	e.must(s.Read(ctx, inst, func(tx port.Tx) (err error) {
+		audit, err = tx.ListAudit("snapshot")
+		return err
+	}))
+	if first, _ := audit[0].Detail["first_warnings"].([]any); len(audit) != 1 || len(first) != 20 || audit[0].Detail["warnings"] != float64(32) {
+		e.t.Fatalf("audit %+v", audit)
 	}
 }

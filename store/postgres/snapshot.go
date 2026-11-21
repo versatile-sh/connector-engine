@@ -50,7 +50,7 @@ func (t *tx) as(tenant string) error {
 
 // Snapshot copies every row of every tenant and of the installation in one repeatable-read transaction.
 func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
-	snap := port.Snapshot{Store: snapshotStore, Schema: schema(), Tables: map[string][]json.RawMessage{}}
+	snap := port.Snapshot{Store: snapshotStore, Schema: Schema(), Tables: map[string][]json.RawMessage{}}
 	err := s.inAll(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(t *tx, tenants []string) error {
 		for _, tenant := range tenants {
 			if err := t.as(tenant); err != nil {
@@ -69,12 +69,12 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 	return snap, err
 }
 
-// Restore replaces every row with a snapshot that CheckRows and restore.Apply accept, in one transaction that holds the tables exclusively; due work is rebuilt by the records trigger.
+// Restore replaces every row with a snapshot CheckRows and restore.Apply accept, in one transaction holding the tables exclusively.
 func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (port.Restored, error) {
 	if snap.Store != snapshotStore {
-		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %q snapshot does not restore into a %s store", snap.Store, snapshotStore)
+		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %s snapshot does not restore into a %s store", restore.Quote(snap.Store), snapshotStore)
 	}
-	if err := CheckRows(snap, schema()); err != nil {
+	if err := CheckRows(snap, Schema()); err != nil {
 		return port.Restored{}, err
 	}
 	byTenant := map[string]map[string][]json.RawMessage{}
@@ -158,8 +158,12 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	return out, nil
 }
 
-func schema() int {
-	files, _ := fs.Glob(migrations, "migrations/*.sql")
+// Schema is the schema version this store's migrations build.
+func Schema() int { return SchemaOf(migrations) }
+
+// SchemaOf is the schema version a set of embedded migrations builds: the number of its migration files.
+func SchemaOf(fsys fs.FS) int {
+	files, _ := fs.Glob(fsys, "migrations/*.sql")
 	return len(files)
 }
 
@@ -173,14 +177,15 @@ func decodes[V any](doc []byte) error {
 	return json.Unmarshal(doc, &v)
 }
 
-// CheckRows refuses, naming the first offending row, a snapshot in this store's row shape of a schema newer than schema, with an unknown table, or with a record that does not decode or repeats a key.
+// CheckRows refuses, naming the first offending row, a snapshot of this row shape newer than schema, with an unknown table,
+// or with a record that does not decode or repeats a key.
 func CheckRows(snap port.Snapshot, schema int) error {
 	if snap.Schema > schema {
 		return port.Errorf(port.CodeInvalidArgument, "snapshot: schema %d is newer than this store's %d; restore it with the release that took it", snap.Schema, schema)
 	}
 	for name := range snap.Tables {
 		if !slices.ContainsFunc(snapshotTables, func(tb snapshotTable) bool { return tb.name == name }) {
-			return port.Errorf(port.CodeInvalidArgument, "snapshot: table %s is not a table of this store", name)
+			return port.Errorf(port.CodeInvalidArgument, "snapshot: table %s is not a table of this store", restore.Quote(name))
 		}
 	}
 	keys, uniqs := map[[2]string]bool{}, map[[2]string]string{}
@@ -195,17 +200,17 @@ func CheckRows(snap port.Snapshot, schema int) error {
 			return port.Errorf(port.CodeInvalidArgument, "snapshot records: a row does not decode")
 		}
 		if decode := recordDocs[r.Kind]; decode != nil && decode(r.Doc) != nil {
-			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %q does not decode", r.Kind, r.K)
+			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %s does not decode", restore.Quote(r.Kind), restore.Quote(r.K))
 		}
 		if keys[[2]string{r.Kind, r.K}] {
-			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %q is there twice", r.Kind, r.K)
+			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %s is there twice", restore.Quote(r.Kind), restore.Quote(r.K))
 		}
 		keys[[2]string{r.Kind, r.K}] = true
 		if r.Uniq == nil {
 			continue
 		}
 		if other, ok := uniqs[[2]string{r.Kind, *r.Uniq}]; ok {
-			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %q and %q have one key", r.Kind, other, r.K)
+			return port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %s and %s have one key", restore.Quote(r.Kind), restore.Quote(other), restore.Quote(r.K))
 		}
 		uniqs[[2]string{r.Kind, *r.Uniq}] = r.K
 	}

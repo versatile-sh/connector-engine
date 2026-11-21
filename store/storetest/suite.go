@@ -65,6 +65,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"restore normalizes agent":         restoreNormalizesAgent,
 		"restore refuses broken snapshots": restoreRefusesBrokenSnapshots,
 		"restore records itself":           restoreRecordsItself,
+		"restore keeps the first warnings": restoreKeepsTheFirstWarnings,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {

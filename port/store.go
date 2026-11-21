@@ -214,13 +214,14 @@ type Snapshot struct {
 	Tables map[string][]json.RawMessage `json:"tables"`
 }
 
-// Restored is what an applied restore holds: its rows per kind and the rows it kept that name something the snapshot lacks.
+// Restored is what an applied restore holds: its rows per kind, how many kept rows name something it lacks, and the first of them.
 type Restored struct {
-	Counts   map[string]int `json:"counts"`
-	Warnings []string       `json:"warnings,omitempty"`
+	Counts       map[string]int `json:"counts"`
+	WarningCount int            `json:"warning_count"`
+	Warnings     []string       `json:"warnings,omitempty"`
 }
 
-// Snapshotter is the capability of a Store to copy every row in one consistent read and to replace every row with a checked Snapshot of its kind in one transaction that records who restored it.
+// Snapshotter copies every row of a Store in one read and replaces them all with a checked Snapshot, recording who restored it.
 type Snapshotter interface {
 	Snapshot(ctx context.Context) (Snapshot, error)
 	Restore(ctx context.Context, s Snapshot, by string) (Restored, error)

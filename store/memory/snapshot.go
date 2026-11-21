@@ -3,7 +3,7 @@ package memory
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"slices"
 	"time"
 
@@ -47,10 +47,10 @@ func (tb *table[V]) load(rows []json.RawMessage) error {
 	for _, raw := range rows {
 		var r storedRow[V]
 		if err := json.Unmarshal(raw, &r); err != nil {
-			return err
+			return errors.New("a row does not decode")
 		}
 		if _, ok := tb.rows[r.K]; ok {
-			return fmt.Errorf("%q is there twice", r.K)
+			return errors.New(restore.Quote(r.K) + " is there twice")
 		}
 		tb.rows[r.K] = row[V]{tenant: r.Tenant, rev: r.Rev, v: r.V}
 	}
@@ -75,8 +75,8 @@ func (s slice[T]) load(rows []json.RawMessage) error {
 	*s.p = make([]T, 0, len(rows))
 	for _, raw := range rows {
 		var v T
-		if err := json.Unmarshal(raw, &v); err != nil {
-			return err
+		if json.Unmarshal(raw, &v) != nil {
+			return errors.New("a row does not decode")
 		}
 		*s.p = append(*s.p, v)
 	}
@@ -93,8 +93,8 @@ func (w whole[T]) dump() ([]json.RawMessage, error) {
 func (w whole[T]) load(rows []json.RawMessage) error {
 	var v T
 	if len(rows) == 1 {
-		if err := json.Unmarshal(rows[0], &v); err != nil {
-			return err
+		if json.Unmarshal(rows[0], &v) != nil {
+			return errors.New("a row does not decode")
 		}
 	}
 	*w.p = v
@@ -150,7 +150,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 		return port.Restored{}, port.Errorf(port.CodeUnavailable, "%v", err)
 	}
 	if snap.Store != snapshotStore || snap.Schema != 0 {
-		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %q snapshot of schema %d does not restore into a %s store", snap.Store, snap.Schema, snapshotStore)
+		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %s snapshot of schema %d does not restore into a %s store", restore.Quote(snap.Store), snap.Schema, snapshotStore)
 	}
 	s.outside()
 	s.mu.Lock()
@@ -160,7 +160,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	tables := work.tables(&x)
 	for name := range snap.Tables {
 		if tables[name] == nil {
-			return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "snapshot: table %s is not a table of a %s store", name, snapshotStore)
+			return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "snapshot: table %s is not a table of a %s store", restore.Quote(name), snapshotStore)
 		}
 	}
 	for name, tb := range tables {

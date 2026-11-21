@@ -280,6 +280,15 @@ export type ActivityData = {
   agents: string[];
 };
 
+/** How many calls a stretch of time held and how many of them failed or were denied. */
+export type WindowCount = { total: number; failed: number };
+
+/** How many calls one access key made and how many of them failed or were denied. */
+export type KeyCount = { agent: string; total: number; failed: number };
+
+/** What GET /api/activity/summary answers: the last 24 hours against the 24 before them, and over the last seven days the calls by hour, by connector and by access key, and the newest ones. */
+export type ActivitySummary = { at: string; total: number; day: WindowCount; previous_day: WindowCount; hours: HourCount[]; connectors: ConnectorCount[]; keys: KeyCount[]; recent: ActivityCall[] };
+
 /** How long the console keeps calls: none, a number of days or for ever. */
 export type Keep = "off" | "7d" | "30d" | "90d" | "forever";
 

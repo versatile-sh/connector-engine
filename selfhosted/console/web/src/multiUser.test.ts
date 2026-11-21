@@ -270,3 +270,15 @@ describe("the page of someone else's held call", () => {
     assert.deepEqual([html.includes("Cancel this call"), html.includes("Allow once")], [true, false]);
   });
 });
+
+describe("the Backups tab of an Admin", () => {
+  const html = page(TEAM_ADMIN, "/account/backups");
+
+  test("opens for the setup", () => {
+    assert.match(html, /aria-selected="true"[^>]*>Backups</);
+  });
+
+  test("says full backups stay with Owners", () => {
+    assert.ok(html.includes("full backups stay with Owners"));
+  });
+});

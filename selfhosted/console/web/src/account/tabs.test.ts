@@ -9,8 +9,8 @@ describe("accountTabsOf", () => {
     assert.deepEqual(accountTabsOf(viewerOf(ONE_OWNER)), ["profile", "people", "backups"]);
   });
 
-  test("gives an Admin Profile and People", () => {
-    assert.deepEqual(accountTabsOf(viewerOf(TEAM_ADMIN)), ["profile", "people"]);
+  test("gives an Admin Backups for the setup", () => {
+    assert.deepEqual(accountTabsOf(viewerOf(TEAM_ADMIN)), ["profile", "people", "backups"]);
   });
 
   test("gives a Member Profile alone", () => {

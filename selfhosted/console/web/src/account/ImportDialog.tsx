@@ -6,6 +6,7 @@ import { importBackup, inspectBackup } from "../mutations";
 import { navigate } from "../router";
 import { Field } from "../ui/Field";
 import { Notice } from "../ui/Notice";
+import { useViewer } from "../people/useViewer";
 import { Sheet } from "../ui/Sheet";
 import { button } from "../ui/styles";
 import { backupKindOf, passwordRefusal } from "./backup";
@@ -40,7 +41,7 @@ function SetupDone({ result, onClose }: { result: SetupResult; onClose(): void }
   );
 }
 
-/** The window that imports a backup file: pick it, give a full backup's passphrase, read what it holds, for a setup answer what becomes of each permission set and whether the keys made already get its connectors, confirm, then import. A full backup restarts the console and moves to the restore screen; a setup shows what it added, kept and failed. `restoreOnly` takes full backups alone, as on first run. */
+/** The window that imports a backup file: pick it, give a full backup's passphrase, read what it holds, for a setup answer what becomes of each permission set and whether the keys made already get its connectors, confirm, then import. A full backup restarts the console and moves to the restore screen; a setup shows what it added, kept and failed. `restoreOnly` takes full backups alone, as on first run; otherwise it takes the kinds the server lets the viewer import. */
 export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps) {
   const t = useT();
   const [file, setFile] = useState<File>();
@@ -51,6 +52,9 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
   const [existingKeys, setExistingKeys] = useState(false);
   const inspect = useMutation(inspectBackup);
   const run = useMutation(importBackup);
+  const viewer = useViewer();
+  const full = restoreOnly || viewer.can("backup.full");
+  const setups = !restoreOnly && viewer.can("setup.manage");
   const needsPassphrase = file !== undefined && backupKindOf(file.name) !== "setup";
   const upload = file ? { file, passphrase: needsPassphrase ? passphrase : "" } : undefined;
   const onInspect = (event: FormEvent) => {
@@ -71,9 +75,9 @@ export function ImportDialog({ onClose, restoreOnly = false }: ImportDialogProps
         <form onSubmit={onInspect} className="swap-in">
           <Field
             label={t("backup.import.file")}
-            hint={t(restoreOnly ? "backup.restore.fileHint" : "backup.import.fileHint")}
+            hint={t(full && setups ? "backup.import.fileHint" : full ? "backup.restore.fileHint" : "backup.import.setupHint")}
             type="file"
-            accept={restoreOnly ? ".cebak" : ".cebak,.yaml,.yml"}
+            accept={full && setups ? ".cebak,.yaml,.yml" : full ? ".cebak" : ".yaml,.yml"}
             required
             onChange={(event) => {
               setFile(event.target.files?.[0]);

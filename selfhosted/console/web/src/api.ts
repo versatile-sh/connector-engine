@@ -436,7 +436,7 @@ export type SlotChoice = { action: "keep" } | { action: "apply"; key: string } |
 export type SetupOptions = { slots?: Record<string, SlotChoice>; existing_keys?: boolean };
 
 /** One user of this console as the People tab lists them: when they joined, how many keys they hold, and whether they are the viewer. */
-export type Person = { person: string; username: string; role: Role; created_at: string; keys: number; you: boolean };
+export type Person = { person: string; username: string; role: Role; created_at: string; keys: number; you: boolean; may_reset?: boolean };
 
 /** What a link is for: joining with a role, or setting a new password for one user. */
 export type LinkPurpose = "join" | "reset";

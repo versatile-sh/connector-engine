@@ -14,7 +14,7 @@ Account has up to three tabs, each its own address, and shows only those the sig
 |---|---|---|---|
 | Profile | `/account` | everyone | the username and password |
 | People | `/account/people` | Owners and Admins | the people of the console, the join and reset links waiting, and the recent changes |
-| Backups | `/account/backups` | Owners | full backups and shareable setups |
+| Backups | `/account/backups` | Owners, and Admins for setups | full backups (Owners) and shareable setups (Owners and Admins) |
 
 People lists each person with their role, their keys and when they joined, and marks your own row "you". An Owner invites with **Invite someone**: pick a role, then copy the link and send it privately. It works once and expires after 72 hours. When the console's public address is a loopback one, the invite says nobody else can open it; set `CONSOLE_PUBLIC_URL` first. Each row of an Owner holds one menu: another role, **Reset password** and **Remove**, which asks first and names what it does. An Admin gets **Reset password** on Members' rows. The link opens `/invite`, which asks the invitee for a username and a password, or asks the person whose password is reset for a new one, and says when a link no longer works.
 

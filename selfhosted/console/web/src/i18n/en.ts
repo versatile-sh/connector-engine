@@ -670,6 +670,8 @@ export const en = {
   "backup.import.title": "Import a backup",
   "backup.import.file": "Backup file",
   "backup.import.fileHint": "A .cebak full backup or a .setup.yaml setup.",
+  "backup.import.setupHint": "A .setup.yaml setup.",
+  "backup.setupOnly": "Your role shares setups: full backups stay with Owners.",
   "backup.restore.fileHint": "A .cebak full backup.",
   "backup.import.passphraseHint": "The passphrase chosen when the backup was made.",
   "backup.inspect": "Read the file",

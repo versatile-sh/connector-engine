@@ -39,6 +39,10 @@ describe("mayReset", () => {
     assert.equal(mayReset(admin, { ...carol, person: "p-dan", you: false }), false);
   });
 
+  test("follows the server's may_reset", () => {
+    assert.deepEqual([mayReset(admin, { ...carol, may_reset: true }), mayReset(owner, { ...carol, may_reset: false })], [true, false]);
+  });
+
   test("refuses anyone their own row", () => {
     assert.equal(mayReset(admin, { ...carol, you: true, role: "member" }), false);
   });

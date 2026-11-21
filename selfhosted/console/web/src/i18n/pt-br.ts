@@ -672,6 +672,8 @@ export const ptBR: Record<MessageKey, string> = {
   "backup.import.title": "Importar um backup",
   "backup.import.file": "Arquivo de backup",
   "backup.import.fileHint": "Um backup completo .cebak ou uma configuração .setup.yaml.",
+  "backup.import.setupHint": "Uma configuração .setup.yaml.",
+  "backup.setupOnly": "Seu papel compartilha configurações: backups completos ficam com os Donos.",
   "backup.restore.fileHint": "Um backup completo .cebak.",
   "backup.import.passphraseHint": "A frase-senha escolhida quando o backup foi feito.",
   "backup.inspect": "Ler o arquivo",

@@ -7,9 +7,10 @@ export const ROLES: readonly Role[] = ["owner", "admin", "member"];
 /** What the viewer may do to one person's row: give them another role, make them a reset link, or remove them. */
 export type RowAction = { kind: "role"; role: Role } | { kind: "reset" } | { kind: "remove" };
 
-/** Whether the viewer may make a reset link for `person`: never for themselves; an Owner for anyone else, an Admin only for a Member. The server checks the same ladder; this only decides what the row offers. */
+/** Whether the viewer may make a reset link for `person`: the server's `may_reset` when the row carries it; else never for themselves, an Owner for anyone else, an Admin only for a Member. The server checks the same ladder; this only decides what the row offers. */
 export function mayReset(viewer: Viewer, person: Person): boolean {
   if (person.you || !viewer.can("people.reset")) return false;
+  if (person.may_reset !== undefined) return person.may_reset;
   return viewer.role === "owner" || person.role === "member";
 }
 

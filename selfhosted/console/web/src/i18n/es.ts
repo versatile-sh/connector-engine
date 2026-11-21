@@ -672,6 +672,8 @@ export const es: Record<MessageKey, string> = {
   "backup.import.title": "Importar una copia",
   "backup.import.file": "Archivo de copia",
   "backup.import.fileHint": "Una copia completa .cebak o una configuración .setup.yaml.",
+  "backup.import.setupHint": "Una configuración .setup.yaml.",
+  "backup.setupOnly": "Tu rol comparte configuraciones: las copias completas quedan con los Propietarios.",
   "backup.restore.fileHint": "Una copia completa .cebak.",
   "backup.import.passphraseHint": "La frase de contraseña elegida al hacer la copia.",
   "backup.inspect": "Leer el archivo",

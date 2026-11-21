@@ -1,30 +1,283 @@
 {
   "name": "connector-engine",
-  "pitch": ["Every MCP connector, ", "one gateway you control", "."],
+  "pitch": [
+    "Every MCP connector, ",
+    "one gateway you control",
+    "."
+  ],
   "sub": "You decide what each AI app may run, and see every call it makes.",
   "badge": "open source  ·  GPL-3.0-or-later",
-  "tags": ["MCP gateway", "Connector catalog", "Permissions & approvals", "Self-hosted", "Headless engine"],
+  "tags": [
+    "MCP gateway",
+    "Connector catalog",
+    "Permissions & approvals",
+    "Self-hosted",
+    "Headless engine"
+  ],
   "heroLabel": "connector-engine: every MCP connector, one gateway you control. You decide what each AI app may run, and see every call it makes.",
   "sections": [
-    ["install", "start here", "Install ", "in one line"],
-    ["use", "start here", "Use it with ", "any AI app"],
-    ["how-it-works", "overview", "How it ", "works"],
-    ["features", "overview", "What you ", "get"],
-    ["docs", "read", "Read the ", "docs"],
-    ["other-ways-to-deploy", "start here", "Other ways ", "to deploy"],
-    ["license", "project", "", "License"]
+    [
+      "install",
+      "start here",
+      "Install ",
+      "in one line"
+    ],
+    [
+      "use",
+      "start here",
+      "Use it with ",
+      "any AI app"
+    ],
+    [
+      "how-it-works",
+      "overview",
+      "How it ",
+      "works"
+    ],
+    [
+      "features",
+      "overview",
+      "What you ",
+      "get"
+    ],
+    [
+      "docs",
+      "read",
+      "Read the ",
+      "docs"
+    ],
+    [
+      "other-ways-to-deploy",
+      "start here",
+      "Other ways ",
+      "to deploy"
+    ],
+    [
+      "license",
+      "project",
+      "",
+      "License"
+    ]
   ],
   "diagrams": [
     {
-      "slug": "flow",
-      "label": "How a call flows. AI apps such as Claude Code, Cursor and Codex call connector-engine over MCP. The gateway checks each function's permission: off hides it, on runs it with the stored credential, ask waits for your approval in the self-hosted console. Allowed calls reach remote and local MCP servers, REST and gRPC connectors. The gateway also keeps approvals, activity and skills.",
-      "cards": [
-        { "title": "AI apps", "sub": "OAuth 2.1 sign-in", "rows": ["Claude Code", "Cursor", "Codex", "VS Code", ["any MCP client", "muted"]] },
-        { "title": "connector-engine", "sub": "/mcp, per function", "weight": 1.4, "rows": [["off: hidden", "muted"], "on: runs with the key", ["ask: waits for you", "accent"], ["approvals, activity, skills", "muted"]] },
-        { "title": "Connectors", "sub": "pinned by hash", "rows": ["remote MCP", "local MCP", "REST (OpenAPI)", "gRPC (reflection)", ["import by URL", "muted"]] }
+      "slug": "call",
+      "kind": "sequence",
+      "why": "Every call stops at one decision (allow, ask or deny) before any connector runs, so the picture is the order of that call, not boxes.",
+      "label": "How one tool call runs. An AI app sends tools/call to the gateway, which verifies the token and hands the call to the service. The service asks the Authorizer, which answers allow, ask or deny. On ask the app gets pending_approval and the call waits for a person. On allow the service calls the connector runtime with the credential, gets a filtered result back and answers the app; the event goes to the outbox in the same transaction.",
+      "actors": [
+        {
+          "id": "app",
+          "title": "AI app",
+          "sub": "any MCP client"
+        },
+        {
+          "id": "gw",
+          "title": "gateway",
+          "sub": "/mcp, OAuth 2.1"
+        },
+        {
+          "id": "svc",
+          "title": "service",
+          "sub": "one call path",
+          "accent": true
+        },
+        {
+          "id": "auth",
+          "title": "Authorizer",
+          "sub": "per function"
+        },
+        {
+          "id": "rt",
+          "title": "runtime",
+          "sub": "the connector"
+        }
       ],
-      "arrows": [{ "label": "MCP" }, { "label": "allowed", "accent": true }],
-      "footer": { "title": "Self-hosted console", "sub": "permissions, approvals", "under": 1, "label": "ask" }
+      "messages": [
+        {
+          "from": "app",
+          "to": "gw",
+          "label": "tools/call"
+        },
+        {
+          "from": "gw",
+          "to": "svc",
+          "label": "verified call"
+        },
+        {
+          "from": "svc",
+          "to": "auth",
+          "label": "Evaluate"
+        },
+        {
+          "from": "auth",
+          "to": "svc",
+          "label": "allow | ask | deny",
+          "reply": true,
+          "accent": true
+        },
+        {
+          "from": "svc",
+          "to": "app",
+          "label": "ask: pending_approval",
+          "reply": true
+        },
+        {
+          "from": "svc",
+          "to": "rt",
+          "label": "call + credential",
+          "accent": true
+        },
+        {
+          "from": "rt",
+          "to": "svc",
+          "label": "result",
+          "reply": true
+        },
+        {
+          "from": "svc",
+          "to": "svc",
+          "label": "filter, outbox"
+        },
+        {
+          "from": "svc",
+          "to": "app",
+          "label": "filtered result",
+          "reply": true,
+          "accent": true
+        }
+      ]
+    },
+    {
+      "slug": "approval",
+      "kind": "states",
+      "why": "An ask becomes an approval record with nine real states, and a call runs at most once, which only a state machine shows.",
+      "label": "The life of an approval. It starts pending. A person approves or denies it, or it expires or is cancelled. An approved call runs once: executing ends executed, failed, or outcome_unknown when no answer came back.",
+      "cols": 4,
+      "gap": [
+        80,
+        56
+      ],
+      "nodes": [
+        {
+          "id": "pending",
+          "title": "pending",
+          "at": [
+            0,
+            1
+          ],
+          "accent": true
+        },
+        {
+          "id": "approved",
+          "title": "approved",
+          "at": [
+            1,
+            0
+          ]
+        },
+        {
+          "id": "executing",
+          "title": "executing",
+          "at": [
+            2,
+            0
+          ]
+        },
+        {
+          "id": "executed",
+          "title": "executed",
+          "at": [
+            3,
+            0
+          ]
+        },
+        {
+          "id": "failed",
+          "title": "failed",
+          "at": [
+            3,
+            1
+          ]
+        },
+        {
+          "id": "unknown",
+          "title": "outcome_unknown",
+          "at": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": "denied",
+          "title": "denied",
+          "at": [
+            1,
+            1
+          ]
+        },
+        {
+          "id": "expired",
+          "title": "expired",
+          "at": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": "cancelled",
+          "title": "cancelled",
+          "at": [
+            0,
+            2
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "from": "pending",
+          "to": "approved",
+          "label": "approve",
+          "accent": true
+        },
+        {
+          "from": "pending",
+          "to": "denied",
+          "label": "deny"
+        },
+        {
+          "from": "pending",
+          "to": "expired",
+          "label": "timer"
+        },
+        {
+          "from": "pending",
+          "to": "cancelled",
+          "label": "cancel"
+        },
+        {
+          "from": "approved",
+          "to": "executing",
+          "label": "once",
+          "accent": true
+        },
+        {
+          "from": "executing",
+          "to": "executed",
+          "label": "ok",
+          "accent": true
+        },
+        {
+          "from": "executing",
+          "to": "failed",
+          "label": "error"
+        },
+        {
+          "from": "executing",
+          "to": "unknown",
+          "label": "no answer"
+        }
+      ]
     }
   ]
 }

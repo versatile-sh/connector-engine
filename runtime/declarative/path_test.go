@@ -73,17 +73,17 @@ func TestPathParameterRefusesEmptyAndSpace(t *testing.T) {
 	refusesPathValues(t, "", " ", "a b", "a\tb", "a\nb")
 }
 
-func TestPathParameterSendsTheValueUnchanged(t *testing.T) {
+func TestPathParameterSendsOneSegment(t *testing.T) {
 	m, seen := pathServer(t)
 	rt, h := start(t, m)
 	defer rt.Stop(context.Background(), h)
-	for _, v := range []string{"abc", "A-b_c~9", "v1.2", "a..b", ".hidden"} {
+	for _, v := range []string{"abc", "A-b_c~9", "v1.2", "a..b", ".hidden", "a@b.test", "2026-01-01T00:00:00Z", "+5511999", "user:42"} {
 		args, _ := json.Marshal(map[string]string{"id": v})
 		if res := call(t, rt, h, "get", string(args)); res.IsError {
 			t.Fatalf("%q: %s", v, res.Content)
 		}
 		got := seen()
-		if want := "/v1/items/" + v + "/notes"; got[len(got)-1] != want {
+		if want := "/v1/items/" + url.PathEscape(v) + "/notes"; got[len(got)-1] != want {
 			t.Fatalf("request = %q, want %q", got[len(got)-1], want)
 		}
 	}

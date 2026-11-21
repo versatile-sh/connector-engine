@@ -111,7 +111,7 @@ func (c *Console) SetUserRole(ctx context.Context, person string, role Role) err
 	case users[i].Role == role:
 		return nil
 	case role.AtLeast(users[i].Role):
-		if err := c.State.SetRole(person, role); err != nil {
+		if err := c.State.SetRole(actorOf(ctx), person, role); err != nil {
 			return err
 		}
 		return c.reconcileRoles(ctx, c.State.Users(), nil)
@@ -123,5 +123,5 @@ func (c *Console) SetUserRole(ctx context.Context, person string, role Role) err
 	if err := c.reconcileRoles(ctx, users, nil); err != nil {
 		return err
 	}
-	return c.State.SetRole(person, role)
+	return c.State.SetRole(actorOf(ctx), person, role)
 }

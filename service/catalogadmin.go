@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/versatile-sh/connector-engine/authz"
-	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/authz/facts"
 	"github.com/versatile-sh/connector-engine/catalog"
 	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
 	"github.com/versatile-sh/connector-engine/port"
@@ -20,7 +20,7 @@ func (s *Service) blockedReasons(tx port.Tx, tenant port.TenantID, only *port.Li
 	for _, c := range conns {
 		workspaces = append(workspaces, c.Workspace)
 	}
-	view, err := table.View(tx, tenant, workspaces, nil)
+	view, err := facts.View(tx, tenant, workspaces, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ func (s *Service) ExplainVisibility(ctx context.Context, p port.Principal, works
 		return out, err
 	}
 	err = s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
-		v, err := table.View(tx, p.Claims.Tenant, []port.WorkspaceID{workspace}, g)
+		v, err := facts.View(tx, p.Claims.Tenant, []port.WorkspaceID{workspace}, g)
 		if err != nil {
 			return err
 		}

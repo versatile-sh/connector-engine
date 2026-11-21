@@ -1,24 +1,20 @@
 package table
 
+import "github.com/versatile-sh/connector-engine/authz/facts"
+
 // Role is a delegated role.
-type Role string
+type Role = facts.Role
 
 // Roles.
 const (
-	Operator        Role = "operator"
-	TenantAdmin     Role = "tenant_admin"
-	WorkspaceAdmin  Role = "workspace_admin"
-	AgentConfigurer Role = "agent_configurer"
-	Reviewer        Role = "reviewer"
-	Approver        Role = "approver"
-	Auditor         Role = "auditor"
+	Operator        = facts.Operator
+	TenantAdmin     = facts.TenantAdmin
+	WorkspaceAdmin  = facts.WorkspaceAdmin
+	AgentConfigurer = facts.AgentConfigurer
+	Reviewer        = facts.Reviewer
+	Approver        = facts.Approver
+	Auditor         = facts.Auditor
 )
 
-// Known reports whether r is a role.
-func Known(r string) bool {
-	switch Role(r) {
-	case Operator, TenantAdmin, WorkspaceAdmin, AgentConfigurer, Reviewer, Approver, Auditor:
-		return true
-	}
-	return false
-}
+// Settings are the installation keys the evaluation reads: permission.destructiveMax and exposure.onTrifecta.
+type Settings = facts.Settings

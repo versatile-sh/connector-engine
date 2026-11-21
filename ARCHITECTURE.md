@@ -29,7 +29,8 @@ Dependencies point inward: adapters import `port`, `core` imports only `port`, a
 | `EventSink` | deliver CloudEvents | `log`, `webhook` (Standard Webhooks signatures) |
 | `ResultFilter` | redact secrets in results | `builtin` |
 | `ToolIndex` | search the functions granted to an agent | `lexical` |
-| `Authorizer` | evaluate calls and role questions | the built-in table in `authz/table` |
+| `PrincipalVerifier` (`auth`) | verify an agent or person token | `jwks`, `local` |
+| `Authorizer` (`authz`) | evaluate calls and role questions | the built-in table in `authz/table` (`authz` joins `adapters.yaml` once a build registers another adapter) |
 
 `adapters.yaml` selects one adapter per port (several for runtimes and sources). `connector-engine adapters check` validates the selection the way boot does.
 
@@ -103,7 +104,7 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 `selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`), desktop notifications, and the install without Docker (`selfhosted/standalone`), which runs the engine and the console in one process over the `sqlite` store.
 
 - Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
-- Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or builds a tree with `cli.Root` and runs it with `command.Main` (`vsh`). `selfhosted/selfhosted.go` lists the self-hosted adapters and commands; `selfhosted/cmd/vsh/main.go` adds the TUI, `manage` and the `standalone` lifecycle commands itself.
+- Composition: every adapter of the store, secrets, runtime, source, sink, filter, index, auth and authz ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or builds a tree with `cli.Root` and runs it with `command.Main` (`vsh`). `selfhosted/selfhosted.go` lists the self-hosted adapters and commands; `selfhosted/cmd/vsh/main.go` adds the TUI, `manage` and the `standalone` lifecycle commands itself.
 
 ```go
 // cmd/connector-engine: the core alone

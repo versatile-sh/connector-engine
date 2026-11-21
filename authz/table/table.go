@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/authz/facts"
 	"github.com/versatile-sh/connector-engine/core/evaluate"
 	"github.com/versatile-sh/connector-engine/port"
 )
@@ -37,7 +38,7 @@ func (a *Authorizer) facts(ctx context.Context, s port.Subject, connector port.C
 		if err != nil {
 			return err
 		}
-		f, err := LoadFacts(tx, a.clock.Now(), s, connector, groups, a.settings)
+		f, err := facts.LoadFacts(tx, a.clock.Now(), s, connector, groups, a.settings)
 		if err != nil {
 			return err
 		}
@@ -76,7 +77,7 @@ func (a *Authorizer) SearchBatch(ctx context.Context, tenant port.TenantID, qs [
 			if err != nil {
 				return err
 			}
-			f, err := loadFacts(tx, now, q.Subject, q.Connector, groups, a.settings, grants)
+			f, err := facts.LoadFactsWith(tx, now, q.Subject, q.Connector, groups, a.settings, grants)
 			if err != nil {
 				return err
 			}

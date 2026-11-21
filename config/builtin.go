@@ -49,6 +49,10 @@ func (c Config) With(builtins ...Builtin) Config {
 	return c
 }
 
+func (c Config) hasBuiltinBeyond(port, core string) bool {
+	return slices.ContainsFunc(c.builtins, func(b Builtin) bool { return b.Port == port && b.Name != core })
+}
+
 func (c Config) declare(ports map[string]adapters.PortSpec) {
 	for _, b := range c.builtins {
 		p, ok := ports[b.Port]

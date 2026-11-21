@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -173,13 +174,13 @@ func isAppPath(p string) bool {
 	return slices.ContainsFunc(appRoutes, func(r appRoute) bool { return r.path == p })
 }
 
-func (c *Console) appRoutes(mux *http.ServeMux) {
+func (c *Console) appRoutes(mux *router) {
 	for _, rt := range appRoutes {
-		mux.HandleFunc(rt.method+" "+rt.path, func(w http.ResponseWriter, r *http.Request) {
+		mux.handle(rt.method+" "+rt.path, func(w http.ResponseWriter, r *http.Request) {
 			cors(w)
 			rt.serve(c, w, r)
 		})
-		mux.HandleFunc("OPTIONS "+rt.path, func(w http.ResponseWriter, _ *http.Request) {
+		mux.handle("OPTIONS "+rt.path, func(w http.ResponseWriter, _ *http.Request) {
 			cors(w)
 			w.WriteHeader(http.StatusNoContent)
 		})
@@ -406,21 +407,27 @@ func (c *Console) userConfirms(w http.ResponseWriter, r *http.Request, password 
 	return true
 }
 
-func (c *Console) agentFor(cl OAuthClient) string {
+func (c *Console) agentFor(cl OAuthClient, person string) string {
 	name := Slug(cl.Name)
 	a, taken := c.State.Agent(name)
-	if !taken || a.ClientID == cl.ID || a.ClientID == "" && a.ViaBrowser && c.State.SignedIn(name, cl.ID) {
+	if !taken || a.Owner == person && (a.ClientID == cl.ID || a.ClientID == "" && a.ViaBrowser && c.State.SignedIn(name, cl.ID)) {
 		return name
 	}
-	if suffixed := name + "-" + cl.ID[:8]; !c.ownedByOther(suffixed, cl.ID) {
-		return suffixed
+	for _, candidate := range []string{name + "-" + cl.ID[:8], name + "-" + cl.ID} {
+		if c.freeFor(candidate, cl.ID, person) {
+			return candidate
+		}
 	}
-	return name + "-" + cl.ID
+	for n := 2; ; n++ {
+		if candidate := fmt.Sprintf("%s-%s-%d", name, cl.ID[:8], n); c.freeFor(candidate, cl.ID, person) {
+			return candidate
+		}
+	}
 }
 
-func (c *Console) ownedByOther(name, clientID string) bool {
+func (c *Console) freeFor(name, clientID, person string) bool {
 	a, taken := c.State.Agent(name)
-	return taken && a.ClientID != clientID
+	return !taken || a.ClientID == clientID && a.Owner == person
 }
 
 func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
@@ -455,7 +462,7 @@ func (c *Console) consent(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"redirect": withParams(req.redirect, params)})
 		return
 	}
-	a, err := c.BindAgent(r.Context(), c.agentFor(req.client), c.MaxAgentTTL, in.Slot)
+	a, err := c.BindAgent(r.Context(), c.agentFor(req.client, actorOf(r.Context())), c.MaxAgentTTL, in.Slot)
 	if err != nil {
 		c.fail(w, err)
 		return

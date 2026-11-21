@@ -289,6 +289,13 @@ func (s *State) HostUser(username string) (User, error) {
 	return User{}, invalid("this console has several users: name one with USER=<username>")
 }
 
+// LegacyOwner returns the person that records made before multi-user belong to: the migrated first Owner, else the configured person.
+func (s *State) LegacyOwner() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return firstOf(s.data.LegacyPerson, s.person)
+}
+
 // HostOwner returns the Owner a host request acts as: the first Owner while they still are one, else the Owner with the smallest person id.
 func (s *State) HostOwner() string {
 	s.mu.Lock()

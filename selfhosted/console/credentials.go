@@ -111,27 +111,17 @@ func (c *Console) mayDecide(a port.Approval, viewer string) bool {
 		return true
 	}
 	u, ok := c.State.User(viewer)
-	return ok && u.Role.AtLeast(RoleAdmin) && slices.Contains(a.Approvers, string(c.managers()))
+	return ok && u.Can(CapApprovalsAny) && slices.Contains(a.Approvers, string(c.managers()))
 }
 
 func (c *Console) seesEveryApproval(viewer string) bool {
 	u, ok := c.State.User(viewer)
-	return ok && u.Role.AtLeast(RoleAdmin)
+	return ok && u.Can(CapApprovalsAny)
 }
 
 // CancelApproval cancels one waiting call as the context's actor; the engine allows it to the call's approvers and to workspace admins.
 func (c *Console) CancelApproval(ctx context.Context, id string) error {
 	return c.Engine.Call(ctx, http.MethodPost, "/v1/approvals/"+esc(id)+":cancel", nil, nil)
-}
-
-func (c *Console) atLeast(min Role, next http.HandlerFunc) http.HandlerFunc {
-	return c.authed(func(w http.ResponseWriter, r *http.Request) {
-		if u, ok := signedInUser(r.Context()); !ok || !u.Role.AtLeast(min) {
-			writeError(w, http.StatusForbidden, "your role does not allow this")
-			return
-		}
-		next(w, r)
-	})
 }
 
 func (c *Console) setCredentialMode(w http.ResponseWriter, r *http.Request) {

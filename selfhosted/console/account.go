@@ -24,10 +24,13 @@ func (c *Console) authed(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func (c *Console) session(w http.ResponseWriter, r *http.Request) {
-	csrf, ok := c.Sessions.Get(r)
+	u, csrf, ok := c.Sessions.Current(r)
 	out := map[string]any{"owner_exists": c.State.HasOwner(), "signed_in": ok, "mcp_url": c.MCPURL}
 	if ok {
 		out["csrf"] = csrf
+		out["user"] = map[string]any{"person": u.Person, "username": u.Username, "role": u.Role}
+		out["can"] = u.Capabilities()
+		out["people"] = len(c.State.Users())
 		out["onboarding_dismissed"] = c.State.OnboardingDismissed()
 		out["key_protection"] = c.keyProtection(r.Context())
 	}

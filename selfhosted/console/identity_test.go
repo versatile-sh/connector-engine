@@ -83,6 +83,9 @@ func TestAnEngineWriteWithoutAnActorIsRefusedAndSendsNothing(t *testing.T) {
 
 func TestEachEngineWriteRunsAsTheActingUserAndEachReadAsTheServicePerson(t *testing.T) {
 	c, rec := recordedConsole(t)
+	if err := c.State.SetCredentialMode("c1", CredentialPerPerson); err != nil {
+		t.Fatal(err)
+	}
 	cookie := sessionOf(t, c.State, "p-bob")
 	var csrf string
 	for _, s := range c.State.data.Sessions {

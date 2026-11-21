@@ -146,22 +146,25 @@ Each console user has a role: Owner, Admin or Member. Every console route declar
 
 ## People
 
-There is no sign-up screen. After the first run, an Owner adds a person from Account, People, "Invite a person": pick the role and copy the link. The person opens it on the console's own address, picks a username and a password, and is signed in. A link works once, for 72 hours, and dies when its creator is no longer an Owner. At most 20 links wait at a time. The link carries its token after a `#`, so it never reaches a server log, and the console keeps only its SHA-256.
+Sign-up is off by default. After the first run, an Owner adds a person from Account, People, "Invite a person": pick the role and copy the link. The person opens it on the console's own address, picks a username and a password, and is signed in. A link works once, for 72 hours, and dies when its creator is no longer an Owner. At most 20 links wait at a time. The link carries its token after a `#`, so it never reaches a server log, and the console keeps only its SHA-256.
 
 - Set `CONSOLE_PUBLIC_URL` to the address people use, or a link points at `127.0.0.1` and nobody else can open it. When that address is `https`, the session cookie is `Secure`; put TLS in front through a reverse proxy ([VPS guide](vps.md#option-b-small-team-on-the-console)). The address needs no port when it is the default one.
 - A forgotten password: an Owner makes a reset link for anyone else, an Admin only for a Member, never for oneself. The person opens it, sets a new password and is signed in; their other sessions end, and their keys, sign-ins and activity stay. A new link for the same person replaces the old one. `make reset-password` stays the way back in for an Owner nobody above can reset.
 - An Owner changes a role or removes a person. Removing signs the person out, stops their keys at once, deletes their provider sign-ins, channels and computers, and keeps their past activity. The last Owner can be neither demoted nor removed, and nobody removes themselves.
+- **Open sign-up** (Grafana's `allow_sign_up`): an Owner turns on **Allow sign-up** in Account, People. The sign-in screen then offers **Create account**, a username, a password typed twice (10 characters or more, as for an invite) and nothing else; the new account is a Member, or an Admin if the Owner chose that, never an Owner, and the person is signed in at once. When it is off, the sign-in screen says to ask an Owner or Admin for an invite link. The first Owner is still made by the first-run screen, never by sign-up. Usernames here are free text, not email addresses, so there is no allowed-domains list, and a new account signs in at once: there is no approval step. **Leave sign-up off on any console reachable from the internet**; anyone who can open it could make an account and use the gateway. Each turn on or off is in the audit as `signup.changed`, and a sign-up as `user.created` with `via: signup`.
 - The People tab also lists the console's audit of these changes. The console keeps the newest 500 entries.
-- Wrong passwords are counted per client address and username (5 a minute) with a ceiling of 30 a minute for each client address, so one client never locks another out; a wrong or used link counts 10 a minute for the whole console. The console reads no forwarded address, so behind a reverse proxy every client shares the proxy's address and its limits. A lock always expires.
+- Wrong passwords are counted per client address and username (5 a minute) with a ceiling of 30 a minute for each client address, so one client never locks another out; a wrong or used link counts 10 a minute for the whole console, and sign-ups are capped at 5 a minute for each client address. The console reads no forwarded address, so behind a reverse proxy every client shares the proxy's address and its limits. A lock always expires.
 
 | Route | Needs | Does |
 |---|---|---|
-| `GET /api/people` | `people.read` | `{people, invites, audit}`; each person has `keys`, `you` and `may_reset` for the viewer; `audit` has at most 50 entries, newest first |
+| `GET /api/people` | `people.read` | `{people, invites, audit, signup}`; each person has `keys`, `you` and `may_reset` for the viewer; `audit` has at most 50 entries, newest first |
 | `POST /api/invites` `{role}` | `people.manage` | `201 {id, link, expires_at}` |
 | `POST /api/people/{person}/reset` | `people.reset` and the ladder | `201 {id, link, expires_at}` |
 | `DELETE /api/invites/{id}` | `people.reset` | `204`; a join link needs `people.manage`, a reset link its creator or `people.manage` |
 | `POST /api/invite/inspect` `{token}` | none | `200 {purpose, role, invited_by, username, expires_at}` or `410 link_gone`; `429` after 10 wrong links a minute |
 | `POST /api/invite/accept` `{token, username, password}` | none | `201 {csrf}` and the session cookie; `username` is ignored for a reset |
+| `PUT /api/people/signup` `{enabled, role}` | `people.manage` | `204`; `role` is `member` or `admin`, `400` for `owner`; the settings come back as `signup` in `GET /api/people` |
+| `POST /api/signup` `{username, password}` | none, Origin guard | `201 {csrf}` and the session cookie; `403 signup_closed` while off, `409` for a taken username in any case, `429` after 5 sign-ups a minute from one address; `GET /api/session` tells the sign-in screen as `signup_open` |
 | `PUT /api/people/{person}/role` `{role}` | `people.manage` | `204`; `409 last_owner` |
 | `DELETE /api/people/{person}` | `people.manage` | `204`; `409 last_owner`, `409 remove_self` |
 

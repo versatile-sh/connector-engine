@@ -81,6 +81,10 @@ Evaluation walks four grant layers, then caps the result:
 
 The strictest mode wins across layers. `core/evaluate` holds the steps and `core/grant` the row rules.
 
+- Only a session row names an agent. A tenant, workspace or user row with `agent` set is refused with `row_refused`. An agent row may repeat its own id, and it is stored without it. A list filtered by `agent` therefore returns session rows only.
+- Removing a binding deletes the agent's session rows and agent rows on that connector, never a workspace or user row.
+- Stores from older releases are rewritten to this form by migration `0003_canonical_grants`, and every restore does the same. Evaluation never read `agent` outside session rows, so a rewritten row answers as before. Rows that come to share a key are replaced by the one that decides every instant (the strictest, without `max_uses`, living at least as long as the others). When no row does, they become one `deny` without expiry.
+
 ## Approvals
 
 - `ask` holds the call. The gateway waits up to `approval.holdWindow` (20 s), then answers `pending_approval` with an id the agent polls through `approval_status` or drops with `approval_cancel`.

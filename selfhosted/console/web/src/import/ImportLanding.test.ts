@@ -66,8 +66,8 @@ describe("ImportLanding", () => {
       t.assert.match(html, /<h1[^>]*>Find Skills<\/h1>/);
     });
 
-    test("centres its header", (t) => {
-      t.assert.match(html, /<header class="flex min-w-0 flex-col items-center text-center">/);
+    test("centres its header below lg and aligns it left from lg", (t) => {
+      t.assert.match(html, /<header class="flex min-w-0 flex-col items-center text-center lg:items-start lg:text-left">/);
     });
 
     test("names the link's origin in a caption", (t) => {
@@ -109,19 +109,38 @@ describe("ImportLanding", () => {
       t.assert.match(html, /<a href="https:\/\/versatile\.sh\/skills\/catalog\/find-skills\.yaml"[^>]*title="https:\/\/versatile\.sh\/skills\/catalog\/find-skills\.yaml"[^>]*>[^]*From the versatile\.sh catalog/);
     });
 
-    test("holds the review and the decision as two columns from lg", (t) => {
-      t.assert.match(html, /class="grid items-start gap-6 lg:grid-cols-\[minmax\(0,1fr\)_26rem\] lg:gap-10"/);
-      t.assert.match(html, /<h2 id="review-title"[^>]*>Review the skill</);
-      t.assert.match(html, /<h2 id="summary-title"[^>]*>Who may load it</);
-    });
+    describe("from lg", () => {
+      test("is two columns from the top, the hero on the left and one card on the right", (t) => {
+        t.assert.match(html, /class="flex w-full min-w-0 flex-1 flex-col justify-start gap-10 lg:grid lg:grid-cols-\[minmax\(0,1fr\)_30rem\] lg:content-start lg:items-start"/);
+        t.assert.ok(html.indexOf("<header") < html.indexOf('class="contents lg:sticky'));
+        t.assert.ok(html.indexOf("<h1") < html.indexOf('class="contents lg:sticky'));
+      });
 
-    test("keeps the decision card sticky from lg, whatever the screen's height", (t) => {
-      t.assert.match(html, / lg:sticky lg:top-6"/);
-      t.assert.doesNotMatch(html, /tall:/);
-    });
+      test("holds the review, who may load it and the notice in that one card", (t) => {
+        const card = html.indexOf('class="contents lg:sticky');
+        t.assert.ok(card < html.indexOf('<h2 id="review-title"'));
+        t.assert.ok(html.indexOf('<h2 id="review-title"') < html.indexOf('<h2 id="summary-title"'));
+        t.assert.ok(html.indexOf('<h2 id="summary-title"') < html.indexOf("Nothing is installed until you confirm"));
+        t.assert.match(html, /<h2 id="review-title"[^>]*>Review the skill</);
+        t.assert.match(html, /<h2 id="summary-title"[^>]*>Who may load it</);
+      });
 
-    test("puts the actions in the decision card from lg", (t) => {
-      t.assert.match(html, /<div class="hidden lg:block">[^]*Add skill/);
+      test("keeps the card sticky, as tall as the screen allows and no taller", (t) => {
+        t.assert.match(html, /class="contents lg:sticky lg:top-18 lg:flex lg:max-h-\[calc\(100dvh-9rem\)\] lg:flex-col"/);
+        t.assert.doesNotMatch(html, /tall:/);
+      });
+
+      test("scrolls the review inside the card and keeps the actions out of that scroll", (t) => {
+        t.assert.match(html, /lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:rounded-b-none lg:border-b-0/);
+        t.assert.ok(html.indexOf("lg:overflow-y-auto") < html.indexOf('class="sticky bottom-0'));
+        t.assert.ok(html.indexOf('<h2 id="summary-title"') < html.indexOf('class="sticky bottom-0'));
+      });
+
+      test("draws the actions once, as the foot of the card", (t) => {
+        t.assert.equal(html.split("Add skill").length - 1, 1);
+        t.assert.equal(html.split(">Cancel<").length - 1, 1);
+        t.assert.match(html, /class="sticky bottom-0[^"]*lg:static[^"]*lg:rounded-b-2xl lg:border lg:bg-ink-raised/);
+      });
     });
 
     test("fixes nothing over the review", (t) => {
@@ -135,8 +154,9 @@ describe("ImportLanding", () => {
         t.assert.match(bar, /border-t border-line bg-ink /);
       });
 
-      test("is gone from lg", (t) => {
-        t.assert.match(bar, /lg:hidden/);
+      test("becomes the card's foot from lg", (t) => {
+        t.assert.match(bar, /lg:static/);
+        t.assert.doesNotMatch(bar, /lg:hidden/);
       });
 
       test("holds Cancel and the primary action", (t) => {
@@ -144,8 +164,7 @@ describe("ImportLanding", () => {
         t.assert.match(bar, /Add skill/);
       });
 
-      test("stays in the flow after both columns, so it reserves its own height", (t) => {
-        t.assert.ok(html.indexOf("sticky bottom-0") > html.indexOf("lg:grid-cols"));
+      test("stays in the flow after the panel, so it reserves its own height", (t) => {
         t.assert.ok(html.indexOf("sticky bottom-0") > html.indexOf("summary-title"));
       });
     });
@@ -182,7 +201,8 @@ describe("ImportLanding", () => {
       t.assert.match(html, />Credentials</);
     });
 
-    test("summarises the proposed access in the decision card", (t) => {
+    test("summarises the proposed access under the review, in the same card", (t) => {
+      t.assert.ok(html.indexOf('<h2 id="review-title"') < html.indexOf('<h2 id="summary-title"'));
       t.assert.match(html, /<h2 id="summary-title"[^>]*>Proposed access</);
       t.assert.match(html, />2 functions</);
     });
@@ -215,6 +235,10 @@ describe("ImportLanding", () => {
     test("still tells that nothing is installed before the owner confirms", (t) => {
       t.assert.match(html, /Nothing is installed until you confirm/);
     });
+
+    test("keeps the card's rounded foot, as it has no actions to join", (t) => {
+      t.assert.doesNotMatch(html, /lg:rounded-b-none/);
+    });
   });
 
   describe("when the link cannot be read", () => {
@@ -226,7 +250,7 @@ describe("ImportLanding", () => {
 
     test("offers the way back and no columns", (t) => {
       t.assert.match(html, /Go to the console/);
-      t.assert.doesNotMatch(html, /lg:grid-cols|sticky bottom-0/);
+      t.assert.doesNotMatch(html, /lg:grid-cols|sticky/);
     });
   });
 });

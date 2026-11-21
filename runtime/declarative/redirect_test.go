@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -39,10 +41,11 @@ func TestRedirectIsTheAnswer(t *testing.T) {
 				defer srv.Close()
 				u, _ := url.Parse(srv.URL)
 				rt, h := start(t, redirectManifest(srv.URL, u.Host))
+				defer rt.Stop(context.Background(), h)
 
 				res := call(t, rt, h, fn, `{"name":"a"}`)
-				if !res.IsError {
-					t.Fatalf("a %d answer is a tool error: %s", status, res.Content)
+				if !res.IsError || !strings.Contains(string(res.Content), strconv.Itoa(status)) || !strings.Contains(string(res.Content), u.Host) {
+					t.Fatalf("a %d answer is a tool error naming the status and host: %s", status, res.Content)
 				}
 				if n := hits.Load(); n != 1 {
 					t.Fatalf("upstream requests = %d, want 1", n)
@@ -68,12 +71,13 @@ func TestRedirectToAnotherHostIsNotFollowed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer rt.Stop(context.Background(), h)
 
 	res, err := rt.Call(context.Background(), h, "write", json.RawMessage(`{"name":"a"}`), time.Now().Add(5*time.Second))
 	if err != nil {
 		t.Fatalf("the upstream answered, so the call has a result: %v", err)
 	}
-	if !res.IsError {
+	if !res.IsError || !strings.Contains(string(res.Content), "307") || !strings.Contains(string(res.Content), other.Listener.Addr().String()) || strings.Contains(string(res.Content), "/x") {
 		t.Fatalf("result: %+v", res)
 	}
 	if first.Load() != 1 || elsewhere.Load() != 0 {

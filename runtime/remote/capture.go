@@ -3,10 +3,12 @@ package remote
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type recorded struct {
@@ -66,12 +68,32 @@ func (t tee) Read(p []byte) (int, error) {
 }
 
 type capture struct {
-	next http.RoundTripper
-	mu   sync.Mutex
-	list []*recorded
+	next  http.RoundTripper
+	mu    sync.Mutex
+	list  []*recorded
+	sent  atomic.Int64
+	moved atomic.Value
 }
 
 func (c *capture) RoundTrip(req *http.Request) (*http.Response, error) {
+	c.sent.Add(1)
+	resp, err := c.capture(req)
+	if err == nil && resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		note := fmt.Sprintf("the upstream answered %d", resp.StatusCode)
+		if loc, perr := resp.Location(); perr == nil {
+			note += " and redirected to " + loc.Host
+		}
+		c.moved.Store(note)
+	}
+	return resp, err
+}
+
+func (c *capture) note() string {
+	note, _ := c.moved.Load().(string)
+	return note
+}
+
+func (c *capture) capture(req *http.Request) (*http.Response, error) {
 	if req.Method != http.MethodPost || req.Body == nil {
 		return c.next.RoundTrip(req)
 	}

@@ -138,7 +138,18 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if err != nil || len(body) > maxResponse {
 		return port.Result{}, port.Errorf(port.CodeUnavailable, "%s %s: the response is unreadable or over %d bytes", f.Method, f.Path, maxResponse)
 	}
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		body = []byte(redirectNote(resp))
+	}
 	return result(resp.StatusCode, body), nil
+}
+
+func redirectNote(resp *http.Response) string {
+	note := fmt.Sprintf("the upstream answered %d", resp.StatusCode)
+	if loc, err := resp.Location(); err == nil {
+		note += " and redirected to " + loc.Host
+	}
+	return note
 }
 
 func (in *instance) request(ctx context.Context, f port.RESTFunction, arguments json.RawMessage) (*http.Request, error) {

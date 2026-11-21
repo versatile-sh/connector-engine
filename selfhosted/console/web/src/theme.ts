@@ -1,5 +1,3 @@
-import { useSyncExternalStore } from "react";
-import { flushSync } from "react-dom";
 
 /** The theme that is drawn. */
 export type Theme = "light" | "dark";
@@ -31,7 +29,6 @@ export function revealRadius(from: Point, width: number, height: number): number
   return Math.hypot(Math.max(from.x, width - from.x), Math.max(from.y, height - from.y));
 }
 
-const listeners = new Set<() => void>();
 const systemLight = () => window.matchMedia("(prefers-color-scheme: light)");
 
 function saved(): Theme | null {
@@ -45,7 +42,6 @@ function saved(): Theme | null {
 function draw(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COLORS[theme]);
-  for (const listener of listeners) listener();
 }
 
 function drawSaved() {
@@ -75,7 +71,7 @@ export function toggleTheme(from: Point) {
   const radius = revealRadius(from, window.innerWidth, window.innerHeight);
   const root = document.documentElement;
   root.classList.add("theme-swap");
-  const transition = document.startViewTransition(() => flushSync(() => draw(next)));
+  const transition = document.startViewTransition(() => draw(next));
   void transition.ready.then(() =>
     root.animate(
       { clipPath: [`circle(0px at ${from.x}px ${from.y}px)`, `circle(${radius}px at ${from.x}px ${from.y}px)`] },
@@ -87,14 +83,4 @@ export function toggleTheme(from: Point) {
 
 function currentTheme(): Theme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
-}
-
-const subscribe = (listener: () => void) => {
-  listeners.add(listener);
-  return () => void listeners.delete(listener);
-};
-
-/** The theme drawn now, shared by every switch on the page. */
-export function useTheme(): Theme {
-  return useSyncExternalStore(subscribe, currentTheme, () => "dark");
 }

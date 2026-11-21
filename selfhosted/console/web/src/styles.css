@@ -305,6 +305,11 @@ svg {
   z-index: 1;
 }
 
+html:not([data-theme="light"]) .light-only,
+html[data-theme="light"] .dark-only {
+  display: none;
+}
+
 .theme-swap,
 .theme-swap *,
 .theme-swap *::before,

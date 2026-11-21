@@ -25,8 +25,7 @@ type metadata struct {
 	RevocationEndpoint    string `json:"revocation_endpoint"`
 }
 
-// Broker is the OAuthBroker for pre-registered clients: PKCE S256, a bound state, single-flight refresh and revocation.
-// Issuer requests go through HTTP, or a zero egress guard when nil, and never follow a redirect.
+// Broker is the OAuthBroker for pre-registered clients: PKCE S256, a bound state, single-flight refresh and revocation. Issuer requests go through HTTP, or a zero egress guard when nil, and never follow a redirect.
 type Broker struct {
 	HTTP *http.Client
 

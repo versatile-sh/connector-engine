@@ -125,8 +125,7 @@ func Reclassify(f port.Function, class port.Class, source port.ClassSource) (por
 	return f, Effects{}
 }
 
-// AutoAccept reports whether an update activates a new hash without an admin: only with pinning.autoAcceptReviewed = read,
-// a hash the new review covers and a reviewed class read.
+// AutoAccept reports whether an update activates a new hash without an admin: only with pinning.autoAcceptReviewed = read, a hash the new review covers and a reviewed class read.
 func AutoAccept(f port.Function, review *port.Review, setting string) bool {
 	return setting == "read" && review != nil && slices.Contains(review.DefinitionHashes, f.DefinitionHash) &&
 		f.ClassSource == port.ClassSourceReviewed && f.Class == port.ClassRead

@@ -55,6 +55,7 @@ type Error struct {
 	Next string
 }
 
+// Error returns the wrapped error text, or the exit status when there is none.
 func (e *Error) Error() string {
 	if e.Err == nil {
 		return fmt.Sprintf("exit status %d", e.Code)
@@ -65,6 +66,7 @@ func (e *Error) Error() string {
 // Silent returns an error that exits with code and prints nothing, for a command that reported its failure itself.
 func Silent(code int) error { return &Error{Code: code} }
 
+// Unwrap returns the wrapped error.
 func (e *Error) Unwrap() error { return e.Err }
 
 // Fail returns an error with code and the next step to suggest.

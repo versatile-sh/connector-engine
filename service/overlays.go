@@ -109,8 +109,7 @@ func (s *Service) SuggestOverlay(ctx context.Context, p port.Principal, id port.
 	return out, err
 }
 
-// ProposeOverlay writes a person's text as a proposed version against the upstream hash the admin saw; a model's suggestion is
-// turned into a proposal by sending its text, edited or not.
+// ProposeOverlay writes a person's text as a proposed version against the upstream hash the admin saw; a model's suggestion is turned into a proposal by sending its text, edited or not.
 func (s *Service) ProposeOverlay(ctx context.Context, p port.Principal, t OverlayTarget, function, title, description string, upstream port.Hash) (port.Overlay, error) {
 	var out port.Overlay
 	err := s.overlayTx(ctx, p, t, "ProposeOverlay", func(tx port.Tx) error {
@@ -132,8 +131,7 @@ func (s *Service) ProposeOverlay(ctx context.Context, p port.Principal, t Overla
 	return out, err
 }
 
-// ActivateOverlay is acceptOverlay and restoreOverlay: a version becomes the served text, pinned to the upstream hash the admin saw,
-// which for a connector is its current one.
+// ActivateOverlay is acceptOverlay and restoreOverlay: a version becomes the served text, pinned to the upstream hash the admin saw, which for a connector is its current one.
 func (s *Service) ActivateOverlay(ctx context.Context, p port.Principal, t OverlayTarget, function string, version int, upstreamSeen port.Hash) (port.Overlay, error) {
 	var out port.Overlay
 	err := s.overlayTx(ctx, p, t, "ActivateOverlay", func(tx port.Tx) error {

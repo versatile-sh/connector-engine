@@ -39,7 +39,7 @@ function KeyNotice() {
   );
 }
 
-/** The frame of every signed-in page: the site's grid and light, a left sidebar on the page's ground (a drawer on a narrow screen), the strip over the page, and the content on an inset raised surface that scrolls on its own and holds the notices, the page and the site's footer. The sidebar and the strip never remount between pages. */
+/** The frame of every signed-in page: the site's grid and light, a left sidebar on the page's ground (a drawer on a narrow screen), the strip over the page, and the content on an inset raised surface that scrolls on its own and holds the notices and the page; the site's footer closes only the Account page. The sidebar and the strip never remount between pages. */
 export function Shell({ section, children }: { section: Section; children: ReactNode }) {
   const t = useT();
   const { path, query } = useLocation();
@@ -115,7 +115,7 @@ export function Shell({ section, children }: { section: Section; children: React
           tabIndex={-1}
           className="shell-surface vignette-top relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain border border-line bg-ink-raised [scrollbar-gutter:stable] max-lg:border-x-0 max-lg:border-b-0 focus-visible:outline-offset-0 lg:mr-3 lg:mb-3 lg:rounded-2xl"
         >
-          <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pt-8 pb-16 sm:px-8 lg:px-10 lg:pt-10">
+          <div className="flex w-full max-w-[110rem] flex-1 flex-col px-5 pt-8 pb-16 sm:px-8 lg:px-10 lg:pt-10 2xl:px-12">
             {oauth ? (
               <div className="mb-6">
                 <Notice
@@ -135,7 +135,7 @@ export function Shell({ section, children }: { section: Section; children: React
               {children}
             </div>
           </div>
-          <Footer />
+          {section === "account" ? <Footer /> : null}
         </main>
       </div>
     </div>

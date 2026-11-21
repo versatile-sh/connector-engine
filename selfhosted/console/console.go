@@ -42,7 +42,7 @@ type Console struct {
 	restoring     sync.Mutex
 	reconciling   sync.Mutex
 	keying        sync.Mutex
-	passwordFails minuteWindow
+	passwordFails lockout
 	icons         iconCache
 	connects      connectStates
 	as            authServer

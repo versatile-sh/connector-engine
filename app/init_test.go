@@ -29,3 +29,21 @@ func TestInitWritesTheFirstBootSecretsOnce(t *testing.T) {
 		t.Fatal("a second init rewrote the operator token")
 	}
 }
+
+func TestEngineSubcommandsAnswerHelpWithExitZero(t *testing.T) {
+	for _, args := range [][]string{{"init", "--help"}, {"adapters", "--help"}, {"adapters", "check", "-h"}} {
+		var out, errw bytes.Buffer
+		if code := app.Main(app.Build{}, args, nil, nil, &out, &errw); code != 0 || out.Len() == 0 {
+			t.Fatalf("%v: %d %q %q", args, code, out.String(), errw.String())
+		}
+	}
+}
+
+func TestABuildCannotShadowABuiltInSubcommand(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("no panic")
+		}
+	}()
+	app.Main(app.Build{Commands: map[string]app.Command{"init": nil}}, nil, nil, nil, nil, nil)
+}

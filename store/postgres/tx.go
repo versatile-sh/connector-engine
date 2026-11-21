@@ -517,6 +517,19 @@ func (t *tx) MarkInbox(id string, at time.Time) (bool, error) {
 	return n == 1, err
 }
 
+func (t *tx) SetInboxPayload(id string, payload []byte) error {
+	_, err := t.exec(`UPDATE inbox SET payload = $3 WHERE tenant_id = $1 AND id = $2`, string(t.scope.Tenant), id, string(payload))
+	return err
+}
+
+func (t *tx) InboxPayload(id string) ([]byte, error) {
+	v, err := many[string](t, `SELECT coalesce(payload, '') FROM inbox WHERE tenant_id = $1 AND id = $2`, string(t.scope.Tenant), id)
+	if err != nil || len(v) == 0 {
+		return nil, err
+	}
+	return []byte(v[0]), nil
+}
+
 func (t *tx) ListRoles(f port.RoleFilter) ([]port.RoleAssignment, error) {
 	return list[port.RoleAssignment](t, kindRole, want("person", string(f.Person)), "k", nil)
 }

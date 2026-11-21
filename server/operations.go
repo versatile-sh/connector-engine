@@ -3,6 +3,9 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"slices"
@@ -189,10 +192,39 @@ func parse(dst reflect.Value, raw string) error {
 
 // Invoke runs a unary operation for the caller; in is the pointer o.In returned.
 func (o Operation) Invoke(ctx context.Context, e *Env, p port.Principal, idempotencyKey string, in any) (any, error) {
-	if idempotencyKey != "" {
-		ctx = service.WithIdempotencyKey(ctx, idempotencyKey)
+	if idempotencyKey == "" {
+		return o.call(ctx, e, p, in)
 	}
-	return o.call(ctx, e, p, in)
+	body, err := json.Marshal(in)
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(append([]byte(o.ID+"\x00"), body...))
+	ctx = service.WithIdempotencyKey(ctx, idempotencyKey, hex.EncodeToString(sum[:]))
+	out, err := o.call(ctx, e, p, in)
+	if stored, replayed, rerr := service.Replay(ctx); replayed {
+		if rerr != nil {
+			return nil, rerr
+		}
+		return o.decodeStored(stored, out, err)
+	}
+	if err == nil {
+		if rerr := e.Svc.Remember(ctx, out); rerr != nil {
+			return out, rerr
+		}
+	}
+	return out, err
+}
+
+func (o Operation) decodeStored(stored []byte, out any, err error) (any, error) {
+	if len(stored) == 0 || o.Out == nil {
+		return out, err
+	}
+	v := reflect.New(reflect.TypeOf(o.Out))
+	if json.Unmarshal(stored, v.Interface()) != nil {
+		return out, err
+	}
+	return v.Elem().Interface(), nil
 }
 
 // Watch streams a live operation until ctx ends: it sends every event after the cursor and sleeps WatchPoll when there is none.

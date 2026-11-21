@@ -32,7 +32,13 @@ func (s *Store) Prune(ctx context.Context, tenant port.TenantID, now time.Time, 
 	counts["audit"] = before - len(d.audit)
 	before = len(d.inbox)
 	prefix := key(string(tenant), "")
-	maps.DeleteFunc(d.inbox, func(k string, at time.Time) bool { return strings.HasPrefix(k, prefix) && expired(r.Inbox, now, at) })
+	maps.DeleteFunc(d.inbox, func(k string, at time.Time) bool {
+		gone := strings.HasPrefix(k, prefix) && expired(r.Inbox, now, at)
+		if gone {
+			delete(d.inboxData, k)
+		}
+		return gone
+	})
 	counts["inbox"] = before - len(d.inbox)
 	for k, c := range d.calls.rows {
 		if c.tenant == tenant && c.v.State != port.CallStarted && expired(r.Calls, now, c.v.FinishedAt) {

@@ -20,7 +20,7 @@ The agent endpoint `/mcp` is separate: it serves the functions granted to one ag
 |---|---|
 | authentication | `Authorization: Bearer <token>`: a person JWT on the public listener, the operator token on the operator listener |
 | errors | `application/problem+json` with a stable error code |
-| idempotency | mutations accept an `Idempotency-Key` header; a retry with the same key runs once |
+| idempotency | mutations accept an `Idempotency-Key` header; a retry with the same key and the same request runs once and answers the first result again; the same key with another request answers `409 conflict`. Keys are kept for `retention.idempotencyKeys`; a retry that arrives before the first result was stored answers an empty result |
 | custom verbs | actions are `POST /v1/<resource>/{id}:<verb>`, such as `:decide`, `:accept`, `:sync` |
 | long work | some mutations answer `202` with an operation; poll `GET /v1/operations/{id}` |
 

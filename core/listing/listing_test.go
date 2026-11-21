@@ -60,6 +60,26 @@ func TestClassSourceOrder(t *testing.T) {
 	}
 }
 
+func TestBaseClassIgnoresTheAdminClass(t *testing.T) {
+	m := port.Manifest{Review: &port.Review{DefinitionHashes: []port.Hash{"h1"}}, Functions: []port.FunctionDef{{Name: "purge", Class: port.ClassDestructive}}}
+	for _, tc := range []struct {
+		name   string
+		f      port.Function
+		class  port.Class
+		source port.ClassSource
+	}{
+		{"a reviewed class under an admin lowering", port.Function{Name: "purge", DefinitionHash: "h1", Class: port.ClassWrite, ClassSource: port.ClassSourceAdmin}, port.ClassDestructive, port.ClassSourceReviewed},
+		{"a review of another hash", port.Function{Name: "purge", DefinitionHash: "h2", Class: port.ClassWrite, ClassSource: port.ClassSourceAdmin}, port.ClassNone, port.ClassSourceDefault},
+		{"a declared destructive function", port.Function{Name: "wipe", Definition: []byte(`{"annotations":{"destructiveHint":true}}`), Class: port.ClassRead, ClassSource: port.ClassSourceAdmin}, port.ClassDestructive, port.ClassSourceAnnotationRaise},
+		{"a read-only hint", port.Function{Name: "list", Definition: []byte(`{"annotations":{"readOnlyHint":true}}`), Class: port.ClassRead, ClassSource: port.ClassSourceAdmin}, port.ClassNone, port.ClassSourceDefault},
+		{"an item", port.Function{Name: "prompt:hello", Class: port.ClassRead, ClassSource: port.ClassSourceItem}, port.ClassRead, port.ClassSourceItem},
+	} {
+		if c, s := listing.Base(tc.f, m); c != tc.class || s != tc.source {
+			t.Errorf("%s: %s %s", tc.name, c, s)
+		}
+	}
+}
+
 func TestTrust(t *testing.T) {
 	m := remote()
 	m.Functions = []port.FunctionDef{{Name: "a", DefinitionHash: "h1"}, {Name: "b", DefinitionHash: "h2"}}

@@ -68,6 +68,7 @@ type stateFile struct {
 	Sessions            map[string]StoredSession     `json:"sessions,omitempty"`
 	Revoked             map[string]time.Time         `json:"revoked,omitempty"`
 	OnboardingDismissed bool                         `json:"onboarding_dismissed,omitempty"`
+	ClassesRepaired     bool                         `json:"classes_repaired,omitempty"`
 	Clients             map[string]OAuthClient       `json:"oauth_clients,omitempty"`
 	Refresh             map[string]RefreshGrant      `json:"oauth_refresh,omitempty"`
 	Spent               map[string]RefreshGrant      `json:"oauth_refresh_spent,omitempty"`
@@ -370,6 +371,32 @@ func (s *State) DismissOnboarding() error {
 			return errUnchanged
 		}
 		d.OnboardingDismissed = true
+		return nil
+	})
+}
+
+// ClassesRepaired reports whether the one-time raise of lowered function classes has run.
+func (s *State) ClassesRepaired() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.data.ClassesRepaired
+}
+
+// MarkClassesRepaired records that the one-time raise of lowered function classes has run.
+func (s *State) MarkClassesRepaired() error {
+	return s.update(func(d *stateFile) error {
+		if d.ClassesRepaired {
+			return errUnchanged
+		}
+		d.ClassesRepaired = true
+		return nil
+	})
+}
+
+// RecordClassRaised records in the audit that the console raised a function of a connector back to the class its review or server declares.
+func (s *State) RecordClassRaised(actor, connector, function, from, to string) error {
+	return s.update(func(d *stateFile) error {
+		record(d, actor, "function.class_raised", connector+"/"+function, map[string]string{"connector": connector, "function": function, "from": from, "to": to})
 		return nil
 	})
 }

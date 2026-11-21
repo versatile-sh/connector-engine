@@ -61,9 +61,8 @@ describe("the shell", () => {
       assert.equal(count(html, '<main id="main" tabindex="-1"'), 1);
     });
 
-    test("puts the strip with the endpoint beside the content, not above the sidebar", () => {
-      assert.ok(at(html, '<nav aria-label="Console"') < at(html, "Copy the endpoint http://127.0.0.1:7465/mcp"));
-      assert.equal(count(html, "Copy the endpoint http://127.0.0.1:7465/mcp"), 1);
+    test("leaves the endpoint out of the strip", () => {
+      assert.equal(count(html, "127.0.0.1:7465/mcp"), 0);
     });
   });
 

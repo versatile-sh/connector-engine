@@ -72,7 +72,7 @@ export function App() {
   const section = sectionOf(path);
   const detail = path.startsWith("/connectors/") ? decodeURIComponent(path.slice("/connectors/".length)) : undefined;
   return (
-    <Shell section={section} endpoint={mcp_url}>
+    <Shell section={section}>
       {section === "access" ? (
         <AccessPage endpoint={mcp_url} />
       ) : section === "approvals" ? (

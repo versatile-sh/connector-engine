@@ -150,7 +150,7 @@ func (c *Console) elicitCall(w http.ResponseWriter, r *http.Request, body []byte
 	first := make(chan engineAnswer, 1)
 	go func() { first <- c.toEngine(ctx, r, body, m.ID) }()
 	id, ans, done := c.bindCall(ctx, first, agent, session, calledFunction(p), time.Now())
-	if id != "" && !done && !c.engineAccepts(ctx, r) {
+	if id != "" && !done && !c.engineAccepts(ctx, r, p.Meta) {
 		id = ""
 	}
 	if id == "" {
@@ -181,10 +181,20 @@ func (c *Console) elicitCall(w http.ResponseWriter, r *http.Request, body []byte
 	return true
 }
 
-// engineAccepts reports whether the engine, which checks the signature, takes the request's bearer; the claims the console reads are unsigned.
-func (c *Console) engineAccepts(ctx context.Context, r *http.Request) bool {
-	ping := c.toEngine(ctx, r, []byte(`{"jsonrpc":"2.0","id":"ce-verify","method":"ping"}`), json.RawMessage(`"ce-verify"`))
-	return ping.err == nil && ping.status != http.StatusUnauthorized
+// engineAccepts reports whether the engine, which checks the signature, answers a harmless request carrying this bearer; the console's claims are unsigned.
+func (c *Console) engineAccepts(ctx context.Context, r *http.Request, meta map[string]json.RawMessage) bool {
+	method, params := "ping", map[string]any{}
+	if metaString(meta, metaProtocol) >= newEra {
+		method, params["_meta"] = "tools/list", meta
+	}
+	body, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": "ce-verify", "method": method, "params": params})
+	probe := r.Clone(ctx)
+	if probe.Header.Get("Mcp-Method") != "" {
+		probe.Header.Set("Mcp-Method", method)
+		probe.Header.Del("Mcp-Name")
+	}
+	a := c.toEngine(ctx, probe, body, json.RawMessage(`"ce-verify"`))
+	return a.err == nil && a.status == http.StatusOK && a.final.Result != nil && a.final.Error == nil
 }
 
 func (c *Console) bindCall(ctx context.Context, first chan engineAnswer, agent, session, function string, start time.Time) (string, engineAnswer, bool) {
@@ -356,7 +366,7 @@ func (c *Console) answered(w http.ResponseWriter, r *http.Request, body []byte, 
 		return
 	}
 	ctx := r.Context()
-	if v, err := c.Approval(ctx, f[0]); err == nil && v.State == string(port.ApprovalPending) && v.App == agent && v.Session == session {
+	if v, err := c.Approval(ctx, f[0]); err == nil && v.State == string(port.ApprovalPending) && v.App == agent && v.Session == session && c.engineAccepts(ctx, r, p.Meta) {
 		var a elicitAnswer
 		_ = json.Unmarshal(p.InputResponses[inputKey], &a)
 		c.apply(ctx, v, a, agent)

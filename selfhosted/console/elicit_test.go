@@ -110,41 +110,49 @@ func forgedBearer(t *testing.T, token string) string {
 }
 
 func TestAForgedBearerCannotBeAskedAboutAnotherAppsApproval(t *testing.T) {
-	r := newRig(t)
-	r.b.ok("PUT", "/api/notifications/apps/claude-code", map[string]any{"elicit": true}, nil)
-	target, _ := url.Parse(r.eng.PublicURL)
-	forged := forgedBearer(t, r.tok.Token)
-	slow := httputil.NewSingleHostReverseProxy(target)
-	slow.FlushInterval = -1
-	front := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if strings.Contains(req.Header.Get("Authorization"), forged) {
-			time.Sleep(1500 * time.Millisecond)
-		}
-		slow.ServeHTTP(w, req)
-	}))
-	t.Cleanup(front.Close)
-	r.eng.PublicURL = front.URL
-	cs := r.connect("", nil)
-	victim := r.call(cs, "create", map[string]any{"n": 1})
-	r.eventually("the victim's approval", func() bool {
-		var held struct{ Approvals []struct{ ID string } }
-		r.b.ok("GET", "/api/approvals", nil, &held)
-		return len(held.Approvals) > 0
-	})
-	body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"` + r.conn.Alias + `__create","arguments":{"n":1},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{"elicitation":{"form":{}}}}}}`
-	req, _ := http.NewRequest(http.MethodPost, r.base+"/mcp", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json, text/event-stream")
-	req.Header.Set("Authorization", "Bearer "+forged)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
+	for name, failing := range map[string]bool{"the engine refuses the bearer": false, "the engine cannot check the bearer": true} {
+		t.Run(name, func(t *testing.T) {
+			r := newRig(t)
+			r.b.ok("PUT", "/api/notifications/apps/claude-code", map[string]any{"elicit": true}, nil)
+			target, _ := url.Parse(r.eng.PublicURL)
+			forged := forgedBearer(t, r.tok.Token)
+			slow := httputil.NewSingleHostReverseProxy(target)
+			slow.FlushInterval = -1
+			front := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if strings.Contains(req.Header.Get("Authorization"), forged) {
+					time.Sleep(1500 * time.Millisecond)
+					if failing {
+						http.Error(w, "unavailable", http.StatusInternalServerError)
+						return
+					}
+				}
+				slow.ServeHTTP(w, req)
+			}))
+			t.Cleanup(front.Close)
+			r.eng.PublicURL = front.URL
+			cs := r.connect("", nil)
+			victim := r.call(cs, "create", map[string]any{"n": 1})
+			r.eventually("the victim's approval", func() bool {
+				var held struct{ Approvals []struct{ ID string } }
+				r.b.ok("GET", "/api/approvals", nil, &held)
+				return len(held.Approvals) > 0
+			})
+			body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"` + r.conn.Alias + `__create","arguments":{"n":1},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{"elicitation":{"form":{}}}}}}`
+			req, _ := http.NewRequest(http.MethodPost, r.base+"/mcp", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "application/json, text/event-stream")
+			req.Header.Set("Authorization", "Bearer "+forged)
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK || strings.Contains(string(raw), "input_required") {
+				t.Fatalf("a forged bearer was asked about the app's approval: %d %s", resp.StatusCode, raw)
+			}
+			r.approveFirstPending()
+			ran(t, within(t, victim, 8*time.Second), "create")
+		})
 	}
-	raw, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusUnauthorized || strings.Contains(string(raw), "input_required") {
-		t.Fatalf("a forged bearer was asked about the app's approval: %d %s", resp.StatusCode, raw)
-	}
-	r.approveFirstPending()
-	ran(t, within(t, victim, 8*time.Second), "create")
 }

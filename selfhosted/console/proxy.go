@@ -7,6 +7,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+
+	"github.com/versatile-sh/connector-engine/core/args"
 )
 
 type tokenClaims struct {
@@ -29,10 +31,23 @@ func bearerClaims(header string) (tokenClaims, bool) {
 		return tokenClaims{}, false
 	}
 	var claims tokenClaims
-	if json.Unmarshal(payload, &claims) != nil || claims.Agent == "" {
+	if args.Parse(payload) != nil || json.Unmarshal(payload, &claims) != nil || claims.Agent == "" || !exactNames(payload) {
 		return tokenClaims{}, false
 	}
 	return claims, true
+}
+
+func exactNames(payload []byte) bool {
+	var names map[string]json.RawMessage
+	_ = json.Unmarshal(payload, &names)
+	for name := range names {
+		for _, claim := range []string{"agent", "session", "on_behalf_of", "iat"} {
+			if name != claim && strings.EqualFold(name, claim) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (c *Console) refuseRevoked(next http.Handler) http.Handler {

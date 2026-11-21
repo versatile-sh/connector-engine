@@ -50,7 +50,7 @@ export function MetaChips({ preview }: { preview: Preview }) {
   const t = useT();
   const { skill } = preview;
   return (
-    <ul className="flex max-w-full flex-wrap items-center justify-center gap-2">
+    <ul className="flex max-w-full flex-wrap items-center justify-center gap-2 lg:justify-start">
       <Chip tone="paper" text={t(skill ? "import.badge.skill" : "import.badge.connector")} />
       {preview.publisher ? <Chip text={t("import.by", { publisher: preview.publisher })} title={preview.publisher} /> : null}
       {skill ? (

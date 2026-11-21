@@ -182,6 +182,7 @@ export type Skill = SkillFacts & {
   alias: string;
   title: string;
   description?: string;
+  icon?: string;
   publisher?: string;
   version: string;
   state: string;

@@ -103,19 +103,17 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 `selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`), desktop notifications, and the install without Docker (`selfhosted/standalone`), which runs the engine and the console in one process over the `sqlite` store.
 
 - Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
-- Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or `cli.Main` (`vsh`). `selfhosted/selfhosted.go` is the single list of self-hosted contributions.
+- Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or builds a tree with `cli.Root` and runs it with `command.Main` (`vsh`). `selfhosted/selfhosted.go` lists the self-hosted adapters and commands; `selfhosted/cmd/vsh/main.go` adds the TUI, `manage` and the `standalone` lifecycle commands itself.
 
 ```go
 // cmd/connector-engine: the core alone
 func main() { os.Exit(app.Main(app.Build{Version: version}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr)) }
 
-// selfhosted/cmd/connector-engine: the core plus hostkey, sqlite, unlock and the no-Docker lifecycle
+// selfhosted/cmd/connector-engine: the core plus hostkey, sqlite and unlock
 func main() {
 	adapters := app.Core()
 	selfhosted.Register(adapters)
-	commands := selfhosted.EngineCommands()
-	maps.Copy(commands, standalone.Commands(version))
-	os.Exit(app.Main(app.Build{Version: version, Adapters: adapters, Commands: commands}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr))
+	os.Exit(app.Main(app.Build{Version: version, Adapters: adapters, Commands: selfhosted.EngineCommands()}, os.Args[1:], os.Environ(), os.Stdin, os.Stdout, os.Stderr))
 }
 ```
 

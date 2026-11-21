@@ -43,6 +43,9 @@ func initSecrets(_ config.Config, args []string, _ io.Reader, stdout, stderr io.
 	dir := fs.String("dir", "/run/connector-engine", "directory of the secrets volume")
 	dbHost := fs.String("db-host", "postgres:5432", "host:port of the Postgres service")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
 		return 2
 	}
 	appPassword := secretHex(24)

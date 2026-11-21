@@ -23,10 +23,8 @@ const terminal = (text: string, setup?: true): Block => ({ where: "clients.where
 
 const file = (path: string, text: string): Block => ({ where: "clients.where.file", path, text });
 
-/** How an app connects one way: the kind of step when it is not the app's own, then the rest of its guide. */
 type Way = Omit<Guide, "id" | "name" | "kind"> & { kind?: MessageKey };
 
-/** One app of the picker with both ways in: by browser sign-in (OAuth) with the endpoint alone, and with an access key for apps without OAuth; an app lacking a way is left out of that list. */
 type App = {
   id: ClientId;
   name: string | ((t: Translate) => string);

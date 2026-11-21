@@ -47,6 +47,9 @@ func Run(ctx context.Context, kc Keychain, args []string, stdin io.Reader, stdou
 	fs.SetOutput(stderr)
 	name := fs.String("name", "connector-engine", "the install, its compose project name")
 	if err := fs.Parse(args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
 		return 2
 	}
 	if !accountName.MatchString(*name) {

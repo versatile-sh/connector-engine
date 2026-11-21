@@ -3,6 +3,7 @@ package hostkey
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -18,6 +19,9 @@ func Main(args []string, socket string, stdin io.Reader, stdout, stderr io.Write
 	op := fs.String("op", string(OpUnlock), "unlock, plaintext, migrate, revert or status")
 	wait := fs.Duration("wait", time.Minute, "how long to wait for the socket")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
 		return 2
 	}
 	req := Request{Op: Op(*op)}

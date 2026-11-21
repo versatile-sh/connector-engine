@@ -24,7 +24,6 @@ const quarantined = (client: QueryClient, id: string, names: readonly string[]) 
   return [...(connector?.functions ?? []), ...(connector?.items ?? [])].some((row) => names.includes(row.name) && row.state === "quarantined");
 };
 
-/** After an access write the cache already holds: the write is laid over the list again, in case a read that started before it landed since, and the engine's answers for this connector's keys are read again; the whole list is read again instead when the write failed, refused a name, or accepted a quarantined row, whose new definition only the console knows. */
 const settleAccess = async (client: QueryClient, id: string, names: readonly string[], access: Access, failed: boolean) => {
   const reconcile = failed || quarantined(client, id, names);
   if (!reconcile) await patchConnector(client, id, withAccess(names, access));

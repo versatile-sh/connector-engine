@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -138,6 +139,9 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 	base := global.String("url", c.env("VSH_ADMIN_URL"), "base address of the engine")
 	token := global.String("token", "", "bearer token (from $VSH_ADMIN_TOKEN when empty)")
 	if err := global.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
 		return 2
 	}
 	rest := global.Args()
@@ -148,6 +152,10 @@ func (c *Cmd) Run(ctx context.Context, args []string) int {
 	)
 	switch {
 	case len(rest) >= 2 && rest[0] == "call":
+		if rest[1] == "-h" || rest[1] == "--help" || rest[1] == "-help" {
+			c.help(c.out)
+			return 0
+		}
 		if op, ok = operation(rest[1]); !ok {
 			fmt.Fprintf(c.err, "unknown operation %q\n", rest[1])
 			return 2

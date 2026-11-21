@@ -335,19 +335,20 @@ export const removePerson = mutationOptions({
   onSuccess: (_data, _person, _onMutate, { client }) => invalidate(client, peopleQuery.queryKey, sessionQuery.queryKey, keysQuery.queryKey),
 });
 
-/** Uses a join or reset link: the new session's CSRF token is armed and the session read again. */
+/** Uses a join or reset link: the new session's CSRF token is armed, every answer read for whoever was signed in before is forgotten, and the session is read again. */
 export const acceptLink = mutationOptions({
   mutationFn: (accept: { token: string; username: string; password: string }) => api<{ csrf: string }>("POST", "/api/invite/accept", accept),
   onSuccess: (result, _accept, _onMutate, { client }) => {
     setCsrf(result.csrf);
+    client.removeQueries({ predicate: (query) => query.queryKey[0] !== sessionQuery.queryKey[0] });
     return invalidate(client, sessionQuery.queryKey);
   },
 });
 
-/** Cancels someone's held call; the held lists are read again. */
+/** Cancels someone's held call; the held lists and that call's own page are read again. */
 export const cancelApproval = mutationOptions({
   mutationFn: (id: string) => api("POST", `/api/approvals/${at(id, "cancel")}`),
-  onSettled: (_data, _error, _id, _onMutate, { client }) => invalidate(client, approvalsQuery.queryKey),
+  onSettled: (_data, _error, id, _onMutate, { client }) => invalidate(client, approvalsQuery.queryKey, approvalQuery(id, null).queryKey),
 });
 
 /** Sets whose credential a connector's calls use, which also sets who approves them. */

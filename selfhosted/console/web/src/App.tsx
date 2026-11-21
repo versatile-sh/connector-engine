@@ -15,6 +15,7 @@ import { useT } from "./i18n/I18nProvider";
 import { ImportLanding } from "./import/ImportLanding";
 import { InvitePage } from "./invite/InvitePage";
 import { NotificationsPage } from "./notifications/NotificationsPage";
+import { viewerOf } from "./people/viewer";
 import { sessionQuery } from "./queries";
 import { SkillsPage } from "./skills/SkillsPage";
 import { useLocation } from "./router";
@@ -65,7 +66,8 @@ export function App() {
   if (path.startsWith("/approve/") && (signed_in || query.has("t"))) return <ApprovePage id={decodeURIComponent(path.slice("/approve/".length))} token={query.get("t")} signedIn={signed_in} />;
   if (!signed_in) return <Auth mode="login" endpoint={mcp_url} waitingHost={waitingLinkHost(path, query)} />;
   if (path === "/connect") return <Consent id={query.get("request") ?? ""} />;
-  const linked = linkedSource(path, query);
+  const viewer = viewerOf(session.data);
+  const linked = viewer.can("connectors.manage") || viewer.can("skills.manage") ? linkedSource(path, query) : undefined;
   if (linked) return <ImportLanding key={JSON.stringify(linked)} source={linked} />;
   const section = sectionOf(path);
   const detail = path.startsWith("/connectors/") ? decodeURIComponent(path.slice("/connectors/".length)) : undefined;

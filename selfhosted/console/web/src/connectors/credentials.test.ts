@@ -17,6 +17,10 @@ describe("credentialsViewOf", () => {
     test("keeps the shared forms", () => {
       assert.equal(view.forms, true);
     });
+
+    test("draws a per-person connector as before", () => {
+      assert.equal(credentialsViewOf(PER_PERSON, viewerOf(ONE_OWNER)).signedIn, undefined);
+    });
   });
 
   describe("for an Admin of a team", () => {

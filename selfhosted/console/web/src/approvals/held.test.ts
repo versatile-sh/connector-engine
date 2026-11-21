@@ -43,8 +43,12 @@ describe("heldViewOf", () => {
   });
 
   describe("without choices from the server", () => {
-    test("offers today's answers and no Cancel", () => {
-      assert.deepEqual(heldViewOf({ ...APPROVAL, choices: undefined }, viewerOf(TEAM_MEMBER), undefined), { waitingFor: "alice", decide: ["once", "always", "deny"], cancel: false, decidesAlone: undefined });
+    test("keeps today's answers on the viewer's own call", () => {
+      assert.deepEqual(heldViewOf({ ...APPROVAL, choices: undefined }, owner, undefined).decide, ["once", "always", "deny"]);
+    });
+
+    test("offers nothing on someone else's call", () => {
+      assert.deepEqual(heldViewOf({ ...APPROVAL, choices: undefined }, viewerOf(TEAM_MEMBER), undefined), { waitingFor: "alice", decide: [], cancel: false, decidesAlone: undefined });
     });
   });
 

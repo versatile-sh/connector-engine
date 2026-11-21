@@ -68,7 +68,6 @@ describe("mutations", () => {
     { name: "revokeLink", run: () => staleAfter(mutations.revokeLink, "i1"), stale: ["people"] },
     { name: "setRole", run: () => staleAfter(mutations.setRole, { person: "p-bob", role: "admin" }), stale: ["people", "session"] },
     { name: "removePerson", run: () => staleAfter(mutations.removePerson, "p-bob"), stale: ["people", "session", "agents"] },
-    { name: "acceptLink", run: () => staleAfter(mutations.acceptLink, { token: "t", username: "dan", password: "long password" }), stale: ["session"] },
     { name: "cancelApproval", run: () => staleAfter(mutations.cancelApproval, "a1"), stale: ["approvals"] },
     { name: "setCredentialMode", run: () => staleAfter(mutations.setCredentialMode, { connector: "c1", mode: "per_person" }), stale: ["connectors"] },
     { name: "inspectBackup", run: () => staleAfter(mutations.inspectBackup, { file: new Blob(["x"]), passphrase: "" }), stale: [] },
@@ -254,6 +253,13 @@ describe("mutations", () => {
         [sessionQuery.queryKey[0]],
       );
       assert.equal(client.getQueryData(sessionQuery.queryKey), undefined);
+    });
+  });
+
+  describe("acceptLink", () => {
+    test("forgets every answer but the session, which it reads again", async () => {
+      const { client, stale } = await staleAfter(mutations.acceptLink, { token: "t", username: "dan", password: "long password" });
+      assert.deepEqual([client.getQueryCache().getAll().map((query) => query.queryKey[0]), stale], [[sessionQuery.queryKey[0]], ["session"]]);
     });
   });
 

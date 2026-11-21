@@ -3,6 +3,7 @@ import { useState, type RefObject } from "react";
 import { errorText, type Skill } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { removeSkill } from "../mutations";
+import { useViewer } from "../people/useViewer";
 import { InlineConfirm } from "../ui/InlineConfirm";
 import { Sheet } from "../ui/Sheet";
 import { SUBTITLE, button } from "../ui/styles";
@@ -36,9 +37,10 @@ function RemoveSkill({ skill }: { skill: Skill }) {
 
 type SkillDialogProps = { skill: Skill; origin: RefObject<HTMLElement | null>; onClose(): void };
 
-/** One skill in a modal grown out of its card: the card's overview in full, then its warnings, licence, source and files, the off, on or ask of each key, and Remove. */
+/** One skill in a modal grown out of its card: the card's overview in full, then its warnings, licence, source and files, the off, on or ask of each key, and Remove for a viewer who manages skills. */
 export function SkillDialog({ skill, origin, onClose }: SkillDialogProps) {
   const t = useT();
+  const manage = useViewer().can("skills.manage");
   return (
     <Sheet title={skill.title} closeLabel={t("common.close")} onClose={onClose} origin={origin} wide>
       <SkillOverview skill={skill} />
@@ -54,7 +56,7 @@ export function SkillDialog({ skill, origin, onClose }: SkillDialogProps) {
             <KeyChoices skill={skill} />
           </div>
         </div>
-        <RemoveSkill skill={skill} />
+        {manage ? <RemoveSkill skill={skill} /> : null}
       </div>
     </Sheet>
   );

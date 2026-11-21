@@ -72,7 +72,7 @@ export function useLens(connector: Connector, profile: Profile | undefined, edit
       flags: () => null,
       choose: (name, access) => ((connector.items ?? []).some((it) => it.name === name) ? item : fn).mutate({ connector: connector.id, name, access }),
       error: failed?.error ? errorText(failed.error) : "",
-      accepts: true,
+      accepts: manage,
     };
   }
   const mine = set.variables?.agent === profile.agent;

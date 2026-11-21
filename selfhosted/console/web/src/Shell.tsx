@@ -37,6 +37,7 @@ const OAUTH: Record<string, MessageKey> = {
   unknown_state: "oauth.unknown_state",
   issuer_mismatch: "oauth.issuer_mismatch",
   failed: "oauth.failed",
+  wrong_user: "oauth.wrong_user",
 };
 
 const NAV_LINK = `relative isolate inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm xl:px-3.5 text-muted transition-colors duration-250 hover:text-paper aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;

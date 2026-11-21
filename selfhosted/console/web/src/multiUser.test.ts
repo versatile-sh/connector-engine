@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { before, describe, mock, test } from "node:test";
+import { describe, mock, test } from "node:test";
 import { createElement } from "react";
 import type { Session } from "./api.ts";
 import { App } from "./App.tsx";
@@ -15,7 +15,7 @@ const SIGNED_OUT = { owner_exists: true, signed_in: false, mcp_url: "http://127.
 
 const JOIN = { purpose: "join", role: "member", invited_by: "alice", username: "", expires_at: "2026-11-22T00:00:00Z" } as const;
 
-before(() => mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-11-20T12:00:00Z") }));
+mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-11-20T12:00:00Z") });
 
 describe("the Account tabs", () => {
   describe("for an Owner", () => {
@@ -239,3 +239,34 @@ describe("a connector", () => {
   });
 });
 
+
+describe("the page of someone else's held call", () => {
+  const view = {
+    id: "a2",
+    state: "pending",
+    mode: "ask",
+    connector: { id: "c1", alias: "gmail", title: "Gmail" },
+    function: "send_message",
+    kind: "write",
+    app: "laptop",
+    session: "s-0123456789",
+    created_at: "2026-11-20T11:59:00Z",
+    expires_at: "2026-11-20T12:05:00Z",
+    may_have_run: false,
+    reaches_outside: false,
+    choices: ["cancel"],
+    owner: { person: "p-bob", username: "bob" },
+  } as const;
+  const html = page(TEAM_OWNER, "/approve/a2", [
+    [["connectors"], { connectors: [{ ...CONNECTOR, credential_mode: "per_person" }] }],
+    [["approval", "a2"], view],
+  ]);
+
+  test("waits for bob", () => {
+    assert.ok(html.includes("waiting for bob"));
+  });
+
+  test("offers only Cancel", () => {
+    assert.deepEqual([html.includes("Cancel this call"), html.includes("Allow once")], [true, false]);
+  });
+});

@@ -44,6 +44,7 @@ export const en = {
   "oauth.unknown_state": "That connection link expired; start it again.",
   "oauth.issuer_mismatch": "The answer came from another issuer than the one asked; nothing was stored.",
   "oauth.failed": "The gateway could not finish the connection.",
+  "oauth.wrong_user": "This sign-in was begun by another person of this console. Start it again while signed in as yourself.",
   "oauth.dismiss": "Dismiss",
 
   "auth.line1": "Your MCP gateway,",

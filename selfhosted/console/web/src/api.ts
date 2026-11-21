@@ -350,6 +350,7 @@ export type ApprovalView = {
   session_until?: string;
   decided_by?: string;
   decided_at?: string;
+  owner?: RowOwner;
   channel?: string;
   always_error?: string;
 };

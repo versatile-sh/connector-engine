@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import type { ApprovalChoice, ApprovalView } from "../api";
+import type { HeldView } from "../approvals/held";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import { useLocale, useT } from "../i18n/I18nProvider";
 import { Disclosure } from "../ui/Disclosure";
 import { Display } from "../ui/Display";
 import { Notice } from "../ui/Notice";
-import { CAPTION, SURFACE, WELL } from "../ui/styles";
+import { CAPTION, SURFACE, WELL, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { clock, secondsLeft, sessionSpan, summarizeArguments } from "./choices";
 import { DecisionButtons } from "./DecisionButtons";
@@ -19,6 +20,9 @@ type ApprovalCardProps = {
   deciding: ApprovalChoice | undefined;
   error: string | undefined;
   onChoose(choice: ApprovalChoice): void;
+  held?: HeldView | undefined;
+  cancelling?: boolean;
+  onCancel?: () => void;
 };
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
@@ -30,8 +34,8 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** One held call laid out for a decision: the connector, the function and its nature, the app and its session, the time left, the warnings, the arguments, and the answers or how it ended. */
-export function ApprovalCard({ approval, signedIn, first, deciding, error, onChoose }: ApprovalCardProps) {
+/** One held call laid out for a decision: the connector, the function and its nature, the app and its session, the time left, the warnings, the arguments, and the answers or how it ended; for someone else's call, whose it is, the answers the server allows, Cancel this call when it may, and who decides when the call uses their own sign-in. */
+export function ApprovalCard({ approval, signedIn, first, deciding, error, onChoose, held, cancelling = false, onCancel }: ApprovalCardProps) {
   const t = useT();
   const locale = useLocale();
   const pending = approval.state === "pending";
@@ -62,6 +66,13 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
         {approval.function}
       </code>
       <dl className="mt-5">
+        {held?.waitingFor ? (
+          <Fact label={t("keys.owner")}>
+            <Tag tone="lime" dot>
+              {t("approvals.waitingFor", { name: held.waitingFor })}
+            </Tag>
+          </Fact>
+        ) : null}
         <Fact label={t("common.app")}>
           <span className="font-mono" translate="no">
             {approval.app}
@@ -101,7 +112,13 @@ export function ApprovalCard({ approval, signedIn, first, deciding, error, onCho
       <div className="mt-6">
         {open ? (
           <>
-            <DecisionButtons choices={approval.choices} session={sessionSpan(approval.session_until, now)} deciding={deciding} size="md" stacked onChoose={onChoose} />
+            {held && held.decide.length === 0 ? null : <DecisionButtons choices={held ? held.decide : approval.choices} session={sessionSpan(approval.session_until, now)} deciding={deciding} size="md" stacked onChoose={onChoose} />}
+            {held?.cancel && onCancel ? (
+              <button type="button" disabled={cancelling || deciding !== undefined} className={`${button({ variant: "secondary" })} mt-2 w-full ${cancelling ? "pulse" : ""}`} onClick={onCancel}>
+                {t("approvals.cancel")}
+              </button>
+            ) : null}
+            {held?.decidesAlone ? <p className={`${CAPTION} mt-3 text-pretty`}>{t("approvals.decidesAlone", { name: held.decidesAlone })}</p> : null}
             {error ? <Notice className="mt-3">{error}</Notice> : null}
           </>
         ) : (

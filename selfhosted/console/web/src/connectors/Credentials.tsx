@@ -36,7 +36,7 @@ export function Credentials({ connector }: { connector: Connector }) {
   const t = useT();
   const viewer = useViewer();
   const view = credentialsViewOf(connector, viewer);
-  const own = view.mode === "per_person";
+  const own = view.signedIn !== undefined;
   const manage = viewer.can("connectors.manage");
   const auth = connector.auth ?? [];
   const stored = connector.credentials ?? [];

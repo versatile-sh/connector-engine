@@ -12,12 +12,12 @@ export type CredentialsView = {
   needed: boolean;
 };
 
-/** The card's view: the mode choice and the count only once a second user exists and only for a viewer who manages connectors; where one account serves everyone only they store it, and where each person signs in every viewer signs in for themselves. */
+/** The card's view: the mode choice and the count only once a second user exists and only for a viewer who manages connectors; where one account serves everyone only they store it, and where each person signs in every viewer signs in for themselves; a one-user install reads every mode as it always did. */
 export function credentialsViewOf(connector: Connector, viewer: Viewer): CredentialsView {
   const mode = connector.credential_mode ?? "shared";
   const manage = viewer.can("connectors.manage");
   const modes = connector.credential_modes ?? [];
-  const own = mode === "per_person";
+  const own = mode === "per_person" && viewer.team;
   const counted = viewer.team && manage && own && connector.signed_in_count !== undefined && connector.people_count !== undefined;
   const state = authState(connector);
   return {

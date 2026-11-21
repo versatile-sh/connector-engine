@@ -4,6 +4,7 @@ name: pdf
 title: PDF forms
 description: Fills and reads PDF forms.
 category: documents
+icon: https://versatile.sh/avatars/example.png
 source:
   repository: "example/skills"
   path: "skills/pdf/SKILL.md"

@@ -28,6 +28,8 @@ const Registry = "skillcatalog"
 // MaxEntryBytes is the largest catalog entry document read.
 const MaxEntryBytes = 256 << 10
 
+const maxIconURL = 2048
+
 var entryID = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,127}$`)
 
 // Get fetches one address and returns its body, refusing more than limit bytes.
@@ -41,6 +43,7 @@ type Entry struct {
 	Title       string             `json:"title"`
 	Description string             `json:"description"`
 	Category    string             `json:"category"`
+	Icon        string             `json:"icon"`
 	Source      EntrySource        `json:"source"`
 	License     EntryLicense       `json:"license"`
 	HasScripts  bool               `json:"has_scripts"`
@@ -164,6 +167,23 @@ func pinned(raw string, s EntrySource, file string) error {
 	return nil
 }
 
+// IconAt is the entry's icon made absolute against entryURL, kept only as a plain https address of at most 2048 bytes; anything else is empty, so a bad icon never refuses an entry.
+func (e Entry) IconAt(entryURL string) string {
+	base, err := url.Parse(entryURL)
+	if err != nil || e.Icon == "" || len(e.Icon) > maxIconURL {
+		return ""
+	}
+	ref, err := url.Parse(strings.TrimSpace(e.Icon))
+	if err != nil {
+		return ""
+	}
+	u := base.ResolveReference(ref)
+	if u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" {
+		return ""
+	}
+	return u.String()
+}
+
 // Redistribution is bundled for a redistributable licence with an SPDX id and metadata_only otherwise.
 func (e Entry) Redistribution() port.Redistribution {
 	if e.License.SPDX != "" && e.License.Redistributable {
@@ -248,7 +268,7 @@ func Manifest(ctx context.Context, get Get, entryURL string, e Entry) (port.Mani
 		hasScripts = hasScripts || listing.LooksExecutable(f)
 	}
 	needs, compat := e.Needs(files)
-	m := port.Manifest{Name: strings.ToLower(u.Hostname()) + "/" + e.ID, Version: e.Source.Commit, Title: e.Title, Description: e.Description, Kind: port.KindSkill,
+	m := port.Manifest{Name: strings.ToLower(u.Hostname()) + "/" + e.ID, Version: e.Source.Commit, Title: e.Title, Description: e.Description, Kind: port.KindSkill, Icon: e.IconAt(entryURL),
 		Publisher: port.Publisher{Name: Publisher(e.Source.Repository, u.Hostname())}, Licence: e.License.SPDX,
 		Skill: &port.Skill{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: e.Source.URL},
 			Licence: port.SkillLicence{SPDX: e.License.SPDX, From: e.License.From, Redistributable: e.License.Redistributable}, Redistribution: e.Redistribution(),

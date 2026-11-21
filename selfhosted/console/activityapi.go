@@ -601,6 +601,7 @@ func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "retention is off, 7d, 30d, 90d or forever")
 		return
 	}
+	was := c.Activity.Settings().Retention.or()
 	err := c.Activity.SetRecording(*in.RecordArguments, *in.RecordResults)
 	if err == nil && in.Retention != nil {
 		err = c.Activity.SetRetention(*in.Retention)
@@ -609,7 +610,7 @@ func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "cannot save the activity settings")
 		return
 	}
-	if in.Retention != nil {
+	if in.Retention != nil && in.Retention.or() != was {
 		c.auditActivity(r, "activity.retention.changed", map[string]string{"retention": string(*in.Retention)})
 	}
 	c.activitySettings(w, r)

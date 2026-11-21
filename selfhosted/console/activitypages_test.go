@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -108,6 +109,10 @@ func TestRetentionIsChosenKeptAndAppliedByThePrune(t *testing.T) {
 	}
 	if _, err := os.Stat(old); !os.IsNotExist(err) {
 		t.Fatalf("a day past the new retention was kept: %v", err)
+	}
+	put("7d")
+	if n := strings.Count(strings.Join(r.auditActions(), " "), "activity.retention.changed"); n != 1 {
+		t.Fatalf("a retention change is audited once, a repeat is not: %d in %v", n, r.auditActions())
 	}
 	if _, s := put("forever"); s["retention"] != "forever" {
 		t.Fatalf("forever: %v", s)

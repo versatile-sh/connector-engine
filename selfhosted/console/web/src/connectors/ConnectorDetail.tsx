@@ -13,6 +13,7 @@ import { Sheet } from "../ui/Sheet";
 import { CAPTION, PANEL, QUIET_LINK, SKELETON, SKELETON_LINE, SUBTITLE, WELL, button } from "../ui/styles";
 import { tabId } from "../ui/Tabs";
 import { Tag } from "../ui/Tag";
+import { useViewer } from "../people/useViewer";
 import { ConnectorChoices } from "./ConnectorChoices";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { Credentials } from "./Credentials";
@@ -59,13 +60,14 @@ function Remove({ connector, remove, onClose }: { connector: Connector; remove: 
   );
 }
 
-/** One connector in full: who it is, the tabs of its profiles over every function and item with its access for the default or one key, beside them the one credential every key shares and the connector's facts, and its removal behind a confirmation. */
+/** One connector in full: who it is, the tabs of its profiles over every function and item with its access for the default or one key, beside them the one credential every key shares and the connector's facts, and, for a viewer who manages connectors, its removal behind a confirmation. */
 export function ConnectorDetail({ id }: { id: string }) {
   const t = useT();
   const { query } = useLocation();
   const connectors = useQuery(connectorsQuery);
   const [removing, setRemoving] = useState(false);
   const remove = useMutation(removeConnector);
+  const manage = useViewer().can("connectors.manage");
   if (connectors.isPending) {
     return (
       <div aria-hidden="true" className="flex flex-col gap-8">
@@ -124,10 +126,12 @@ export function ConnectorDetail({ id }: { id: string }) {
             <Icon name="activity" className="size-4" />
             {t("detail.activity")}
           </a>
-          <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
-            <Icon name="trash" className="size-4" />
-            {t("common.remove")}
-          </button>
+          {manage ? (
+            <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
+              <Icon name="trash" className="size-4" />
+              {t("common.remove")}
+            </button>
+          ) : null}
         </div>
       </header>
       <article className={`${PANEL} p-4 sm:p-8 xl:p-10`}>

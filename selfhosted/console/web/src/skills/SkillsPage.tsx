@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { ImportDialog } from "../import/ImportDialog";
+import { useViewer } from "../people/useViewer";
 import { skillsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { EmptyState } from "../ui/EmptyState";
@@ -14,12 +15,13 @@ import { PANEL, SKELETON, button } from "../ui/styles";
 import { expandedOf, skillsHref } from "./expanded";
 import { SkillCard } from "./SkillCard";
 
-/** Every installed skill as a grid of compact cards in one panel, with a filter past six of them; one at a time opens in a dialog over the grid, named by `?skill=` so it survives a reload and Back closes it. Import reads a skill link like a connector link. */
+/** Every installed skill as a grid of compact cards in one panel, with a filter past six of them; one at a time opens in a dialog over the grid, named by `?skill=` so it survives a reload and Back closes it. Import, for those the server lets manage skills, reads a skill link like a connector link. */
 export function SkillsPage() {
   const t = useT();
   const { query } = useLocation();
   const skills = useQuery(skillsQuery);
   const [importing, setImporting] = useState(false);
+  const manage = useViewer().can("skills.manage");
   const list = skills.data ?? [];
   const open = expandedOf(query, list);
   const pushed = useRef(false);
@@ -35,10 +37,12 @@ export function SkillsPage() {
             {t("skills.intro")}
           </PageTitle>
         </div>
-        <button type="button" className={button()} onClick={() => setImporting(true)}>
-          <Icon name="plus" className="size-4" />
-          {t("connectors.import")}
-        </button>
+        {manage ? (
+          <button type="button" className={button()} onClick={() => setImporting(true)}>
+            <Icon name="plus" className="size-4" />
+            {t("connectors.import")}
+          </button>
+        ) : null}
       </header>
       <div className={`${PANEL} @container p-4 sm:p-6 lg:p-8`}>
         {skills.isError ? (

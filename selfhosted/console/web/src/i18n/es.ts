@@ -9,10 +9,8 @@ export const es: Record<MessageKey, string> = {
 
   "brand.label": "gateway de conectores",
   "lang.label": "Idioma",
-  "theme.label": "Tema",
-  "theme.system": "Sistema",
-  "theme.light": "Claro",
-  "theme.dark": "Oscuro",
+  "theme.toLight": "Cambiar al tema claro",
+  "theme.toDark": "Cambiar al tema oscuro",
 
   "common.cancel": "Cancelar",
   "common.close": "Cerrar",

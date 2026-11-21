@@ -182,8 +182,8 @@ func TestMigrationOverTheSocketKeepsEveryRecordAndRunsAgain(t *testing.T) {
 }
 
 func TestListenMovesTheSocketIntoPlaceAt0600AndLeavesNothingBehind(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "run")
-	path := filepath.Join(dir, "s")
+	path := socketIn(t)
+	dir := filepath.Dir(path)
 	lis, err := hostkey.Listen(path)
 	if err != nil {
 		t.Fatal(err)

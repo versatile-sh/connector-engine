@@ -56,4 +56,12 @@ describe("presetNames", () => {
       [["read_file"], ["write_file"], ["delete_file"]],
     );
   });
+
+  test("leaves a function whose server declares nothing out of every preset", () => {
+    const functions = [{ name: "sharepoint_search", kind: "undeclared" as const }];
+    assert.deepEqual(
+      PRESETS.map((preset) => presetNames(functions, preset)),
+      [[], [], []],
+    );
+  });
 });

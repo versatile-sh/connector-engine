@@ -139,6 +139,7 @@ export const en = {
   "kind.read": "reads",
   "kind.write": "changes",
   "kind.destructive": "deletes",
+  "kind.undeclared": "not declared",
 
   "detail.back": "Connectors",
   "detail.functions": "Functions",

@@ -77,18 +77,21 @@ type Probed struct {
 	Items       []Item       `json:"items"`
 }
 
-// Propose pre-classifies a tool from its hints, which come from an untrusted server: only readOnlyHint true is on; anything else waits for the owner.
-func Propose(a *mcp.ToolAnnotations) (readOnly, destructive bool, proposed Access) {
-	if a != nil && a.ReadOnlyHint {
-		return true, false, AccessOn
+// KindUndeclared is the console's kind of a tool whose server declares neither readOnlyHint nor destructiveHint; it is never stored as an engine class.
+const KindUndeclared port.Class = "undeclared"
+
+// Propose pre-classifies a tool from its hints, which come from an untrusted server: a declared read or a tool that declares nothing is on; a declared change or delete waits for the owner.
+func Propose(a *mcp.ToolAnnotations) (kind port.Class, proposed Access) {
+	kind = KindOf(a)
+	if kind == port.ClassRead || kind == KindUndeclared {
+		return kind, AccessOn
 	}
-	destructive = a == nil || a.DestructiveHint == nil || *a.DestructiveHint
-	return false, destructive, AccessAsk
+	return kind, AccessAsk
 }
 
 func probedTool(name, title, description string, hints *mcp.ToolAnnotations) ProbedTool {
-	ro, de, prop := Propose(hints)
-	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop}
+	kind, proposed := Propose(hints)
+	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: kind == port.ClassRead, Destructive: kind == port.ClassDestructive, Kind: kind, Proposed: proposed}
 }
 
 func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
@@ -98,12 +101,14 @@ func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{ReadOnlyHint: a.ReadOnlyHint != nil && *a.ReadOnlyHint, DestructiveHint: a.DestructiveHint}
 }
 
-// KindOf names what a tool does by its hints: read, destructive (the MCP default when not read-only) or write.
-func KindOf(readOnly, destructive bool) port.Class {
+// KindOf names what a tool does by its hints: read or destructive as declared, write when it declares it does not delete, else undeclared.
+func KindOf(a *mcp.ToolAnnotations) port.Class {
 	switch {
-	case readOnly:
+	case a != nil && a.ReadOnlyHint:
 		return port.ClassRead
-	case destructive:
+	case a == nil || a.DestructiveHint == nil:
+		return KindUndeclared
+	case *a.DestructiveHint:
 		return port.ClassDestructive
 	}
 	return port.ClassWrite
@@ -118,8 +123,7 @@ func Nature(f port.Function, m port.Manifest) port.Class {
 		Annotations *mcp.ToolAnnotations `json:"annotations"`
 	}
 	_ = json.Unmarshal(f.Definition, &d)
-	readOnly, destructive, _ := Propose(d.Annotations)
-	return KindOf(readOnly, destructive)
+	return KindOf(d.Annotations)
 }
 
 // Probe connects to an MCP server (server/discover for 2026-07-28, initialize before), reads its server info and lists its tools.

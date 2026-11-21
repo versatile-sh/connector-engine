@@ -85,16 +85,16 @@ func TestAnApprovalReachesOnlyTheKeyOwnersChannelAndAnswersAsThatOwner(t *testin
 func TestADesktopLinkDecidesOnlyAsItsDevicesOwner(t *testing.T) {
 	r := newRig(t)
 	alice, bob := r.member("p-alice", "alice"), r.member("p-bob", "bob")
-	pair := func(b *browser) (string, <-chan console.HubEvent) {
+	pair := func(b *browser) (string, string, <-chan console.HubEvent) {
 		var paired struct {
 			Key    string
 			Device console.DeviceView
 		}
 		b.ok("POST", "/api/notifications/devices", map[string]any{"name": "laptop"}, &paired)
-		return paired.Device.ID, streamEvents(t, r.base, paired.Key)
+		return paired.Device.ID, paired.Key, streamEvents(t, r.base, paired.Key)
 	}
-	aliceDevice, aliceEvents := pair(alice)
-	_, bobEvents := pair(bob)
+	aliceDevice, aliceKey, aliceEvents := pair(alice)
+	_, bobKey, bobEvents := pair(bob)
 	var tok console.AgentToken
 	bob.ok("POST", "/api/agents", map[string]any{"name": "bobkey"}, &tok)
 	pending := r.call(r.connectAs(tok, "", nil), "create", map[string]any{"title": "bob's"})
@@ -102,6 +102,11 @@ func TestADesktopLinkDecidesOnlyAsItsDevicesOwner(t *testing.T) {
 	if ev.Type != "prompt" {
 		t.Fatalf("event %+v", ev)
 	}
+	aliceLate := streamEvents(t, r.base, aliceKey)
+	if late := within(t, streamEvents(t, r.base, bobKey), 5*time.Second); late.Approval != ev.Approval {
+		t.Fatalf("bob's late stream replayed %+v", late)
+	}
+	quiet(t, aliceLate, "alice's late stream")
 	anon := &browser{t: t, base: r.base, client: &http.Client{}}
 	forged, err := r.c.LinkToken(ev.Approval, aliceDevice, time.Now().Add(time.Hour))
 	if err != nil {

@@ -45,6 +45,9 @@ make notify
 `make notify` runs `vsh notify --console http://127.0.0.1:<CONSOLE_PORT>`: it shows a desktop notification for each call waiting for you and opens a small approval page.
 
 - Chat surfaces accept clicks only from the owner id you configure, and keep call arguments out of third-party messages.
+- Each console user has their own notifications: their channels, their paired computers and the elicitation setting of their own keys. Nobody else sees or changes them.
+- A call waiting for approval goes only to the channels and computers of the key's owner.
+- A chat channel answers for the console user who added it: a click from its configured owner id decides as that user. In a shared chat everyone there sees the prompts, and whoever holds that owner id answers for that user, so add the channel in a private chat with the bot. A click for a call that user may not decide is refused with "this call is not yours to answer".
 - Elicitation lets the app ask you inside the chat. Turn it on only for apps you answer by hand: an app with hooks or scripts that answer prompts could approve its own calls. Destructive functions are never asked there, and Always allow this app is never offered there.
 
 Design and threat model: [approval surfaces](../self-hosted/approval-surfaces.md).

@@ -11,18 +11,20 @@ import (
 	"time"
 )
 
-// StoredChannel is one configured approval channel as the state file keeps it, without its secrets.
+// StoredChannel is one configured approval channel as the state file keeps it, without its secrets, with the person it answers for.
 type StoredChannel struct {
 	ID        string            `json:"id"`
+	Owner     string            `json:"owner,omitempty"`
 	Kind      string            `json:"kind"`
 	Label     string            `json:"label"`
 	Settings  map[string]string `json:"settings"`
 	CreatedAt time.Time         `json:"created_at"`
 }
 
-// Device is one paired host helper; only the SHA-256 of its key is kept.
+// Device is one paired host helper and the person it answers for; only the SHA-256 of its key is kept.
 type Device struct {
 	ID        string    `json:"id"`
+	Owner     string    `json:"owner,omitempty"`
 	Name      string    `json:"name"`
 	KeyHash   string    `json:"key_hash"`
 	CreatedAt time.Time `json:"created_at"`
@@ -60,19 +62,15 @@ func (s *State) PutChannel(ch StoredChannel) error {
 	})
 }
 
-// DeleteChannel removes an approval channel and its secrets, reporting whether it existed.
-func (s *State) DeleteChannel(id string) (bool, error) {
-	return deleteFrom(s, func(d *stateFile) map[string]StoredChannel { return d.Notify.Channels }, id)
-}
-
-func deleteFrom[V any](s *State, table func(*stateFile) map[string]V, id string) (bool, error) {
+// DeleteChannel removes owner's approval channel and its secrets, reporting whether owner had it.
+func (s *State) DeleteChannel(owner, id string) (bool, error) {
 	found := false
 	err := s.update(func(d *stateFile) error {
-		m := table(d)
-		if _, found = m[id]; !found {
+		if found = d.Notify.Channels[id].Owner == owner && owner != ""; !found {
 			return errUnchanged
 		}
-		delete(m, id)
+		delete(d.Notify.Channels, id)
+		delete(d.Notify.Sealed, id)
 		return nil
 	})
 	return found && err == nil, err
@@ -93,6 +91,11 @@ func (s *State) Device(id string) (Device, bool) {
 	return dev, ok && id != ""
 }
 
+func ownDevice(d *stateFile, owner, id string) (Device, bool) {
+	dev, ok := d.Notify.Devices[id]
+	return dev, ok && owner != "" && dev.Owner == owner
+}
+
 // PutDevice stores a paired host helper.
 func (s *State) PutDevice(dev Device) error {
 	return s.update(func(d *stateFile) error {
@@ -101,11 +104,11 @@ func (s *State) PutDevice(dev Device) error {
 	})
 }
 
-// RenameDevice names a paired host helper again, reporting whether it existed.
-func (s *State) RenameDevice(id, name string) (bool, error) {
+// RenameDevice names owner's paired host helper again, reporting whether owner had it.
+func (s *State) RenameDevice(owner, id, name string) (bool, error) {
 	found := false
 	err := s.update(func(d *stateFile) error {
-		dev, ok := d.Notify.Devices[id]
+		dev, ok := ownDevice(d, owner, id)
 		if found = ok; !ok {
 			return errUnchanged
 		}
@@ -116,9 +119,17 @@ func (s *State) RenameDevice(id, name string) (bool, error) {
 	return found && err == nil, err
 }
 
-// DeleteDevice revokes a paired host helper, reporting whether it existed.
-func (s *State) DeleteDevice(id string) (bool, error) {
-	return deleteFrom(s, func(d *stateFile) map[string]Device { return d.Notify.Devices }, id)
+// DeleteDevice revokes owner's paired host helper, reporting whether owner had it.
+func (s *State) DeleteDevice(owner, id string) (bool, error) {
+	found := false
+	err := s.update(func(d *stateFile) error {
+		if _, found = ownDevice(d, owner, id); !found {
+			return errUnchanged
+		}
+		delete(d.Notify.Devices, id)
+		return nil
+	})
+	return found && err == nil, err
 }
 
 // DeviceByKey returns the device whose key hashes to keyHash.
@@ -227,13 +238,6 @@ func (s channelSecrets) put(ctx context.Context, channel string, secrets map[str
 	}
 	return s.state.update(func(d *stateFile) error {
 		put(&d.Notify.Sealed, channel, v)
-		return nil
-	})
-}
-
-func (s channelSecrets) remove(channel string) error {
-	return s.state.update(func(d *stateFile) error {
-		delete(d.Notify.Sealed, channel)
 		return nil
 	})
 }

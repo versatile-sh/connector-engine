@@ -114,7 +114,8 @@ The console acts on the engine as engine persons, never as one shared account:
 | `--managers-group` (`CONSOLE_MANAGERS_GROUP`) | `managers` | the engine group that holds every Owner and Admin |
 
 - Every write runs as the person of the console user who made it, so the engine's audit, `decided_by` on approvals and the grants name that user. A write with no user behind it is refused before it reaches the engine.
-- Background writes act for the key's owner: a refresh-token renewal, and a decision from a chat channel, a desktop link or an app's elicitation. "Always allow" acts as the user who chose it.
+- Background writes act for the key's owner: a refresh-token renewal and a decision from an app's elicitation. A decision from a chat channel or a desktop link acts as the user who added the channel or paired the computer; the engine refuses it when that user is not an approver of the call. "Always allow" acts as the user who chose it.
+- Each notification channel and paired computer belongs to the user who added it; those from an earlier console belong to the first Owner. The approvals watch notifies only the channels and computers of the key's owner (the call's `on_behalf_of`).
 - Reads and the approvals watch run as the service person; the console then shows each user what is theirs.
 - At every start, and after a restore, the console writes each user's engine role as the service person: `tenant_admin` over `t/<tenant>` for an Owner or Admin, `agent_configurer` over `t/<tenant>/w/<workspace>` for a Member, and membership of the managers group for Owners and Admins. It removes the rows of its users that should not be there and the old `owner` row once no user is `owner`; rows of other persons stay.
 - Upgrading with your own `connector-engine.yaml`: add the service person's row to `bootstrap.roles`, or the console logs "waiting for the engine" and every page stays empty. The old `owner` row can stay; the console then manages it.

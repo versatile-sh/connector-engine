@@ -192,6 +192,8 @@ For a `tools/call` from an app that is turned on and that declared the `elicitat
 | `DELETE /api/notifications/devices/{id}` | session + CSRF | revokes the device key at once |
 | `GET /api/notify/stream` | bearer device key | SSE: `prompt` and `settled` events for the helper |
 
+Every `/api/notifications` route lists and changes only the signed-in user's own channels, devices and keys; another user's id answers `404`. A new channel or paired device belongs to the user who made it. The relay sends each prompt only to the channels and devices of the call's `on_behalf_of` person, and a click or a link decides as the channel's or device's owner.
+
 `ApprovalView`: `id`, `state`, `mode`, `connector {id, alias, title, icon}`, `function`, `function_title`, `kind` (the function's nature: read, write or destructive), `app`, `session`, `created_at`, `expires_at`, `arguments` (the JSON the engine opened, local page only), `may_have_run`, `reaches_outside`, `choices`, `decided_by`, `decided_at`, `channel`.
 
 `ChannelView`: `id`, `kind`, `label`, `interactive`, `owner` (the configured owner id), `secret_hint` (the last 4 characters), `created_at`, `status` (`connected`, `connecting`, `error`, `notify_only`), `error`.

@@ -21,7 +21,6 @@ bootstrap:
     - {tenant: local, person: console, role: tenant_admin, scope: t/local}
 secrets:
   dir: /var/lib/connector-engine/secrets
-  unlockSocket: /run/connector-engine-unlock/unlock.sock
 runtime:
   allowPrivateHosts: true
   loopbackHost: host.docker.internal

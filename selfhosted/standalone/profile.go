@@ -42,7 +42,7 @@ func engineProfile(p paths, r *app.Registry) (config.Config, adapters.File, erro
 		return cfg, adapters.File{}, err
 	}
 	cfg.Server.Listen, cfg.Server.OperatorListen, cfg.Server.GRPCListen = loopbackAny, loopbackAny, ""
-	cfg.Secrets.Dir, cfg.Secrets.UnlockSocket = p.engineSecrets, ""
+	cfg.Secrets.Dir = p.engineSecrets
 	cfg.Runtime.LoopbackHost = ""
 	cfg.Auth.Operator.TokenRef = "file:" + p.operatorFile
 	cfg = cfg.With(r.Builtins()...)

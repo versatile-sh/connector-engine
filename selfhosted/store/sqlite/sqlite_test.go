@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/selfhosted/store/sqlite"
 	"github.com/versatile-sh/connector-engine/store/postgres"
-	"github.com/versatile-sh/connector-engine/store/sqlite"
 	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 

@@ -328,12 +328,11 @@ type Credentials struct {
 	Clients           []OAuthClient `yaml:"clients"`
 }
 
-// Secrets is secrets.*; Adapter is a deprecated alias of ports.secrets, Dir is where the file-backed adapters keep their root key, UnlockSocket where an adapter of the build receives its unlock key.
+// Secrets is secrets.*; Adapter is a deprecated alias of ports.secrets, Dir is where the file-backed adapters keep their root key.
 type Secrets struct {
 	Adapter      string        `yaml:"adapter,omitempty"`
 	DataKeyCache time.Duration `yaml:"dataKeyCache"`
 	Dir          string        `yaml:"dir"`
-	UnlockSocket string        `yaml:"unlockSocket"`
 	OnePassword  OnePassword   `yaml:"onePassword"`
 }
 

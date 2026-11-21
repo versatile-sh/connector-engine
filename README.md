@@ -72,6 +72,18 @@ codex mcp add versatile --url http://127.0.0.1:7465/mcp
 
 Cursor and VS Code have one-click links on the console's **Access** page. Claude Desktop, OpenCode, Antigravity and others get their config on the same page. The app signs in through your browser (OAuth), so there is no key to copy. More in [Connect an AI app](docs/getting-started/connect-an-app.md).
 
+From a terminal, `vsh` does what the console does, as the same user and through the same API:
+
+```sh
+vsh login
+vsh connectors import --mcp https://mcp.example.com/mcp
+vsh access github --kind read on
+vsh approvals
+```
+
+Every command is in [the vsh reference](docs/reference/vsh.md).
+
+
 <a id="how-it-works"></a>
 
 ![How it works](docs/assets/section-readme-how.svg)

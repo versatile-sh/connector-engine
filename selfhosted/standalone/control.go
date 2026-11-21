@@ -102,3 +102,6 @@ func running(ctx context.Context, data string) (Status, bool) {
 	}
 	return s, true
 }
+
+// Running returns the status of the install that runs on the data directory data, if one does.
+func Running(ctx context.Context, data string) (Status, bool) { return running(ctx, data) }

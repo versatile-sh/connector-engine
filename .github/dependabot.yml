@@ -23,9 +23,31 @@ updates:
       actions:
         patterns: ["*"]
   - package-ecosystem: docker
-    directory: /
+    directories:
+      - /
+      - /deploy/cloud
     schedule:
       interval: weekly
     groups:
       docker:
         patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /docs/assets/src
+    ignore:
+      - dependency-name: "opentype.js"
+        versions: [">=2.0.0"]
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: npm
+    directory: /docs/assets/readme/src
+    ignore:
+      - dependency-name: "opentype.js"
+        versions: [">=2.0.0"]
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]

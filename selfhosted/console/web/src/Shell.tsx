@@ -39,8 +39,8 @@ function KeyNotice() {
   );
 }
 
-/** The frame of every signed-in page: the site's grid and light, a left sidebar on the page's ground (a drawer on a narrow screen), the strip over the page with the endpoint, and the content on an inset raised surface that scrolls on its own and holds the notices, the page and the site's footer. The sidebar and the strip never remount between pages. */
-export function Shell({ section, endpoint, children }: { section: Section; endpoint: string; children: ReactNode }) {
+/** The frame of every signed-in page: the site's grid and light, a left sidebar on the page's ground (a drawer on a narrow screen), the strip over the page, and the content on an inset raised surface that scrolls on its own and holds the notices, the page and the site's footer. The sidebar and the strip never remount between pages. */
+export function Shell({ section, children }: { section: Section; children: ReactNode }) {
   const t = useT();
   const { path, query } = useLocation();
   const waiting = useQuery(approvalsQuery).data?.length ?? 0;
@@ -108,7 +108,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
         onSignOut={() => logout.mutate()}
       />
       <div inert={shell.drawer} className="flex min-w-0 flex-1 flex-col">
-        <TopStrip section={section} endpoint={endpoint} sidebar={sidebarId} drawer={shell.drawer} menuRef={menu} onOpenMenu={shell.openDrawer} />
+        <TopStrip section={section} sidebar={sidebarId} drawer={shell.drawer} menuRef={menu} onOpenMenu={shell.openDrawer} />
         <main
           id="main"
           ref={surface}

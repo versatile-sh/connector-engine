@@ -36,7 +36,6 @@ export const es: Record<MessageKey, string> = {
   "nav.approvals": "Aprobaciones",
   "nav.waiting": "{count} en espera",
   "shell.signOut": "Salir",
-  "shell.copyEndpoint": "Copiar el endpoint {url}",
   "shell.setup": "Configuración {done}/{total}",
   "shell.keysPlaintext": "Tus secretos guardados están protegidos por una clave de cifrado guardada en un archivo de texto plano en este equipo. Ejecuta make keychain-migrate para llevarla al llavero del sistema.",
   "shell.keysLocked": "Tus secretos guardados están bloqueados. Ejecuta make unlock en este equipo para abrirlos con la clave del llavero del sistema.",

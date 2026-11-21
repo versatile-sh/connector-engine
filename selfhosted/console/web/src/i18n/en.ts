@@ -34,7 +34,6 @@ export const en = {
   "nav.approvals": "Approvals",
   "nav.waiting": "{count} waiting",
   "shell.signOut": "Sign out",
-  "shell.copyEndpoint": "Copy the endpoint {url}",
   "shell.setup": "Setup {done}/{total}",
   "shell.keysPlaintext": "Your saved secrets are protected by an encryption key kept in a plaintext file on this computer. Run make keychain-migrate to move it into your system keychain.",
   "shell.keysLocked": "Your saved secrets are locked. Run make unlock on this computer to open them with the key in your system keychain.",

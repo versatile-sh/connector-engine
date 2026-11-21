@@ -36,7 +36,6 @@ export const ptBR: Record<MessageKey, string> = {
   "nav.approvals": "Aprovações",
   "nav.waiting": "{count} aguardando",
   "shell.signOut": "Sair",
-  "shell.copyEndpoint": "Copiar o endpoint {url}",
   "shell.setup": "Configuração {done}/{total}",
   "shell.keysPlaintext": "Seus segredos salvos são protegidos por uma chave de criptografia guardada em um arquivo de texto puro neste computador. Rode make keychain-migrate para levá-la ao chaveiro do sistema.",
   "shell.keysLocked": "Seus segredos salvos estão trancados. Rode make unlock neste computador para abri-los com a chave do chaveiro do sistema.",

@@ -74,6 +74,18 @@ describe("ImportLanding", () => {
       t.assert.match(html, />Install link from versatile\.sh</);
     });
 
+    test("draws the initial of its title on the tile when it has no icon", (t) => {
+      t.assert.doesNotMatch(html, /<img/);
+      t.assert.match(html, /uppercase[^>]*>F<\/span>/);
+    });
+
+    test("draws its icon on the tile through the console's icon proxy", (t) => {
+      const icon = "https://versatile.sh/avatars/vercel-labs.png";
+      const withIcon = draw({ ...SKILL, icon }, SKILL_SOURCE);
+      t.assert.match(withIcon, new RegExp(`<img[^>]*src="/api/icon\\?u=${encodeURIComponent(icon).replace(/\./g, "\\.")}"`));
+      t.assert.doesNotMatch(withIcon, /uppercase[^>]*>F<\/span>/);
+    });
+
     test("shows the owner and the licence as chips", (t) => {
       t.assert.match(textOf(html), /Skill/);
       t.assert.match(html, />by vercel-labs</);

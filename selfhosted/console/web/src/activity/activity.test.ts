@@ -172,10 +172,10 @@ describe("kindOf and approvalStateKey", () => {
 describe("namedOf", () => {
   test("names connectors and skills by id, marking the skills", () => {
     const connector = { id: "c1", title: "Notes", icon: "https://x/i.png" } as Connector;
-    const skill = { id: "s1", title: "", alias: "pdf" } as Skill;
+    const skill = { id: "s1", title: "", alias: "pdf", icon: "https://versatile.sh/avatars/example.png" } as Skill;
     const named = namedOf([connector], [skill]);
     assert.deepEqual(named.get("c1"), { id: "c1", title: "Notes", icon: "https://x/i.png", skill: false });
-    assert.deepEqual(named.get("s1"), { id: "s1", title: "pdf", skill: true });
+    assert.deepEqual(named.get("s1"), { id: "s1", title: "pdf", icon: "https://versatile.sh/avatars/example.png", skill: true });
   });
 });
 

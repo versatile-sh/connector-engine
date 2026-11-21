@@ -83,27 +83,29 @@ func Open(ctx context.Context, dir, socket string, log *slog.Logger) (*Store, er
 	}
 }
 
-// Listen opens the unix socket at path in a directory made 0700 before the socket exists, replacing a stale socket left by a crash, and serves only the running user or root.
+// Listen opens the unix socket at path, bound first inside a private 0700 directory and moved into place at mode 0600, replacing a stale socket left by a crash, and serves only the running user or root.
 func Listen(path string) (net.Listener, error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	if info, err := os.Stat(dir); err != nil {
-		return nil, err
-	} else if info.Mode().Perm()&0o077 != 0 {
-		if err := os.Chmod(dir, 0o700); err != nil {
-			return nil, fmt.Errorf("the socket directory %s is open to other users and cannot be tightened: %w", dir, err)
-		}
-	}
 	if info, err := os.Lstat(path); err == nil && info.Mode()&os.ModeSocket != 0 {
 		_ = os.Remove(path)
 	}
-	lis, err := net.Listen("unix", path)
+	private, err := os.MkdirTemp(dir, ".sock-")
 	if err != nil {
 		return nil, err
 	}
-	if err = os.Chmod(path, 0o600); err != nil {
+	defer func() { _ = os.RemoveAll(private) }()
+	bound := filepath.Join(private, "s")
+	lis, err := net.Listen("unix", bound)
+	if err != nil {
+		return nil, err
+	}
+	if err = os.Chmod(bound, 0o600); err == nil {
+		err = os.Rename(bound, path)
+	}
+	if err != nil {
 		lis.Close()
 		return nil, err
 	}

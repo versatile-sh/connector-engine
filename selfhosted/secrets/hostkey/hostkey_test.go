@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -180,24 +181,26 @@ func TestMigrationOverTheSocketKeepsEveryRecordAndRunsAgain(t *testing.T) {
 	}
 }
 
-func TestListenTightensALooseDirectoryAndOpensTheSocketAt0600(t *testing.T) {
+func TestListenMovesTheSocketIntoPlaceAt0600AndLeavesNothingBehind(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "run")
-	if err := os.Mkdir(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	lis, err := hostkey.Listen(filepath.Join(dir, "s"))
+	path := filepath.Join(dir, "s")
+	lis, err := hostkey.Listen(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer lis.Close()
-	di, _ := os.Stat(dir)
-	si, _ := os.Stat(filepath.Join(dir, "s"))
-	if di.Mode().Perm() != 0o700 || si.Mode().Perm() != 0o600 {
-		t.Fatalf("directory %v, socket %v", di.Mode().Perm(), si.Mode().Perm())
+	si, err := os.Stat(path)
+	if err != nil || si.Mode().Perm() != 0o600 {
+		t.Fatalf("socket %v %v", si, err)
 	}
+	if left, _ := filepath.Glob(filepath.Join(dir, ".sock-*")); len(left) != 0 {
+		t.Fatalf("left behind %v", left)
+	}
+	c, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatalf("the moved socket does not accept: %v", err)
+	}
+	c.Close()
 }
 
 func TestCancellingTheWaitReturns(t *testing.T) {

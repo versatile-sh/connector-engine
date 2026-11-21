@@ -14,7 +14,7 @@ The `person` profile keeps its root keys wrapped by an unlock key in your OS key
 | `make keychain-recovery` | print the unlock key once, for a password manager |
 | `make keychain-import` | read the unlock key on stdin into this machine's keychain |
 
-The unlock and host sockets are `0600` in a directory the console makes `0700` before it listens, and they serve only the user that runs the process (or root). A `revert` request over the socket needs the same unlock key as the wrapping, so a process that merely reaches the socket cannot write the root key back in plaintext.
+The unlock and host sockets are `0600`, bound first inside a private `0700` directory and moved into place, and they serve only the user that runs the process (or root). A `revert` request over the socket needs the same unlock key as the wrapping, so a process that merely reaches the socket cannot write the root key back in plaintext.
 
 ```sh
 make keychain-status

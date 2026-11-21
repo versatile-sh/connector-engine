@@ -1,6 +1,6 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session, type SetupOptions } from "./api";
-import { accountQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries";
+import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type CredentialMode, type NewLink, type Role, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session, type SetupOptions } from "./api";
+import { accountQuery, peopleQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
 
@@ -261,10 +261,10 @@ export const changePassword = mutationOptions({
   mutationFn: (change: { current: string; password: string }) => api("PUT", "/api/account/password", change),
 });
 
-/** Renames the owner. */
+/** Renames the signed-in user; their account and the list of people are read again. */
 export const renameOwner = mutationOptions({
   mutationFn: (username: string) => api("PUT", "/api/account/username", { username }),
-  onSuccess: (_data, _username, _onMutate, { client }) => invalidate(client, accountQuery.queryKey),
+  onSuccess: (_data, _username, _onMutate, { client }) => invalidate(client, accountQuery.queryKey, peopleQuery.queryKey),
 });
 
 /** What POST /api/backup/export takes: a setup needs nothing else; a full backup needs the confirmation, the owner's password and a passphrase. */
@@ -303,4 +303,56 @@ export const importBackup = mutationOptions({
     return "added" in answer ? { kind: "setup", result: answer } : { kind: "full", summary: answer };
   },
   onSuccess: (outcome, _upload, _onMutate, { client }) => (outcome.kind === "setup" ? invalidate(client, connectorsQuery.queryKey, skillsQuery.queryKey, slotsQuery.queryKey, sessionQuery.queryKey) : undefined),
+});
+
+/** Makes a join link for a role, shown once; the list of waiting links is read again. */
+export const createInvite = mutationOptions({
+  mutationFn: (role: Role) => api<NewLink>("POST", "/api/invites", { role }),
+  onSuccess: (_link, _role, _onMutate, { client }) => invalidate(client, peopleQuery.queryKey),
+});
+
+/** Makes a link that sets a new password for one person, shown once, in place of their previous one. */
+export const createReset = mutationOptions({
+  mutationFn: (person: string) => api<NewLink>("POST", `/api/people/${at(person, "reset")}`),
+  onSuccess: (_link, _person, _onMutate, { client }) => invalidate(client, peopleQuery.queryKey),
+});
+
+/** Revokes a waiting join or reset link. */
+export const revokeLink = mutationOptions({
+  mutationFn: (id: string) => api("DELETE", `/api/invites/${at(id)}`),
+  onSuccess: (_data, _id, _onMutate, { client }) => invalidate(client, peopleQuery.queryKey),
+});
+
+/** Gives a person another role; the people and the session, whose capabilities may change with it, are read again. */
+export const setRole = mutationOptions({
+  mutationFn: ({ person, role }: { person: string; role: Role }) => api("PUT", `/api/people/${at(person, "role")}`, { role }),
+  onSuccess: (_data, _change, _onMutate, { client }) => invalidate(client, peopleQuery.queryKey, sessionQuery.queryKey),
+});
+
+/** Removes a person: they are signed out and their keys stop working; the people, the session and the keys are read again. */
+export const removePerson = mutationOptions({
+  mutationFn: (person: string) => api("DELETE", `/api/people/${at(person)}`),
+  onSuccess: (_data, _person, _onMutate, { client }) => invalidate(client, peopleQuery.queryKey, sessionQuery.queryKey, keysQuery.queryKey),
+});
+
+/** Uses a join or reset link: the new session's CSRF token is armed, every answer read for whoever was signed in before is forgotten, and the session is read again. */
+export const acceptLink = mutationOptions({
+  mutationFn: (accept: { token: string; username: string; password: string }) => api<{ csrf: string }>("POST", "/api/invite/accept", accept),
+  onSuccess: (result, _accept, _onMutate, { client }) => {
+    setCsrf(result.csrf);
+    client.removeQueries({ predicate: (query) => query.queryKey[0] !== sessionQuery.queryKey[0] });
+    return invalidate(client, sessionQuery.queryKey);
+  },
+});
+
+/** Cancels someone's held call; the held lists and that call's own page are read again. */
+export const cancelApproval = mutationOptions({
+  mutationFn: (id: string) => api("POST", `/api/approvals/${at(id, "cancel")}`),
+  onSettled: (_data, _error, id, _onMutate, { client }) => invalidate(client, approvalsQuery.queryKey, approvalQuery(id, null).queryKey),
+});
+
+/** Sets whose credential a connector's calls use, which also sets who approves them. */
+export const setCredentialMode = mutationOptions({
+  mutationFn: ({ connector, mode }: { connector: string; mode: CredentialMode }) => api("PUT", `/api/connectors/${at(connector, "credential-mode")}`, { mode }),
+  onSettled: (_data, _error, _change, _onMutate, { client }) => invalidate(client, connectorsQuery.queryKey),
 });

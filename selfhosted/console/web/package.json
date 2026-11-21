@@ -7,7 +7,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "node --import ./resolve-ts.mjs --test \"src/**/*.test.ts\"",
+    "test": "TZ=UTC node --import ./resolve-ts.mjs --test \"src/**/*.test.ts\"",
     "dev": "vite"
   },
   "dependencies": {

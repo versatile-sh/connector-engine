@@ -4,6 +4,7 @@ import { errorText, type SlotProfile } from "../api";
 import { modeText } from "../connectors/profiles";
 import { useT } from "../i18n/I18nProvider";
 import { claimSlot, discardSlot } from "../mutations";
+import { useViewer } from "../people/useViewer";
 import { keysQuery } from "../queries";
 import { InlineConfirm } from "../ui/InlineConfirm";
 import { rowMotion, type RowPhase } from "../ui/kept";
@@ -30,6 +31,7 @@ export function SlotTags({ profiles, withAlias = true }: SlotTagsProps) {
 function SlotActions({ name }: { name: string }) {
   const t = useT();
   const keys = useQuery(keysQuery);
+  const mayDiscard = useViewer().can("keys.any");
   const [key, setKey] = useState<string>();
   const [asking, setAsking] = useState(false);
   const claim = useMutation(claimSlot);
@@ -47,7 +49,7 @@ function SlotActions({ name }: { name: string }) {
             </button>
           </>
         ) : null}
-        {asking ? null : (
+        {asking || !mayDiscard ? null : (
           <button type="button" disabled={busy} aria-label={t("slots.discardLabel", { set: name })} className={button({ variant: "danger", size: "xs" })} onClick={() => setAsking(true)}>
             {t("slots.discard")}
           </button>
@@ -74,7 +76,7 @@ function SlotActions({ name }: { name: string }) {
 
 type SlotRowProps = { name: string; profiles: readonly SlotProfile[]; phase: RowPhase; withAlias?: boolean };
 
-/** One unclaimed permission set, coming in or going out as `phase` says: its name, what it holds, and the way to apply it to an access key made already or discard it. */
+/** One unclaimed permission set, coming in or going out as `phase` says: its name, what it holds, and the way to apply it to an access key made already or, for a viewer the server lets, discard it. */
 export function SlotRow({ name, profiles, phase, withAlias = true }: SlotRowProps) {
   return (
     <li {...rowMotion(phase)} className="flex flex-col gap-2 border-b border-line px-4 py-3 last:border-b-0 sm:px-5">

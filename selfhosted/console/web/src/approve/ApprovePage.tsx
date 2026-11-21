@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import { errorText } from "../api";
 import { Frame } from "../Frame";
 import { useT } from "../i18n/I18nProvider";
-import { decideApproval } from "../mutations";
-import { approvalQuery, sessionQuery } from "../queries";
+import { heldViewOf } from "../approvals/held";
+import { cancelApproval, decideApproval } from "../mutations";
+import { useViewer } from "../people/useViewer";
+import { approvalQuery, connectorsQuery, sessionQuery } from "../queries";
 import { navigate } from "../router";
 import { Display } from "../ui/Display";
 import { Notice } from "../ui/Notice";
@@ -34,6 +36,9 @@ export function ApprovePage({ id, token, signedIn }: ApprovePageProps) {
   const link = signedIn ? null : token;
   const approval = useQuery(approvalQuery(id, link));
   const decide = useMutation(decideApproval);
+  const cancel = useMutation(cancelApproval);
+  const viewer = useViewer();
+  const connectors = useQuery({ ...connectorsQuery, enabled: signedIn });
   const signIn = () => {
     navigate(`/approve/${encodeURIComponent(id)}`, { replace: true });
     void queryClient.invalidateQueries({ queryKey: sessionQuery.queryKey });
@@ -48,7 +53,11 @@ export function ApprovePage({ id, token, signedIn }: ApprovePageProps) {
           deciding={decide.isPending ? decide.variables.choice : undefined}
           error={decide.isError ? (statusOf(decide.error) === 401 ? t(link ? "approve.linkSpent" : "approve.sessionEnded") : errorText(decide.error)) : undefined}
           onChoose={(choice) => decide.mutate({ id, choice, token: link })}
+          held={signedIn ? heldViewOf(approval.data, viewer, connectors.data?.find((c) => c.id === approval.data.connector.id)?.credential_mode) : undefined}
+          cancelling={cancel.isPending}
+          onCancel={() => cancel.mutate(id)}
         />
+        {cancel.isError ? <Notice className="mt-3">{errorText(cancel.error)}</Notice> : null}
         {decide.isError && statusOf(decide.error) === 401 ? (
           <button type="button" className={`${button({ variant: "secondary", size: "sm" })} mt-4 self-center`} onClick={signIn}>
             {t("approve.signIn")}

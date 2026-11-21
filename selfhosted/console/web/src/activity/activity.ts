@@ -7,11 +7,14 @@ export type PresetRange = "24h" | "7d" | "30d";
 /** How far back the activity page looks: a preset that ends now, or local days from and to, both included, as `YYYY-MM-DD`. */
 export type ActivityPeriod = { range: PresetRange } | { range: "custom"; from: string; to: string };
 
-/** What narrows the page within its period: a connector, an app, an outcome and a text in the function name. */
-export type Narrowing = { connector?: string; agent?: string; outcome?: CallOutcome; search?: string };
+/** What narrows the page within its period: a connector, an app, an outcome, a text in the function name and, among everyone's calls, one person. */
+export type Narrowing = { connector?: string; agent?: string; outcome?: CallOutcome; search?: string; person?: string };
+
+/** Whose calls the page shows: everyone's when set, else the viewer's own. */
+export type Scoped = { scope?: "everyone" };
 
 /** What the activity page shows, as its URL query holds it. */
-export type ActivityFilter = ActivityPeriod & Narrowing;
+export type ActivityFilter = ActivityPeriod & Narrowing & Scoped;
 
 /** The preset ranges the page offers, with their length in hours. */
 export const RANGES: readonly { value: PresetRange; hours: number }[] = [
@@ -38,8 +41,8 @@ const startOf = (day: string): Date | undefined => {
   return dayOf(at) === day ? at : undefined;
 };
 
-const setNarrowing = (query: URLSearchParams, narrowing: Narrowing) => {
-  for (const name of ["connector", "agent", "outcome", "search"] as const) {
+const setNarrowing = (query: URLSearchParams, narrowing: Narrowing & Scoped) => {
+  for (const name of ["connector", "agent", "outcome", "search", "scope", "person"] as const) {
     const value = narrowing[name];
     if (value) query.set(name, value);
   }
@@ -77,6 +80,11 @@ export function filterOf(query: URLSearchParams): ActivityFilter {
     const value = query.get(name);
     if (value) filter[name] = value;
   }
+  if (query.get("scope") === "everyone") {
+    filter.scope = "everyone";
+    const person = query.get("person");
+    if (person) filter.person = person;
+  }
   const outcome = query.get("outcome");
   if (isOutcome(outcome)) filter.outcome = outcome;
   return filter;
@@ -101,8 +109,20 @@ export function hrefOf(filter: ActivityFilter, call?: string): string {
 /** The filter's period alone, with nothing narrowing it. */
 export const periodOf = (filter: ActivityFilter): ActivityPeriod => (filter.range === "custom" ? { range: "custom", from: filter.from, to: filter.to } : { range: filter.range });
 
+/** The filter with nothing narrowing it: its period, and whose calls it shows. */
+export const clearedOf = (filter: ActivityFilter): ActivityFilter => (filter.scope ? { ...periodOf(filter), scope: filter.scope } : periodOf(filter));
+
+/** The filter in a scope: everyone's calls, or the viewer's own with no person chosen. */
+export function inScope(filter: ActivityFilter, scope: "mine" | "everyone"): ActivityFilter {
+  const next = { ...filter };
+  delete next.scope;
+  delete next.person;
+  if (scope === "mine") return next;
+  return filter.person ? { ...next, scope, person: filter.person } : { ...next, scope };
+}
+
 /** Whether anything narrows the page within its period. */
-export const isNarrowed = (filter: ActivityFilter) => Boolean(filter.connector || filter.agent || filter.outcome || filter.search);
+export const isNarrowed = (filter: ActivityFilter) => Boolean(filter.connector || filter.agent || filter.outcome || filter.search || filter.person);
 
 /** The API query for a filter: a preset ends now; custom days run from the first's local midnight to the end of the last or now, at most the 30 days the console keeps. */
 export function apiQueryOf(filter: ActivityFilter, now: Date): string {

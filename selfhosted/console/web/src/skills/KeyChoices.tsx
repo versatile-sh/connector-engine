@@ -5,6 +5,7 @@ import { ChoiceRow } from "../connectors/ChoiceRow";
 import { commonAccess } from "../connectors/summary";
 import { useT } from "../i18n/I18nProvider";
 import { setSkillAccess, setSkillAccessAll } from "../mutations";
+import { useViewer } from "../people/useViewer";
 import { LongList } from "../ui/LongList";
 import { WELL } from "../ui/styles";
 import type { RowPhase } from "../ui/kept";
@@ -29,15 +30,16 @@ function KeyChoice({ skill, agent, access, phase }: { skill: Skill; agent: strin
   );
 }
 
-/** Every access key's off, on or ask on a skill as compact rows, under one choice that sets all of them in one request; past a few keys, a filter and Show all. */
+/** Every access key's off, on or ask on a skill as compact rows, under one choice that sets all of them in one request for a viewer who manages skills; past a few keys, a filter and Show all. */
 export function KeyChoices({ skill }: { skill: Skill }) {
   const t = useT();
+  const manage = useViewer().can("skills.manage");
   const all = useMutation(setSkillAccessAll);
   const kept = all.data?.keys.filter((key) => key.error) ?? [];
   if (skill.access.length === 0) return <p className="py-4 text-sm text-muted">{t("skills.noKeys")}</p>;
   return (
     <>
-      {skill.access.length > 1 ? (
+      {manage && skill.access.length > 1 ? (
         <div className="@container mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 pb-3 @md:gap-x-6 sm:px-5">
           <span className="text-sm font-medium">{t("skills.allKeys", { count: skill.access.length })}</span>
           <AccessPicker

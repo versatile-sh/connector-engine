@@ -59,7 +59,7 @@ Everything an install knows lives in four Docker volumes of the project:
 
 `docker compose down -v`, `docker system prune --volumes` and `docker volume prune -a` delete these volumes. That loses everything, and the keychain cannot bring it back, because the keychain holds only the key that unwraps the root keys. Export a backup before you run any of them.
 
-A full backup (`make export`, or Account → Export) is one encrypted file. It holds a consistent snapshot of the engine's database, both key stores with their root keys in plaintext, and the console's state and activity. It opens on a new machine without the old keychain, and the import wraps the root keys again with the new machine's keychain. The `secrets` volume is not in it: a new install writes its own. The format is in [account and backup](../docs/using/account-backup.md#full-backups). User documentation: [the person profile](../docs/self-hosted/person.md).
+A full backup (`make export`, or Account → Backups → Export) is one encrypted file. It holds a consistent snapshot of the engine's database, both key stores with their root keys in plaintext, and the console's state and activity. It opens on a new machine without the old keychain, and the import wraps the root keys again with the new machine's keychain. The `secrets` volume is not in it: a new install writes its own. The format is in [account and backup](../docs/using/account-backup.md#full-backups). User documentation: [the person profile](../docs/self-hosted/person.md).
 
 ## Run without Docker
 

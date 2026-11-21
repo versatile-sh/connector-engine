@@ -141,6 +141,7 @@ export const ptBR: Record<MessageKey, string> = {
   "kind.read": "lê",
   "kind.write": "altera",
   "kind.destructive": "apaga",
+  "kind.undeclared": "não declarada",
 
   "detail.back": "Conectores",
   "detail.functions": "Funções",

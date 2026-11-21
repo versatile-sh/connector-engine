@@ -57,17 +57,20 @@ func TestEnablingADeclaredDestructiveFunctionKeepsTheCap(t *testing.T) {
 
 func TestEnablingAnUnreviewedFunctionClassesItByItsHints(t *testing.T) {
 	r := newRig(t)
-	for _, name := range []string{"create", "search"} {
+	for _, name := range []string{"create", "search", "mystery"} {
 		r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/functions/"+name, map[string]string{"access": "on"}, nil)
 	}
 	if f := r.function("create"); f.Class != port.ClassWrite || f.Capped {
 		t.Fatalf("create after on: %+v", f)
 	}
+	if f := r.function("mystery"); f.Class != port.ClassWrite || f.Kind != console.KindUndeclared || f.Capped {
+		t.Fatalf("mystery after on: %+v", f)
+	}
 	if f := r.function("search"); f.Class != port.ClassRead {
 		t.Fatalf("search after on: %+v", f)
 	}
 	cs := r.connect("", nil)
-	for _, name := range []string{"create", "search"} {
+	for _, name := range []string{"create", "search", "mystery"} {
 		before := r.up.count(name)
 		ran(t, <-r.call(cs, name, map[string]any{}), name)
 		if r.up.count(name) != before+1 {

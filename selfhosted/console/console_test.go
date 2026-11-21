@@ -266,10 +266,10 @@ func TestTheConsoleImportsGrantsAndServesAnAgent(t *testing.T) {
 	for _, tool := range pv.Tools {
 		proposed[tool.Name], kinds[tool.Name] = tool.Proposed, tool.Kind
 	}
-	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessOn || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessAsk {
+	if pv.Title != "Notes" || pv.Description != "A notebook" || proposed["search"] != console.AccessOn || proposed["create"] != console.AccessAsk || proposed["purge"] != console.AccessAsk || proposed["mystery"] != console.AccessOn {
 		t.Fatalf("preview: %+v", pv)
 	}
-	if kinds["search"] != port.ClassRead || kinds["create"] != port.ClassWrite || kinds["purge"] != port.ClassDestructive || kinds["mystery"] != port.ClassDestructive {
+	if kinds["search"] != port.ClassRead || kinds["create"] != port.ClassWrite || kinds["purge"] != port.ClassDestructive || kinds["mystery"] != console.KindUndeclared {
 		t.Fatalf("preview kinds: %v", kinds)
 	}
 	if status, _ := b.send("POST", "/api/import", map[string]any{"mcp": up.URL + "/mcp", "local": true, "choices": map[string]string{"create": "write"}}, nil); status != http.StatusBadRequest {
@@ -465,19 +465,23 @@ func TestIconsAreImagesNeverSVG(t *testing.T) {
 	}
 }
 
-func TestOnlyReadOnlyHintProposesOn(t *testing.T) {
-	no := false
+func TestOnlyADeclaredChangeOrDeleteProposesAsk(t *testing.T) {
+	no, yes := false, true
 	cases := []struct {
 		ann  *mcp.ToolAnnotations
+		kind port.Class
 		want console.Access
-	}{{nil, console.AccessAsk}, {&mcp.ToolAnnotations{ReadOnlyHint: true}, console.AccessOn}, {&mcp.ToolAnnotations{DestructiveHint: &no}, console.AccessAsk}}
-	for _, c := range cases {
-		if _, _, got := console.Propose(c.ann); got != c.want {
-			t.Errorf("%+v: %s", c.ann, got)
-		}
+	}{
+		{nil, console.KindUndeclared, console.AccessOn},
+		{&mcp.ToolAnnotations{}, console.KindUndeclared, console.AccessOn},
+		{&mcp.ToolAnnotations{ReadOnlyHint: true}, port.ClassRead, console.AccessOn},
+		{&mcp.ToolAnnotations{DestructiveHint: &no}, port.ClassWrite, console.AccessAsk},
+		{&mcp.ToolAnnotations{DestructiveHint: &yes}, port.ClassDestructive, console.AccessAsk},
 	}
-	if _, destructive, _ := console.Propose(nil); !destructive {
-		t.Error("no hints means destructive")
+	for _, c := range cases {
+		if kind, got := console.Propose(c.ann); kind != c.kind || got != c.want {
+			t.Errorf("%+v: %s %s, want %s %s", c.ann, kind, got, c.kind, c.want)
+		}
 	}
 }
 

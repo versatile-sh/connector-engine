@@ -57,6 +57,7 @@ type StoredSession struct {
 }
 
 type stateFile struct {
+	Format              int                          `json:"format"`
 	Owner               *Owner                       `json:"owner,omitempty"`
 	Users               map[string]User              `json:"users,omitempty"`
 	LegacyPerson        string                       `json:"legacy_person,omitempty"`
@@ -104,6 +105,7 @@ func OpenState(path, person string) (*State, error) {
 	s := &State{path: path, person: person}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
+		s.data.Format = stateFormat
 		return s, nil
 	}
 	if err != nil {
@@ -112,9 +114,33 @@ func OpenState(path, person string) (*State, error) {
 	if err := json.Unmarshal(raw, &s.data); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	migrateSlots(&s.data)
-	migrateUsers(&s.data, person)
+	if err := upgradeState(&s.data, person); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
 	return s, nil
+}
+
+const stateFormat = 1
+
+var stateSteps = []func(d *stateFile, person string){
+	func(d *stateFile, person string) {
+		migrateSlots(d)
+		migrateUsers(d, person)
+	},
+}
+
+func upgradeState(d *stateFile, person string) error {
+	if d.Format > stateFormat {
+		return fmt.Errorf("the state file has format %d and this console reads up to format %d: run a newer console, or restore a backup made by this one", d.Format, stateFormat)
+	}
+	if d.Format < 0 {
+		return fmt.Errorf("the state file has format %d", d.Format)
+	}
+	for _, step := range stateSteps[d.Format:] {
+		step(d, person)
+	}
+	d.Format = stateFormat
+	return nil
 }
 
 var errUnchanged = errors.New("unchanged")

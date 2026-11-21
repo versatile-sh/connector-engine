@@ -88,6 +88,9 @@ selfhosted/console/web (JavaScript bundled into the console binary)
   @fontsource/geist, @fontsource/instrument-serif, @fontsource/jetbrains-mono
                                   OFL-1.1
   Exact versions and licenses: selfhosted/console/web/package-lock.json.
+  AI app marks in src/ui/brandMarks.ts (Claude, Cursor, Google Gemini,
+  GitHub Copilot, opencode): path data from Simple Icons, CC0-1.0. The marks
+  are trademarks of their owners, shown only to name the app a skill works in.
 
 docs/assets (banner SVGs)
   The banners contain glyph outlines of Instrument Serif and JetBrains Mono,

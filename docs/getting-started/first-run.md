@@ -16,7 +16,7 @@ Have a backup from another machine? Choose **Restore from a backup** on the same
 
 ## 3. Import a connector
 
-Paste the URL of an MCP server on the **Connectors** page, or open an install link. Review its functions, then confirm. See [import a connector](import-a-connector.md).
+After you sign in, the **Dashboard** opens with a short checklist (the account, a first connector, a first AI app) that ticks itself and hides when all three are done. Open **Connectors** in the sidebar and paste the URL of an MCP server, or open an install link. Review its functions, then confirm. See [import a connector](import-a-connector.md).
 
 ## 4. Choose what may run
 

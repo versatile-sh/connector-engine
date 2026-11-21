@@ -3,6 +3,7 @@ package manage
 import (
 	"cmp"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -362,7 +364,7 @@ func (c *Client) Approvals(ctx context.Context) ([]port.Approval, error) {
 
 // Activity returns the calls from since to now, narrowed to a connector id and a key when given, oldest first.
 func (c *Client) Activity(ctx context.Context, since time.Time, connector, key string) ([]console.ActivityCall, error) {
-	q := url.Values{"from": {since.UTC().Format(time.RFC3339Nano)}, "to": {time.Now().UTC().Format(time.RFC3339Nano)}}
+	q := url.Values{"from": {since.UTC().Format(time.RFC3339Nano)}, "to": {time.Now().UTC().Format(time.RFC3339Nano)}, "limit": {"500"}}
 	if connector != "" {
 		q.Set("connector", connector)
 	}
@@ -378,10 +380,62 @@ func (c *Client) Activity(ctx context.Context, since time.Time, connector, key s
 }
 
 func activityCommand() *command.Command {
+	var days int
+	var olderThan string
+	var yes bool
+	return &command.Command{Name: "activity", Summary: "Show the calls agents made, or delete old ones.", Default: "list", Subs: []*command.Command{
+		activityList(),
+		leaf("prune", "", "Delete the activity older than a period, such as 30d.", func(fs *flag.FlagSet) {
+			fs.StringVar(&olderThan, "older-than", "", "delete the calls older than this, such as 30d or 720h")
+			fs.BoolVar(&yes, "yes", false, "skip the confirmation")
+		}, func(ctx context.Context, e *Env) error {
+			if err := e.args(0, ""); err != nil {
+				return err
+			}
+			var err error
+			if days, err = daysOf(olderThan); err != nil {
+				return command.Usage(e.X.Path, "%s", err)
+			}
+			count, err := e.Client.PruneActivity(ctx, days, true)
+			if err != nil {
+				return err
+			}
+			if count > 0 {
+				if err := e.confirm(fmt.Sprintf("Delete %d calls older than %d days?", count, days), yes || e.JSON); err != nil {
+					return err
+				}
+			}
+			if _, err := e.Client.PruneActivity(ctx, days, false); err != nil {
+				return err
+			}
+			return e.print(map[string]int{"deleted": count}, func(w io.Writer) { fmt.Fprintf(w, "deleted %d calls\n", count) })
+		}, opts{}),
+	}}
+}
+
+func daysOf(text string) (int, error) {
+	if n, ok := strings.CutSuffix(text, "d"); ok {
+		if days, err := strconv.Atoi(n); err == nil && days >= 0 {
+			return days, nil
+		}
+	} else if d, err := time.ParseDuration(text); err == nil && d >= 0 {
+		return int((d + 24*time.Hour - 1) / (24 * time.Hour)), nil
+	}
+	return 0, errors.New("--older-than is a period such as 30d or 720h")
+}
+
+// PruneActivity counts, or with dryRun false deletes, the calls older than days; it returns how many.
+func (c *Client) PruneActivity(ctx context.Context, days int, dryRun bool) (int, error) {
+	var out console.PruneResult
+	err := c.Do(ctx, http.MethodPost, "/api/activity/prune", map[string]any{"older_than_days": days, "dry_run": dryRun}, &out)
+	return out.Count, err
+}
+
+func activityList() *command.Command {
 	var connector, key string
 	var since, every time.Duration
 	var follow bool
-	return leaf("activity", "", "Show the calls agents made, or follow them live with --follow.", func(fs *flag.FlagSet) {
+	return leaf("list", "", "Show the calls agents made, or follow them live with --follow.", func(fs *flag.FlagSet) {
 		fs.StringVar(&connector, "connector", "", "only the calls of this connector")
 		fs.StringVar(&key, "key", "", "only the calls of this access key")
 		fs.DurationVar(&since, "since", time.Hour, "how far back to start, such as 30m or 24h")

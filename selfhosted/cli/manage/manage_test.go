@@ -184,6 +184,11 @@ func TestManageAnInstallAsTheSignedInUser(t *testing.T) {
 	w.ok("", "approvals")
 	w.fails(command.ExitFailure, "", "approvals", "approve", "nope")
 	w.ok("", "activity", "--since", "1h")
+	w.fails(command.ExitUsage, "--older-than", "activity", "prune")
+	w.fails(command.ExitUsage, "--older-than", "activity", "prune", "--older-than", "soon")
+	if out := w.ok("", "activity", "prune", "--older-than", "30d", "--yes"); !strings.Contains(out, "deleted 0 calls") {
+		t.Fatalf("activity prune: %s", out)
+	}
 	w.ok("", "skills", "list")
 
 	w.fails(command.ExitUsage, "--yes", "keys", "revoke", "agent-one")

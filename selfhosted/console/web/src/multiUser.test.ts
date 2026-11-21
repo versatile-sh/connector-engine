@@ -4,7 +4,7 @@ import { createElement } from "react";
 import type { Session } from "./api.ts";
 import { App } from "./App.tsx";
 import { LinkMade, LinkSheet } from "./people/LinkSheet.tsx";
-import { APPROVAL, CONNECTOR, TEAM_ADMIN, TEAM_MEMBER, TEAM_OWNER, pageData } from "./testing/fixtures.ts";
+import { APPROVAL, CONNECTOR, PEOPLE, TEAM_ADMIN, TEAM_MEMBER, TEAM_OWNER, pageData } from "./testing/fixtures.ts";
 import { renderMarkup, type Seed } from "./testing/render.ts";
 
 const page = (session: Session, path: string, extra: Seed["data"] = []) => renderMarkup(createElement(App), { path, data: [...pageData(session), ...extra] });
@@ -67,7 +67,8 @@ describe("the People tab", () => {
   });
 
   describe("for an Admin", () => {
-    const html = page(TEAM_ADMIN, "/account/people");
+    const adminPeople = { ...PEOPLE, people: PEOPLE.people.map((p) => ({ ...p, may_reset: p.person === "p-bob" })), invites: PEOPLE.invites.map((l) => ({ ...l, may_revoke: false })) };
+    const html = page(TEAM_ADMIN, "/account/people", [[["people"], adminPeople]]);
 
     test("offers no invite", () => {
       assert.equal(html.includes("Invite someone"), false);

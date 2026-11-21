@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -507,3 +508,18 @@ func (c *Channel) opName(method, target string) string {
 func (c *Channel) scrub(err error) string { return surface.Scrub(err, c.token) }
 
 func (c *Channel) scrubText(s string) string { return surface.ScrubText(s, c.token) }
+
+// Kind describes the Discord channel for the console's settings page and factory.
+var Kind = surface.Kind{
+	Name:        "discord",
+	Title:       "Discord",
+	Interactive: true,
+	Fields: []surface.Field{
+		{Name: "token", Label: "Bot token", Secret: true, Hint: true},
+		{Name: "owner_user_id", Label: "Your Discord user id"},
+	},
+	Owner: regexp.MustCompile(`^[0-9]{1,24}$`),
+	New: func(s map[string]string) (surface.Channel, error) {
+		return New(Config{Token: s["token"], OwnerUserID: s["owner_user_id"]})
+	},
+}

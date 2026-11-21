@@ -3,7 +3,7 @@ import { describe, mock, test } from "node:test";
 import type { QueryKey } from "@tanstack/react-query";
 import { createElement } from "react";
 import type { Session } from "../api.ts";
-import { CONNECTOR, ONE_OWNER, TEAM_MEMBER, TEAM_OWNER, pageData } from "../testing/fixtures.ts";
+import { CHANNEL_KINDS, CONNECTOR, ONE_OWNER, TEAM_MEMBER, TEAM_OWNER, pageData } from "../testing/fixtures.ts";
 import { renderMarkup } from "../testing/render.ts";
 import { ApprovalsPage } from "./ApprovalsPage.tsx";
 
@@ -85,7 +85,7 @@ describe("ApprovalsPage", () => {
       const seen = new Date(Date.now() - 3 * 3_600_000).toISOString();
       const html = draw(ONE_OWNER, [
         ...NONE,
-        [["notifications"], { apps: [{ name: "claude-code", elicit: true }], devices: [{ id: "d", name: "laptop", created_at: "2026-11-01T00:00:00Z", last_seen: seen }], channels: [{ id: "ch", kind: "discord", label: "Team chat", interactive: true, created_at: "2026-11-01T00:00:00Z", status: "connected" }] }],
+        [["notifications"], { apps: [{ name: "claude-code", elicit: true }], devices: [{ id: "d", name: "laptop", created_at: "2026-11-01T00:00:00Z", last_seen: seen }], channels: [{ id: "ch", kind: "discord", label: "Team chat", interactive: true, created_at: "2026-11-01T00:00:00Z", status: "connected" }], kinds: CHANNEL_KINDS }],
       ]);
       assert.match(html, /laptop.*?Seen 3 hours ago/);
       assert.match(html, /Team chat.*?Discord bot.*?connected/);

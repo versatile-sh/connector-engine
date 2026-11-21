@@ -291,6 +291,14 @@ func TestAnOwnerRevokesLinksAndAnAdminOnlyTheirOwnResetLinks(t *testing.T) {
 	if len(data.Invites) != 2 {
 		t.Fatalf("the Admin sees %d links", len(data.Invites))
 	}
+	for _, l := range data.Invites {
+		if want := l.ID == reset.ID; l.MayRevoke != want {
+			t.Errorf("link %s may_revoke %v for the Admin, want %v", l.ID, l.MayRevoke, want)
+		}
+	}
+	if _, all := r.people(owner); !all.Invites[0].MayRevoke || !all.Invites[1].MayRevoke {
+		t.Error("an Owner is not told they may revoke every link")
+	}
 	if status, _ := admin.send("DELETE", "/api/invites/nope", nil, nil); status != http.StatusNotFound {
 		t.Errorf("an unknown link: %d", status)
 	}

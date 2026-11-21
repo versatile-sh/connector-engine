@@ -177,7 +177,10 @@ func (s *surfaces) holds(approval string) bool {
 	return ok
 }
 
-var interactiveKinds = map[string]bool{"discord": true, "slack": true, "telegram": true}
+func interactive(kind string) bool {
+	k, _ := kindOf(kind)
+	return k.Interactive
+}
 
 type tracked struct {
 	surface.Channel
@@ -210,7 +213,7 @@ func (t tracked) Notify(ctx context.Context, p surface.Prompt) (surface.Ref, err
 }
 
 func (t tracked) Listen(ctx context.Context, click surface.ClickFunc) error {
-	if interactiveKinds[t.Kind()] {
+	if interactive(t.Kind()) {
 		t.surf.setStatus(t.id, "connected", "")
 	}
 	err := t.Channel.Listen(ctx, func(ctx context.Context, c surface.Click) (surface.Outcome, error) {
@@ -249,7 +252,7 @@ func (c *Console) buildChannels(ctx context.Context) []surface.Channel {
 			continue
 		}
 		t.Channel = ch
-		if interactiveKinds[sc.Kind] {
+		if interactive(sc.Kind) {
 			c.surf.setStatus(sc.ID, "connecting", "")
 		} else {
 			c.surf.setStatus(sc.ID, "notify_only", "")

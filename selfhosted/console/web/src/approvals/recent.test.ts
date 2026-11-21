@@ -58,7 +58,7 @@ describe("askedOf", () => {
 });
 
 describe("reachOf", () => {
-  const data = (over: Partial<NotificationsData>): NotificationsData => ({ channels: [], devices: [], apps: [], ...over });
+  const data = (over: Partial<NotificationsData>): NotificationsData => ({ channels: [], devices: [], apps: [], kinds: [], ...over });
 
   test("counts the apps that ask in the AI app", () => {
     assert.equal(reachOf(data({ apps: [{ name: "a", elicit: true }, { name: "b", elicit: false }, { name: "c", elicit: true }] })).elicit, 2);

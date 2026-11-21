@@ -234,11 +234,6 @@ type CredentialInjector interface {
 	Inject(ctx context.Context, kind CredentialKind, secret []byte, out *Outbound) error
 }
 
-// ApprovalChannel optionally delivers an approval prompt directly; events are always published.
-type ApprovalChannel interface {
-	Deliver(ctx context.Context, a Approval) error
-}
-
 // Finding is one result of a DefinitionScanner or a ResultFilter.
 type Finding struct {
 	Kind     string `json:"kind"`

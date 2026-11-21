@@ -57,6 +57,7 @@ AI app ──MCP──▶ gateway (/mcp)
 
 - `tools/list` follows the same path with `Authorizer.Search`, so an agent sees only functions it may call.
 - A denied function answers exactly like an unknown one: an agent cannot probe what exists.
+- Arguments are checked first, once: an object that repeats a key at any depth is refused with `invalid_argument` and never forwarded; `core/args` holds the rule.
 - Every event is written to the outbox inside the use case's transaction. `relay/` delivers it at least once, in order. Schema URIs (`https://agents-control.dev/...`) are stable wire identifiers.
 
 ## Grants

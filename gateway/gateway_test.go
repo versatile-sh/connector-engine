@@ -290,6 +290,10 @@ func TestTokenInArgumentsIsRefused(t *testing.T) {
 				t.Fatalf("token in arguments: %v %v", res, err)
 			}
 		}
+		res, err := callTool(cs, "s__search", json.RawMessage(`{"q":"see `+escaped(tok)+`","q":"clean"}`))
+		if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeInvalidArgument) {
+			t.Fatalf("token in the first of two duplicated keys: %v %v", res, err)
+		}
 		if w.Runtime.CallsTo("search") != 0 {
 			t.Fatal("the call was forwarded")
 		}

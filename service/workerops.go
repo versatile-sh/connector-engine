@@ -7,6 +7,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/catalog"
 	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/core/args"
 	"github.com/versatile-sh/connector-engine/core/evaluate"
 	"github.com/versatile-sh/connector-engine/port"
 )
@@ -289,6 +290,8 @@ func (s *Service) recheck(tx port.Tx, h heldRun, cur port.Approval, ext port.Acc
 	}
 	d := evaluate.Evaluate(f, evaluate.Request{Subject: h.Sub, Function: cur.Function, Now: s.now(), Arguments: nonEmpty(h.Args), Call: true})
 	switch fn := f.Functions[cur.Function]; {
+	case args.Parse(h.Args) != nil:
+		return port.CodeInvalidArgument, nil, nil, nil
 	case d.Mode == port.ModeDeny:
 		return d.Reason, nil, nil, nil
 	case ext.Mode == port.ModeDeny:

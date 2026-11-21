@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/versatile-sh/connector-engine/authz"
+	"github.com/versatile-sh/connector-engine/core/args"
 	"github.com/versatile-sh/connector-engine/core/evaluate"
 	"github.com/versatile-sh/connector-engine/core/names"
 	"github.com/versatile-sh/connector-engine/core/projection"
@@ -442,12 +443,15 @@ func queryOf(sub port.Subject, t target, args json.RawMessage) port.Query {
 		Session: sub.Session, Connector: t.Conn.ID, Function: t.Fn.Name, Class: t.Fn.Class, Arguments: args}
 }
 
-func (s *Service) checkArguments(p port.Principal, t target, req CallRequest, args json.RawMessage) *Outcome {
+func (s *Service) checkArguments(p port.Principal, t target, req CallRequest, payload json.RawMessage) *Outcome {
 	fail := func(o Outcome) *Outcome { return &o }
-	if s.cfg.ScanForToken && tokenscan.Contains(args, p.Token) {
+	if err := args.Parse(payload); err != nil {
+		return fail(toolError(port.CodeInvalidArgument, "%v", err))
+	}
+	if s.cfg.ScanForToken && tokenscan.Contains(payload, p.Token) {
 		return fail(toolError(port.CodeTokenInArguments, "the arguments carry the bearer token of this request"))
 	}
-	if err := schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), args); err != nil {
+	if err := schemacheck.Validate(schemaOf(t.Fn, "inputSchema"), payload); err != nil {
 		return fail(toolError(port.CodeInvalidArgument, "%v", err))
 	}
 	if len(req.Fields) == 0 {

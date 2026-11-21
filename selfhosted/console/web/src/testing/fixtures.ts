@@ -163,6 +163,7 @@ export const PEOPLE = {
   ],
   invites: [{ id: "i1", purpose: "join", role: "member", person: "", created_by: "owner", created_at: "2026-11-19T00:00:00Z", expires_at: "2026-11-22T00:00:00Z", may_revoke: true }],
   audit: [{ at: "2026-11-03T00:00:00Z", actor: "owner", action: "user.created", target: "p-bob" }],
+  signup: { enabled: false, role: "member" },
 } as const satisfies PeopleData;
 
 const SKILLS: Skill[] = [];

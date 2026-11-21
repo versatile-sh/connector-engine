@@ -141,7 +141,8 @@ export const es: Record<MessageKey, string> = {
   "kind.read": "lee",
   "kind.write": "modifica",
   "kind.destructive": "borra",
-  "kind.undeclared": "no declarada",
+  "kind.estimated": "estimada",
+  "kind.estimatedHint": "Su servidor no declara si solo lee ni si borra: estimada por los verbos de su nombre.",
 
   "detail.back": "Conectores",
   "detail.functions": "Funciones",

@@ -172,7 +172,7 @@ func connectorState(k console.ConnectorSummary) string {
 }
 
 // Kinds are the kinds of function in the order the console shows them.
-var Kinds = []port.Class{port.ClassRead, port.ClassWrite, port.ClassDestructive, console.KindUndeclared}
+var Kinds = []port.Class{port.ClassRead, port.ClassWrite, port.ClassDestructive}
 
 func showConnector(w io.Writer, k console.ConnectorSummary) {
 	fmt.Fprintf(w, "%s\t%s   %s\n", k.Alias, k.Title, connectorState(k))
@@ -186,7 +186,7 @@ func showConnector(w io.Writer, k console.ConnectorSummary) {
 				fmt.Fprintf(w, "\n%s\n", strings.ToUpper(string(kind)))
 				first = false
 			}
-			fmt.Fprintf(w, "  %s\t%s\n", f.Name, f.Access)
+			fmt.Fprintf(w, "  %s\t%s%s\n", f.Name, f.Access, estimatedMark(f.Estimated))
 		}
 	}
 	if len(k.Profiles) > 0 {
@@ -201,6 +201,13 @@ func showConnector(w io.Writer, k console.ConnectorSummary) {
 	}
 }
 
+func estimatedMark(estimated bool) string {
+	if estimated {
+		return "  (estimated from its name)"
+	}
+	return ""
+}
+
 func showPreview(w io.Writer, p console.Preview) {
 	from := p.Host
 	if from == "" {
@@ -211,7 +218,7 @@ func showPreview(w io.Writer, p console.Preview) {
 		fmt.Fprintln(w, "warning:", p.Warning)
 	}
 	for _, t := range p.Tools {
-		fmt.Fprintf(w, "  %-12s %-5s %s\n", t.Kind, t.Proposed, t.Name)
+		fmt.Fprintf(w, "  %-12s %-5s %s%s\n", t.Kind, t.Proposed, t.Name, estimatedMark(t.Estimated))
 	}
 }
 

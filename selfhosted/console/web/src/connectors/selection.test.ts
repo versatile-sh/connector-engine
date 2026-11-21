@@ -57,11 +57,14 @@ describe("presetNames", () => {
     );
   });
 
-  test("leaves a function whose server declares nothing out of every preset", () => {
-    const functions = [{ name: "sharepoint_search", kind: "undeclared" as const }];
+  test("groups an estimated function by the kind it shows", () => {
+    const functions = [
+      { name: "sharepoint_search", kind: "read" as const, estimated: true },
+      { name: "delete_event", kind: "destructive" as const, estimated: true },
+    ];
     assert.deepEqual(
       PRESETS.map((preset) => presetNames(functions, preset)),
-      [[], [], []],
+      [["sharepoint_search"], [], ["delete_event"]],
     );
   });
 });

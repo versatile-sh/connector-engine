@@ -63,7 +63,7 @@ func TestEnablingAnUnreviewedFunctionClassesItByItsHints(t *testing.T) {
 	if f := r.function("create"); f.Class != port.ClassWrite || f.Capped {
 		t.Fatalf("create after on: %+v", f)
 	}
-	if f := r.function("mystery"); f.Class != port.ClassWrite || f.Kind != console.KindUndeclared || f.Capped {
+	if f := r.function("mystery"); f.Class != port.ClassWrite || f.Kind != port.ClassRead || !f.Estimated || f.Capped {
 		t.Fatalf("mystery after on: %+v", f)
 	}
 	if f := r.function("search"); f.Class != port.ClassRead {

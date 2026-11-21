@@ -91,7 +91,7 @@ func accessCommand() *command.Command {
 	var key, kind string
 	return leaf("access", "<connector> [<function>] on|off|ask|follow|custom", "Set who may call what: a connector's access, or one key's override with --key.", func(fs *flag.FlagSet) {
 		fs.StringVar(&key, "key", "", "change this access key's profile instead of the connector's own access")
-		fs.StringVar(&kind, "kind", "", "without a function, change only the functions of this kind: read, write, destructive or undeclared")
+		fs.StringVar(&kind, "kind", "", "without a function, change only the functions of this kind: read, write or destructive")
 	}, func(ctx context.Context, e *Env) error {
 		args := e.X.Args
 		if len(args) < 2 || len(args) > 3 {
@@ -114,7 +114,7 @@ func accessCommand() *command.Command {
 		case "on", "off", "ask":
 			names := FunctionsOf(k, port.Class(kind))
 			if kind != "" && !slices.Contains(Kinds, port.Class(kind)) {
-				return command.Usage(e.X.Path, "--kind is read, write, destructive or undeclared")
+				return command.Usage(e.X.Path, "--kind is read, write or destructive")
 			}
 			if len(args) == 3 {
 				if kind != "" {

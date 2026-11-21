@@ -26,13 +26,13 @@ The full evaluation order is in [ARCHITECTURE.md](../../ARCHITECTURE.md#grants).
 
 ## Function classes
 
-The engine treats each function as read, write or destructive. The console labels a function whose server declares neither `readOnlyHint` nor `destructiveHint` "undeclared": import proposes it on, and turning it on stores write, so it never asks once a session.
+The engine treats each function as read, write or destructive. When a server declares neither `readOnlyHint` nor `destructiveHint` for a function, the console estimates its kind from the verbs in its name, by the same rule as the MCP catalog: a delete verb (`delete`, `remove`, `purge`, ...) reads "deletes · estimated", a change verb (`create`, `send`, `update`, ...) "changes · estimated", anything else "reads · estimated". Import proposes an estimated read on and an estimated change or delete ask. The bulk actions group functions by the kind shown, estimated ones included. The estimate is a label only: turning such a function on stores write, so it never asks once a session, and the gateway never enforces an estimated delete as destructive.
 
 | Where the class comes from | Turning it on or asking |
 |---|---|
 | a review of the listing at the function's hash | keeps the reviewed class |
 | the server declares `destructiveHint: true` | keeps destructive: on asks once a session, and the row says "asks once a session" |
-| neither | sets read when the server's `readOnlyHint` says so, else write (an undeclared function too) |
+| neither | sets read when the server's `readOnlyHint` says so, else write (an estimated read too) |
 
 - On the first start after this version, every class below a reviewed or declared class is raised once, including one set through the engine API; lower it again through the API if that was intended. Each raise drops the session answers of that function and is listed under **Changes** on the People page. A connector the console cannot read then is skipped with a warning in its log, and later starts raise nothing.
 

@@ -141,7 +141,7 @@ func TestEventTypesArePublicAndCarryTheirSchemas(t *testing.T) {
 	s := newSurfaces(t)
 	code, out, _ := s.do(t, http.MethodGet, "/v1/event-types", "", "", nil)
 	types, _ := out["types"].([]any)
-	if code != http.StatusOK || len(types) != 47 {
+	if code != http.StatusOK || len(types) != 48 {
 		t.Fatalf("%d types, status %d", len(types), code)
 	}
 	code, out, _ = s.do(t, http.MethodGet, "/v1/event-types/connector.call.finished", "", "", nil)
@@ -169,7 +169,7 @@ func TestGRPCAnswersWhatHTTPAnswers(t *testing.T) {
 		t.Fatalf("http %v, grpc %v", out, list)
 	}
 	types, err := s.grpc.ListEventTypes(context.Background(), &emptypb.Empty{})
-	if err != nil || len(types.Types) != 47 {
+	if err != nil || len(types.Types) != 48 {
 		t.Fatalf("%v %v", types, err)
 	}
 	if _, err := s.grpc.GetConnector(s.ctx(admin), &connectorenginev1.ConnectorRequest{Id: "nope"}); status.Code(err) != codes.NotFound {

@@ -240,7 +240,6 @@ type Verdict struct {
 }
 
 // Lookup picks the rule for a repeat of one (session, call_hash) from its records and newest audit row; HoldAfterUnknown skips the session row.
-// A direct call still started counts as unknown, since its upstream may have received it.
 func Lookup(records []port.Approval, latest *port.Call) Verdict {
 	for _, a := range records {
 		if a.State.Open() {
@@ -264,7 +263,7 @@ func Lookup(records []port.Approval, latest *port.Call) Verdict {
 		}
 	}
 	if latest != nil && latest.Approval == "" && latest.StartedAt.After(at) {
-		unknown = latest.State == port.CallOutcomeUnknown || latest.State == port.CallStarted
+		unknown = latest.State == port.CallOutcomeUnknown
 	}
 	if unknown {
 		return Verdict{Rule: HoldAfterUnknown}

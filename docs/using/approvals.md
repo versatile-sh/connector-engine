@@ -17,8 +17,6 @@ The **Approvals** page keeps the calls that wait for you in its main column, eac
 
 An approved call runs once. A repeated identical call in the same session attaches to the open approval instead of opening a new one.
 
-A call that reached the server is never sent again. If the engine cannot record its result, the app gets `outcome_unknown`. While that call is unresolved, an identical repeat allowed only by "Allow for this session" waits for a person again.
-
 ## The answers
 
 | Answer | Effect |

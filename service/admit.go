@@ -37,6 +37,8 @@ type forwardPlan struct {
 	Conn       port.Connector
 }
 
+const mayHaveRun = "the call may have run; it was not retried"
+
 type admission struct {
 	Out     Outcome
 	Deliver *port.Approval
@@ -258,14 +260,14 @@ func (s *Service) forwardDirect(ctx context.Context, in admitInput, plan forward
 	inv := s.invoke(ctx, invocation{Conn: plan.Conn, Manifest: in.T.Manifest, Function: in.T.Fn.Name, Credential: plan.Credential, Args: in.Args, Fields: in.Fields, Deadline: plan.Call.Deadline})
 	out, err := s.settle(context.WithoutCancel(ctx), plan.Call, inv, nil)
 	if err != nil {
-		return toolError(CodeOutcomeUnknown, "the call may have run; it was not retried"), nil
+		return toolError(CodeOutcomeUnknown, mayHaveRun), nil
 	}
 	return out, nil
 }
 
 func (s *Service) settle(ctx context.Context, call port.Call, inv invoked, a *port.Approval) (Outcome, error) {
 	if inv.Unknown {
-		return toolError(CodeOutcomeUnknown, "the call may have run; it was not retried"), nil
+		return toolError(CodeOutcomeUnknown, mayHaveRun), nil
 	}
 	var sealed *port.Sealed
 	if a != nil {
@@ -326,7 +328,7 @@ func (s *Service) settle(ctx context.Context, call port.Call, inv invoked, a *po
 	case err != nil:
 		return Outcome{}, err
 	case late:
-		return toolError(CodeOutcomeUnknown, "the call may have run; it was not retried"), nil
+		return toolError(CodeOutcomeUnknown, mayHaveRun), nil
 	case inv.Err != nil:
 		return toolError(CodeCallFailed, "%v", inv.Err), nil
 	}
@@ -356,7 +358,7 @@ func (s *Service) answer(ctx context.Context, a port.Approval) (Outcome, error) 
 		}
 		return Outcome{Status: OutcomeResult, Result: &res, Approval: &a}, nil
 	case port.ApprovalOutcomeUnknown:
-		return Outcome{Status: OutcomeError, Code: CodeOutcomeUnknown, Detail: "the call may have run; it was not retried", Approval: &a}, nil
+		return Outcome{Status: OutcomeError, Code: CodeOutcomeUnknown, Detail: mayHaveRun, Approval: &a}, nil
 	case port.ApprovalDenied:
 		return Outcome{Status: OutcomeError, Code: CodeApprovalDenied, Detail: a.DecisionNote, Approval: &a}, nil
 	case port.ApprovalExpired:

@@ -10,6 +10,7 @@ const SUMMARY: ActivitySummary = {
   total: 5,
   day: { total: 3, failed: 1 },
   previous_day: { total: 2, failed: 0 },
+  day_hours: Array.from({ length: 25 }, (_, at) => hour(at)),
   hours: Array.from({ length: 40 }, (_, at) => hour(at)),
   connectors: [],
   keys: [],
@@ -53,18 +54,16 @@ describe("isQuiet", () => {
 
 describe("hoursOf", () => {
   describe("for the last 24 hours", () => {
-    test("keeps the newest 24 hours in order", () => {
+    test("takes the hours the console counted the day's total over", () => {
       const hours = hoursOf(SUMMARY, "24h");
-      assert.equal(hours.length, 24);
-      assert.equal(hours[0]?.ok, 16);
-      assert.equal(hours[23]?.ok, 39);
+      assert.equal(hours.length, 25);
+      assert.equal(hours[0]?.ok, 0);
+      assert.equal(hours[24]?.ok, 24);
     });
-
-    test("keeps all of a shorter list", () => assert.equal(hoursOf({ ...SUMMARY, hours: SUMMARY.hours.slice(0, 5) }, "24h").length, 5));
   });
 
   describe("for seven days", () => {
-    test("keeps every hour", () => assert.equal(hoursOf(SUMMARY, "7d").length, 40));
+    test("keeps every hour of the week", () => assert.equal(hoursOf(SUMMARY, "7d").length, 40));
   });
 });
 

@@ -114,6 +114,8 @@ export const ACTIVITY = {
   agents: ["laptop"],
 } as const satisfies ActivityData;
 
+const dayHours = (): ActivitySummary["hours"] => Array.from({ length: 25 }, (_, at) => ({ start: new Date(Date.parse("2026-11-19T11:00:00Z") + at * 3_600_000).toISOString(), ok: at === 20 ? 2 : 0, error: at === 22 ? 1 : 0, denied: 0, pending: 0, running: 0 }));
+
 const hours = (count: number): ActivitySummary["hours"] => Array.from({ length: count }, (_, at) => ({ start: new Date(Date.parse("2026-11-13T12:00:00Z") + at * 3_600_000).toISOString(), ok: at % 5 === 0 ? 2 : 0, error: at === count - 3 ? 1 : 0, denied: 0, pending: 0, running: 0 }));
 
 /** A week with calls: three in the last day against two the day before, one of them failed, over two connectors and two access keys. */
@@ -122,6 +124,7 @@ export const SUMMARY = {
   total: 7,
   day: { total: 3, failed: 1 },
   previous_day: { total: 2, failed: 0 },
+  day_hours: dayHours(),
   hours: hours(169),
   connectors: [
     { connector: "c1", alias: "gmail", total: 5, failed: 1 },
@@ -135,7 +138,7 @@ export const SUMMARY = {
 } as const satisfies ActivitySummary;
 
 /** A week with no calls at all. */
-export const QUIET = { at: "2026-11-20T12:00:00Z", total: 0, day: { total: 0, failed: 0 }, previous_day: { total: 0, failed: 0 }, hours: hours(169).map((hour) => ({ ...hour, ok: 0, error: 0 })), connectors: [], keys: [], recent: [] } as const satisfies ActivitySummary;
+export const QUIET = { at: "2026-11-20T12:00:00Z", total: 0, day: { total: 0, failed: 0 }, previous_day: { total: 0, failed: 0 }, day_hours: dayHours().map((hour) => ({ ...hour, ok: 0, error: 0 })), hours: hours(169).map((hour) => ({ ...hour, ok: 0, error: 0 })), connectors: [], keys: [], recent: [] } as const satisfies ActivitySummary;
 
 const SETTINGS = { record_arguments: false, record_results: false, retention: "30d", retention_days: 30 } as const satisfies ActivitySettings;
 

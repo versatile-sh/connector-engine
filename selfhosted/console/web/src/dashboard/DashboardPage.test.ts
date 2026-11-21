@@ -53,6 +53,10 @@ describe("DashboardPage", () => {
       assert.match(html, /<a href="\/access"[^>]*>.*?>1<\/span>.*?access key<\/span><\/a>/);
     });
 
+    test("draws a chart of the same calls the stat card counts", () => {
+      assert.match(html, /3 calls; at the peak, 2 per hour\./);
+    });
+
     test("draws the calls chart with its range toggle on the 24 hours", () => {
       assert.match(html, /<figure aria-labelledby="chart-title"/);
       assert.match(html, /aria-label="Chart range"/);

@@ -21,10 +21,8 @@ export function deltaOf(current: number, previous: number): Delta {
 /** Whether the viewer's calls of the last seven days number none, so the dashboard shows its empty state and not a wall of zeros. */
 export const isQuiet = (summary: ActivitySummary): boolean => summary.total === 0;
 
-const HOURS_IN_A_DAY = 24;
-
-/** The hourly counts a chart range draws: the last 24 hours as they are, the seven days whole, which the chart then groups by local day. */
-export const hoursOf = (summary: ActivitySummary, range: ChartRange): HourCount[] => (range === "24h" ? summary.hours.slice(-HOURS_IN_A_DAY) : summary.hours);
+/** The hourly counts a chart range draws: the last 24 hours as the console counted them for the day's total, so the chart and the stat card agree, or the seven days whole, which the chart then groups by local day. */
+export const hoursOf = (summary: ActivitySummary, range: ChartRange): HourCount[] => (range === "24h" ? summary.day_hours : summary.hours);
 
 /** Whole percent of the busiest row that `total` is, for the hairline under a ranked row; a row with calls always shows at least a sliver. */
 export const shareOf = (total: number, busiest: number): number => (total <= 0 || busiest <= 0 ? 0 : Math.max(4, Math.round((total / busiest) * 100)));

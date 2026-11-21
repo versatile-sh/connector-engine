@@ -260,6 +260,7 @@ func (s *Service) forwardDirect(ctx context.Context, in admitInput, plan forward
 	inv := s.invoke(ctx, invocation{Conn: plan.Conn, Manifest: in.T.Manifest, Function: in.T.Fn.Name, Credential: plan.Credential, Args: in.Args, Fields: in.Fields, Deadline: plan.Call.Deadline})
 	out, err := s.settle(context.WithoutCancel(ctx), plan.Call, inv, nil)
 	if err != nil {
+		s.d.Log.WarnContext(ctx, "recording a forwarded call failed", "call", string(plan.Call.ID), "error", err)
 		return toolError(CodeOutcomeUnknown, mayHaveRun), nil
 	}
 	return out, nil

@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"log/slog"
 	"slices"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 )
 
 // Deps are the ports a Service runs on; Store, Clock, Authorizer, Secrets and Runtime are required.
+// Log receives the operational failures a caller is not told about; nil discards them.
 type Deps struct {
 	Store      port.Store
 	Clock      port.Clock
@@ -31,6 +33,7 @@ type Deps struct {
 	Scanner    port.DefinitionScanner
 	Suggester  port.DescriptionSuggester
 	NewID      func() string
+	Log        *slog.Logger
 }
 
 // Service runs the use cases over its ports.
@@ -51,6 +54,9 @@ func New(d Deps, cfg Config) (*Service, error) {
 	}
 	if d.NewID == nil {
 		d.NewID = randomID
+	}
+	if d.Log == nil {
+		d.Log = slog.New(slog.DiscardHandler)
 	}
 	return &Service{d: d, cfg: cfg, handles: map[string]*started{}, connect: map[string]pendingConnect{}}, nil
 }

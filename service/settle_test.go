@@ -1,7 +1,10 @@
 package service_test
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -15,6 +18,7 @@ type failingSettle struct {
 	port.Store
 	code port.Code
 	left atomic.Int32
+	log  bytes.Buffer
 }
 
 func (f *failingSettle) Write(ctx context.Context, scope port.Scope, fn func(port.Tx) error) error {
@@ -47,6 +51,7 @@ func settleWorld(t *testing.T, code port.Code) (*world, *failingSettle) {
 	w := newWorld(t, opts{reviewed: true, tune: []func(*service.Config, *service.Deps){func(_ *service.Config, d *service.Deps) {
 		f.Store = d.Store
 		d.Store = f
+		d.Log = slog.New(slog.NewTextHandler(&f.log, nil))
 	}}})
 	return w, f
 }
@@ -75,6 +80,20 @@ func TestASettleCommitFailureAnswersOutcomeUnknown(t *testing.T) {
 	w.Clock.Advance(71 * time.Second)
 	w.sweep()
 	want(t, w.Types(before), []string{"connector.call.started", "connector.call.outcome_unknown"}, "the sweep records the unknown outcome")
+}
+
+func TestAFailureToRecordAForwardedCallIsLogged(t *testing.T) {
+	w, f := settleWorld(t, port.CodeUnavailable)
+	w.acceptAll()
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	f.left.Store(1)
+	before := len(w.Events())
+	w.call(x, "s__search", `{"q":"kept-private"}`)
+	line := f.log.String()
+	call := w.Events()[before].Subject
+	want(t, strings.Contains(line, "call="+call) && strings.Contains(line, "the commit failed"), true, "the log names the call and the failure: "+line)
+	want(t, strings.Contains(line, "kept-private"), false, "the log carries no argument")
 }
 
 func TestAnApprovedCallWhoseResultCouldNotBeRecordedRunsOnce(t *testing.T) {

@@ -2174,6 +2174,10 @@ components:
       properties:
         category:
           type: string
+        compat:
+          items:
+            $ref: '#/components/schemas/SkillCompat'
+          type: array
         files:
           items:
             $ref: '#/components/schemas/SkillFile'
@@ -2184,6 +2188,8 @@ components:
           $ref: '#/components/schemas/SkillLicence'
         name:
           type: string
+        needs:
+          $ref: '#/components/schemas/SkillNeeds'
         redistribution:
           type: string
         requires:
@@ -2198,6 +2204,24 @@ components:
         - licence
         - redistribution
         - files
+      type: object
+    SkillCompat:
+      properties:
+        client:
+          type: string
+        reasons:
+          items:
+            type: string
+          type: array
+        source:
+          type: string
+        status:
+          type: string
+      required:
+        - client
+        - status
+        - reasons
+        - source
       type: object
     SkillFile:
       properties:
@@ -2227,6 +2251,28 @@ components:
           type: string
       required:
         - redistributable
+      type: object
+    SkillNeeds:
+      properties:
+        mcp:
+          items:
+            type: string
+          type: array
+        network:
+          type: boolean
+        runtimes:
+          items:
+            type: string
+          type: array
+        tools:
+          items:
+            type: string
+          type: array
+      required:
+        - tools
+        - runtimes
+        - network
+        - mcp
       type: object
     SkillSource:
       properties:

@@ -11,8 +11,6 @@ import (
 	"github.com/versatile-sh/connector-engine/service"
 	st "github.com/versatile-sh/connector-engine/service/servicetest"
 	"github.com/versatile-sh/connector-engine/store/memory"
-	"github.com/versatile-sh/connector-engine/store/postgres"
-	"github.com/versatile-sh/connector-engine/store/storetest"
 )
 
 const benchAgents, benchConnectors = 20, 20
@@ -89,26 +87,7 @@ func seed(b *testing.B, store port.Store) bench {
 
 func benchmarkStores(b *testing.B, run func(*testing.B, bench)) {
 	b.Run("memory", func(b *testing.B) { run(b, seed(b, memory.New())) })
-	b.Run("postgres", func(b *testing.B) {
-		pg, err := storetest.StartPostgres()
-		if err != nil {
-			b.Skip(err)
-		}
-		b.Cleanup(pg.Stop)
-		dsn, err := pg.NewDatabase()
-		if err != nil {
-			b.Fatal(err)
-		}
-		s, err := postgres.New(context.Background(), dsn)
-		if err != nil {
-			b.Fatal(err)
-		}
-		b.Cleanup(s.Close)
-		if err := s.Migrate(context.Background()); err != nil {
-			b.Fatal(err)
-		}
-		run(b, seed(b, s))
-	})
+	b.Run("postgres", func(b *testing.B) { run(b, seed(b, postgresStore(b))) })
 }
 
 func BenchmarkPutBindingWithManyAgentsAndConnectors(b *testing.B) {

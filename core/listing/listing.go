@@ -55,8 +55,8 @@ func Lint(m port.Manifest, requireDigest bool) []port.Finding {
 		}
 		if m.REST != nil {
 			for _, f := range m.REST.Functions {
-				if f.Name == "" || f.Method == "" || f.Path == "" {
-					bad("rest function %q carries name, method and path", f.Name)
+				if f.Name == "" || f.Method == "" || !strings.HasPrefix(f.Path, "/") {
+					bad("rest function %q carries name, method and a path that starts with /", f.Name)
 				}
 			}
 		}

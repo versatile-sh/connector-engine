@@ -1065,7 +1065,16 @@ message Skill {
   string redistribution = 5;
   bool has_scripts = 6;
   repeated string requires = 7;
-  repeated SkillFile files = 8;
+  SkillNeeds needs = 8;
+  repeated SkillCompat compat = 9;
+  repeated SkillFile files = 10;
+}
+
+message SkillCompat {
+  string client = 1;
+  string status = 2;
+  repeated string reasons = 3;
+  string source = 4;
 }
 
 message SkillFile {
@@ -1080,6 +1089,13 @@ message SkillLicence {
   string spdx = 1;
   string from = 2;
   bool redistributable = 3;
+}
+
+message SkillNeeds {
+  repeated string tools = 1;
+  repeated string runtimes = 2;
+  bool network = 3;
+  repeated string mcp = 4;
 }
 
 message SkillSource {

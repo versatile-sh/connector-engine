@@ -174,3 +174,21 @@ func TestMigrateRefusesAnUnknownNewerMigration(t *testing.T) {
 		t.Fatalf("Migrate = %v; want refusal naming the unknown migration", err)
 	}
 }
+
+func TestUpgradeStoresGrantRowsInCanonicalForm(t *testing.T) {
+	s, dsn := newStore(t)
+	ctx := context.Background()
+	storetest.LegacyGrants(t, s)
+	conn, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(ctx)
+	if _, err := conn.Exec(ctx, `DELETE FROM schema_migrations WHERE version = 'migrations/0003_canonical_grants.sql'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	storetest.CheckCanonicalGrants(t, s)
+}

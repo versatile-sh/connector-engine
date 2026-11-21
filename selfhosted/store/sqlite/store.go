@@ -122,6 +122,11 @@ func (s *Store) migrate(ctx context.Context) error {
 		if _, err := q.ExecContext(ctx, string(ddl)); err != nil {
 			return fail(err)
 		}
+		if files[i] == canonicalGrantsMigration {
+			if err := canonicalGrants(ctx, q); err != nil {
+				return err
+			}
+		}
 	}
 	if _, err := q.ExecContext(ctx, fmt.Sprintf(`PRAGMA user_version = %d`, len(files))); err != nil {
 		return fail(err)

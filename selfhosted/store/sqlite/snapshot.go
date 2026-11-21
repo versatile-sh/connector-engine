@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/core/grant"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -214,8 +215,23 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 				return err
 			}
 		}
-		return nil
+		return canonicalGrants(ctx, t.q)
 	})
+}
+
+const canonicalGrantsMigration = "migrations/0003_canonical_grants.sql"
+
+func canonicalGrants(ctx context.Context, q *sql.Tx) error {
+	tenants, err := many[string](&tx{ctx: ctx, q: q, scope: port.Scope{Installation: true}}, `SELECT DISTINCT tenant_id FROM records WHERE kind = 'grant' ORDER BY tenant_id`)
+	if err != nil {
+		return err
+	}
+	for _, tenant := range tenants {
+		if err := grant.Rewrite(&tx{ctx: ctx, q: q, scope: port.Scope{Tenant: port.TenantID(tenant)}}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 var _ port.Snapshotter = (*Store)(nil)

@@ -246,3 +246,19 @@ func TestOpenKeepsAndRefusesANewerSchema(t *testing.T) {
 		t.Fatalf("user_version = %d, %v; want 5 untouched", v, err)
 	}
 }
+
+func TestUpgradeStoresGrantRowsInCanonicalForm(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "store.db")
+	s := open(t, path)
+	storetest.LegacyGrants(t, s)
+	s.Close()
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`PRAGMA user_version = 2`); err != nil {
+		t.Fatal(err)
+	}
+	raw.Close()
+	storetest.CheckCanonicalGrants(t, open(t, path))
+}

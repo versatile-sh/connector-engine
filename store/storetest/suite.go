@@ -62,6 +62,7 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"purge tenant":              purgeTenant,
 		"prune history":             pruneHistory,
 		"snapshot and restore":      snapshotRestore,
+		"restore normalizes agent":  restoreNormalizesAgent,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -975,4 +976,58 @@ func snapshotRestore(e *env) {
 	}
 	e.must(src.Restore(ctx, snap))
 	e.same(want, viewOf(e, e.s, e.o))
+}
+
+// LegacyGrants writes, in tenant ta, rows an older release could store: a user row naming an agent and two agent rows whose keys differ only by agent.
+func LegacyGrants(t *testing.T, s port.Store) {
+	t.Helper()
+	err := s.Write(ctx, inst, func(tx port.Tx) error {
+		return tx.PutTenant(port.Tenant{ID: "ta", State: port.TenantActive, CreatedAt: t0})
+	})
+	if err == nil {
+		err = s.Write(ctx, scopeA, func(tx port.Tx) error {
+			user := agentGrant("ta", "u1", "*", 0)
+			user.ScopeKind, user.ScopeID, user.Agent, user.Mode = port.ScopeUser, "alice", "x", port.ModeDeny
+			named := agentGrant("ta", "a1", "class:read", 0)
+			named.Agent, named.ExpiresAt = "x", t0.Add(time.Hour)
+			bare := agentGrant("ta", "a2", "class:read", 0)
+			bare.Mode = port.ModeDeny
+			return errors.Join(tx.PutGrant(user), tx.PutGrant(named), tx.PutGrant(bare))
+		})
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// CheckCanonicalGrants fails unless tenant ta holds the canonical form of LegacyGrants: u1 without its agent, and a2 alone for the two agent rows.
+func CheckCanonicalGrants(t *testing.T, s port.Store) {
+	t.Helper()
+	var got []port.Grant
+	if err := s.Read(ctx, scopeA, func(tx port.Tx) (err error) {
+		got, err = tx.ListGrants(port.GrantFilter{})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	slices.SortFunc(got, func(a, b port.Grant) int { return strings.Compare(string(a.ID), string(b.ID)) })
+	if len(got) != 2 || got[0].ID != "a2" || got[0].Mode != port.ModeDeny || got[1].ID != "u1" || got[1].Agent != "" || got[1].Mode != port.ModeDeny {
+		t.Fatalf("grants %+v", got)
+	}
+	if err := s.Write(ctx, scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "a3", "class:read", 0)) }); !port.IsCode(err, port.CodeConflict) {
+		t.Fatalf("a row with the canonical key of a2: %v", err)
+	}
+}
+
+func restoreNormalizesAgent(e *env) {
+	src, ok := e.s.(port.Snapshotter)
+	if !ok {
+		e.t.Skip("the store takes no snapshot")
+	}
+	LegacyGrants(e.t, e.s)
+	snap, err := src.Snapshot(ctx)
+	e.must(err)
+	s, _ := e.fresh()
+	e.must(s.(port.Snapshotter).Restore(ctx, snap))
+	CheckCanonicalGrants(e.t, s)
 }

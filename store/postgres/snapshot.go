@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/versatile-sh/connector-engine/core/grant"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -131,8 +132,38 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 				}
 			}
 		}
-		return nil
+		return t.canonicalGrants()
 	})
+}
+
+const canonicalGrantsMigration = "migrations/0003_canonical_grants.sql"
+
+func migrateGrants(ctx context.Context, q pgx.Tx) error {
+	t := &tx{ctx: ctx, q: q, scope: port.Scope{Installation: true}}
+	if _, err := t.exec(`SELECT set_config('cn.installation', 'on', true)`); err != nil {
+		return err
+	}
+	if err := t.canonicalGrants(); err != nil {
+		return err
+	}
+	_, err := t.exec(`SELECT set_config('cn.installation', 'off', true)`)
+	return err
+}
+
+func (t *tx) canonicalGrants() error {
+	tenants, err := many[string](t, `SELECT k FROM records WHERE kind = 'tenant' ORDER BY k`)
+	if err != nil {
+		return err
+	}
+	for _, tenant := range tenants {
+		if err := t.as(tenant); err != nil {
+			return err
+		}
+		if err := grant.Rewrite(t); err != nil {
+			return err
+		}
+	}
+	return t.as("")
 }
 
 var _ port.Snapshotter = (*Store)(nil)

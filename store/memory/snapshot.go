@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/core/grant"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -170,6 +171,15 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 	}
 	if work.inboxData == nil {
 		work.inboxData = map[string][]byte{}
+	}
+	tenants := map[port.TenantID]bool{}
+	for _, r := range work.grants.rows {
+		tenants[r.tenant] = true
+	}
+	for tenant := range tenants {
+		if err := grant.Rewrite(&tx{d: &work, scope: port.Scope{Tenant: tenant}, write: true}); err != nil {
+			return err
+		}
 	}
 	s.d = work
 	return nil

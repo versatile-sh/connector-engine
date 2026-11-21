@@ -25,6 +25,7 @@ Once a second person exists, the shell shows your role beside Account, and Acces
 - A wrong password and an unknown username get the same answer, "wrong username or password", after the same work.
 - The console keeps its users in the state file, keyed by the engine person id. The first user is an Owner with the configured `--person` (default `owner`). Removing or demoting the last Owner is refused. Each user acts on the engine as their own person ([engine identity](../self-hosted/person.md#engine-identity)).
 - A state file from an earlier console, with its one `owner` account, becomes that Owner on the first start, and its sessions stay signed in. This is a one-way door: once this console writes the file it has no `owner`, and an earlier console on the same volume would see a first run.
+- The state file carries a `format` number. An older file (no number) is upgraded step by step on start and written in the current format on its first change. A file with a newer `format` than this console reads is refused with a message that names both numbers and is left untouched, so a rollback never drops fields it does not know; restore a backup or run a newer console.
 
 Forgot the password? On the machine that runs the console:
 

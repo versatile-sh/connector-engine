@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import type { Skill } from "../api";
 import { Icon } from "../ui/Icon";
-import { LIT_EDGE } from "../ui/styles";
+import { LIT_CARD, SKELETON_LINE, SURFACE } from "../ui/styles";
 import { SkillDialog } from "./SkillDialog";
 import { SkillOverview } from "./SkillOverview";
 import { rowMotion, type RowPhase } from "../ui/kept";
@@ -21,7 +21,7 @@ export function SkillCard({ skill, href, open, phase, onOpen, onClose }: SkillCa
           event.preventDefault();
           onOpen();
         }}
-        className={`group ${LIT_EDGE} flex h-full flex-col p-5`}
+        className={`group ${LIT_CARD} flex h-full flex-col p-5`}
       >
         <div className="flex items-start gap-3">
           <h2 className="min-w-0 flex-1 truncate leading-snug font-medium">{skill.title}</h2>
@@ -30,6 +30,19 @@ export function SkillCard({ skill, href, open, phase, onOpen, onClose }: SkillCa
         <SkillOverview skill={skill} compact />
       </a>
       {open ? <SkillDialog skill={skill} origin={card} onClose={onClose} /> : null}
+    </li>
+  );
+}
+
+/** The shape of a skill card while the list loads. */
+export function SkillCardSkeleton() {
+  return (
+    <li aria-hidden="true" className={`${SURFACE} p-5`}>
+      <div className={`${SKELETON_LINE} h-5 w-40`} />
+      <div className={`${SKELETON_LINE} mt-3 h-3 w-28`} />
+      <div className={`${SKELETON_LINE} mt-3 h-3 w-full`} />
+      <div className={`${SKELETON_LINE} mt-2 h-3 w-2/3`} />
+      <div className={`${SKELETON_LINE} mt-5 h-1.5 w-full`} />
     </li>
   );
 }

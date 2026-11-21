@@ -12,7 +12,7 @@ export function UnclaimedSlots() {
   const slots = useKept(useQuery(slotsQuery).data ?? [], (slot) => slot.name);
   if (slots.length === 0) return null;
   return (
-    <section aria-labelledby="slots-title" className={`${SURFACE} arrive mt-6 p-5`}>
+    <section aria-labelledby="slots-title" className={`${SURFACE} arrive p-5`}>
       <div className="flex items-baseline gap-3">
         <h2 id="slots-title" className={SUBTITLE}>
           {t("slots.title")}

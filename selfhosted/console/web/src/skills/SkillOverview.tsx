@@ -19,13 +19,15 @@ export function SkillOverview({ skill, compact = false }: SkillOverviewProps) {
         {skill.publisher ? ` · ${t("import.by", { publisher: skill.publisher })}` : ""}
       </p>
       <p className={`mt-3 text-sm text-pretty text-muted ${compact ? "line-clamp-2 min-h-10" : "max-w-2xl"}`}>{skill.description}</p>
-      <AccessBar counts={counts} className="mt-4" />
-      <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-0.5">
-        {skill.category ? <Tag>{skill.category}</Tag> : null}
-        <Tag>{t("skills.keysOn", { count: counts.on + counts.ask, total: skill.access.length })}</Tag>
-        {counts.on > 0 ? <Tag tone="paper">{t("access.count.on", { count: counts.on })}</Tag> : null}
-        {counts.ask > 0 ? <Tag tone="lime">{t("access.count.ask", { count: counts.ask })}</Tag> : null}
-        {skill.state === "quarantined" ? <Tag tone="amber" dot>{t("connectors.changed", { count: 1 })}</Tag> : null}
+      <div className={compact ? "mt-auto pt-4" : "mt-4"}>
+        <AccessBar counts={counts} />
+        <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-0.5">
+          {skill.category ? <Tag>{skill.category}</Tag> : null}
+          <Tag>{t("skills.keysOn", { count: counts.on + counts.ask, total: skill.access.length })}</Tag>
+          {counts.on > 0 ? <Tag tone="paper">{t("access.count.on", { count: counts.on })}</Tag> : null}
+          {counts.ask > 0 ? <Tag tone="lime">{t("access.count.ask", { count: counts.ask })}</Tag> : null}
+          {skill.state === "quarantined" ? <Tag tone="amber" dot>{t("connectors.changed", { count: 1 })}</Tag> : null}
+        </div>
       </div>
     </>
   );

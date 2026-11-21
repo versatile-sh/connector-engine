@@ -12,11 +12,14 @@ import { EmptyState } from "../ui/EmptyState";
 import { rowMotion, type RowPhase } from "../ui/kept";
 import { LongList } from "../ui/LongList";
 import { Notice } from "../ui/Notice";
-import { PageTitle } from "../ui/PageTitle";
-import { CAPTION, PANEL, SKELETON, SURFACE, button } from "../ui/styles";
+import { PageHeader } from "../ui/PageHeader";
+import { CAPTION, PAGE, SKELETON, SURFACE, button } from "../ui/styles";
+import { Toolbar } from "../ui/Toolbar";
 import { ScopeSwitch } from "../people/ScopeSwitch";
 import { Tag } from "../ui/Tag";
 import { heldViewOf, type HeldView } from "./held";
+
+const HELD_GRID = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,34rem),1fr))] gap-6";
 
 const fromNow = (iso: string, locale: Locale) => {
   const seconds = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
@@ -69,7 +72,7 @@ function Held({ approval, view, owner, connector, skill, deciding, cancelling, p
   );
 }
 
-/** Calls of functions set to ask, held until someone approves or denies each one; the list refreshes on its own. Once a second user exists, a viewer who may see everyone's calls picks Mine or Everyone, and a call waiting on someone else offers what the server allows: its answers on a shared connector, and Cancel. */
+/** Calls of functions set to ask, held until someone approves or denies each one, in a grid of cards on the content surface; the list refreshes on its own. Once a second user exists, a viewer who may see everyone's calls picks Mine or Everyone, and a call waiting on someone else offers what the server allows: its answers on a shared connector, and Cancel. */
 export function ApprovalsPage() {
   const t = useT();
   const viewer = useViewer();
@@ -85,35 +88,33 @@ export function ApprovalsPage() {
   const modeOf = (id: string) => connectors.data?.find((c) => c.id === id)?.credential_mode;
   const titleOf = (id: string) => connectors.data?.find((c) => c.id === id)?.title ?? id;
   const skillOf = (id: string) => skills.data?.find((s) => s.id === id)?.title;
+  const scopeSwitch = offered ? <ScopeSwitch scope={scope} onChange={(next) => navigate(scopedHref(path, query, next), { replace: true, keepScroll: true })} /> : null;
+  const drawn = approvals.isPending || (list.length === 0 && !approvals.isError);
   return (
-    <section aria-labelledby="page-title">
-      <header className="mb-10">
-        <PageTitle title={t("approvals.title")} count={approvals.isSuccess ? list.length : undefined} scope={scope === "everyone" ? t("scope.count") : undefined}>
-          {t("approvals.intro")}
-        </PageTitle>
-        {offered ? <ScopeSwitch scope={scope} onChange={(next) => navigate(scopedHref(path, query, next), { replace: true, keepScroll: true })} className="mt-6" /> : null}
-      </header>
-      {approvals.isError ? <Notice className="mb-4">{errorText(approvals.error)}</Notice> : null}
-      {decide.isError ? <Notice className="mb-4">{errorText(decide.error)}</Notice> : null}
-      {cancel.isError ? <Notice className="mb-4">{errorText(cancel.error)}</Notice> : null}
+    <section aria-labelledby="page-title" className={PAGE}>
+      <PageHeader title={t("approvals.title")} count={approvals.isSuccess ? list.length : undefined} scope={scope === "everyone" ? t("scope.count") : undefined}>
+        {t("approvals.intro")}
+      </PageHeader>
+      {scopeSwitch && (drawn || approvals.isError) ? <Toolbar>{scopeSwitch}</Toolbar> : null}
+      {approvals.isError ? <Notice>{errorText(approvals.error)}</Notice> : null}
+      {decide.isError ? <Notice>{errorText(decide.error)}</Notice> : null}
+      {cancel.isError ? <Notice>{errorText(cancel.error)}</Notice> : null}
       {approvals.isPending ? (
-        <ul aria-hidden="true" className="flex flex-col gap-3">
+        <ul aria-hidden="true" className={HELD_GRID}>
           {[0, 1].map((row) => (
             <li key={row} className={`${SKELETON} h-32`} />
           ))}
         </ul>
       ) : list.length === 0 && !approvals.isError ? (
-        <div className={`${PANEL} p-4 sm:p-8`}>
-          <EmptyState title={t("approvals.empty.title")} body={t("approvals.empty.body")}>
-            <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => navigate("/")}>
-              {t("approvals.empty.action")}
-            </button>
-          </EmptyState>
-        </div>
+        <EmptyState title={t("approvals.empty.title")} body={t("approvals.empty.body")}>
+          <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => navigate("/")}>
+            {t("approvals.empty.action")}
+          </button>
+        </EmptyState>
       ) : (
-        <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} keyOf={(approval) => approval.id} label={t("approvals.filter")} whole>
+        <LongList rows={list} textOf={(approval) => `${skillOf(approval.connector) ?? approval.function} ${titleOf(approval.connector)} ${approval.agent}`} keyOf={(approval) => approval.id} label={t("approvals.filter")} whole bar toolbar={scopeSwitch}>
           {(shown) => (
-            <ul aria-live="polite" className="flex flex-col gap-3">
+            <ul aria-live="polite" className={HELD_GRID}>
               {shown.map(({ row: approval, phase }) => (
                 <Held
                   key={approval.id}

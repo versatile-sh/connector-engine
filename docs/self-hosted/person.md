@@ -152,7 +152,7 @@ There is no sign-up screen. After the first run, an Owner adds a person from Acc
 - A forgotten password: an Owner makes a reset link for anyone else, an Admin only for a Member, never for oneself. The person opens it, sets a new password and is signed in; their other sessions end, and their keys, sign-ins and activity stay. A new link for the same person replaces the old one. `make reset-password` stays the way back in for an Owner nobody above can reset.
 - An Owner changes a role or removes a person. Removing signs the person out, stops their keys at once, deletes their provider sign-ins, channels and computers, and keeps their past activity. The last Owner can be neither demoted nor removed, and nobody removes themselves.
 - The People tab also lists the console's audit of these changes. The console keeps the newest 500 entries.
-- Wrong passwords are counted per username (5 a minute) with a ceiling of 30 a minute for the console; a wrong or used link counts 10 a minute for the whole console. A lock always expires.
+- Wrong passwords are counted per client address and username (5 a minute) with a ceiling of 30 a minute for each client address, so one client never locks another out; a wrong or used link counts 10 a minute for the whole console. A lock always expires.
 
 | Route | Needs | Does |
 |---|---|---|

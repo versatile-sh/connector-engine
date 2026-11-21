@@ -383,11 +383,9 @@ func (c *Console) userConfirms(w http.ResponseWriter, r *http.Request, password 
 		writeJSON(w, http.StatusBadRequest, apiError{Error: "type your password to allow the app", Code: "password_required"})
 		return false
 	}
-	c.loginMu.Lock()
-	defer c.loginMu.Unlock()
-	now := time.Now()
 	u, _ := signedInUser(r.Context())
-	if c.passwordFails.locked(now, u.Username) {
+	ip := clientIP(r)
+	if c.passwordFails.locked(time.Now(), ip, u.Username) {
 		w.Header().Set("Retry-After", "60")
 		writeJSON(w, http.StatusTooManyRequests, apiError{Error: "too many wrong passwords, try again in a minute", Code: "slow_down"})
 		return false
@@ -398,8 +396,8 @@ func (c *Console) userConfirms(w http.ResponseWriter, r *http.Request, password 
 		return false
 	}
 	if !ok {
-		c.passwordFails.fail(now, u.Username)
-		time.Sleep(500 * time.Millisecond)
+		c.passwordFails.fail(time.Now(), ip, u.Username)
+		time.Sleep(wrongPasswordDelay)
 		writeJSON(w, http.StatusForbidden, apiError{Error: "wrong password", Code: "wrong_password"})
 		return false
 	}

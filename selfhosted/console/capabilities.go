@@ -83,6 +83,12 @@ var errForbidden = &statusError{status: http.StatusForbidden, code: "forbidden",
 
 var routeCapabilities = map[string]Capability{
 	"POST /api/logout":                           CapAccountOwn,
+	"GET /api/people":                            CapPeopleRead,
+	"POST /api/invites":                          CapPeopleManage,
+	"DELETE /api/invites/{id}":                   CapPeopleReset,
+	"POST /api/people/{person}/reset":            CapPeopleReset,
+	"PUT /api/people/{person}/role":              CapPeopleManage,
+	"DELETE /api/people/{person}":                CapPeopleManage,
 	"GET /api/account":                           CapAccountOwn,
 	"PUT /api/account/password":                  CapAccountOwn,
 	"PUT /api/account/username":                  CapAccountOwn,

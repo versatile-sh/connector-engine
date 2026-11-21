@@ -60,6 +60,41 @@ type FunctionAccepted struct {
 	By          string `json:"by"`
 }
 
+// FunctionClassChanged is event 41: an admin set the class of a function.
+type FunctionClassChanged struct {
+	Connector string `json:"connector"`
+	Function  string `json:"function"`
+	Hash      string `json:"hash"`
+	OldClass  string `json:"old_class"`
+	NewClass  string `json:"new_class"`
+	By        string `json:"by"`
+}
+
+// FunctionStateChanged is event 42: an admin disabled a function or returned it to its earlier state.
+type FunctionStateChanged struct {
+	Connector string `json:"connector"`
+	Function  string `json:"function"`
+	OldState  string `json:"old_state"`
+	NewState  string `json:"new_state"`
+	By        string `json:"by"`
+}
+
+// FunctionProjectionChanged is event 43: an admin turned response projection on or off for a function.
+type FunctionProjectionChanged struct {
+	Connector  string `json:"connector"`
+	Function   string `json:"function"`
+	Projection bool   `json:"projection"`
+	By         string `json:"by"`
+}
+
+// InstructionsAccepted is event 44: an admin pinned the pending instructions hash of a connector.
+type InstructionsAccepted struct {
+	Connector string `json:"connector"`
+	OldHash   string `json:"old_hash"`
+	NewHash   string `json:"new_hash"`
+	By        string `json:"by"`
+}
+
 // FunctionRemoved is event 8.
 type FunctionRemoved struct {
 	Connector string `json:"connector"`

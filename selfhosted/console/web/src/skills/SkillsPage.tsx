@@ -62,7 +62,7 @@ export function SkillsPage() {
           ))}
         </ul>
       ) : list.length === 0 ? (
-        <EmptyState title={t("skills.empty.title")} body={t("skills.empty.body")} />
+        <EmptyState icon="spark" title={t("skills.empty.title")} body={t("skills.empty.body")} />
       ) : (
         <LongList rows={list} textOf={(skill) => `${skill.title} ${skill.alias} ${skill.publisher ?? ""} ${skill.description ?? ""}`} keyOf={(skill) => skill.id} label={t("skills.filter")} whole bar>
           {(shown) => (

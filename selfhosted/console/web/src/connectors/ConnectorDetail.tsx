@@ -104,36 +104,32 @@ export function ConnectorDetail({ id }: { id: string }) {
   return (
     <div className={`swap-in ${PAGE}`}>
       <Back />
-      <header className="mb-2 flex flex-wrap items-start gap-x-6 gap-y-5">
+      <header className="mb-2 flex flex-col items-center text-center">
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
-        <div className="min-w-0 flex-1 basis-full sm:basis-56">
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-4">
-            <Display className="[overflow-wrap:anywhere]">{connector.title}</Display>
-            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-              <a
-                href={hrefOf({ range: "24h", connector: connector.id })}
-                className={button({ variant: "secondary", size: "sm" })}
-                onClick={(event) => {
-                  event.preventDefault();
-                  navigate(hrefOf({ range: "24h", connector: connector.id }));
-                }}
-              >
-                <Icon name="activity" className="size-4" />
-                {t("detail.activity")}
-              </a>
-              {manage ? (
-                <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
-                  <Icon name="trash" className="size-4" />
-                  {t("common.remove")}
-                </button>
-              ) : null}
-            </div>
-          </div>
-          <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted empty:hidden">
-            {connector.publisher ? <span>{t("import.by", { publisher: connector.publisher })}</span> : null}
-            {connector.blocked ? <Tag tone="amber" dot>{connector.blocked}</Tag> : null}
-          </p>
-          {connector.description ? <p className="mt-4 max-w-2xl text-pretty text-muted">{connector.description}</p> : null}
+        <Display className="mt-5 [overflow-wrap:anywhere]">{connector.title}</Display>
+        <p className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-muted empty:hidden">
+          {connector.publisher ? <span>{t("import.by", { publisher: connector.publisher })}</span> : null}
+          {connector.blocked ? <Tag tone="amber" dot>{connector.blocked}</Tag> : null}
+        </p>
+        {connector.description ? <p className="mx-auto mt-4 max-w-2xl text-pretty text-muted">{connector.description}</p> : null}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <a
+            href={hrefOf({ range: "24h", connector: connector.id })}
+            className={button({ variant: "secondary", size: "sm" })}
+            onClick={(event) => {
+              event.preventDefault();
+              navigate(hrefOf({ range: "24h", connector: connector.id }));
+            }}
+          >
+            <Icon name="activity" className="size-4" />
+            {t("detail.activity")}
+          </a>
+          {manage ? (
+            <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
+              <Icon name="trash" className="size-4" />
+              {t("common.remove")}
+            </button>
+          ) : null}
         </div>
       </header>
       <article className="flex flex-col">

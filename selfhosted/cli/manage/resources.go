@@ -200,7 +200,11 @@ func showConnector(w io.Writer, k console.ConnectorSummary) {
 }
 
 func showPreview(w io.Writer, p console.Preview) {
-	fmt.Fprintf(w, "%s (%s) from %s\n", p.Title, p.Kind, p.Host)
+	from := p.Host
+	if from == "" {
+		from = "a file"
+	}
+	fmt.Fprintf(w, "%s (%s) from %s\n", p.Title, p.Kind, from)
 	if p.Warning != "" {
 		fmt.Fprintln(w, "warning:", p.Warning)
 	}

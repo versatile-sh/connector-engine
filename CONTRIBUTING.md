@@ -8,9 +8,10 @@ Thanks for helping. This page covers setup, tests, code rules, commits, and the 
 
 | Tool | Version |
 |---|---|
+| [mise](https://mise.jdx.dev) | installs the pinned Go, Node.js, golangci-lint, vlint and revive from `mise.toml`; every command below is a `mise run` task |
 | Go | the version in `go.mod` |
 | Node.js | 26 (console web app only) |
-| Docker | with Compose 2.20 or newer, for `make up` and the Postgres tests |
+| Docker | with Compose 2.20 or newer, for `mise run up` and the Postgres tests |
 | golangci-lint | v2.15.0 |
 
 ```sh
@@ -28,14 +29,15 @@ go build ./...
 | `CN_EXHAUSTIVE=1 go test ./core/approval ./core/evaluate` | the full model sweeps, which sample by default | about 7 min |
 | `cd selfhosted/console/web && npm ci && npm run lint && npm run typecheck && npm test` | the console web app | under 1 min |
 | `golangci-lint run` | Go linters | about 1 min |
-| `make vlint` | the versatile-sh org Go lint; fails only on findings not in `lint/vlint.baseline` (regenerate with `-write` when you fix old ones) | about 1 min |
-| `make test` | Go tests, web typecheck, layering check, `adapters check` of both profiles | |
-| `make check` | `go vet`, `make vlint`, then the `person` stack end to end on its own compose project | |
+| `mise run lint-full` | gofmt, `go vet`, config drift, the versatile-sh org Go lint (fails only on findings not in `lint/vlint.baseline`; regenerate with `-write` when you fix old ones) and golangci-lint | about 2 min |
+| `mise run lint` | the pre-push tier: the same on the packages changed since `origin/main` | seconds |
+| `mise run test` | Go tests, web typecheck, layering check, `adapters check` of both profiles | |
+| `mise run check` | `mise run lint-full`, `mise run test`, Semgrep, then the `person` stack end to end on its own compose project (`mise run check:stack`, needs Docker) | |
 
 - Postgres tests start a throwaway container and skip without Docker. Set `CN_PG=0` or `CN_DOCKER=0` to skip them on purpose.
 - Integration tests remove only what they created, by exact name.
 - On a busy machine, limit parallelism: `GOMAXPROCS=4 go test -p 2 ./...`.
-- `make seed` serves a throwaway console at `http://127.0.0.1:7477` (`SEED_ADDR=host:port` moves it) with 12 access keys, 15 connectors and 10 skills, to see pages with many items. It takes about nine minutes, prints a one-time `owner` password, keeps everything in memory and a temporary folder, and never touches a running stack or the system keychain. It is `TestSeedPlayground`, skipped unless `CN_SEED_ADDR` is set.
+- `mise run seed` serves a throwaway console at `http://127.0.0.1:7477` (`SEED_ADDR=host:port` moves it) with 12 access keys, 15 connectors and 10 skills, to see pages with many items. It takes about nine minutes, prints a one-time `owner` password, keeps everything in memory and a temporary folder, and never touches a running stack or the system keychain. It is `TestSeedPlayground`, skipped unless `CN_SEED_ADDR` is set.
 
 ## Code rules
 
@@ -107,7 +109,7 @@ The user documentation lives in [`docs/`](docs/README.md), one page per task.
 - Show a command and the output it prints. Copy the output from a real run; never invent a flag.
 - Keep one fact in one page and link to it from the others.
 - A new page needs a banner: add a line to `SECTIONS` in `docs/assets/src/build-banners.mjs`, then run `npm ci && npm run build` in `docs/assets/src`. The banners and the README flow diagram (`diagram-flow.svg`) are outlined paths and load no font.
-- CI checks the docs (`.github/workflows/docs.yml`): relative links and anchors with lychee, then `scripts/check-docs.sh` for the `make` targets and scripts the docs name and the banner sizes.
+- CI checks the docs (`.github/workflows/docs.yml`): relative links and anchors with lychee, then `scripts/check-docs.sh` for the `mise run` tasks and scripts the docs name and the banner sizes.
 
 ## Repository layout
 

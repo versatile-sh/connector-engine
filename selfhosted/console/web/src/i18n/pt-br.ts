@@ -37,8 +37,8 @@ export const ptBR: Record<MessageKey, string> = {
   "nav.waiting": "{count} aguardando",
   "shell.signOut": "Sair",
   "shell.setup": "Configuração {done}/{total}",
-  "shell.keysPlaintext": "Seus segredos salvos são protegidos por uma chave de criptografia guardada em um arquivo de texto puro neste computador. Rode make keychain-migrate para levá-la ao chaveiro do sistema.",
-  "shell.keysLocked": "Seus segredos salvos estão trancados. Rode make unlock neste computador para abri-los com a chave do chaveiro do sistema.",
+  "shell.keysPlaintext": "Seus segredos salvos são protegidos por uma chave de criptografia guardada em um arquivo de texto puro neste computador. Rode mise run keychain-migrate para levá-la ao chaveiro do sistema.",
+  "shell.keysLocked": "Seus segredos salvos estão trancados. Rode mise run unlock neste computador para abri-los com a chave do chaveiro do sistema.",
 
   "nav.group.gateway": "Gateway",
   "nav.group.settings": "Configurações",
@@ -795,7 +795,7 @@ export const ptBR: Record<MessageKey, string> = {
   "backup.result.needsSignIn": "precisa de login",
   "backup.result.nothing": "Nada foi adicionado.",
   "restored.title": "Restaurado",
-  "restored.body": "Rode make unlock neste computador para concluir. Esta página segue sozinha quando o console estiver pronto.",
+  "restored.body": "Rode mise run unlock neste computador para concluir. Esta página segue sozinha quando o console estiver pronto.",
   "restored.waiting": "Esperando o console reiniciar",
   "backup.import.passwordHint": "Restaurar sobre esta instalação pede a senha da sua conta.",
 

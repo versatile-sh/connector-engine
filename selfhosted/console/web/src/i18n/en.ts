@@ -35,8 +35,8 @@ export const en = {
   "nav.waiting": "{count} waiting",
   "shell.signOut": "Sign out",
   "shell.setup": "Setup {done}/{total}",
-  "shell.keysPlaintext": "Your saved secrets are protected by an encryption key kept in a plaintext file on this computer. Run make keychain-migrate to move it into your system keychain.",
-  "shell.keysLocked": "Your saved secrets are locked. Run make unlock on this computer to open them with the key in your system keychain.",
+  "shell.keysPlaintext": "Your saved secrets are protected by an encryption key kept in a plaintext file on this computer. Run mise run keychain-migrate to move it into your system keychain.",
+  "shell.keysLocked": "Your saved secrets are locked. Run mise run unlock on this computer to open them with the key in your system keychain.",
 
   "nav.group.gateway": "Gateway",
   "nav.group.settings": "Settings",
@@ -793,7 +793,7 @@ export const en = {
   "backup.result.needsSignIn": "sign-in needed",
   "backup.result.nothing": "Nothing was added.",
   "restored.title": "Restored",
-  "restored.body": "Run make unlock on this computer to finish. This page moves on by itself once the console is ready.",
+  "restored.body": "Run mise run unlock on this computer to finish. This page moves on by itself once the console is ready.",
   "restored.waiting": "Waiting for the console to restart",
   "backup.import.passwordHint": "Restoring over this install takes your account password.",
 

@@ -14,7 +14,7 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. make up
+        1. mise run up
         2. ...
     validations:
       required: true
@@ -37,7 +37,7 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: Relevant output from `make logs`. Remove tokens and keys first.
+      description: Relevant output from `mise run logs`. Remove tokens and keys first.
       render: text
   - type: markdown
     attributes:

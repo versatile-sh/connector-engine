@@ -43,7 +43,7 @@ func TestALockedConsoleAnswersLinksWithTheUnlockHint(t *testing.T) {
 		} else {
 			c.decideChoice(rec, req)
 		}
-		if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "make unlock") {
+		if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "mise run unlock") {
 			t.Errorf("%s while locked: %d %s", req.Method, rec.Code, rec.Body)
 		}
 	}

@@ -8,16 +8,16 @@ The `person` profile keeps its root keys wrapped by an unlock key in your OS key
 
 | Command | What it does |
 |---|---|
-| `make unlock` | read the unlock key from the keychain and deliver it to the engine and the console (also run by `make up`) |
-| `make keychain-status` | report whether each root key is `wrapped` or plaintext |
-| `make keychain-migrate` / `make keychain-revert` | move a plaintext `root.key` under the keychain, verified and idempotent, or back |
-| `make keychain-recovery` | print the unlock key once, for a password manager |
-| `make keychain-import` | read the unlock key on stdin into this machine's keychain |
+| `mise run unlock` | read the unlock key from the keychain and deliver it to the engine and the console (also run by `mise run up`) |
+| `mise run keychain-status` | report whether each root key is `wrapped` or plaintext |
+| `mise run keychain-migrate` / `mise run keychain-revert` | move a plaintext `root.key` under the keychain, verified and idempotent, or back |
+| `mise run keychain-recovery` | print the unlock key once, for a password manager |
+| `mise run keychain-import` | read the unlock key on stdin into this machine's keychain |
 
 The unlock and host sockets are `0600`, bound first inside a private `0700` directory and moved into place, and they serve only the user that runs the process (or root). A `revert` request over the socket needs the same unlock key as the wrapping, so a process that merely reaches the socket cannot write the root key back in plaintext.
 
 ```sh
-make keychain-status
+mise run keychain-status
 ```
 
 ```text
@@ -43,14 +43,14 @@ Every secret the engine keeps (credentials, held call arguments, results, client
 
 The console seals its own secrets (notifier tokens) through `selfhosted/console/sealed`, a `port.SecretStore` under key scope `selfhosted/console`, with the same adapter: `hostkey` in the `person` profile (`CONSOLE_UNLOCK_SOCKET`), `secrets/local` otherwise. Owner passwords, session cookies and refresh tokens stay hashes.
 
-The local token issuer keeps its Ed25519 signing keys in `local-issuer.json` beside the ring, each seed sealed under the installation key, so tokens it minted survive a restart, a reboot and `make keychain-migrate`. At boot it rotates a signing key older than `auth.localIssuer.rotateEvery` (30 days by default). The retired key stays in the published key set for `max(1h, auth.agentTokenMaxLifetime)`, until every token it signed has expired. With `secrets: memory` the key is made at start and never stored, as before.
+The local token issuer keeps its Ed25519 signing keys in `local-issuer.json` beside the ring, each seed sealed under the installation key, so tokens it minted survive a restart, a reboot and `mise run keychain-migrate`. At boot it rotates a signing key older than `auth.localIssuer.rotateEvery` (30 days by default). The retired key stays in the published key set for `max(1h, auth.agentTokenMaxLifetime)`, until every token it signed has expired. With `secrets: memory` the key is made at start and never stored, as before.
 
 ## How the unlock key reaches the container
 
 The engine and the console run in Docker and cannot reach the host keychain. The host reads the key and pipes it into the running container:
 
 ```
-make up | make unlock
+mise run up | mise run unlock
   bin/vsh keychain get --name <project>          host: macOS Keychain, Secret Service, or DPAPI
     | docker compose exec -T engine connector-engine unlock
         -> unix socket /run/connector-engine-unlock/unlock.sock   tmpfs inside the container, 0700, uid 65532
@@ -60,7 +60,7 @@ make up | make unlock
 - The key travels on pipes only: never in argv, an environment variable, a log line, a compose file or a file on any disk. `vsh keychain` writes it on the stdin of `security -i` (macOS) and `secret-tool store` (Linux), never as an argument.
 - The socket is in a `tmpfs` mount of each container, owned by the image user. No other container and no host process reaches it; `docker exec` needs the Docker socket, which is root-equivalent anyway.
 - It behaves the same on Linux, Docker Desktop for macOS and for Windows: it needs neither a bind-mounted host socket (those do not cross the Docker Desktop VM) nor a host file.
-- After a restart (a crash, `docker restart`, a reboot with `restart: unless-stopped`) the container comes back locked and waits on the socket: the engine logs `waiting for the host to deliver the unlock key` and serves nothing; the console serves and shows "locked". `make unlock` opens both. This is the price of never resting the key outside the keychain. A locked engine with an unlocked console shows no banner: the console only sees an engine that does not answer. An AI app calling `/mcp` meanwhile gets 503 with `Retry-After: 5` and a JSON-RPC error: "the gateway is locked: run make unlock …" while the console is locked too, else "the gateway is not answering; after a restart it stays locked until you run make unlock …".
+- After a restart (a crash, `docker restart`, a reboot with `restart: unless-stopped`) the container comes back locked and waits on the socket: the engine logs `waiting for the host to deliver the unlock key` and serves nothing; the console serves and shows "locked". `mise run unlock` opens both. This is the price of never resting the key outside the keychain. A locked engine with an unlocked console shows no banner: the console only sees an engine that does not answer. An AI app calling `/mcp` meanwhile gets 503 with `Retry-After: 5` and a JSON-RPC error: "the gateway is locked: run mise run unlock …" while the console is locked too, else "the gateway is not answering; after a restart it stays locked until you run mise run unlock …".
 
 Tested on Linux with gnome-keyring. The macOS and Windows backends are covered by command-line fakes and a cross-compile only.
 
@@ -76,23 +76,23 @@ Each Docker install has its own keychain item: service `connector-engine`, accou
 |---|---|---|
 | macOS | login keychain through `/usr/bin/security` | the item is readable by `security` without a prompt, so by any process of the user |
 | Linux | Secret Service (gnome-keyring, KWallet) through `secret-tool` (package `libsecret-tools` or `libsecret`) over D-Bus | any process of the user on the session bus can read it while the collection is unlocked |
-| Windows | DPAPI, `%LOCALAPPDATA%\connector-engine\<project>.unlock`, bound to the Windows user | run `make` from Git Bash or WSL with Docker Desktop |
+| Windows | DPAPI, `%LOCALAPPDATA%\connector-engine\<project>.unlock`, bound to the Windows user | run `mise` from Git Bash or WSL with Docker Desktop |
 
 ## Without a keychain
 
-When `bin/vsh` cannot be built (no Go on the host) or the host has no keychain, `make unlock` says so and tells a fresh store to keep a plaintext `root.key`, as `localfile` does. The console shows a warning while either root key is a plaintext file. A store already wrapped never falls back: without its unlock key it stays locked, and the plaintext choice is refused.
+When `bin/vsh` cannot be built (no Go on the host) or the host has no keychain, `mise run unlock` says so and tells a fresh store to keep a plaintext `root.key`, as `localfile` does. The console shows a warning while either root key is a plaintext file. A store already wrapped never falls back: without its unlock key it stays locked, and the plaintext choice is refused.
 
 ## Migrating an existing install
 
-`make keychain-migrate` (idempotent):
+`mise run keychain-migrate` (idempotent):
 
 1. creates the unlock key in the keychain if missing and reads it back;
 2. delivers it, then asks each container to migrate: write `root.key.wrapped`, read it back, check it equals the live root and unwraps every tenant key in `keystore.json`, and only then remove `root.key`;
 3. restarts the engine and the console, unlocks them from the keychain and checks both report `wrapped`.
 
-A failure before the removal leaves `root.key` in place and the store running on it; run the command again. If both files exist after a crash, the plaintext one wins and the next migration finishes the job. `make keychain-revert` writes `root.key` back (checked the same way) and removes the wrapped file; the keychain item stays.
+A failure before the removal leaves `root.key` in place and the store running on it; run the command again. If both files exist after a crash, the plaintext one wins and the next migration finishes the job. `mise run keychain-revert` writes `root.key` back (checked the same way) and removes the wrapped file; the keychain item stays.
 
-Recovery: `make keychain-recovery` prints the unlock key once, for a password manager. On a new machine, `make keychain-import` reads it on stdin into that machine's keychain. Without the unlock key and without a backup of `root.key`, the records cannot be opened: that is the point.
+Recovery: `mise run keychain-recovery` prints the unlock key once, for a password manager. On a new machine, `mise run keychain-import` reads it on stdin into that machine's keychain. Without the unlock key and without a backup of `root.key`, the records cannot be opened: that is the point.
 
 ## 1Password
 
@@ -113,7 +113,7 @@ Recovery: `make keychain-recovery` prints the unlock key once, for a password ma
    No `plaintext_root_key` acknowledgement is needed.
 4. Start the engine.
    - A fresh directory gets a wrapped root.
-   - A directory with a plaintext `root.key` is migrated at the first start, with the same verified steps as `make keychain-migrate`. Selecting the adapter is the consent.
+   - A directory with a plaintext `root.key` is migrated at the first start, with the same verified steps as `mise run keychain-migrate`. Selecting the adapter is the consent.
    - Keep a copy of the field: without it the records cannot be opened.
 
 Limits:

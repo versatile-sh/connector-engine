@@ -83,11 +83,11 @@ func seedListing(catalog *fixtureCatalog) func(context.Context, string, int64) (
 	}
 }
 
-// TestSeedPlayground serves a console on CN_SEED_ADDR with 12 access keys, 15 connectors and 10 skills until interrupted, to see the layout at scale; only `make seed` runs it, and its state lives in a temporary folder.
+// TestSeedPlayground serves a console on CN_SEED_ADDR with 12 access keys, 15 connectors and 10 skills until interrupted, to see the layout at scale; only `mise run seed` runs it, and its state lives in a temporary folder.
 func TestSeedPlayground(t *testing.T) {
 	addr := os.Getenv("CN_SEED_ADDR")
 	if addr == "" {
-		t.Skip("make seed runs this playground")
+		t.Skip("mise run seed runs this playground")
 	}
 	slog.SetDefault(slog.New(slog.DiscardHandler))
 	lis, err := net.Listen("tcp", addr)

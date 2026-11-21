@@ -2,7 +2,7 @@
 
 # First run
 
-Five steps from a running stack to an AI app calling a tool you allowed. It assumes you ran [`make up`](install.md#docker-from-a-clone).
+Five steps from a running stack to an AI app calling a tool you allowed. It assumes you ran [`mise run up`](install.md#docker-from-a-clone).
 
 ## 1. Open the console
 
@@ -33,7 +33,7 @@ The app opens the console in your browser; you allow it once. See [connect an AI
 ## Check it works
 
 ```sh
-make ps
+mise run ps
 ```
 
 Expected: `postgres`, `engine` and `console` are listed as running (`Up`).
@@ -41,7 +41,7 @@ Expected: `postgres`, `engine` and `console` are listed as running (`Up`).
 After a reboot or a container restart, the engine waits for its unlock key. Run:
 
 ```sh
-make unlock
+mise run unlock
 ```
 
 See [the keychain](../self-hosted/keychain.md) for why, and [troubleshooting](../self-hosted/troubleshooting.md) if a step fails.

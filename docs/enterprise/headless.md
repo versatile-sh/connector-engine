@@ -52,7 +52,7 @@ VSH_ADMIN_URL=http://127.0.0.1:8081 VSH_ADMIN_TOKEN=dev vsh admin tenants create
 With Docker, from a clone:
 
 ```sh
-make up PROFILE=headless
+PROFILE=headless mise run up
 ```
 
 It starts `init` (operator token and Postgres passwords), Postgres and the engine with `deploy/profiles/headless/`. The public listener is on `127.0.0.1:8080` and the operator listener on `127.0.0.1:8081`. Set your issuer in `deploy/profiles/headless/connector-engine.yaml` first ([OIDC](oidc.md)).

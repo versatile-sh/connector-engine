@@ -44,7 +44,7 @@ func TestAnAgentRequestToAnEngineThatIsDownGets503WithAJSONRPCError(t *testing.T
 				JSONRPC string
 				Error   struct{ Message string }
 			}
-			if rec.Code != http.StatusServiceUnavailable || rec.Header().Get("Retry-After") == "" || json.Unmarshal(rec.Body.Bytes(), &body) != nil || body.JSONRPC != "2.0" || !strings.Contains(body.Error.Message, "make unlock") {
+			if rec.Code != http.StatusServiceUnavailable || rec.Header().Get("Retry-After") == "" || json.Unmarshal(rec.Body.Bytes(), &body) != nil || body.JSONRPC != "2.0" || !strings.Contains(body.Error.Message, "mise run unlock") {
 				t.Fatalf("%d Retry-After %q body %s", rec.Code, rec.Header().Get("Retry-After"), rec.Body)
 			}
 			if locked := strings.Contains(body.Error.Message, "is locked"); locked != (name == "locked") {

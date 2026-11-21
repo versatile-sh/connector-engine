@@ -100,9 +100,9 @@ func (c *Console) agentProxy() http.Handler {
 }
 
 func (c *Console) engineDown(w http.ResponseWriter) {
-	message := "the gateway is not answering; after a restart it stays locked until you run make unlock on this computer, then retry"
+	message := "the gateway is not answering; after a restart it stays locked until you run mise run unlock on this computer, then retry"
 	if c.Secrets.Locked() {
-		message = "the gateway is locked: run make unlock on this computer, then retry"
+		message = "the gateway is locked: run mise run unlock on this computer, then retry"
 	}
 	w.Header().Set("Retry-After", "5")
 	w.Header().Set("Content-Type", "application/json")

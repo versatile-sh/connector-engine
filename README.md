@@ -38,7 +38,7 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 
 | Platform | Command | |
 |---|---|---|
-| **Docker** (any OS) | `git clone https://github.com/versatile-sh/connector-engine && cd connector-engine && make up` | works today |
+| **Docker** (any OS) | `git clone https://github.com/versatile-sh/connector-engine && cd connector-engine && mise run up` | works today |
 | **Linux, macOS** | `curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.sh \| sh`, then `vsh up --open` | after v0.1.0 |
 | **Windows** | `irm https://raw.githubusercontent.com/versatile-sh/connector-engine/main/scripts/install.ps1 \| iex` | after v0.1.0 |
 | **A VPS** | [Run it on a VPS](docs/self-hosted/vps.md): the binary or Docker on loopback, reached through an SSH tunnel; a small team behind a TLS proxy; or the headless engine behind Caddy | works today with Docker |
@@ -49,7 +49,7 @@ Works today, with Docker:
 ```sh
 git clone https://github.com/versatile-sh/connector-engine
 cd connector-engine
-make up
+mise run up
 ```
 
 Without Docker, available after the first release (v0.1.0):
@@ -59,13 +59,13 @@ curl -fsSL https://raw.githubusercontent.com/versatile-sh/connector-engine/main/
 vsh up --open
 ```
 
-`make up` ends with:
+`mise run up` ends with:
 
 ```text
 console: http://127.0.0.1:7465   agent endpoint: http://127.0.0.1:7465/mcp
 ```
 
-Open the console, create your account, import a connector: [First run](docs/getting-started/first-run.md). Your data lives in Docker volumes: export a backup with `make export` before any `docker compose down -v` or volume prune. The installers verify the SHA-256 of every download; to read them before running, see [Install](docs/getting-started/install.md#read-it-before-you-run-it).
+Open the console, create your account, import a connector: [First run](docs/getting-started/first-run.md). Your data lives in Docker volumes: export a backup with `mise run export` before any `docker compose down -v` or volume prune. The installers verify the SHA-256 of every download; to read them before running, see [Install](docs/getting-started/install.md#read-it-before-you-run-it).
 
 <a id="use"></a>
 

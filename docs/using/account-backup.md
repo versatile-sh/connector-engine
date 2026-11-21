@@ -30,8 +30,8 @@ Once a second person exists, the shell shows your role beside Account, and Acces
 Forgot the password? On the machine that runs the console:
 
 ```sh
-make reset-password                          # without Docker: vsh reset-password
-make reset-password USER=<username>          # once there are several users; without Docker: --user <username>
+mise run reset-password                          # without Docker: vsh reset-password
+RESET_USER=<username> mise run reset-password          # once there are several users; without Docker: --user <username>
 ```
 
 With one user the name may be left out.
@@ -57,8 +57,8 @@ It reaches the console through a socket that only `docker compose exec` can open
 From the command line:
 
 ```sh
-make export                  # full backup: asks y/N (YES=1 skips it), then a passphrase of 12+ characters twice
-make export MODE=setup       # shareable setup, no credentials
+mise run export                  # full backup: asks y/N (YES=1 skips it), then a passphrase of 12+ characters twice
+MODE=setup mise run export       # shareable setup, no credentials
 ```
 
 ```text
@@ -94,7 +94,7 @@ A setup records each connector's credential mode as `credentials: per_person`; a
 **Account → Backups → Import**, **Restore from a backup** on the first-run screen, or:
 
 ```sh
-make import FILE=~/connector-engine-backups/connector-engine-backup-20261120T180000Z.cebak
+mise run import -- ~/connector-engine-backups/connector-engine-backup-20261120T180000Z.cebak
 ```
 
 Either kind of file works; the console tells them apart by their first bytes.
@@ -110,19 +110,19 @@ A full restore, step by step:
 2. The engine stages its keys, replaces its rows in one transaction, checks them before the commit, and puts its keys in place.
 3. Only when the engine succeeds does the console put its own files in place.
 4. The root keys are wrapped again with this machine's keychain key.
-5. The engine and the console restart. `make import` runs `make unlock` for you; from the console, run `make unlock` yourself. Sign in with the restored account's password.
+5. The engine and the console restart. `mise run import` runs `mise run unlock` for you; from the console, run `mise run unlock` yourself. Sign in with the restored account's password.
 
 - A refusal before the engine's commit leaves the install as it was.
 - The engine refuses a snapshot whose schema is newer than the one of the store kind that wrote it, that holds a table it does not know, a row that does not decode or is there twice, two grants with one key, a grant row its rules refuse, a row stored under another tenant or under the installation, or a binding to a connector the snapshot lacks. Rules that depend on this install's settings, such as `permission.alwaysMaxDuration`, are not applied, so a backup taken before a stricter setting still restores.
 - The refusal names the first offending row by its kind and its ids, with the rule it breaks; each value taken from the file is quoted and cut to 64 characters, and no other field of the row appears.
 - A grant that names a connector or a function the snapshot lacks is kept, as it can be written today: the restore counts it as a warning and lists the first 20. It never applies until that connector and function exist.
-- An applied restore writes one `connector.snapshot.restored` audit row and event on the installation, with who restored it, the rows per kind and the number of warnings. A restore from the console is recorded as the signed-in person, or `make import`'s owner; the first-run restore and a call with the operator token alone are recorded as `system`.
+- An applied restore writes one `connector.snapshot.restored` audit row and event on the installation, with who restored it, the rows per kind and the number of warnings. A restore from the console is recorded as the signed-in person, or `mise run import`'s owner; the first-run restore and a call with the operator token alone are recorded as `system`.
 - Importing the same backup again gives the same result. If a disk fails right after the commit, restore the same backup again.
 - Signed in, a full import asks for your password again. The first-run restore works only while no user exists.
 - A backup from an earlier console, with its one `owner` account, restores: the account becomes the Owner with this console's `--person`. A backup made by this console has `users` and no `owner`, and uses backup format 2, so an earlier console refuses it as written by a newer connector-engine. This is a one-way door: keep the earlier console's own backups if you may go back to it.
 - A setup's review shows each new connector's host, whether it is `local` (it reaches a private or loopback address on this machine), whether its new keys start off, and each choice the file sets above what this console proposes. Every choice is capped at this console's proposal, local connectors included, and the result lists what was lowered.
 - Keys made already start off on the connectors and skills a setup adds, unless **Give my existing keys the new connectors** is on.
-- Per permission set the review chooses **Keep** (the default), **Apply** to an existing key, or **Discard**. A set whose name is taken gets the first free `-2`, `-3` suffix. `make import` takes the defaults: every set kept, existing keys off, choices capped.
+- Per permission set the review chooses **Keep** (the default), **Apply** to an existing key, or **Discard**. A set whose name is taken gets the first free `-2`, `-3` suffix. `mise run import` takes the defaults: every set kept, existing keys off, choices capped.
 - A full backup restores the keys and the sets exactly as they were; it creates none.
 
 ## Where state lives

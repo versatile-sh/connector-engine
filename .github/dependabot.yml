@@ -10,6 +10,9 @@ updates:
   - package-ecosystem: npm
     directories:
       - /**/console/web
+    ignore:
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
     schedule:
       interval: weekly
     groups:

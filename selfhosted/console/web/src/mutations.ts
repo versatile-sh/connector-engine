@@ -1,5 +1,5 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type AgentToken, type ApprovalChoice, type CredentialMode, type NewLink, type Role, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session, type SetupOptions } from "./api";
+import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type Keep, type PrunePeriod, type PruneResult, type AgentToken, type ApprovalChoice, type CredentialMode, type NewLink, type Role, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session, type SetupOptions } from "./api";
 import { accountQuery, peopleQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
@@ -199,7 +199,7 @@ export const decideApproval = mutationOptions({
 });
 
 /** What the console keeps of each call. */
-export type Recording = Pick<ActivitySettings, "record_arguments" | "record_results">;
+export type Recording = Pick<ActivitySettings, "record_arguments" | "record_results"> & { retention?: Keep };
 
 /** Saves what the console keeps of each call; the answer is the settings now. */
 export const saveRecording = mutationOptions({
@@ -213,6 +213,12 @@ export const saveRecording = mutationOptions({
 export const deleteActivity = mutationOptions({
   mutationFn: () => api("DELETE", "/api/activity"),
   onSuccess: (_data, _variables, _onMutate, { client }) => invalidate(client, activityKey, activitySettingsQuery.queryKey),
+});
+
+/** Deletes the calls of a period and hides the engine's rows of it; the answer is how many it held. */
+export const pruneActivity = mutationOptions({
+  mutationFn: (period: PrunePeriod) => api<PruneResult>("POST", "/api/activity/prune", period),
+  onSuccess: (_data, _period, _onMutate, { client }) => invalidate(client, activityKey, activitySettingsQuery.queryKey),
 });
 
 /** Turns MCP elicitation on or off for one app. */

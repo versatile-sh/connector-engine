@@ -5,11 +5,11 @@ const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matche
 
 const staying = <T>(rows: readonly T[], keyOf: (row: T) => string): Kept<T>[] => rows.map((row) => ({ row, key: keyOf(row), phase: "stay" }));
 
-/** The rows a list draws for `rows`, each with its phase: a new row enters and a gone one stays `ROW_MS` to leave; nothing moves on the first draw or under reduced motion. */
-export function useKept<T>(rows: readonly T[], keyOf: (row: T) => string): readonly Kept<T>[] {
+/** The rows a list draws for `rows`, each with its phase: a new row enters and a gone one stays `ROW_MS` to leave; nothing moves on the first draw, under reduced motion or when `scope` changes, as it does when a filter swaps the whole list or more rows are loaded below. */
+export function useKept<T>(rows: readonly T[], keyOf: (row: T) => string, scope = ""): readonly Kept<T>[] {
   const keys = rows.map(keyOf).join("\u0000");
-  const [drawn, setDrawn] = useState(() => ({ keys, kept: staying(rows, keyOf) }));
-  if (drawn.keys !== keys) setDrawn({ keys, kept: still() ? staying(rows, keyOf) : keptOf(drawn.kept, rows, keyOf) });
+  const [drawn, setDrawn] = useState(() => ({ keys, scope, kept: staying(rows, keyOf) }));
+  if (drawn.keys !== keys || drawn.scope !== scope) setDrawn({ keys, scope, kept: still() || drawn.scope !== scope ? staying(rows, keyOf) : keptOf(drawn.kept, rows, keyOf) });
   const leaving = drawn.kept.some((kept) => kept.phase === "leave");
   useEffect(
     function dropLeftRows() {

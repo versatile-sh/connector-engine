@@ -1,16 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { useViewer } from "../people/useViewer";
 import { offersScope } from "../people/viewer";
-import { activityQuery, connectorsQuery, skillsQuery } from "../queries";
+import { activityQuery, activitySettingsQuery, connectorsQuery, skillsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { EmptyState } from "../ui/EmptyState";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { CAPTION, SKELETON, SURFACE, TITLE, button } from "../ui/styles";
-import { callOf, filterOf, hrefOf, inScope, isNarrowed, namedOf, clearedOf, type ActivityFilter } from "./activity";
+import { callOf, filterOf, hrefOf, inScope, isNarrowed, keptDaysOf, namedOf, clearedOf, type ActivityFilter } from "./activity";
 import { ActivitySettings } from "./ActivitySettings";
 import { CallDetail } from "./CallDetail";
 import { CallList } from "./CallList";
@@ -28,7 +28,8 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
   const filter = offered || !asked.scope ? asked : inScope(asked, "mine");
   const open = callOf(query);
   const pushed = useRef(false);
-  const activity = useQuery(activityQuery(filter));
+  const keptDays = keptDaysOf(useQuery(activitySettingsQuery).data?.retention);
+  const activity = useInfiniteQuery(activityQuery(filter, keptDays));
   const connectors = useQuery(connectorsQuery);
   const skills = useQuery(skillsQuery);
   const show = (next: ActivityFilter) => navigate(hrefOf(next), { replace: true, keepScroll: true });
@@ -50,7 +51,7 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
           {t("activity.intro")}
         </PageTitle>
       </header>
-      <FilterRow filter={filter} data={data} named={named} scoped={offered} onChange={show} />
+      <FilterRow filter={filter} data={data} named={named} scoped={offered} keptDays={keptDays} onChange={show} />
       {activity.isError ? (
         <Notice className="mb-6" action={<button type="button" className={button({ variant: "quiet", size: "xs" })} onClick={() => void activity.refetch()}>{t("common.retry")}</button>}>
           {errorText(activity.error)}
@@ -73,8 +74,15 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
                 ))}
               </ul>
             ) : data.calls.length > 0 ? (
-              <div className="mt-2">
-                <CallList calls={data.calls} named={named} owners={filter.scope === "everyone"} onOpen={openCall} />
+              <div aria-busy={activity.isPlaceholderData} className={`mt-2 transition-opacity duration-250 ${activity.isPlaceholderData ? "opacity-60" : ""}`}>
+                <CallList calls={data.calls} named={named} owners={filter.scope === "everyone"} scope={`${hrefOf(filter)}#${data.pages}`} onOpen={openCall} />
+                {data.more ? (
+                  <div className="flex justify-center pt-4">
+                    <button type="button" disabled={activity.isFetchingNextPage} className={button({ variant: "secondary", size: "sm" })} onClick={() => void activity.fetchNextPage()}>
+                      {t("activity.loadMore")}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ) : isNarrowed(filter) ? (
               <div className="arrive flex flex-col items-start gap-4 px-1 py-8">

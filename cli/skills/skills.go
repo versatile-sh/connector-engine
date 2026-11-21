@@ -149,7 +149,7 @@ func load(ctx context.Context, cs *mcp.ClientSession, skill, path string) (loade
 		return l, nil, err
 	}
 	if l.Status == "pending_approval" {
-		return l, nil, fmt.Errorf("skill %s waits for your approval; approve it in the console and export again", skill)
+		return l, nil, fmt.Errorf("skill %s waits for an approval; approve it, then export again", skill)
 	}
 	if l.Redistribution == port.RedistributionMetadataOnly {
 		return l, nil, nil

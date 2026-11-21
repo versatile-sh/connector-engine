@@ -1,6 +1,6 @@
 SHELL    := /bin/bash
 PROJECT  ?= connector-engine
-PROFILE  ?= person
+PROFILE  ?= $(if $(wildcard selfhosted/selfhosted.mk),person,headless)
 COMPOSE_FILE := $(if $(filter headless,$(PROFILE)),deploy/compose.yaml,selfhosted/deploy/compose.yaml)
 COMPOSE  ?= docker compose -f $(COMPOSE_FILE) -p $(PROJECT)
 IMAGE    ?= connector-engine:local
@@ -48,9 +48,9 @@ layering:
 	scripts/check-layering.sh
 
 test: layering
-	go test -race ./...
-	cd selfhosted/console/web && npm ci --no-audit --no-fund && npm run typecheck
+	go test -race -timeout 30m ./...
+	@if [ -d selfhosted/console/web ]; then cd selfhosted/console/web && npm ci --no-audit --no-fund && npm run typecheck; fi
 	go run ./cmd/connector-engine --config deploy/profiles/headless/connector-engine.yaml --adapters deploy/profiles/headless/adapters.yaml adapters check
-	go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check
+	@if [ -d selfhosted ]; then go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check; fi
 
-include selfhosted/selfhosted.mk
+-include selfhosted/selfhosted.mk

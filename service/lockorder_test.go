@@ -109,7 +109,7 @@ func lockWorld(t *testing.T, tune ...func(*service.Config, *service.Deps)) (*loc
 	return step, w
 }
 
-func (l *lockStep) together(t *testing.T, at []string, first, second func() error) {
+func (l *lockStep) together(t *testing.T, at []string, first, second func() error) []error {
 	t.Helper()
 	l.arm(at...)
 	done := make(chan error, 1)
@@ -119,6 +119,7 @@ func (l *lockStep) together(t *testing.T, at []string, first, second func() erro
 	if n := l.deadlocks.Load(); n > 0 {
 		t.Fatalf("%d transactions were aborted on a deadlock: %v", n, errs)
 	}
+	return errs
 }
 
 func (w *world) admitted(x port.Principal, name string) func() error {
@@ -175,10 +176,13 @@ func TestExpiringASessionRowWhileAnApprovalReplacesItNeverDeadlocks(t *testing.T
 	w.Clock.Advance(9 * time.Hour)
 	second := w.call(x, "s__search", `{"q":"b"}`)
 	want(t, second.Status, service.OutcomePending, "held after the session row expired")
-	step.together(t, []string{"DeleteGrant", "Emit"}, func() error { return w.Svc.ExpireGrant(w.Ctx, tenant, rows[0].ID) }, func() error {
+	errs := step.together(t, []string{"DeleteGrant", "Emit"}, func() error { return w.Svc.ExpireGrant(w.Ctx, tenant, rows[0].ID) }, func() error {
 		_, err := w.Svc.DecideApproval(w.Ctx, w.alice, second.Approval.ID, port.DecisionApproveForSession, "", "test")
 		return err
 	})
+	want(t, errs[0], nil, "the decision replaces the row or finds it gone")
+	rows = st.Ok(w.Svc.ListGrants(w.Ctx, w.admin, port.GrantFilter{ScopeKind: port.ScopeSession, ScopeID: "s1"}))
+	want(t, len(rows), 1, "one session row after the decision")
 }
 
 func TestExpiringAnApprovalWhileItsBindingIsRemovedNeverDeadlocks(t *testing.T) {
@@ -228,4 +232,47 @@ func TestMarkingAnExecutionUnknownWhileItSettlesNeverDeadlocks(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestRemovingAPersonWhileACallIsAdmittedNeverDeadlocks(t *testing.T) {
+	step, w := lockWorld(t)
+	w.allowAll("x")
+	w.row(port.ScopeUser, "alice", "*", port.ModeAllow)
+	w.row(port.ScopeUser, "alice", "fn:search", port.ModeAllow)
+	x := w.agent("x", "s1")
+	want(t, w.call(x, "s__search", `{"q":"a"}`).Status, service.OutcomeResult, "warm call")
+	step.together(t, admitting, func() error { return w.Svc.RemovePerson(w.Ctx, w.admin, "alice", workspace) }, w.admitted(x, "s__search"))
+}
+
+func TestRevokingARowWhileItsAgentIsUnboundNeverDeadlocks(t *testing.T) {
+	step, w := lockWorld(t)
+	w.customWorkspace()
+	ws := w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "*", port.ModeAsk)
+	held := w.call(w.agent("x", "s1"), "s__search", `{"q":"a"}`)
+	want(t, held.Status, service.OutcomePending, "held")
+	step.together(t, []string{"UpdateApproval", "Emit"}, func() error { return w.Svc.DeleteGrant(w.Ctx, w.admin, ws.ID) },
+		func() error { return w.Svc.DeleteBinding(w.Ctx, w.admin, w.conn.ID, "x") })
+}
+
+func TestDenyingTwoApprovalsTogetherCountsBoth(t *testing.T) {
+	step, w := lockWorld(t)
+	w.customWorkspace()
+	w.row(port.ScopeWorkspace, string(workspace), "*", port.ModeAllow)
+	w.bind("x")
+	w.row(port.ScopeAgent, "x", "*", port.ModeAsk)
+	x := w.agent("x", "s1")
+	first, second := w.call(x, "s__search", `{"q":"a"}`), w.call(x, "s__search", `{"q":"b"}`)
+	deny := func(id port.ApprovalID) func() error {
+		return func() error {
+			_, err := w.Svc.DecideApproval(w.Ctx, w.alice, id, port.DecisionDeny, "", "test")
+			return err
+		}
+	}
+	errs := step.together(t, []string{"UpdateApproval"}, deny(first.Approval.ID), deny(second.Approval.ID))
+	want(t, errs[0] == nil && errs[1] == nil, true, "both denials succeed")
+	pauses := st.Ok(w.Svc.ListPauses(w.Ctx, w.admin))
+	want(t, len(pauses), 1, "one pause row")
+	want(t, pauses[0].Total, 2, "both denials counted")
 }

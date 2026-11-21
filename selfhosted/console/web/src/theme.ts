@@ -24,9 +24,12 @@ export function otherTheme(theme: Theme): Theme {
   return theme === "light" ? "dark" : "light";
 }
 
-/** The radius of the circle from a point that covers a viewport: the distance to its farthest corner. */
+/** How far past the farthest corner the reveal ends, so its edge leaves the screen while still moving fast. */
+export const REVEAL_OVERSHOOT = 1.5;
+
+/** The radius the reveal ends at: past the viewport's farthest corner from the point, by REVEAL_OVERSHOOT. */
 export function revealRadius(from: Point, width: number, height: number): number {
-  return Math.hypot(Math.max(from.x, width - from.x), Math.max(from.y, height - from.y));
+  return Math.hypot(Math.max(from.x, width - from.x), Math.max(from.y, height - from.y)) * REVEAL_OVERSHOOT;
 }
 
 const systemLight = () => window.matchMedia("(prefers-color-scheme: light)");

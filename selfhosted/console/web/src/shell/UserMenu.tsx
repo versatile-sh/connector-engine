@@ -104,8 +104,10 @@ export function UserMenu({ user, role, rail, signingOut, onSignOut, onNavigate }
               {name}
             </p>
             {role ? <Tag title={t("shell.role")}>{t(`role.${role}`)}</Tag> : null}
-            <ThemeSwitch className="mt-1.5 w-full" />
-            <LanguageSwitch className="w-full" />
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <LanguageSwitch className="flex-1" />
+              <ThemeSwitch />
+            </div>
           </div>
         ) : null}
         <a

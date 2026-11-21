@@ -9,10 +9,8 @@ export const ptBR: Record<MessageKey, string> = {
 
   "brand.label": "gateway de conectores",
   "lang.label": "Idioma",
-  "theme.label": "Tema",
-  "theme.system": "Sistema",
-  "theme.light": "Claro",
-  "theme.dark": "Escuro",
+  "theme.toLight": "Mudar para o tema claro",
+  "theme.toDark": "Mudar para o tema escuro",
 
   "common.cancel": "Cancelar",
   "common.close": "Fechar",

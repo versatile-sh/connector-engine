@@ -295,6 +295,12 @@ svg {
   }
 }
 
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
 }

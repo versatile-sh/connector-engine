@@ -7,10 +7,8 @@ export const en = {
 
   "brand.label": "connector gateway",
   "lang.label": "Language",
-  "theme.label": "Theme",
-  "theme.system": "System",
-  "theme.light": "Light",
-  "theme.dark": "Dark",
+  "theme.toLight": "Switch to light theme",
+  "theme.toDark": "Switch to dark theme",
 
   "common.cancel": "Cancel",
   "common.close": "Close",

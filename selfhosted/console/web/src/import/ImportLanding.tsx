@@ -18,11 +18,30 @@ const hostOf = (raw: string) => {
   }
 };
 
-/** An install link opened from outside, in one centred composition: the link's identity on top, then from `lg` two cards side by side, the review on the left and a sticky decision card on the right that holds who may load it, the notice and the actions; below `lg` one column that ends in a solid bar of actions in the flow, so it never covers the end of the review. Nothing is installed before Add. */
+const FOOTER =
+  "sticky bottom-0 z-20 -mx-5 -mb-10 border-t border-line bg-ink px-5 py-3 sm:-mx-8 sm:-mb-14 sm:px-8 lg:static lg:z-auto lg:m-0 lg:shrink-0 lg:rounded-b-2xl lg:border lg:bg-ink-raised lg:px-6 lg:py-4";
+
+/** An install link opened from outside: the link's identity on the left from `lg`, and on the right one sticky card that scrolls inside itself, holding the review, who may load it and the notice, with the actions as its foot; below `lg` one column, hero, review and decision in one panel, then the actions as a solid bar in the flow, so it never covers the end of the review. Nothing is installed before Add. */
 export function ImportLanding({ source }: { source: ImportSource }) {
   const t = useT();
   const { preview, install, request, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
   const url = source.listing ?? source.mcp ?? "";
+  const header = <LandingHeader host={hostOf(url)} preview={preview} />;
+  if (preview.isError) {
+    return (
+      <Frame width="split" home>
+        <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-1 flex-col justify-start gap-10">
+          {header}
+          <section className={`${PANEL} flex w-full flex-col items-start gap-5 p-5 sm:p-6`}>
+            <Notice>{errorText(preview.error)}</Notice>
+            <button type="button" className={button({ variant: "secondary" })} onClick={() => navigate("/")}>
+              {t("import.home")}
+            </button>
+          </section>
+        </div>
+      </Frame>
+    );
+  }
   const actions = preview.isSuccess ? (
     <LandingActions
       label={t(preview.data.skill ? "import.addSkill" : "import.addConnector")}
@@ -34,26 +53,21 @@ export function ImportLanding({ source }: { source: ImportSource }) {
   ) : null;
   return (
     <Frame width="split" home>
-      <div className="flex w-full min-w-0 flex-1 flex-col justify-start gap-10">
-        <LandingHeader host={hostOf(url)} preview={preview} />
-        {preview.isError ? (
-          <section className={`${PANEL} mx-auto flex w-full max-w-2xl flex-col items-start gap-5 p-5 sm:p-6`}>
-            <Notice>{errorText(preview.error)}</Notice>
-            <button type="button" className={button({ variant: "secondary" })} onClick={() => navigate("/")}>
-              {t("import.home")}
-            </button>
-          </section>
-        ) : (
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-10">
-            <section aria-labelledby={preview.isSuccess ? "review-title" : undefined} className={`${PANEL} min-w-0 p-5 sm:p-6`}>
-              {preview.isSuccess ? <LandingReview preview={preview.data} accessOf={accessOf} choose={choose} /> : <LandingReading url={url} />}
-            </section>
-            <div className={`${PANEL} p-5 sm:p-6 lg:sticky lg:top-6`}>
-              <LandingSummary preview={preview.data} accessOf={accessOf} skillAccess={skillAccess} onSkillAccess={setSkillAccess} actions={actions} />
-            </div>
+      <div className="flex w-full min-w-0 flex-1 flex-col justify-start gap-10 lg:grid lg:grid-cols-[minmax(0,1fr)_30rem] lg:content-start lg:items-start">
+        {header}
+        <div className="contents lg:sticky lg:top-18 lg:flex lg:max-h-[calc(100dvh-9rem)] lg:flex-col">
+          <div className={`${PANEL} min-w-0 p-5 sm:p-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain ${actions ? "lg:rounded-b-none lg:border-b-0" : ""}`}>
+            {preview.isSuccess ? (
+              <section aria-labelledby="review-title">
+                <LandingReview preview={preview.data} accessOf={accessOf} choose={choose} />
+              </section>
+            ) : (
+              <LandingReading url={url} />
+            )}
+            <LandingSummary preview={preview.data} accessOf={accessOf} skillAccess={skillAccess} onSkillAccess={setSkillAccess} />
           </div>
-        )}
-        {actions ? <div className="sticky bottom-0 z-20 -mx-5 -mb-10 border-t border-line bg-ink px-5 py-3 sm:-mx-8 sm:-mb-14 sm:px-8 lg:hidden">{actions}</div> : null}
+          {actions ? <div className={FOOTER}>{actions}</div> : null}
+        </div>
       </div>
     </Frame>
   );

@@ -250,7 +250,7 @@ export type Named = { id: string; title: string; icon?: string | undefined; skil
 export function namedOf(connectors: readonly Connector[], skills: readonly Skill[]): Map<string, Named> {
   const out = new Map<string, Named>();
   for (const c of connectors) out.set(c.id, { id: c.id, title: c.title, icon: c.icon, skill: false });
-  for (const s of skills) out.set(s.id, { id: s.id, title: s.title || s.alias, skill: true });
+  for (const s of skills) out.set(s.id, { id: s.id, title: s.title || s.alias, icon: s.icon, skill: true });
   return out;
 }
 

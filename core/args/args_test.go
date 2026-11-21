@@ -24,7 +24,7 @@ func TestParseRefusesDuplicateKeys(t *testing.T) {
 	}
 }
 
-func TestParseAcceptsWhatTheGatewayAcceptsToday(t *testing.T) {
+func TestParseAcceptsUniqueKeys(t *testing.T) {
 	for name, in := range map[string]string{
 		"absent":                  ``,
 		"blank":                   "  \n",
@@ -35,6 +35,8 @@ func TestParseAcceptsWhatTheGatewayAcceptsToday(t *testing.T) {
 		"keys differ by case":     `{"a":1,"A":2}`,
 		"keys differ by escape":   `{"a":1,"á":2}`,
 		"trailing whitespace":     `{"a":1} ` + "\n",
+		"huge exponent":           `{"a":1e400}`,
+		"large integer":           `{"a":123456789012345678901234567890}`,
 		"scalars inside":          `{"a":[1,"x",null,true,{"b":[]}]}`,
 	} {
 		t.Run(name, func(t *testing.T) {

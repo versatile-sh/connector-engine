@@ -516,3 +516,31 @@ func TestTheGatewayMarksItsOwnErrorsOnly(t *testing.T) {
 		}
 	})
 }
+
+func TestMetaToolArgumentsAreStrict(t *testing.T) {
+	eachEra(t, func(t *testing.T, version string) {
+		w := newWorld(t, options{})
+		w.bind("x")
+		w.row(port.ScopeAgent, "x", "fn:search", port.ModeAllow)
+		cs, _ := w.agent("x", "s1", version)
+		for name, args := range map[string]string{
+			"duplicated wrapper key": `{"name":"s__search","arguments":{"q":1},"arguments":{"q":2}}`,
+			"duplicated nested key":  `{"name":"s__search","arguments":{"q":1,"q":2}}`,
+			"case variant beside":    `{"name":"s__search","arguments":{"q":1},"Arguments":{"q":2}}`,
+			"case variant instead":   `{"name":"s__search","Arguments":{"q":2}}`,
+			"case variant of name":   `{"NAME":"s__search","arguments":{}}`,
+		} {
+			res, err := callTool(cs, "call", json.RawMessage(args))
+			if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeInvalidArgument) {
+				t.Fatalf("%s: %v %v", name, res, err)
+			}
+		}
+		if w.Runtime.CallsTo("search") != 0 {
+			t.Fatal("a refused wrapper was forwarded")
+		}
+		res, err := callTool(cs, "call", map[string]any{"name": "s__search", "arguments": map[string]any{"q": "a"}})
+		if err != nil || res.IsError || w.Runtime.CallsTo("search") != 1 {
+			t.Fatalf("a normal call: %v %v", res, err)
+		}
+	})
+}

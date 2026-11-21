@@ -15,6 +15,7 @@ func Parse(raw []byte) error {
 		return nil
 	}
 	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
 	first, err := d.Token()
 	if err != nil {
 		return notJSON(err)

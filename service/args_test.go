@@ -1,6 +1,8 @@
 package service_test
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/versatile-sh/connector-engine/port"
@@ -58,4 +60,57 @@ func TestDuplicateKeyInAStoredApprovalIsNotForwarded(t *testing.T) {
 	want(t, w.Runtime.CallsTo("search"), 0, "a duplicate key in the stored arguments is not run")
 	got := st.Ok(w.Svc.ApprovalStatus(w.Ctx, x, held.Approval.ID))
 	want(t, got.Code, port.CodeInvalidArgument, "reason")
+}
+
+type recorder struct {
+	port.Authorizer
+	seen []port.Query
+}
+
+func (r *recorder) Evaluate(ctx context.Context, q port.Query) (port.AccessDecision, error) {
+	r.seen = append(r.seen, q)
+	return r.Authorizer.Evaluate(ctx, q)
+}
+
+func recording(r *recorder, mode string) []func(*service.Config, *service.Deps) {
+	return []func(*service.Config, *service.Deps){func(c *service.Config, d *service.Deps) {
+		c.RelistBeforeCall = mode
+		r.Authorizer = d.Authorizer
+		d.Authorizer = r
+	}}
+}
+
+func TestTheAuthorizerNeverSeesArgumentsThatFailTheParse(t *testing.T) {
+	r := &recorder{}
+	w := newWorld(t, opts{reviewed: true, tune: recording(r, "all")})
+	w.acceptAll()
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	_, _, list := definitions("Searches", "Searches, differently")
+	w.Runtime.SetDefinitions(listing, list...)
+	r.seen = nil
+	out := w.call(x, "s__search", duplicated)
+	want(t, out.Code, port.CodeInvalidArgument, "refused")
+	want(t, len(r.seen), 1, "one question to the authorizer")
+	want(t, string(r.seen[0].Arguments), "", "the authorizer got no arguments")
+	for _, f := range st.Ok(w.Svc.ListFunctionsOf(w.Ctx, w.admin, w.conn.ID)) {
+		want(t, f.State, port.FunctionActive, "no re-list ran for "+f.Name)
+	}
+}
+
+func TestEmptySchemaTakesAnObjectOrNothing(t *testing.T) {
+	w := newWorld(t, opts{})
+	w.Runtime.SetDefinitions(listing, port.RawDefinition{Name: "search", Raw: json.RawMessage(`{"name":"search","description":"Searches"}`)})
+	st.Ok(w.Svc.Relist(w.Ctx, tenant, w.conn.ID))
+	w.acceptAll()
+	w.allowAll("x")
+	x := w.agent("x", "s1")
+	for _, args := range []string{`[]`, `"x"`, `""`, `1`} {
+		out := w.call(x, "s__search", args)
+		want(t, out.Code, port.CodeInvalidArgument, "refused: "+args)
+	}
+	want(t, w.Runtime.CallsTo("search"), 0, "nothing reached the upstream")
+	for _, args := range []string{`null`, ``, `{}`} {
+		want(t, w.call(x, "s__search", args).Status != service.OutcomeError, true, "accepted: "+args)
+	}
 }

@@ -175,6 +175,7 @@ func (s *Service) RefreshDueCredentials(ctx context.Context, tenant port.TenantI
 }
 
 type heldRun struct {
+	Bad    bool
 	A      port.Approval
 	Conn   port.Connector
 	Bind   port.Binding
@@ -220,11 +221,14 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 	if err != nil || !ok {
 		return err
 	}
-	if _, err := s.Relist(ctx, tenant, h.A.Connector); err != nil && s.now().Sub(h.A.DecidedAt) <= s.cfg.Approval.ExecuteWithin {
-		return err
+	h.Bad = args.Parse(h.Args) != nil
+	if !h.Bad {
+		if _, err := s.Relist(ctx, tenant, h.A.Connector); err != nil && s.now().Sub(h.A.DecidedAt) <= s.cfg.Approval.ExecuteWithin {
+			return err
+		}
 	}
 	ext, err := s.d.Authorizer.Evaluate(ctx, port.Query{Tenant: tenant, Workspace: h.A.Workspace, Agent: h.A.Agent, AgentOwner: h.Sub.AgentOwner, OnBehalfOf: h.A.OnBehalfOf,
-		Caller: port.CallerModel, Session: h.A.Session, Connector: h.A.Connector, Function: h.A.Function, Class: h.A.Class, Arguments: nonEmpty(h.Args)})
+		Caller: port.CallerModel, Session: h.A.Session, Connector: h.A.Connector, Function: h.A.Function, Class: h.A.Class, Arguments: h.evaluated()})
 	if err != nil {
 		return err
 	}
@@ -276,6 +280,13 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 	return err
 }
 
+func (h heldRun) evaluated() []byte {
+	if h.Bad {
+		return nil
+	}
+	return nonEmpty(h.Args)
+}
+
 func nonEmpty(b []byte) []byte {
 	if len(b) == 0 {
 		return []byte("{}")
@@ -288,14 +299,14 @@ func (s *Service) recheck(tx port.Tx, h heldRun, cur port.Approval, ext port.Acc
 	if err != nil {
 		return "", nil, nil, err
 	}
-	d := evaluate.Evaluate(f, evaluate.Request{Subject: h.Sub, Function: cur.Function, Now: s.now(), Arguments: nonEmpty(h.Args), Call: true})
+	d := evaluate.Evaluate(f, evaluate.Request{Subject: h.Sub, Function: cur.Function, Now: s.now(), Arguments: h.evaluated(), Call: true})
 	switch fn := f.Functions[cur.Function]; {
-	case args.Parse(h.Args) != nil:
-		return port.CodeInvalidArgument, nil, nil, nil
 	case d.Mode == port.ModeDeny:
 		return d.Reason, nil, nil, nil
 	case ext.Mode == port.ModeDeny:
 		return ext.Reason, nil, nil, nil
+	case h.Bad:
+		return port.CodeInvalidArgument, nil, nil, nil
 	case fn.DefinitionHash != cur.DefinitionHash:
 		return port.CodeDefinitionChanged, nil, nil, nil
 	}

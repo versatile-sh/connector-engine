@@ -3,12 +3,16 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/versatile-sh/connector-engine/core/args"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/service"
 )
+
+var callKeys = []string{"name", "arguments", "fields"}
 
 func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Result, error) {
 	p, err := principalOf(req)
@@ -16,12 +20,17 @@ func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Resul
 		return nil, err
 	}
 	params, d := req.Params, deliveriesOf(req)
+	if g.isMeta(params.Name) {
+		if err := args.Parse(params.Arguments); err != nil {
+			return toolError(port.CodeInvalidArgument, err.Error()), nil
+		}
+	}
 	switch params.Name {
 	case port.ToolFind:
 		return g.find(ctx, p, params.Arguments)
 	case port.ToolCall:
 		var a callArgs
-		if err := json.Unmarshal(params.Arguments, &a); err != nil || a.Name == "" {
+		if err := json.Unmarshal(params.Arguments, &a); err != nil || a.Name == "" || caseVariantKey(params.Arguments) {
 			return toolError(port.CodeInvalidArgument, "call takes a name and arguments"), nil
 		}
 		return g.forward(ctx, p, d, service.CallRequest{Name: a.Name, Arguments: a.Arguments, Fields: fieldsOf(a.Fields, params.Meta)})
@@ -33,6 +42,29 @@ func (g *Gateway) call(ctx context.Context, req *mcp.CallToolRequest) (mcp.Resul
 		}
 	}
 	return g.forward(ctx, p, d, service.CallRequest{Name: params.Name, Arguments: params.Arguments, Fields: fieldsOf(nil, params.Meta)})
+}
+
+func (g *Gateway) isMeta(name string) bool {
+	switch name {
+	case port.ToolFind, port.ToolCall, port.ToolApprovalStatus, port.ToolApprovalCancel:
+		return true
+	case port.ToolSkillList, port.ToolSkillLoad:
+		return g.cfg.Skills
+	}
+	return false
+}
+
+func caseVariantKey(raw json.RawMessage) bool {
+	var keys map[string]json.RawMessage
+	_ = json.Unmarshal(raw, &keys)
+	for k := range keys {
+		for _, declared := range callKeys {
+			if k != declared && strings.EqualFold(k, declared) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func fieldsOf(fromArgs []string, meta mcp.Meta) []string {

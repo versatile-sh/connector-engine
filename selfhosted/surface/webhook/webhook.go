@@ -216,3 +216,25 @@ func (c *Channel) send(ctx context.Context, method string, u *url.URL, h http.He
 func (c *Channel) scrub(err error) string {
 	return surface.Scrub(err, c.url.String(), c.url.Path, c.url.RawQuery, c.token)
 }
+
+func webhookKind(name, title string, fields []surface.Field, hosts ...string) surface.Kind {
+	return surface.Kind{
+		Name:   name,
+		Title:  title,
+		Fields: fields,
+		Hosts:  hosts,
+		New: func(s map[string]string) (surface.Channel, error) {
+			return New(Config{Kind: name, URL: s["url"], Token: s["token"]})
+		},
+	}
+}
+
+// Kinds describes the three webhook channels (ntfy, Discord and Slack incoming webhooks) for the console's settings page and factory.
+var Kinds = []surface.Kind{
+	webhookKind(KindNtfy, "ntfy", []surface.Field{
+		{Name: "url", Label: "Topic URL", Placeholder: "https://ntfy.sh/", Secret: true, Hint: true},
+		{Name: "token", Label: "Access token", Secret: true, Optional: true},
+	}),
+	webhookKind(KindDiscordWebhook, "Discord webhook", []surface.Field{{Name: "url", Label: "Webhook URL", Placeholder: "https://", Secret: true, Hint: true}}, "discord.com", "discordapp.com"),
+	webhookKind(KindSlackWebhook, "Slack webhook", []surface.Field{{Name: "url", Label: "Webhook URL", Placeholder: "https://", Secret: true, Hint: true}}, "hooks.slack.com"),
+}

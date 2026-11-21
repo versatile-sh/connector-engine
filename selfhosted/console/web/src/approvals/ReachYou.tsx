@@ -1,5 +1,6 @@
 import type { ChannelView, NotificationsData } from "../api";
 import { useLocale, useT } from "../i18n/I18nProvider";
+import { kindTitle } from "../notifications/setup";
 import { openLink } from "../router";
 import { Arrow, Icon, type IconName } from "../ui/Icon";
 import { CAPTION, QUIET_LINK, SKELETON_LINE, SURFACE, TITLE } from "../ui/styles";
@@ -71,7 +72,7 @@ export function ReachYou({ data, failed }: { data: NotificationsData | undefined
               row.kind === "device" ? (
                 <Row key={`d:${row.device.id}`} icon="terminal" label={row.device.name} note={row.device.last_seen ? t("approvals.reach.seen", { when: relativeOf(row.device.last_seen, now, locale) }) : t("approvals.reach.never")} tag={{ tone: "muted", dot: false, text: t("approvals.reach.popup") }} />
               ) : (
-                <Row key={`c:${row.channel.id}`} icon="bell" label={row.channel.label} note={t(`notify.kind.${row.channel.kind}`)} tag={{ ...STATUS[row.channel.status], text: t(`notify.status.${row.channel.status}`) }} />
+                <Row key={`c:${row.channel.id}`} icon="bell" label={row.channel.label} note={kindTitle(t, data?.kinds ?? [], row.channel.kind)} tag={{ ...STATUS[row.channel.status], text: t(`notify.status.${row.channel.status}`) }} />
               ),
             )}
           </ul>

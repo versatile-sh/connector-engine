@@ -409,8 +409,14 @@ export type DecisionRow = { id: string; agent: string; connector: string; functi
 /** What POST /api/approvals/{id}/decide answers: the record now, and whether someone else had decided it first. */
 export type Decision = { outcome: ApprovalView; already_decided: boolean };
 
-/** Where a notification can go: chat bots that take clicks, and notify-only pushes and webhooks. */
-export type ChannelKind = "discord" | "slack" | "telegram" | "ntfy" | "discord_webhook" | "slack_webhook";
+/** The name of a channel kind as the server lists it in `NotificationsData.kinds`. */
+export type ChannelKind = string;
+
+/** One setting a channel kind takes, as the server describes it. */
+export type ChannelFieldView = { name: string; label: string; placeholder?: string; secret: boolean; optional?: boolean };
+
+/** A channel kind the server can build: what to ask for, and whether it takes answers or only notifies. */
+export type ChannelKindView = { kind: ChannelKind; title: string; interactive: boolean; fields: ChannelFieldView[] };
 
 /** An approval channel as the console lists it, secrets left out. */
 export type ChannelView = {
@@ -429,7 +435,7 @@ export type ChannelView = {
 export type DeviceView = { id: string; name: string; created_at: string; last_seen?: string };
 
 /** What GET /api/notifications answers; it never carries a secret. */
-export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[]; apps: { name: string; elicit: boolean }[] };
+export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[]; apps: { name: string; elicit: boolean }[]; kinds: ChannelKindView[] };
 
 /** A computer just paired for desktop popups: its key, shown once, and the command that uses it. */
 export type PairedDevice = { device: DeviceView; key: string; command: string };
@@ -488,13 +494,13 @@ export type SlotChoice = { action: "keep" } | { action: "apply"; key: string } |
 export type SetupOptions = { slots?: Record<string, SlotChoice>; existing_keys?: boolean };
 
 /** One user of this console as the People tab lists them: when they joined, how many keys they hold, and whether they are the viewer. */
-export type Person = { person: string; username: string; role: Role; created_at: string; keys: number; you: boolean; may_reset?: boolean };
+export type Person = { person: string; username: string; role: Role; created_at: string; keys: number; you: boolean; may_reset: boolean };
 
 /** What a link is for: joining with a role, or setting a new password for one user. */
 export type LinkPurpose = "join" | "reset";
 
 /** A join or reset link that has not been used yet; its token is never shown again. */
-export type PendingLink = { id: string; purpose: LinkPurpose; role: Role; person: string; created_by: string; created_at: string; expires_at: string };
+export type PendingLink = { id: string; purpose: LinkPurpose; role: Role; person: string; created_by: string; created_at: string; expires_at: string; may_revoke: boolean };
 
 /** One entry of the console's own record of changes to people and access: who did what to whom. */
 export type AuditEntry = { at: string; actor: string; action: string; target: string; detail?: Record<string, string> };

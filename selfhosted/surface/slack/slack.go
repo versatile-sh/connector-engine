@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -397,3 +398,19 @@ func (c *Channel) scrub(err error, secrets ...string) string {
 }
 
 func (c *Channel) scrubText(s string) string { return surface.ScrubText(s, c.app, c.bot) }
+
+// Kind describes the Slack channel for the console's settings page and factory.
+var Kind = surface.Kind{
+	Name:        "slack",
+	Title:       "Slack",
+	Interactive: true,
+	Fields: []surface.Field{
+		{Name: "app_token", Label: "App-level token", Placeholder: "xapp-", Secret: true},
+		{Name: "bot_token", Label: "Bot token", Placeholder: "xoxb-", Secret: true, Hint: true},
+		{Name: "owner_user_id", Label: "Your Slack member id"},
+	},
+	Owner: regexp.MustCompile(`^[UW][A-Z0-9]{2,20}$`),
+	New: func(s map[string]string) (surface.Channel, error) {
+		return New(Config{AppToken: s["app_token"], BotToken: s["bot_token"], OwnerUserID: s["owner_user_id"]})
+	},
+}

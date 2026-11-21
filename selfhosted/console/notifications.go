@@ -7,7 +7,6 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -20,31 +19,10 @@ const (
 	defaultDeviceName = "This computer"
 )
 
-var (
-	digits    = regexp.MustCompile(`^[0-9]{1,24}$`)
-	slackUser = regexp.MustCompile(`^[UW][A-Z0-9]{2,20}$`)
-)
-
-type kindSpec struct {
-	required []string
-	optional []string
-	secrets  []string
-	owner    *regexp.Regexp
-	hosts    []string
-}
-
-var kinds = map[string]kindSpec{
-	"discord":         {required: []string{"token", "owner_user_id"}, secrets: []string{"token"}, owner: digits},
-	"slack":           {required: []string{"app_token", "bot_token", "owner_user_id"}, secrets: []string{"bot_token", "app_token"}, owner: slackUser},
-	"telegram":        {required: []string{"token", "owner_user_id"}, secrets: []string{"token"}, owner: digits},
-	"ntfy":            {required: []string{"url"}, optional: []string{"token"}, secrets: []string{"url", "token"}},
-	"discord_webhook": {required: []string{"url"}, secrets: []string{"url"}, hosts: []string{"discord.com", "discordapp.com"}},
-	"slack_webhook":   {required: []string{"url"}, secrets: []string{"url"}, hosts: []string{"hooks.slack.com"}},
-}
-
 func secretValues(kind string, settings map[string]string) []string {
 	var out []string
-	for _, k := range kinds[kind].secrets {
+	spec, _ := kindOf(kind)
+	for _, k := range spec.Secrets() {
 		out = append(out, settings[k])
 	}
 	return out
@@ -52,8 +30,10 @@ func secretValues(kind string, settings map[string]string) []string {
 
 func splitSecrets(kind string, all map[string]string) (plain, secret map[string]string) {
 	plain, secret = map[string]string{}, map[string]string{}
+	spec, _ := kindOf(kind)
+	secrets := spec.Secrets()
 	for k, v := range all {
-		if slices.Contains(kinds[kind].secrets, k) {
+		if slices.Contains(secrets, k) {
 			secret[k] = v
 		} else {
 			plain[k] = v
@@ -78,24 +58,24 @@ func (c *Console) settingsOf(ctx context.Context, sc StoredChannel) (map[string]
 }
 
 func checkSettings(kind string, in map[string]string) (map[string]string, error) {
-	spec, ok := kinds[kind]
+	spec, ok := kindOf(kind)
 	if !ok {
 		return nil, invalid("unknown channel kind %q", kind)
 	}
 	out := map[string]string{}
-	for _, k := range append(slices.Clone(spec.required), spec.optional...) {
-		v := strings.TrimSpace(in[k])
-		if v == "" && slices.Contains(spec.required, k) {
-			return nil, invalid("%s is required", k)
+	for _, f := range spec.Fields {
+		v := strings.TrimSpace(in[f.Name])
+		if v == "" && !f.Optional {
+			return nil, invalid("%s is required", f.Name)
 		}
 		if strings.ContainsAny(v, " \r\n\t") || len(v) > 2048 {
-			return nil, invalid("%s has spaces or is too long", k)
+			return nil, invalid("%s has spaces or is too long", f.Name)
 		}
 		if v != "" {
-			out[k] = v
+			out[f.Name] = v
 		}
 	}
-	if spec.owner != nil && !spec.owner.MatchString(out["owner_user_id"]) {
+	if spec.Owner != nil && !spec.Owner.MatchString(out["owner_user_id"]) {
 		return nil, invalid("owner_user_id does not look like a %s user id", kind)
 	}
 	if raw, ok := out["url"]; ok {
@@ -103,8 +83,8 @@ func checkSettings(kind string, in map[string]string) (map[string]string, error)
 		if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
 			return nil, invalid("the URL is an https address")
 		}
-		if len(spec.hosts) > 0 && !slices.Contains(spec.hosts, strings.ToLower(u.Hostname())) {
-			return nil, invalid("a %s URL is on %s", kind, strings.Join(spec.hosts, " or "))
+		if len(spec.Hosts) > 0 && !slices.Contains(spec.Hosts, strings.ToLower(u.Hostname())) {
+			return nil, invalid("a %s URL is on %s", kind, strings.Join(spec.Hosts, " or "))
 		}
 	}
 	return out, nil
@@ -132,10 +112,11 @@ type DeviceView struct {
 }
 
 func (c *Console) channelView(ctx context.Context, sc StoredChannel) ChannelView {
-	v := ChannelView{ID: sc.ID, Kind: sc.Kind, Label: sc.Label, Interactive: interactiveKinds[sc.Kind], Owner: sc.Settings["owner_user_id"], CreatedAt: sc.CreatedAt}
-	if s := kinds[sc.Kind].secrets; len(s) > 0 {
+	spec, _ := kindOf(sc.Kind)
+	v := ChannelView{ID: sc.ID, Kind: sc.Kind, Label: sc.Label, Interactive: spec.Interactive, Owner: sc.Settings["owner_user_id"], CreatedAt: sc.CreatedAt}
+	if hint := spec.HintField(); hint != "" {
 		sec, _ := c.secrets().get(ctx, sc.ID)
-		if secret := sec[s[0]]; len(secret) > 8 {
+		if secret := sec[hint]; len(secret) > 8 {
 			v.SecretHint = secret[len(secret)-4:]
 		}
 	}
@@ -200,7 +181,7 @@ func (c *Console) listNotifications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	slices.SortFunc(apps, func(a, b app) int { return strings.Compare(a.Name, b.Name) })
-	writeJSON(w, http.StatusOK, map[string]any{"channels": views, "devices": devices, "apps": apps})
+	writeJSON(w, http.StatusOK, map[string]any{"channels": views, "devices": devices, "apps": apps, "kinds": channelKinds})
 }
 
 func (c *Console) addChannel(w http.ResponseWriter, r *http.Request) {

@@ -196,8 +196,9 @@ func decodeState(raw []byte, person string) (stateFile, error) {
 	if err := json.Unmarshal(raw, &d); err != nil {
 		return d, err
 	}
-	migrateSlots(&d)
-	migrateUsers(&d, person)
+	if err := upgradeState(&d, person); err != nil {
+		return d, err
+	}
 	if owners(&d) == 0 {
 		return d, errors.New("it has no owner account")
 	}

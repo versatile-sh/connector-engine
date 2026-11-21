@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"io/fs"
 	"time"
 
 	"github.com/versatile-sh/connector-engine/core/grant"
@@ -113,7 +112,7 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 	if err != nil {
 		return port.Snapshot{}, err
 	}
-	snap := port.Snapshot{Store: snapshotStore, Schema: schema(), Tables: map[string][]json.RawMessage{}}
+	snap := port.Snapshot{Store: snapshotStore, Schema: postgres.SchemaOf(migrations), Tables: map[string][]json.RawMessage{}}
 	for name, table := range map[string]any{"records": r.records, "streams": r.streams, "outbox": r.outbox, "audit": r.audit, "inbox": r.inbox} {
 		if snap.Tables[name], err = encodeRows(table); err != nil {
 			return port.Snapshot{}, port.Errorf(port.CodeInternal, "snapshot %s: %v", name, err)
@@ -135,8 +134,8 @@ func decodeRows[T any](snap port.Snapshot, name string, check func(T) bool) ([]T
 	out := make([]T, 0, len(snap.Tables[name]))
 	for _, raw := range snap.Tables[name] {
 		var v T
-		if err := json.Unmarshal(raw, &v); err != nil || !check(v) {
-			return nil, port.Errorf(port.CodeInvalidArgument, "snapshot %s: a row does not decode: %v", name, err)
+		if json.Unmarshal(raw, &v) != nil || (check != nil && !check(v)) {
+			return nil, port.Errorf(port.CodeInvalidArgument, "snapshot %s: a row does not decode", name)
 		}
 		out = append(out, v)
 	}
@@ -148,7 +147,7 @@ func object(doc json.RawMessage) bool {
 }
 
 func decodeSnapshot(snap port.Snapshot) (r rows, err error) {
-	if r.records, err = decodeRows(snap, "records", func(recordRow) bool { return true }); err != nil {
+	if r.records, err = decodeRows[recordRow](snap, "records", nil); err != nil {
 		return r, err
 	}
 	if r.streams, err = decodeRows(snap, "streams", func(v streamRow) bool { return v.Stream != "" }); err != nil {
@@ -164,10 +163,11 @@ func decodeSnapshot(snap port.Snapshot) (r rows, err error) {
 	return r, err
 }
 
-// Restore replaces every row with a snapshot of this store or of the Postgres store that postgres.CheckRows and restore.Apply accept, in one transaction, and rebuilds the due work.
+// Restore replaces every row with a SQLite or Postgres snapshot the checks accept, in one transaction, and rebuilds the due work.
 func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (port.Restored, error) {
-	if snap.Store != snapshotStore && snap.Store != "postgres" {
-		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %q snapshot does not restore into a %s store", snap.Store, snapshotStore)
+	schema := writerSchemas[snap.Store]
+	if schema == nil {
+		return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "a %s snapshot does not restore into a %s store", restore.Quote(snap.Store), snapshotStore)
 	}
 	if err := postgres.CheckRows(snap, schema()); err != nil {
 		return port.Restored{}, err
@@ -179,7 +179,7 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	dues := make([]any, len(r.records))
 	for i, rec := range r.records {
 		if dues[i], err = decodeDue(rec.Kind, rec.Doc); err != nil {
-			return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %s does not decode", rec.Kind, shown(rec.K))
+			return port.Restored{}, port.Errorf(port.CodeInvalidArgument, "snapshot records: %s %s does not decode", restore.Quote(rec.Kind), restore.Quote(shown(rec.K)))
 		}
 	}
 	var out port.Restored
@@ -253,7 +253,4 @@ func canonicalGrants(ctx context.Context, q *sql.Tx) error {
 
 var _ port.Snapshotter = (*Store)(nil)
 
-func schema() int {
-	files, _ := fs.Glob(migrations, "migrations/*.sql")
-	return len(files)
-}
+var writerSchemas = map[string]func() int{snapshotStore: func() int { return postgres.SchemaOf(migrations) }, "postgres": postgres.Schema}

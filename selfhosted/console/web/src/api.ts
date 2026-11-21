@@ -258,12 +258,22 @@ export type ActivityData = {
   to: string;
   calls: ActivityCall[];
   total: number;
+  next_cursor?: string;
   hours: HourCount[];
   connectors: ConnectorCount[];
   agents: string[];
 };
 
-export type ActivitySettings = { record_arguments: boolean; record_results: boolean; retention_days: number; cleared_at?: string };
+/** How long the console keeps calls: none, a number of days or for ever. */
+export type Keep = "off" | "7d" | "30d" | "90d" | "forever";
+
+export type ActivitySettings = { record_arguments: boolean; record_results: boolean; retention: Keep; retention_days: number; cleared_at?: string };
+
+/** The period a deletion covers: calls older than some days, or from one instant to another. */
+export type PrunePeriod = { older_than_days: number } | { from: string; to: string };
+
+/** How many calls a period holds, and whether they were deleted or only counted. */
+export type PruneResult = { count: number; deleted: boolean };
 
 export type ApiError = { status: number; message: string; code?: string | undefined };
 

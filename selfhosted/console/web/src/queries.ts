@@ -1,7 +1,7 @@
-import { queryOptions } from "@tanstack/react-query";
-import { apiQueryOf, type ActivityFilter } from "./activity/activity";
+import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
+import { activityViewOf, apiQueryOf, KEPT_DAYS, type ActivityFilter } from "./activity/activity";
 import type { Scope } from "./people/viewer";
-import { api, setCsrf, type Account, type LinkFacts, type PeopleData, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type Session, type Skill, type SlotView } from "./api";
+import { api, setCsrf, type Account, type LinkFacts, type PeopleData, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type PrunePeriod, type PruneResult, type Session, type Skill, type SlotView } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -84,14 +84,24 @@ export const scopedApprovalsQuery = (scope: Scope) =>
 /** The key every activity page shares, whatever its filter. */
 export const activityKey = ["activity"] as const;
 
-/** The activity page for a filter, its range ending at each fetch, refreshed while it is open. */
-export const activityQuery = (filter: ActivityFilter) =>
-  queryOptions({
-    queryKey: [...activityKey, filter],
-    queryFn: () => api<ActivityData>("GET", `/api/activity?${apiQueryOf(filter, new Date())}`),
-    refetchInterval: 10_000,
-    placeholderData: (previous) => previous,
+/** The activity for a filter, a page of calls at a time under one key per filter, so changing the filter keeps the old rows until the new ones arrive; refreshed every few seconds while only the first page is loaded. */
+export const activityQuery = (filter: ActivityFilter, keptDays = KEPT_DAYS) =>
+  infiniteQueryOptions({
+    queryKey: [...activityKey, filter, keptDays],
+    queryFn: ({ pageParam }) => api<ActivityData>("GET", `/api/activity?${apiQueryOf(filter, new Date(), pageParam, keptDays)}`),
+    initialPageParam: "",
+    getNextPageParam: (last) => last.next_cursor || undefined,
+    select: activityViewOf,
+    refetchInterval: (query) => ((query.state.data?.pages.length ?? 0) > 1 ? false : ACTIVITY_POLL_MS),
+    placeholderData: keepPreviousData,
   });
+
+/** How often the first page of the activity is read again. */
+export const ACTIVITY_POLL_MS = 10_000;
+
+/** How many calls a period holds, counted by the console without deleting any. */
+export const activityPruneQuery = (period: PrunePeriod) =>
+  queryOptions({ queryKey: ["activity-prune", period], queryFn: () => api<PruneResult>("POST", "/api/activity/prune", { ...period, dry_run: true }), staleTime: 0, gcTime: 0 });
 
 /** One call in full: its arguments, its result excerpt and the engine's record. */
 export const activityCallQuery = (id: string) =>

@@ -18,13 +18,13 @@ function Asked({ state }: { state: string | undefined }) {
   return <Tag title={key ? t(key) : undefined}>{t("activity.asked")}</Tag>;
 }
 
-type CallListProps = { calls: readonly ActivityCall[]; named: ReadonlyMap<string, Named>; owners?: boolean; onOpen(id: string): void };
+type CallListProps = { calls: readonly ActivityCall[]; named: ReadonlyMap<string, Named>; owners?: boolean; scope: string; onOpen(id: string): void };
 
-/** The calls newest first, a new one sliding in at the top, one row each: the icon, the function or the skill with its class and approval, when, through which connector or file and from which app, then the outcome and the duration; with `owners`, whose call it was. */
-export function CallList({ calls, named, owners = false, onOpen }: CallListProps) {
+/** The calls newest first, a new one sliding in at the top unless the `scope` (the filter and how many pages are loaded) changed, one row each: the icon, the function or the skill with its class and approval, when, through which connector or file and from which app, then the outcome and the duration; with `owners`, whose call it was. */
+export function CallList({ calls, named, owners = false, scope, onOpen }: CallListProps) {
   const t = useT();
   const locale = useLocale();
-  const drawn = useKept(calls, (call) => call.id);
+  const drawn = useKept(calls, (call) => call.id, scope);
   return (
     <ol className="@container -mx-1 flex flex-col">
       {drawn.map(({ row: call, phase }) => {

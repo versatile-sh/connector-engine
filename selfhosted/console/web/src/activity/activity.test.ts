@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { Connector, HourCount, Skill } from "../api.ts";
-import { apiQueryOf, approvalStateKey, barsOf, callOf, clearedOf, inScope, daysBetween, durationText, filterOf, hrefOf, keptSince, kindOf, lastWeek, namedOf, prettyJSON, skillFile } from "./activity.ts";
+import type { ActivityCall, ActivityData } from "../api.ts";
+import { activityViewOf, apiQueryOf, approvalStateKey, barsOf, callOf, clearedOf, inScope, daysBetween, durationText, filterOf, hrefOf, keptDaysOf, keptSince, kindOf, lastWeek, namedOf, prettyJSON, pruneBodyOf, skillFile } from "./activity.ts";
 
 const hour = (start: Date, counts: Partial<Omit<HourCount, "start">> = {}): HourCount => ({ start: start.toISOString(), ok: 0, error: 0, denied: 0, pending: 0, running: 0, ...counts });
 
@@ -214,5 +215,63 @@ describe("the activity scope", () => {
   test("sends the scope and person to the API", () => {
     const query = new URLSearchParams(apiQueryOf({ range: "24h", scope: "everyone", person: "p-bob" }, new Date("2026-11-20T00:00:00Z")));
     assert.deepEqual([query.get("scope"), query.get("person")], ["everyone", "p-bob"]);
+  });
+});
+
+const call = (id: string): ActivityCall => ({ id, at: "2026-11-20T10:00:00Z", agent: "a", function: "f", outcome: "ok", captured: true });
+const page = (ids: string[], more?: string): ActivityData => ({ from: "f", to: "t", calls: ids.map(call), total: 5, hours: [], connectors: [], agents: ["a"], ...(more ? { next_cursor: more } : {}) });
+
+describe("activityViewOf", () => {
+  test("takes the counts of the first page and the calls of every page in order", () => {
+    const view = activityViewOf({ pages: [page(["c3", "c2"], "x"), page(["c1"])], pageParams: ["", "x"] });
+    assert.deepEqual(view.calls.map((c) => c.id), ["c3", "c2", "c1"]);
+    assert.deepEqual([view.total, view.pages, view.agents], [5, 2, ["a"]]);
+  });
+
+  describe("while the last page names a cursor", () => {
+    test("has more", () => {
+      assert.equal(activityViewOf({ pages: [page(["c1"], "x")], pageParams: [""] }).more, true);
+    });
+  });
+
+  describe("when the last page names none", () => {
+    test("has no more", () => {
+      assert.equal(activityViewOf({ pages: [page(["c1", "c0"])], pageParams: [""] }).more, false);
+    });
+  });
+});
+
+describe("apiQueryOf with a cursor", () => {
+  test("asks for one page after it", () => {
+    const query = new URLSearchParams(apiQueryOf({ range: "24h", connector: "c1" }, new Date("2026-11-20T12:00:00Z"), "abc"));
+    assert.deepEqual([query.get("limit"), query.get("cursor"), query.get("connector")], ["50", "abc", "c1"]);
+  });
+
+  describe("without one", () => {
+    test("asks for the first page", () => {
+      assert.equal(new URLSearchParams(apiQueryOf({ range: "24h" }, new Date())).has("cursor"), false);
+    });
+  });
+});
+
+describe("keptDaysOf", () => {
+  test("reads each retention as days, 30 when unknown", () => {
+    assert.deepEqual((["7d", "30d", "90d", "forever", "off", undefined] as const).map(keptDaysOf), [7, 30, 90, 366, 1, 30]);
+  });
+});
+
+describe("pruneBodyOf", () => {
+  test("keeps older than as days", () => {
+    assert.deepEqual(pruneBodyOf({ mode: "older", days: 7 }), { older_than_days: 7 });
+  });
+
+  test("runs days from the first's local midnight to the last millisecond of the last", () => {
+    assert.deepEqual(pruneBodyOf({ mode: "days", from: "2026-11-02", to: "2026-11-03" }), { from: new Date(2026, 10, 2).toISOString(), to: new Date(2026, 10, 4, 0, 0, 0, -1).toISOString() });
+  });
+
+  describe("with the first day after the last", () => {
+    test("is no period", () => {
+      assert.equal(pruneBodyOf({ mode: "days", from: "2026-11-03", to: "2026-11-02" }), undefined);
+    });
   });
 });

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import type { ActivityData, CallOutcome } from "../api";
+import type { CallOutcome } from "../api";
 import { ConnectorIcon } from "../connectors/ConnectorIcon";
 import type { Locale } from "../i18n";
 import { useLocale, useT } from "../i18n/I18nProvider";
@@ -11,7 +11,7 @@ import { Icon } from "../ui/Icon";
 import { SearchBox } from "../ui/SearchBox";
 import { Select, type SelectOption } from "../ui/Select";
 import { CHIP, SURFACE, button } from "../ui/styles";
-import { dayOf, daysBetween, inScope, isNarrowed, keptSince, lastWeek, clearedOf, RANGES, type ActivityFilter, type ActivityPeriod, type Named } from "./activity";
+import { dayOf, daysBetween, inScope, isNarrowed, keptSince, lastWeek, clearedOf, RANGES, type ActivityFilter, type ActivityPeriod, type ActivityView, type Named } from "./activity";
 
 const FILTER_OUTCOMES: readonly CallOutcome[] = ["ok", "error", "denied", "pending"];
 
@@ -56,9 +56,9 @@ function Search({ value, onSearch }: { value: string | undefined; onSearch(searc
   );
 }
 
-type FilterRowProps = { filter: ActivityFilter; data: ActivityData | undefined; named: ReadonlyMap<string, Named>; scoped?: boolean; onChange(filter: ActivityFilter): void };
+type FilterRowProps = { filter: ActivityFilter; data: ActivityView | undefined; named: ReadonlyMap<string, Named>; scoped?: boolean; keptDays: number; onChange(filter: ActivityFilter): void };
 
-function usePeopleOptions(data: ActivityData | undefined, everyone: boolean): SelectOption<string>[] {
+function usePeopleOptions(data: ActivityView | undefined, everyone: boolean): SelectOption<string>[] {
   const viewer = useViewer();
   const people = useQuery({ ...peopleQuery, enabled: everyone && viewer.can("people.read") });
   if (!everyone) return [];
@@ -68,7 +68,7 @@ function usePeopleOptions(data: ActivityData | undefined, everyone: boolean): Se
 }
 
 /** The page's filters in one wrapping row in a card of its own, as wide as the page's columns: the range as chips or custom days picked from the kept ones with two `Select`s, the connector, the access key and the outcome as selects that filter past eight options, the connector turning into a chip with its icon once chosen, a search by function name, and Clear filters while anything narrows the page; when `scoped`, Mine or Everyone leads the row, and Everyone adds a person. */
-export function FilterRow({ filter, data, named, scoped = false, onChange }: FilterRowProps) {
+export function FilterRow({ filter, data, named, scoped = false, keptDays, onChange }: FilterRowProps) {
   const t = useT();
   const locale = useLocale();
   const everyone = scoped && filter.scope === "everyone";
@@ -90,7 +90,7 @@ export function FilterRow({ filter, data, named, scoped = false, onChange }: Fil
       </div>
       {filter.range === "custom" ? (
         <span className="swap-in flex items-center gap-1.5">
-          <Select<string> label={t("activity.from")} value={filter.from} options={daysBetween(keptSince(now), filter.to).map(dayOption)} onChange={(from) => period({ ...filter, from })} className="w-40" />
+          <Select<string> label={t("activity.from")} value={filter.from} options={daysBetween(keptSince(now, keptDays), filter.to).map(dayOption)} onChange={(from) => period({ ...filter, from })} className="w-40" />
           <span aria-hidden="true" className="text-muted">
             –
           </span>

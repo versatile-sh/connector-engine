@@ -94,7 +94,7 @@ The strictest mode wins across layers. `core/evaluate` holds the steps and `core
 | Profile | Identity | Who decides approvals | Binaries |
 |---|---|---|---|
 | `headless` | tokens from your OIDC/JWKS issuer | your product, through the operator API and events | `cmd/connector-engine`, `cmd/vsh` |
-| `person` | the console is the OAuth 2.1 server for AI apps | one person, in the console or an approval surface | `selfhosted/cmd/*` |
+| `person` | the console is the OAuth 2.1 server for AI apps; Owner, Admin and Member roles | the console's users, in the console or an approval surface | `selfhosted/cmd/*` |
 
 Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `deploy/profiles/headless` or `selfhosted/deploy/profiles/person`.
 

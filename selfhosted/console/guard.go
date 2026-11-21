@@ -93,10 +93,13 @@ type Guard struct {
 	Hosts []string
 }
 
-// LoopbackHosts is the Host allowlist of a console reached at public: its own host and 127.0.0.1, localhost and [::1], all at public's port.
+// LoopbackHosts is the Host allowlist of a console reached at public: its own host and, when public names a port, 127.0.0.1, localhost and [::1] at that port.
 func LoopbackHosts(public *url.URL) []string {
 	port := public.Port()
 	hosts := []string{strings.ToLower(public.Host)}
+	if port == "" {
+		return hosts
+	}
 	for _, h := range []string{"127.0.0.1", "localhost", "[::1]"} {
 		if h+":"+port != hosts[0] {
 			hosts = append(hosts, h+":"+port)

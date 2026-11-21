@@ -29,6 +29,10 @@ describe("the console's design vocabulary", () => {
     assert.deepEqual(using(/\bfont-(display|bold|black|extrabold)\b/), []);
   });
 
+  test("draws the large panel only outside the shell, never inside its content surface", () => {
+    assert.deepEqual(using(/\bPANEL\b/), ["import/ImportLanding.tsx", "ui/styles.ts"]);
+  });
+
   test("draws every dropdown with Select, never the native select or datalist", () => {
     assert.deepEqual(using(/<(select|datalist|option)\b/), []);
   });

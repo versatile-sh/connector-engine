@@ -35,8 +35,8 @@ type Options struct {
 // Open opens the state and activity of o, unlocks the key store and, on ctx, prepares the tenant and the users' engine roles and runs the notification loop; the closer flushes the activity.
 func Open(ctx context.Context, o Options) (*Console, func(), error) {
 	public, err := url.Parse(strings.TrimRight(o.PublicURL, "/"))
-	if err != nil || public.Host == "" || public.Port() == "" {
-		return nil, nil, invalid("the public URL %q is not an absolute URL with a port", o.PublicURL)
+	if err != nil || public.Host == "" {
+		return nil, nil, invalid("the public URL %q is not an absolute URL", o.PublicURL)
 	}
 	if firstOf(o.ServicePerson, defaultServicePerson) == firstOf(o.Person, defaultPerson) {
 		return nil, nil, invalid("the service person %q is also the first Owner's person", firstOf(o.Person, defaultPerson))

@@ -10,7 +10,7 @@ import { Display } from "../ui/Display";
 import { Arrow, Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
-import { CAPTION, PANEL, QUIET_LINK, SKELETON, SKELETON_LINE, SUBTITLE, WELL, button } from "../ui/styles";
+import { CAPTION, PAGE, QUIET_LINK, SKELETON, SKELETON_LINE, SPLIT, SUBTITLE, WELL, button } from "../ui/styles";
 import { tabId } from "../ui/Tabs";
 import { Tag } from "../ui/Tag";
 import { useViewer } from "../people/useViewer";
@@ -102,41 +102,43 @@ export function ConnectorDetail({ id }: { id: string }) {
     ...(host ? [{ label: t("detail.facts.server"), value: host }] : []),
   ];
   return (
-    <div className="swap-in flex flex-col">
+    <div className={`swap-in ${PAGE}`}>
       <Back />
-      <header className="mt-8 mb-10 flex flex-wrap items-start gap-x-6 gap-y-5">
+      <header className="mb-2 flex flex-wrap items-start gap-x-6 gap-y-5">
         <ConnectorIcon src={connector.icon} title={connector.title} size="lg" />
         <div className="min-w-0 flex-1 basis-full sm:basis-56">
-          <Display className="[overflow-wrap:anywhere]">{connector.title}</Display>
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-4">
+            <Display className="[overflow-wrap:anywhere]">{connector.title}</Display>
+            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+              <a
+                href={hrefOf({ range: "24h", connector: connector.id })}
+                className={button({ variant: "secondary", size: "sm" })}
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate(hrefOf({ range: "24h", connector: connector.id }));
+                }}
+              >
+                <Icon name="activity" className="size-4" />
+                {t("detail.activity")}
+              </a>
+              {manage ? (
+                <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
+                  <Icon name="trash" className="size-4" />
+                  {t("common.remove")}
+                </button>
+              ) : null}
+            </div>
+          </div>
           <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-muted empty:hidden">
             {connector.publisher ? <span>{t("import.by", { publisher: connector.publisher })}</span> : null}
             {connector.blocked ? <Tag tone="amber" dot>{connector.blocked}</Tag> : null}
           </p>
           {connector.description ? <p className="mt-4 max-w-2xl text-pretty text-muted">{connector.description}</p> : null}
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <a
-            href={hrefOf({ range: "24h", connector: connector.id })}
-            className={button({ variant: "secondary", size: "sm" })}
-            onClick={(event) => {
-              event.preventDefault();
-              navigate(hrefOf({ range: "24h", connector: connector.id }));
-            }}
-          >
-            <Icon name="activity" className="size-4" />
-            {t("detail.activity")}
-          </a>
-          {manage ? (
-            <button type="button" className={button({ variant: "danger", size: "sm" })} onClick={() => setRemoving(true)}>
-              <Icon name="trash" className="size-4" />
-              {t("common.remove")}
-            </button>
-          ) : null}
-        </div>
       </header>
-      <article className={`${PANEL} p-4 sm:p-8 xl:p-10`}>
+      <article className="flex flex-col">
         {tabs ? <ProfileTabs connector={connector} agent={profile?.agent} panel={PROFILE_PANEL} className="mb-6" /> : null}
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
+        <div className={SPLIT}>
           <div id={PROFILE_PANEL} role={tabs ? "tabpanel" : undefined} aria-labelledby={tabs ? tabId(PROFILE_PANEL, profile?.agent ?? "") : undefined} className="min-w-0">
             <ConnectorChoices connector={connector} agent={profile?.agent} />
           </div>

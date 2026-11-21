@@ -28,7 +28,7 @@ The engine is a policy point between AI apps and tool servers. It assumes the ag
 
 | Rule | Why |
 |---|---|
-| **Never expose the person console publicly.** Publish it on `127.0.0.1` only, as `make up` does | it is a single-owner app whose Host allowlist, cookie and OAuth redirects assume loopback; a reverse proxy in front of it is not a supported setup |
+| **Publish the console only on `127.0.0.1`, or behind a TLS reverse proxy with `CONSOLE_PUBLIC_URL` set.** Never publish its port directly | the Host allowlist, `Secure` cookie and OAuth redirects follow `CONSOLE_PUBLIC_URL`; the first visitor of a new console becomes Owner, so claim it before exposing it |
 | **Headless needs OIDC.** Configure your issuer before you send traffic | without a trusted issuer, no agent or person token verifies; the local issuer is for dev and the person console only |
 | **Keep the operator listener private** | its bearer token can do everything, including snapshots when `server.snapshot` is on |
 | **Persist and back up the secrets directory with the database** | rows without the root key cannot be opened; a lost volume loses the data |

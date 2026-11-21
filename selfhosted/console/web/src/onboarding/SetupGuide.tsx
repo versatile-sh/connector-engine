@@ -25,7 +25,7 @@ export function SetupGuide({ onPaste }: { onPaste(text: string): void }) {
   if (!setup.visible) return null;
   const current = setup.steps.find((step) => !step.done)?.id;
   return (
-    <section aria-labelledby="setup-title" className={`${SURFACE} arrive relative mb-8 overflow-hidden`}>
+    <section aria-labelledby="setup-title" className={`${SURFACE} arrive relative overflow-hidden`}>
       <span aria-hidden="true" className={HAIRLINE} />
       <header className="flex items-center gap-4 px-5 pt-5 pb-2 sm:px-6">
         <div className="min-w-0 flex-1">

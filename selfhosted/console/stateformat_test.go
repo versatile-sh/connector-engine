@@ -37,7 +37,7 @@ func TestAFileFromBeforeVersioningUpgradesToTheCurrentFormatOnItsFirstWrite(t *t
 }
 
 func TestACurrentFileIsNotMigratedAgain(t *testing.T) {
-	path := writeRaw(t, `{"format":1,"agents":{"k":{"name":"k"}},"users":{"p1":{"Person":"p1","Role":"owner"}}}`)
+	path := writeRaw(t, `{"format":2,"agents":{"k":{"name":"k"}},"users":{"p1":{"Person":"p1","Role":"owner"}}}`)
 	s, err := OpenState(path, "p-other")
 	if err != nil {
 		t.Fatal(err)
@@ -69,7 +69,18 @@ func TestAFreshStateIsWrittenInTheCurrentFormat(t *testing.T) {
 		t.Fatal(err)
 	}
 	raw, _ := os.ReadFile(path)
-	if !strings.Contains(string(raw), `"format": 1`) {
+	if !strings.Contains(string(raw), `"format": 2`) {
 		t.Fatalf("no format in %s", raw)
+	}
+}
+
+func TestAFormatOneFileUpgradesWithSignupOffAndMemberAsItsRole(t *testing.T) {
+	path := writeRaw(t, `{"format":1,"users":{"p1":{"Person":"p1","Role":"owner"}}}`)
+	s, err := OpenState(path, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Signup(); s.data.Format != 2 || got.Enabled || got.Role != "member" {
+		t.Fatalf("format %d signup %+v", s.data.Format, got)
 	}
 }

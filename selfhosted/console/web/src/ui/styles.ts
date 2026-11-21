@@ -46,8 +46,8 @@ export const QUIET_LINK = "cursor-pointer underline decoration-line-strong under
 /** The vertical rhythm of a page: its header, toolbar, content and sections stand in one column, 1.5rem apart; the header adds 0.5rem under itself. */
 export const PAGE = "flex flex-col gap-6";
 
-/** The grid of cards a page lists: as many 18rem-or-wider columns as the width holds, 1.5rem apart, so the cards fill the surface on a wide screen and stack on a phone. */
-export const CARD_GRID = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-6";
+/** The grid of cards a page lists: as many 17rem-or-wider columns as the width holds, 1.5rem apart, so the cards fill the surface on a wide screen and stack on a phone. */
+export const CARD_GRID = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-6";
 
 /** The two-column body of a page whose side column is the shared facts or the secondary lists: the main column takes the rest, the side one is 20rem, 2.5rem apart from `lg`. */
 export const SPLIT = "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10";

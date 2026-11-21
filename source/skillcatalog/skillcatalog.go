@@ -19,6 +19,7 @@ import (
 	"github.com/versatile-sh/connector-engine/internal/fetch"
 	"github.com/versatile-sh/connector-engine/internal/importer"
 	"github.com/versatile-sh/connector-engine/port"
+	"github.com/versatile-sh/connector-engine/source/skillcompat"
 )
 
 // Registry is the name recorded as the provenance of a skill catalog import.
@@ -34,16 +35,18 @@ type Get func(ctx context.Context, rawURL string, limit int64) ([]byte, error)
 
 // Entry is one catalog entry document: a skill folder pinned to a commit, its licence and its files.
 type Entry struct {
-	Kind        string       `json:"kind"`
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Title       string       `json:"title"`
-	Description string       `json:"description"`
-	Category    string       `json:"category"`
-	Source      EntrySource  `json:"source"`
-	License     EntryLicense `json:"license"`
-	HasScripts  bool         `json:"has_scripts"`
-	Files       []EntryFile  `json:"files"`
+	Kind        string             `json:"kind"`
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	Category    string             `json:"category"`
+	Source      EntrySource        `json:"source"`
+	License     EntryLicense       `json:"license"`
+	HasScripts  bool               `json:"has_scripts"`
+	Requires    *port.SkillNeeds   `json:"requires"`
+	Compat      []port.SkillCompat `json:"compat"`
+	Files       []EntryFile        `json:"files"`
 }
 
 // EntrySource is where the catalog read the skill folder; Path names the folder or its SKILL.md.
@@ -123,7 +126,27 @@ func Parse(data []byte) (Entry, error) {
 	if total > listing.MaxSkillBytes {
 		return Entry{}, invalid("the files have %d bytes; at most %d", total, listing.MaxSkillBytes)
 	}
+	e.Compat = cleanCompat(e.Compat)
 	return e, nil
+}
+
+var knownReasons = []string{skillcompat.ReasonOK, skillcompat.ReasonRunsBundled, skillcompat.ReasonNoShell, skillcompat.ReasonNoFiles, skillcompat.ReasonNoWeb}
+
+func cleanCompat(in []port.SkillCompat) []port.SkillCompat {
+	var out []port.SkillCompat
+	for _, c := range in {
+		if c.Client == "" || len(c.Client) > 64 || !slices.Contains([]string{skillcompat.StatusFull, skillcompat.StatusInstructions, skillcompat.StatusNo}, c.Status) {
+			continue
+		}
+		reasons := []string{}
+		for _, r := range c.Reasons {
+			if slices.Contains(knownReasons, r) {
+				reasons = append(reasons, r)
+			}
+		}
+		out = append(out, port.SkillCompat{Client: c.Client, Status: c.Status, Reasons: reasons, Source: skillcompat.Source})
+	}
+	return out
 }
 
 func pinned(raw string, s EntrySource, file string) error {
@@ -161,6 +184,28 @@ func (e Entry) SkillFiles() []port.SkillFile {
 // HasScriptsDeclaredOrSeen reports has_scripts, or any file the engine would count as executable by its path.
 func (e Entry) HasScriptsDeclaredOrSeen() bool {
 	return e.HasScripts || slices.ContainsFunc(e.SkillFiles(), listing.LooksExecutable)
+}
+
+// Needs returns the entry's requirements and per-client compatibility: the catalog's when it states them, else derived from the files by the same rules, reading SKILL.md and scripts only where files carry content.
+func (e Entry) Needs(files []port.SkillFile) (port.SkillNeeds, []port.SkillCompat) {
+	var needs port.SkillNeeds
+	hasScripts := e.HasScriptsDeclaredOrSeen()
+	if e.Requires != nil {
+		needs = *e.Requires
+	} else {
+		paths, content := make([]string, len(files)), map[string]string{}
+		for i, f := range files {
+			paths[i] = f.Path
+			if f.Content != nil {
+				content[f.Path] = string(f.Content)
+			}
+		}
+		needs = skillcompat.Analyze(content[listing.SkillEntry], paths, func(rel string) (string, bool) { s, ok := content[rel]; return s, ok })
+	}
+	if e.Compat != nil {
+		return needs, e.Compat
+	}
+	return needs, skillcompat.Compat(needs, hasScripts)
 }
 
 // Digest is the bundle digest the entry declares, over its paths and sha256 values.
@@ -202,11 +247,12 @@ func Manifest(ctx context.Context, get Get, entryURL string, e Entry) (port.Mani
 	for _, f := range files {
 		hasScripts = hasScripts || listing.LooksExecutable(f)
 	}
+	needs, compat := e.Needs(files)
 	m := port.Manifest{Name: strings.ToLower(u.Hostname()) + "/" + e.ID, Version: e.Source.Commit, Title: e.Title, Description: e.Description, Kind: port.KindSkill,
 		Publisher: port.Publisher{Name: Publisher(e.Source.Repository, u.Hostname())}, Licence: e.License.SPDX,
 		Skill: &port.Skill{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: e.Source.URL},
 			Licence: port.SkillLicence{SPDX: e.License.SPDX, From: e.License.From, Redistributable: e.License.Redistributable}, Redistribution: e.Redistribution(),
-			HasScripts: hasScripts, Files: files}}
+			HasScripts: hasScripts, Needs: &needs, Compat: compat, Files: files}}
 	return m, listing.Validate(m, true)
 }
 

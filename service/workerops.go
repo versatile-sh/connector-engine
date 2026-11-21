@@ -46,6 +46,7 @@ func (s *Service) RetainApproval(ctx context.Context, tenant port.TenantID, id p
 }
 
 // MarkExecutionUnknown moves an executing record to outcome_unknown with its audit row and connector.call.outcome_unknown once the deadline plus grace passed.
+// It writes the call, then streams, then the approval, the order of every write of an executing record, so it never deadlocks with the settle.
 func (s *Service) MarkExecutionUnknown(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
@@ -56,17 +57,16 @@ func (s *Service) MarkExecutionUnknown(ctx context.Context, tenant port.TenantID
 		if err != nil {
 			return nil
 		}
-		if err := tx.UpdateApproval(unk, port.ApprovalExecuting); err != nil {
-			return err
-		}
 		call, ok, err := tx.LatestCall(a.Session, a.CallHash)
 		if err != nil {
 			return err
 		}
-		if !ok || call.Approval != id || call.State != port.CallStarted {
-			return nil
+		if ok && call.Approval == id && call.State == port.CallStarted {
+			if err := s.callUnknown(tx, call); err != nil {
+				return err
+			}
 		}
-		return s.callUnknown(tx, call)
+		return tx.UpdateApproval(unk, port.ApprovalExecuting)
 	})
 }
 

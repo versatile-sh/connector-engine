@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { ImportDialog } from "../import/ImportDialog";
 import { SetupGuide } from "../onboarding/SetupGuide";
 import { useSetup } from "../onboarding/useSetup";
+import { useViewer } from "../people/useViewer";
 import { connectorsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { EmptyState } from "../ui/EmptyState";
@@ -25,6 +26,7 @@ export function ConnectorsPage() {
   const { path } = useLocation();
   const connectors = useQuery(connectorsQuery);
   const setup = useSetup();
+  const manage = useViewer().can("connectors.manage");
   const [importing, setImporting] = useState<{ initial?: string } | undefined>(path === "/import" ? {} : undefined);
   const open = (initial?: string) => setImporting(initial ? { initial } : {});
   const close = () => {
@@ -41,13 +43,15 @@ export function ConnectorsPage() {
             {t("connectors.intro")}
           </PageTitle>
         </div>
-        <button type="button" className={button()} onClick={() => open()}>
-          <Icon name="plus" className="size-4" />
-          {t("connectors.import")}
-        </button>
+        {manage ? (
+          <button type="button" className={button()} onClick={() => open()}>
+            <Icon name="plus" className="size-4" />
+            {t("connectors.import")}
+          </button>
+        ) : null}
       </header>
-      <SetupGuide onPaste={open} />
-      {empty && !(setup.settled && !setup.visible) ? null : (
+      {manage ? <SetupGuide onPaste={open} /> : null}
+      {empty && manage && !(setup.settled && !setup.visible) ? null : (
         <div className={`${PANEL} @container p-4 sm:p-6 lg:p-8`}>
           {connectors.isError ? (
             <Notice
@@ -66,11 +70,13 @@ export function ConnectorsPage() {
               ))}
             </ul>
           ) : empty ? (
-            <EmptyState title={t("connectors.empty.title")} body={t("connectors.empty.body")}>
-              <div className="flex max-w-2xl flex-col gap-5">
-                <HubCard />
-                <PasteBox onPaste={open} />
-              </div>
+            <EmptyState title={t("connectors.empty.title")} body={manage ? t("connectors.empty.body") : t("connectors.empty.byAdmins")}>
+              {manage ? (
+                <div className="flex max-w-2xl flex-col gap-5">
+                  <HubCard />
+                  <PasteBox onPaste={open} />
+                </div>
+              ) : null}
             </EmptyState>
           ) : (
             <LongList rows={list} textOf={(c) => `${c.title} ${c.alias} ${c.publisher ?? ""} ${c.description ?? ""}`} keyOf={(c) => c.id} label={t("connectors.filter")} whole>
@@ -85,7 +91,7 @@ export function ConnectorsPage() {
           )}
         </div>
       )}
-      {importing ? <ImportDialog initial={importing.initial} onClose={close} /> : null}
+      {importing && manage ? <ImportDialog initial={importing.initial} onClose={close} /> : null}
     </section>
   );
 }

@@ -7,12 +7,15 @@ import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { signOut } from "./mutations";
 import { useSetup } from "./onboarding/useSetup";
+import { useViewer } from "./people/useViewer";
+import { roleBadgeOf } from "./people/viewer";
 import { approvalsQuery, sessionQuery } from "./queries";
 import { navigate, useLocation } from "./router";
 import { Icon } from "./ui/Icon";
 import { flip, irisAt } from "./ui/motion";
 import { Notice } from "./ui/Notice";
 import { ICON_BUTTON, PRESS, TOUCH, button } from "./ui/styles";
+import { Tag } from "./ui/Tag";
 import { useCopy } from "./ui/useCopy";
 
 /** The console's sections and the paths each one owns. */
@@ -34,6 +37,7 @@ const OAUTH: Record<string, MessageKey> = {
   unknown_state: "oauth.unknown_state",
   issuer_mismatch: "oauth.issuer_mismatch",
   failed: "oauth.failed",
+  wrong_user: "oauth.wrong_user",
 };
 
 const NAV_LINK = `relative isolate inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-sm xl:px-3.5 text-muted transition-colors duration-250 hover:text-paper aria-[current=page]:text-paper ${TOUCH} ${PRESS}`;
@@ -68,7 +72,8 @@ function KeyNotice() {
 function SetupProgress() {
   const t = useT();
   const setup = useSetup();
-  if (!setup.visible) return null;
+  const manage = useViewer().can("connectors.manage");
+  if (!setup.visible || !manage) return null;
   return (
     <button type="button" onClick={() => navigate("/")} className={`${button({ variant: "secondary", size: "sm" })} arrive hidden font-mono text-xs font-normal sm:inline-flex lg:hidden xl:inline-flex`}>
       <span aria-hidden="true" className="flex gap-1">
@@ -151,9 +156,10 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
   );
 }
 
-/** The links of the sections inside a `relative` nav: one quiet pill glides under the current link and follows it when the links resize, and a soft iris opens where a link is pressed, from its centre on a key press. */
+/** The links of the sections inside a `relative` nav: one quiet pill glides under the current link and follows it when the links resize, a soft iris opens where a link is pressed, from its centre on a key press, and once a second user exists Account carries the viewer's role. */
 function NavLinks({ section, waiting }: { section: Section; waiting: number }) {
   const t = useT();
+  const role = roleBadgeOf(useViewer());
   const pill = useRef<HTMLSpanElement>(null);
   const [iris, setIris] = useState<Iris>();
   useLayoutEffect(
@@ -210,6 +216,11 @@ function NavLinks({ section, waiting }: { section: Section; waiting: number }) {
             </span>
           ) : null}
           {t(item.label)}
+          {item.section === "account" && role ? (
+            <Tag className="arrive" title={t("shell.role")}>
+              {t(`role.${role}`)}
+            </Tag>
+          ) : null}
           {item.section === "approvals" && waiting > 0 ? (
             <span className="arrive font-mono text-xs text-lime tabular-nums">
               <span aria-hidden="true">{waiting}</span>

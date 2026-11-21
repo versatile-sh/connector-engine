@@ -47,7 +47,7 @@ function ProfileFlags({ shown, overridden, following, effect, onReset }: { shown
 }
 
 /** How the rows read and write for the profile shown: with no `profile`, the default, each row the connector's own choice for every key; with one, what that key gets, at most the default, flagged as its own or from the default with the engine's answer where it differs, its rows changing only while `editable`. The writes of every profile live here, so switching profiles keeps the rows mounted; a write's pending choice, error and refusals show only on the profile it was made for. */
-export function useLens(connector: Connector, profile: Profile | undefined, editable: boolean): Lens {
+export function useLens(connector: Connector, profile: Profile | undefined, editable: boolean, manage = true): Lens {
   const fn = useMutation(setFunctionAccess);
   const item = useMutation(setItemAccess);
   const all = useMutation(setFunctionsAccess);
@@ -57,20 +57,22 @@ export function useLens(connector: Connector, profile: Profile | undefined, edit
     const pending = (name: string) => [fn, item].find((m) => m.isPending && m.variables.name === name)?.variables?.access ?? (all.isPending && all.variables.names.includes(name) ? all.variables.access : undefined);
     const failed = [fn, item, all].find((m) => m.isError);
     return {
-      many: {
-        set: (names, access) => access !== "default" && all.mutate({ connector: connector.id, names, access }),
-        busy: all.isPending,
-        refused: all.data?.items.filter((result) => result.error) ?? [],
-        resets: false,
-        overridden: () => false,
-      },
+      many: manage
+        ? {
+            set: (names, access) => access !== "default" && all.mutate({ connector: connector.id, names, access }),
+            busy: all.isPending,
+            refused: all.data?.items.filter((result) => result.error) ?? [],
+            resets: false,
+            overridden: () => false,
+          }
+        : undefined,
       accessOf: (name, base) => pending(name) ?? base,
       most: () => undefined,
-      locked: (name) => pending(name) !== undefined,
+      locked: (name) => !manage || pending(name) !== undefined,
       flags: () => null,
       choose: (name, access) => ((connector.items ?? []).some((it) => it.name === name) ? item : fn).mutate({ connector: connector.id, name, access }),
       error: failed?.error ? errorText(failed.error) : "",
-      accepts: true,
+      accepts: manage,
     };
   }
   const mine = set.variables?.agent === profile.agent;

@@ -5,6 +5,7 @@ import { useT } from "../i18n/I18nProvider";
 import { exportBackup } from "../mutations";
 import { Field } from "../ui/Field";
 import { Notice } from "../ui/Notice";
+import { useViewer } from "../people/useViewer";
 import { Sheet } from "../ui/Sheet";
 import { Switch } from "../ui/Switch";
 import { OPTION_CARD, button } from "../ui/styles";
@@ -94,11 +95,12 @@ function FullWarning({ onBack, onContinue }: { onBack(): void; onContinue(): voi
   );
 }
 
-/** The window that exports this install: a shareable setup downloads at once; a full backup first says plainly what the file holds, then asks for the confirmation, the password and a passphrase typed twice. */
+/** The window that exports this install: a shareable setup downloads at once; a full backup first says plainly what the file holds, then asks for the confirmation, the password and a passphrase typed twice; each kind shows only to a viewer the server lets make it. */
 export function ExportDialog({ onClose }: { onClose(): void }) {
   const t = useT();
   const [step, setStep] = useState<Step>("pick");
   const setup = useMutation(exportBackup);
+  const viewer = useViewer();
   const onSetup = () =>
     setup.mutate(
       { mode: "setup" },
@@ -115,14 +117,18 @@ export function ExportDialog({ onClose }: { onClose(): void }) {
         <div className="swap-in">
           <p className="text-sm text-muted">{t("backup.export.pick")}</p>
           <div role="group" aria-label={t("backup.export.kind")} className="mt-3 flex flex-col gap-2">
-            <button type="button" className={OPTION_CARD} onClick={() => setStep("warn")}>
-              <span className="text-sm font-medium">{t("backup.full.title")}</span>
-              <span className="text-sm text-muted">{t("backup.full.body")}</span>
-            </button>
-            <button type="button" disabled={setup.isPending} className={OPTION_CARD} onClick={onSetup}>
-              <span className="text-sm font-medium">{t("backup.setup.title")}</span>
-              <span className="text-sm text-muted">{setup.isPending ? t("backup.exporting") : t("backup.setup.body")}</span>
-            </button>
+            {viewer.can("backup.full") ? (
+              <button type="button" className={OPTION_CARD} onClick={() => setStep("warn")}>
+                <span className="text-sm font-medium">{t("backup.full.title")}</span>
+                <span className="text-sm text-muted">{t("backup.full.body")}</span>
+              </button>
+            ) : null}
+            {viewer.can("setup.manage") ? (
+              <button type="button" disabled={setup.isPending} className={OPTION_CARD} onClick={onSetup}>
+                <span className="text-sm font-medium">{t("backup.setup.title")}</span>
+                <span className="text-sm text-muted">{setup.isPending ? t("backup.exporting") : t("backup.setup.body")}</span>
+              </button>
+            ) : null}
           </div>
           <p role="alert" className="mt-3 text-sm text-amber-400 empty:hidden">
             {setup.isError ? errorText(setup.error) : ""}

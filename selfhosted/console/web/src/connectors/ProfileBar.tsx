@@ -43,8 +43,8 @@ function SetsHere({ connector }: { connector: Connector }) {
   );
 }
 
-/** The default's own controls: one choice that sets every key to off or the default in one request, whether keys made from now on start off, and the permission sets that hold a profile here, to apply to a key. */
-export function DefaultBar({ connector }: { connector: Connector }) {
+/** The default's own controls: one choice that sets every key to off or the default in one request, whether keys made from now on start off, and the permission sets that hold a profile here, to apply to a key; without `manage`, only that admins set it, and the sets. */
+export function DefaultBar({ connector, manage = true }: { connector: Connector; manage?: boolean }) {
   const t = useT();
   const every = useMutation(setProfileMode);
   const newKeys = useMutation(setNewKeysOff);
@@ -54,6 +54,14 @@ export function DefaultBar({ connector }: { connector: Connector }) {
   const count = (mode: ProfileMode) => connector.profiles.filter((p) => p.mode === mode).length;
   const kept = every.data?.keys.filter((key) => key.error) ?? [];
   const error = every.isError && !asking ? errorText(every.error) : newKeys.isError ? errorText(newKeys.error) : kept.length > 0 ? t("profile.everyKeyKept", { keys: kept.map((key) => key.agent).join(", ") }) : "";
+  if (!manage) {
+    return (
+      <div className="@container divide-y divide-line">
+        <p className="px-4 py-3 text-sm text-pretty text-muted sm:px-5">{t("profile.byAdmins")}</p>
+        <SetsHere connector={connector} />
+      </div>
+    );
+  }
   return (
     <div className="@container divide-y divide-line">
       {connector.profiles.length === 0 ? <p className="px-4 py-3 text-sm text-pretty text-muted sm:px-5">{t("profile.noKeys")}</p> : null}

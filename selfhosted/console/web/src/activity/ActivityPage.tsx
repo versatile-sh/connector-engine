@@ -2,13 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
+import { useViewer } from "../people/useViewer";
+import { offersScope } from "../people/viewer";
 import { activityQuery, connectorsQuery, skillsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
 import { EmptyState } from "../ui/EmptyState";
 import { Notice } from "../ui/Notice";
 import { PageTitle } from "../ui/PageTitle";
 import { CAPTION, SKELETON, SURFACE, TITLE, button } from "../ui/styles";
-import { callOf, filterOf, hrefOf, isNarrowed, namedOf, periodOf, type ActivityFilter } from "./activity";
+import { callOf, filterOf, hrefOf, inScope, isNarrowed, namedOf, clearedOf, type ActivityFilter } from "./activity";
 import { ActivitySettings } from "./ActivitySettings";
 import { CallDetail } from "./CallDetail";
 import { CallList } from "./CallList";
@@ -16,11 +18,14 @@ import { ConnectorTotals } from "./ConnectorTotals";
 import { FilterRow } from "./FilterRow";
 import { HourlyChart } from "./HourlyChart";
 
-/** Every function call the apps made through the console: filters and the open call in the address, the calls per hour, per connector, the newest calls and, on a click, one call in full that Back closes. */
+/** Every function call the apps made through the console: filters and the open call in the address, the calls per hour, per connector, the newest calls and, on a click, one call in full that Back closes. Once a second user exists, a viewer who may see everyone's calls picks Mine or Everyone and one person among them. */
 export function ActivityPage({ endpoint }: { endpoint: string }) {
   const t = useT();
   const { query } = useLocation();
-  const filter = filterOf(query);
+  const viewer = useViewer();
+  const offered = offersScope(viewer, "activity.any");
+  const asked = filterOf(query);
+  const filter = offered || !asked.scope ? asked : inScope(asked, "mine");
   const open = callOf(query);
   const pushed = useRef(false);
   const activity = useQuery(activityQuery(filter));
@@ -41,11 +46,11 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-10">
-        <PageTitle section={t("nav.activity")} title={t("activity.title")} count={data?.total}>
+        <PageTitle section={t("nav.activity")} title={t("activity.title")} count={data?.total} scope={filter.scope ? t("scope.count") : undefined}>
           {t("activity.intro")}
         </PageTitle>
       </header>
-      <FilterRow filter={filter} data={data} named={named} onChange={show} />
+      <FilterRow filter={filter} data={data} named={named} scoped={offered} onChange={show} />
       {activity.isError ? (
         <Notice className="mb-6" action={<button type="button" className={button({ variant: "quiet", size: "xs" })} onClick={() => void activity.refetch()}>{t("common.retry")}</button>}>
           {errorText(activity.error)}
@@ -69,12 +74,12 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
               </ul>
             ) : data.calls.length > 0 ? (
               <div className="mt-2">
-                <CallList calls={data.calls} named={named} onOpen={openCall} />
+                <CallList calls={data.calls} named={named} owners={filter.scope === "everyone"} onOpen={openCall} />
               </div>
             ) : isNarrowed(filter) ? (
               <div className="arrive flex flex-col items-start gap-4 px-1 py-8">
                 <p className="text-muted">{t("activity.noMatch")}</p>
-                <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => show(periodOf(filter))}>
+                <button type="button" className={button({ variant: "secondary", size: "sm" })} onClick={() => show(clearedOf(filter))}>
                   {t("activity.clearFilters")}
                 </button>
               </div>
@@ -87,7 +92,7 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
         </div>
         <aside className="flex flex-col gap-6">
           {data ? <ConnectorTotals counts={data.connectors} named={named} selected={filter.connector} onSelect={(connector) => show({ ...filter, connector })} /> : <div aria-hidden="true" className={`${SKELETON} h-48`} />}
-          <ActivitySettings />
+          {viewer.can("activity.settings") || viewer.can("activity.delete") ? <ActivitySettings /> : null}
         </aside>
       </div>
       {open ? <CallDetail id={open} named={named} onClose={closeCall} /> : null}

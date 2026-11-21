@@ -3,7 +3,11 @@ import { useReducer, useState, type FormEvent } from "react";
 import { errorText, type AgentToken } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { mintKey, revokeKey } from "../mutations";
-import { keysPageQuery } from "../queries";
+import { ScopeSwitch } from "../people/ScopeSwitch";
+import { useViewer } from "../people/useViewer";
+import { offersScope, scopedHref, scopeOf } from "../people/viewer";
+import { scopedKeysQuery } from "../queries";
+import { navigate, useLocation } from "../router";
 import { CopyBox } from "../ui/CopyBox";
 import { Field } from "../ui/Field";
 import { Icon } from "../ui/Icon";
@@ -46,10 +50,13 @@ function Created({ token, endpoint }: { token: AgentToken; endpoint: string }) {
   );
 }
 
-/** Connect an AI app: one endpoint for every MCP client in a panel of its own, then a panel of access keys made and revoked here, and for a new key the exact way into each app. */
+/** Connect an AI app: one endpoint for every MCP client in a panel of its own, then a panel of access keys made and revoked here, and for a new key the exact way into each app. Once a second user exists, a viewer who may see everyone's keys picks Mine or Everyone in the list's heading, and each key then names its owner. */
 export function AccessPage({ endpoint }: { endpoint: string }) {
   const t = useT();
-  const keys = useQuery(keysPageQuery);
+  const { path, query } = useLocation();
+  const offered = offersScope(useViewer(), "keys.any");
+  const scope = scopeOf(query, offered);
+  const keys = useQuery(scopedKeysQuery(scope));
   const [name, setName] = useState("");
   const [days, setDays] = useState(30);
   const [slot, setSlot] = useState("");
@@ -125,11 +132,12 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
             <p className="mt-4 text-[0.8125rem] leading-snug text-pretty text-muted">{t("keys.skillsOff")}</p>
           </form>
           <section aria-labelledby="keys-title" className={`${WELL} p-5`}>
-            <div className="mb-3 flex items-baseline gap-3">
+            <div className={offered ? "mb-3 flex flex-wrap items-center gap-x-3 gap-y-2" : "mb-3 flex items-baseline gap-3"}>
               <h2 id="keys-title" className={SUBTITLE}>
                 {t("keys.list")}
               </h2>
-              {keys.isSuccess ? <Tag>{list.length}</Tag> : null}
+              {keys.isSuccess ? <Tag>{scope === "everyone" ? `${t("scope.count")} · ${list.length}` : list.length}</Tag> : null}
+              {offered ? <ScopeSwitch scope={scope} onChange={(next) => navigate(scopedHref(path, query, next), { replace: true, keepScroll: true })} className="ml-auto" /> : null}
             </div>
             {keys.isError ? (
               <Notice>{errorText(keys.error)}</Notice>
@@ -149,7 +157,7 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
                 {(shown) => (
                   <ul className="@container -mx-5 mt-3 border-t border-line">
                     {shown.map(({ row: key, phase }) => (
-                      <KeyRow key={key.name} phase={phase} entry={key} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
+                      <KeyRow key={key.name} phase={phase} entry={key} owner={scope === "everyone" ? key.owner : undefined} flow={flow} error={revoke.isError ? errorText(revoke.error) : undefined} dispatch={onRevokeEvent} onConfirm={onConfirm} />
                     ))}
                   </ul>
                 )}

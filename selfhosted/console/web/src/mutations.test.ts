@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, test } from "node:test";
 import { MutationObserver, QueryClient, type QueryKey, type UseMutationOptions } from "@tanstack/react-query";
 import * as mutations from "./mutations.ts";
 import type { Connector } from "./api.ts";
-import { accountQuery, activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, profileEffectsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries.ts";
+import { accountQuery, activityQuery, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, peopleQuery, profileEffectsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries.ts";
 
 const KNOWN: readonly QueryKey[] = [
   sessionQuery.queryKey,
@@ -16,6 +16,7 @@ const KNOWN: readonly QueryKey[] = [
   notificationsQuery.queryKey,
   accountQuery.queryKey,
   slotsQuery.queryKey,
+  peopleQuery.queryKey,
 ];
 
 const realFetch = globalThis.fetch;
@@ -60,8 +61,15 @@ describe("mutations", () => {
     { name: "renameDevice", run: () => staleAfter(mutations.renameDevice, { id: "d1", name: "Desk" }), stale: ["notifications"] },
     { name: "revokeDevice", run: () => staleAfter(mutations.revokeDevice, "d1"), stale: ["notifications"] },
     { name: "changePassword", run: () => staleAfter(mutations.changePassword, { current: "old", password: "new password" }), stale: [] },
-    { name: "renameOwner", run: () => staleAfter(mutations.renameOwner, "owner"), stale: ["account"] },
+    { name: "renameOwner", run: () => staleAfter(mutations.renameOwner, "owner"), stale: ["account", "people"] },
     { name: "exportBackup", run: () => staleAfter(mutations.exportBackup, { mode: "setup" }), stale: ["account"] },
+    { name: "createInvite", run: () => staleAfter(mutations.createInvite, "member"), stale: ["people"] },
+    { name: "createReset", run: () => staleAfter(mutations.createReset, "p-bob"), stale: ["people"] },
+    { name: "revokeLink", run: () => staleAfter(mutations.revokeLink, "i1"), stale: ["people"] },
+    { name: "setRole", run: () => staleAfter(mutations.setRole, { person: "p-bob", role: "admin" }), stale: ["people", "session"] },
+    { name: "removePerson", run: () => staleAfter(mutations.removePerson, "p-bob"), stale: ["people", "session", "agents"] },
+    { name: "cancelApproval", run: () => staleAfter(mutations.cancelApproval, "a1"), stale: ["approvals"] },
+    { name: "setCredentialMode", run: () => staleAfter(mutations.setCredentialMode, { connector: "c1", mode: "per_person" }), stale: ["connectors"] },
     { name: "inspectBackup", run: () => staleAfter(mutations.inspectBackup, { file: new Blob(["x"]), passphrase: "" }), stale: [] },
   ];
 
@@ -245,6 +253,13 @@ describe("mutations", () => {
         [sessionQuery.queryKey[0]],
       );
       assert.equal(client.getQueryData(sessionQuery.queryKey), undefined);
+    });
+  });
+
+  describe("acceptLink", () => {
+    test("forgets every answer but the session, which it reads again", async () => {
+      const { client, stale } = await staleAfter(mutations.acceptLink, { token: "t", username: "dan", password: "long password" });
+      assert.deepEqual([client.getQueryCache().getAll().map((query) => query.queryKey[0]), stale], [[sessionQuery.queryKey[0]], ["session"]]);
     });
   });
 

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { deleteActivity, saveRecording, type Recording } from "../mutations";
+import { useViewer } from "../people/useViewer";
 import { activitySettingsQuery } from "../queries";
 import { Icon } from "../ui/Icon";
 import { Sheet } from "../ui/Sheet";
@@ -31,9 +32,10 @@ function DeleteAll({ onClose }: { onClose(): void }) {
   );
 }
 
-/** What the console keeps of each call: arguments on by default, result excerpts off, 30 days, and a way to delete it all behind a confirmation. */
+/** What the console keeps of each call: arguments on by default, result excerpts off, 30 days, and a way to delete it all behind a confirmation, each shown only to a viewer the server lets change it. */
 export function ActivitySettings() {
   const t = useT();
+  const viewer = useViewer();
   const settings = useQuery(activitySettingsQuery);
   const [deleting, setDeleting] = useState(false);
   const save = useMutation(saveRecording);
@@ -43,7 +45,7 @@ export function ActivitySettings() {
       <h2 id="activity-settings" className={TITLE}>
         {t("activity.settings.title")}
       </h2>
-      {current ? (
+      {!viewer.can("activity.settings") ? null : current ? (
         <div className="mt-4 flex flex-col gap-4">
           <Switch checked={current.record_arguments} hint={t("activity.settings.argumentsHint")} onChange={(on) => save.mutate({ ...current, record_arguments: on })}>
             {t("activity.settings.arguments")}
@@ -63,10 +65,12 @@ export function ActivitySettings() {
       <p role="alert" className="mt-2 text-sm text-amber-400 empty:hidden">
         {save.isError ? errorText(save.error) : ""}
       </p>
-      <button type="button" className={`${button({ variant: "danger", size: "sm" })} mt-4`} onClick={() => setDeleting(true)}>
-        <Icon name="trash" className="size-4" />
-        {t("activity.settings.delete")}
-      </button>
+      {viewer.can("activity.delete") ? (
+        <button type="button" className={`${button({ variant: "danger", size: "sm" })} mt-4`} onClick={() => setDeleting(true)}>
+          <Icon name="trash" className="size-4" />
+          {t("activity.settings.delete")}
+        </button>
+      ) : null}
       {deleting ? <DeleteAll onClose={() => setDeleting(false)} /> : null}
     </section>
   );

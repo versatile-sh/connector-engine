@@ -8,7 +8,19 @@ The console keeps its users and their access keys. This page covers the password
 
 ## Account
 
-- **Account** changes the signed-in user's username and password. A username is unique without regard to case, and the login finds it the same way. A password change asks for the current one, needs at least 10 characters, signs out that user's other sessions and keeps this one; other users stay signed in.
+Account has up to three tabs, each its own address, and shows only those the signed-in user's role opens. With one tab there is no tab bar.
+
+| Tab | Address | Who sees it | Holds |
+|---|---|---|---|
+| Profile | `/account` | everyone | the username and password |
+| People | `/account/people` | Owners and Admins | the people of the console, the join and reset links waiting, and the recent changes |
+| Backups | `/account/backups` | Owners, and Admins for setups | full backups (Owners) and shareable setups (Owners and Admins) |
+
+People lists each person with their role, their keys and when they joined, and marks your own row "you". An Owner invites with **Invite someone**: pick a role, then copy the link and send it privately. It works once and expires after 72 hours. When the console's public address is a loopback one, the invite says nobody else can open it; set `CONSOLE_PUBLIC_URL` first. Each row of an Owner holds one menu: another role, **Reset password** and **Remove**, which asks first and names what it does. An Admin gets **Reset password** on Members' rows. The link opens `/invite`, which asks the invitee for a username and a password, or asks the person whose password is reset for a new one, and says when a link no longer works.
+
+Once a second person exists, the shell shows your role beside Account, and Access, Approvals and Activity offer **Mine | Everyone** to Owners and Admins, with each row then naming its owner. A one-user install looks as before.
+
+- **Profile** changes the signed-in user's username and password. A username is unique without regard to case, and the login finds it the same way. A password change asks for the current one, needs at least 10 characters, signs out that user's other sessions and keeps this one; other users stay signed in.
 - Wrong current passwords are rate-limited like the login: 5 a minute.
 - A wrong password and an unknown username get the same answer, "wrong username or password", after the same work.
 - The console keeps its users in the state file, keyed by the engine person id. The first user is an Owner with the configured `--person` (default `owner`). Removing or demoting the last Owner is refused. Each user acts on the engine as their own person ([engine identity](../self-hosted/person.md#engine-identity)).
@@ -34,7 +46,7 @@ It reaches the console through a socket that only `docker compose exec` can open
 
 ## Export and import
 
-**Account → Export** offers two files.
+**Account → Backups → Export** offers two files.
 
 | Mode | File | Holds | For |
 |---|---|---|---|
@@ -78,7 +90,7 @@ A setup records each connector's credential mode as `credentials: per_person`; a
 
 ## Restore
 
-**Account → Import**, **Restore from a backup** on the first-run screen, or:
+**Account → Backups → Import**, **Restore from a backup** on the first-run screen, or:
 
 ```sh
 make import FILE=~/connector-engine-backups/connector-engine-backup-20261120T180000Z.cebak

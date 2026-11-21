@@ -9,7 +9,7 @@ Every function of every connector is **off**, **on** or **ask**, for each access
 | Choice | The AI app |
 |---|---|
 | Off | does not see the function; a call answers like an unknown tool |
-| On | calls it directly, unless its class counts as destructive (see [function classes](#function-classes)) |
+| On | calls it directly, unless a review or its server declares it destructive (see [function classes](#function-classes)) |
 | Ask | the call waits until you decide; see [approvals](approvals.md) |
 
 A denied function looks exactly like one that does not exist, so an app cannot probe what is there.
@@ -26,15 +26,14 @@ The full evaluation order is in [ARCHITECTURE.md](../../ARCHITECTURE.md#grants).
 
 ## Function classes
 
-The engine treats each function as read, write or destructive. Turning a function on or asking never changes that class; the console keeps it.
+The engine treats each function as read, write or destructive.
 
-| Where the class comes from | Class |
+| Where the class comes from | Turning it on or asking |
 |---|---|
-| a review of the listing at the function's hash | the reviewed class |
-| the server declares `destructiveHint: true` | destructive |
-| neither | none, which counts as destructive |
+| a review of the listing at the function's hash | keeps the reviewed class |
+| the server declares `destructiveHint: true` | keeps destructive: on asks once a session, and the row says "asks once a session" |
+| neither | sets read when the server's `readOnlyHint` says so, else write |
 
-- A server's `readOnlyHint` is only the server's claim. The function shows "reads", but on still asks once a session until you choose **Trust read-only** on its row. That makes it read: on then runs without asking, and keys held to reads get it. The console refuses that choice for a function with a reviewed or declared class.
 - On its first start after an update, the console raises once every function whose class lies below its reviewed or declared class. Each raise drops the session answers of that function and is listed under **Changes** on the People page. An operator can still set a class through the engine API.
 
 ## Per-key profiles
@@ -81,7 +80,6 @@ The console API behind these actions:
 | Endpoint | Does |
 |---|---|
 | `PUT /api/connectors/{id}/functions` | `{"names": [...], "access": ...}` sets many functions for the default; also answers one entry per key it failed to give the new item rows |
-| `PUT /api/connectors/{id}/read-only` | `{"name": ...}` classes an unreviewed function read on its server's read-only hint; `400` for a reviewed or declared class or no such hint |
 | `PUT /api/connectors/{id}/profiles` | `{"mode": "off" \| "follow" \| "custom", "keys": [...]}`; every key when `keys` is empty |
 | `PUT /api/connectors/{id}/profiles/{key}` | `{"names": [...], "access": ...}` narrows for one key, or `{"names": [...], "reset": true}` returns to the default |
 | `POST /api/connectors/{id}/profiles:copy` | `{"from": key, "keys": [...]}` copies one key's mode and overrides |

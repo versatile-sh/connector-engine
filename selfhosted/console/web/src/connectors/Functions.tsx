@@ -1,11 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { errorText, type Access, type Connector, type FunctionView } from "../api";
+import type { Connector } from "../api";
 import { useT } from "../i18n/I18nProvider";
-import { trustReadOnly } from "../mutations";
 import { Checkbox } from "../ui/Checkbox";
 import { LongList } from "../ui/LongList";
-import { button, TITLE, WELL } from "../ui/styles";
+import { TITLE, WELL } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { AccessPicker } from "./AccessPicker";
 import { ChoiceRow } from "./ChoiceRow";
@@ -20,27 +18,6 @@ const TONE = { on: "paper", ask: "lime", off: "muted" } as const;
 type FunctionsProps = { connector: Connector; lens: Lens; scope: string; copy?: { text: string; open(): void } | undefined };
 
 const NONE: ReadonlySet<string> = new Set();
-
-/** What a function's class does to its choice: on still asks once a session for a class that counts as deleting, and an owner may take an unreviewed read-only hint as true. */
-function ClassFlags({ connector, fn, access, manage }: { connector: string; fn: FunctionView; access: Access; manage: boolean }) {
-  const t = useT();
-  const trust = useMutation(trustReadOnly);
-  return (
-    <>
-      {access === "on" && (fn.class === "" || fn.class === "destructive") ? <AsksOnce /> : null}
-      {manage && fn.kind === "read" && fn.class !== "read" ? (
-        <button type="button" title={t("kind.trustReadHint")} disabled={trust.isPending} className={button({ variant: "quiet", size: "xs" })} onClick={() => trust.mutate({ connector, name: fn.name })}>
-          {t("kind.trustRead")}
-        </button>
-      ) : null}
-      {trust.isError ? (
-        <Tag tone="amber" dot>
-          {errorText(trust.error)}
-        </Tag>
-      ) : null}
-    </>
-  );
-}
 
 /** A connector's functions in one card, its heading, counts, filter and tools inside, with each one's choice as the lens of a profile reads and writes it; while they can change, each row can be picked for the tools over the list, and the rows picked belong to the profile `scope` they were picked in. */
 export function Functions({ connector, lens, scope, copy }: FunctionsProps) {
@@ -87,7 +64,7 @@ export function Functions({ connector, lens, scope, copy }: FunctionsProps) {
                       flags={
                         <>
                           <KindLabel kind={fn.kind} />
-                          <ClassFlags connector={connector.id} fn={fn} access={lens.accessOf(fn.name, fn.access)} manage={lens.accepts} />
+                          {lens.accessOf(fn.name, fn.access) === "on" && (fn.class === "" || fn.class === "destructive") ? <AsksOnce /> : null}
                           {fn.state !== "active" ? (
                             <Tag tone="amber" dot title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
                               {fn.state}

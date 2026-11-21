@@ -51,9 +51,16 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
   const surface = useRef<HTMLElement>(null);
   const oauth = query.get("oauth");
   const oauthKey = oauth ? OAUTH[oauth] : undefined;
+  const shown = useRef(section);
   useLayoutEffect(
     function startEachSectionAtTheTop() {
-      surface.current?.scrollTo({ top: 0 });
+      const page = surface.current;
+      if (!page) return;
+      page.scrollTo({ top: 0 });
+      if (shown.current === section) return;
+      shown.current = section;
+      const held = document.activeElement;
+      if (!held || held === document.body || sidebar.current?.contains(held)) page.focus({ preventScroll: true });
     },
     [section],
   );
@@ -63,7 +70,10 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
       const root = sidebar.current;
       const opener = menu.current;
       (root?.querySelector<HTMLElement>('[aria-current="page"]') ?? root)?.focus();
-      return () => opener?.focus();
+      return () => {
+        const held = document.activeElement;
+        if (!held || held === document.body || root?.contains(held)) opener?.focus();
+      };
     },
     [shell.drawer],
   );
@@ -99,7 +109,7 @@ export function Shell({ section, endpoint, children }: { section: Section; endpo
           id="main"
           ref={surface}
           tabIndex={-1}
-          className="shell-surface vignette-top relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain border border-line bg-ink-raised [scrollbar-gutter:stable] max-lg:border-x-0 max-lg:border-b-0 lg:mr-3 lg:mb-3 lg:rounded-2xl"
+          className="shell-surface vignette-top relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain border border-line bg-ink-raised [scrollbar-gutter:stable] max-lg:border-x-0 max-lg:border-b-0 focus-visible:outline-none lg:mr-3 lg:mb-3 lg:rounded-2xl"
         >
           <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-5 pt-8 pb-16 sm:px-8 lg:px-10 lg:pt-10">
             {oauth ? (

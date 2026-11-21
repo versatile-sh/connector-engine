@@ -26,7 +26,7 @@ type SidebarProps = {
 };
 
 const FRAME =
-  "group/side fixed inset-y-0 left-0 z-40 invisible flex w-72 max-w-[85vw] -translate-x-full flex-col border-r border-line bg-ink shadow-2xl shadow-black/60 transition-[translate,visibility,width] duration-250 ease-(--ease-glide) data-drawer:visible data-drawer:translate-x-0 lg:relative lg:z-30 lg:visible lg:w-64 lg:translate-x-0 lg:border-r-0 lg:bg-transparent lg:shadow-none lg:data-rail:w-[4.5rem]";
+  "group/side fixed inset-y-0 left-0 z-40 invisible flex w-72 max-w-[85vw] -translate-x-full flex-col border-r border-line bg-ink shadow-2xl shadow-black/60 transition-[translate,visibility,width] duration-250 ease-(--ease-glide) data-drawer:visible data-drawer:translate-x-0 lg:relative lg:z-30 lg:shrink-0 lg:visible lg:w-64 lg:translate-x-0 lg:border-r-0 lg:bg-transparent lg:shadow-none lg:data-rail:w-[4.5rem]";
 
 const HANDLE = `absolute top-5 -right-3 z-10 hidden size-6 place-items-center rounded-full border border-line-strong bg-ink-raised text-muted hover:text-paper lg:grid ${TOUCH} ${PRESS}`;
 

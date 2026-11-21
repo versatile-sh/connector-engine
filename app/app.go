@@ -158,7 +158,18 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		return err
 	}
 	a.closers = append(a.closers, closer)
+	scanner, closer, err := b.scanner(ctx)
+	if err != nil {
+		return fmt.Errorf("scanner: %w", err)
+	}
+	a.closers = append(a.closers, closer)
+	suggester, closer, err := b.suggester(ctx)
+	if err != nil {
+		return fmt.Errorf("suggester: %w", err)
+	}
+	a.closers = append(a.closers, closer)
 	a.Service, err = service.New(service.Deps{
+		Scanner: scanner, Suggester: suggester,
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
 		Authorizer: authorizer,
 		Broker:     &credential.Broker{HTTP: b.guard(b.issuerHosts()).Client()}, Registrar: credential.NewRegistrar(clients...).WithStore(store, secrets),

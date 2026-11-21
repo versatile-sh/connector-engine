@@ -12,17 +12,19 @@ import (
 
 // Engine and ports of the adapters file; each port also reads CN_<PORT> from the environment.
 const (
-	Engine      = "connector-engine"
-	EnvPrefix   = "CN"
-	PortStore   = "store"
-	PortSecrets = "secrets"
-	PortAuth    = "auth"
-	PortAuthz   = "authz"
-	PortRuntime = "runtime"
-	PortSource  = "source"
-	PortSink    = "sink"
-	PortFilter  = "filter"
-	PortIndex   = "index"
+	Engine        = "connector-engine"
+	EnvPrefix     = "CN"
+	PortStore     = "store"
+	PortSecrets   = "secrets"
+	PortAuth      = "auth"
+	PortAuthz     = "authz"
+	PortScanner   = "scanner"
+	PortSuggester = "suggester"
+	PortRuntime   = "runtime"
+	PortSource    = "source"
+	PortSink      = "sink"
+	PortFilter    = "filter"
+	PortIndex     = "index"
 )
 
 func use(tier string, names ...string) []string {
@@ -81,6 +83,11 @@ func (c Config) AdaptersSpec() adapters.Spec {
 	}
 	if c.hasBuiltinBeyond(PortAuthz, "table") {
 		ports[PortAuthz] = adapters.PortSpec{Default: use(adapters.TierBuiltin, "table"), Sensitive: true}
+	}
+	for _, name := range []string{PortScanner, PortSuggester} {
+		if c.hasBuiltinBeyond(name, "") {
+			ports[name] = adapters.PortSpec{}
+		}
 	}
 	c.declare(ports)
 	return adapters.Spec{Engine: Engine, EnvPrefix: EnvPrefix, Acknowledgements: Acknowledgements, Ports: ports, Validate: c.validateAdapters}

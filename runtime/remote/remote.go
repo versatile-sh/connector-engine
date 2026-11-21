@@ -86,8 +86,7 @@ func (r *Runtime) Start(ctx context.Context, _ port.Connector, m port.Manifest, 
 	return r.started.Add(&instance{session: session, capture: capt, pages: map[string]page{}}), nil
 }
 
-// ListFunctions returns every tool definition as the server sent it; a list the SDK served from its TTL cache repeats the last bytes
-// seen, and a response that was sent but not captured is an error.
+// ListFunctions returns every tool definition as the server sent it; a list the SDK served from its TTL cache repeats the last bytes seen, and a response that was sent but not captured is an error.
 func (r *Runtime) ListFunctions(ctx context.Context, h port.Handle) ([]port.RawDefinition, port.ListMeta, error) {
 	in, err := r.started.Get(h)
 	if err != nil {

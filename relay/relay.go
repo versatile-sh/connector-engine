@@ -13,17 +13,13 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-// Relay reads Outbox.Pending, delivers through Sink and marks what was delivered.
+// Relay reads Outbox.Pending, delivers through Sink and marks what was delivered; Store, when set, receives an audit row for each event given up; zero Batch is 100 events, Every (poll interval once the outbox is empty) one second, MaxBackoff (cap of the doubling wait after a failure) one minute.
 type Relay struct {
-	Outbox port.Outbox
-	Sink   port.EventSink
-	// Store, when set, receives an audit row for each event given up.
-	Store port.Store
-	// Batch is the most events per delivery; 100 by default.
-	Batch int
-	// Every is the poll interval once the outbox is empty; one second by default.
-	Every time.Duration
-	// MaxBackoff caps the doubling wait after a failure; one minute by default.
+	Outbox     port.Outbox
+	Sink       port.EventSink
+	Store      port.Store
+	Batch      int
+	Every      time.Duration
 	MaxBackoff time.Duration
 	Log        *slog.Logger
 	Now        func() time.Time

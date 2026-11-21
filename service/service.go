@@ -118,7 +118,7 @@ func (s *Service) Remember(ctx context.Context, result any) error {
 	if err != nil {
 		return err
 	}
-	return s.d.Store.Write(ctx, st.scope, func(tx port.Tx) error { return tx.SetInboxPayload(st.id, payload) })
+	return s.writeTx(ctx, st.scope, func(tx port.Tx) error { return tx.SetInboxPayload(st.id, payload) })
 }
 
 func (s *Service) write(ctx context.Context, scope port.Scope, op string, fn func(port.Tx) error) error {
@@ -152,12 +152,53 @@ func (s *Service) write(ctx context.Context, scope port.Scope, op string, fn fun
 			st.id, st.scope = id, scope
 		}
 		seen = newTouched(tx, slices.Contains(catalogOps, op))
-		return fn(seen)
+		return recordLast(seen, fn)
 	})
 	if err == nil && !(st != nil && st.replayed) && scope.Tenant != "" && slices.Contains(exposureOps, op) {
 		s.refreshExposures(ctx, scope.Tenant, seen)
 	}
 	return err
+}
+
+func (s *Service) writeTx(ctx context.Context, scope port.Scope, fn func(port.Tx) error) error {
+	return s.d.Store.Write(ctx, scope, func(tx port.Tx) error { return recordLast(tx, fn) })
+}
+
+type heldEvents struct {
+	port.Tx
+	events []port.Event
+}
+
+func (t *heldEvents) Emit(e port.Event) (port.Event, error) {
+	t.events = append(t.events, e)
+	return e, nil
+}
+
+func (t *heldEvents) flush() error {
+	for _, e := range t.events {
+		if _, err := t.Tx.Emit(e); err != nil {
+			return err
+		}
+	}
+	t.events = nil
+	return nil
+}
+
+// recordLast runs fn and emits its events, in order, once fn returned: a write locks its rows, then the tenant stream row.
+// emitNow takes the stream row early, where a read must see the tenant's other recorded writes committed.
+func recordLast(tx port.Tx, fn func(port.Tx) error) error {
+	h := &heldEvents{Tx: tx}
+	if err := fn(h); err != nil {
+		return err
+	}
+	return h.flush()
+}
+
+func emitNow(tx port.Tx) error {
+	if h, ok := tx.(*heldEvents); ok {
+		return h.flush()
+	}
+	return nil
 }
 
 func (s *Service) emit(tx port.Tx, tenant port.TenantID, subject, typ string, payload any) error {

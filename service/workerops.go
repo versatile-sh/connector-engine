@@ -14,7 +14,7 @@ import (
 
 // ExpireApproval expires a record: it acts only when the record is pending and its expiry passed.
 func (s *Service) ExpireApproval(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
-	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+	return s.writeTx(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
 		if err != nil {
 			return err
@@ -32,7 +32,7 @@ func (s *Service) ExpireApproval(ctx context.Context, tenant port.TenantID, id p
 
 // RetainApproval destroys the stored result and the sealed arguments once retention ended.
 func (s *Service) RetainApproval(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
-	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+	return s.writeTx(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
 		if err != nil {
 			return err
@@ -46,9 +46,9 @@ func (s *Service) RetainApproval(ctx context.Context, tenant port.TenantID, id p
 }
 
 // MarkExecutionUnknown moves an executing record to outcome_unknown with its audit row and connector.call.outcome_unknown once the deadline plus grace passed.
-// It writes the call, then streams, then the approval, the order of every write of an executing record, so it never deadlocks with the settle.
+// It writes the call, then the approval, the order of every write of an executing record, so it never deadlocks with the settle.
 func (s *Service) MarkExecutionUnknown(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
-	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+	return s.writeTx(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
 		if err != nil {
 			return err
@@ -81,7 +81,7 @@ func (s *Service) callUnknown(tx port.Tx, call port.Call) error {
 
 // SweepCall sweeps a call that was never held: a row left in started beyond its deadline plus grace becomes outcome_unknown.
 func (s *Service) SweepCall(ctx context.Context, tenant port.TenantID, id port.CallID) error {
-	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+	return s.writeTx(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		call, err := tx.GetCall(id)
 		if err != nil {
 			return err
@@ -95,7 +95,7 @@ func (s *Service) SweepCall(ctx context.Context, tenant port.TenantID, id port.C
 
 // ExpireGrant deletes a row whose expiry passed and publishes connector.grant.expired.
 func (s *Service) ExpireGrant(ctx context.Context, tenant port.TenantID, id port.GrantID) error {
-	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+	return s.writeTx(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		g, err := tx.GetGrant(id)
 		if port.IsCode(err, port.CodeNotFound) {
 			return nil
@@ -112,7 +112,7 @@ func (s *Service) ExpireGrant(ctx context.Context, tenant port.TenantID, id port
 
 // ExpirePauses ends every pause of the tenant whose expiry passed.
 func (s *Service) ExpirePauses(ctx context.Context, tenant port.TenantID) error {
-	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+	return s.writeTx(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		all, err := tx.ListPauses()
 		if err != nil {
 			return err
@@ -234,7 +234,7 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 	}
 	var plan *forwardPlan
 	var started port.Approval
-	err = s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
+	err = s.writeTx(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		cur, err := tx.GetApproval(id)
 		if err != nil || cur.State != port.ApprovalApproved {
 			return err

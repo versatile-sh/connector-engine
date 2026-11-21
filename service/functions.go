@@ -40,6 +40,9 @@ func (s *Service) functionTx(ctx context.Context, p port.Principal, id port.Conn
 
 func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port.Hash, keepOverlay bool, by string) (AcceptResult, error) {
 	var out AcceptResult
+	if err := emitNow(tx); err != nil {
+		return out, err
+	}
 	f, err := tx.GetFunction(c.ID, name)
 	if err != nil {
 		return out, err
@@ -59,6 +62,9 @@ func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port
 		}
 	}
 	if err := tx.PutFunction(f); err != nil {
+		return out, err
+	}
+	if err := emitNow(tx); err != nil {
 		return out, err
 	}
 	if err := s.carryOverlay(tx, f, keepOverlay, by); err != nil {

@@ -192,7 +192,7 @@ func (s *Service) writeSessionRow(tx port.Tx, a port.Approval) error {
 	}
 	for _, g := range existing {
 		if g.Key() == row.Key() {
-			if err := s.revokeGrant(tx, g, a.DecidedBy, "replaced"); err != nil {
+			if err := s.revokeGrant(tx, g, a.DecidedBy, "replaced"); err != nil && !port.IsCode(err, port.CodeNotFound) {
 				return err
 			}
 		}
@@ -201,6 +201,9 @@ func (s *Service) writeSessionRow(tx port.Tx, a port.Approval) error {
 }
 
 func (s *Service) countDecision(tx port.Tx, a port.Approval, d port.Decision) error {
+	if err := emitNow(tx); err != nil {
+		return err
+	}
 	pz, ok, err := tx.GetPause(a.Session, a.Agent, a.Connector)
 	if err != nil {
 		return err

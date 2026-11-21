@@ -467,6 +467,9 @@ func (s *Service) forgetPerson(tx port.Tx, person port.PersonID, inScope map[por
 			}
 		}
 	}
+	if err := emitNow(tx); err != nil {
+		return err
+	}
 	binds, err := tx.ListBindings(port.BindingFilter{})
 	if err != nil {
 		return err

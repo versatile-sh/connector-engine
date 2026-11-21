@@ -77,7 +77,7 @@ func (s *Service) SuggestOverlay(ctx context.Context, p port.Principal, id port.
 	var out port.Overlay
 	t := OverlayTarget{Connector: id}
 	if s.d.Suggester == nil {
-		return out, port.Errorf(port.CodeUnavailable, "no description suggester is configured")
+		return out, port.Errorf(port.CodeUnavailable, "no description suggester is configured: a build registers one on the suggester port and adapters.yaml selects it")
 	}
 	if err := s.overlayAuth(ctx, p, t); err != nil {
 		return out, err

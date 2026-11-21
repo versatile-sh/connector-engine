@@ -30,6 +30,7 @@ Dependencies point inward: adapters import `port`, `core` imports only `port`, a
 | `ResultFilter` | redact secrets in results | `builtin` |
 | `ToolIndex` | search the functions granted to an agent | `lexical` |
 | `PrincipalVerifier` (`auth`) | verify an agent or person token | `jwks`, `local` |
+| `DefinitionScanner` (`scanner`), `DescriptionSuggester` (`suggester`) | scan a definition at pin time; propose an overlay description | none built in: a port joins `adapters.yaml` once a build registers an adapter on it, and `vsh admin overlays suggest` answers `unavailable` until then |
 | `Authorizer` (`authz`) | evaluate calls and role questions | the built-in table in `authz/table` (`authz` joins `adapters.yaml` once a build registers another adapter) |
 
 `adapters.yaml` selects one adapter per port (several for runtimes and sources). `connector-engine adapters check` validates the selection the way boot does.

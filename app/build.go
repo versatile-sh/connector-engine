@@ -238,6 +238,24 @@ func (b builder) authorizer(ctx context.Context, store port.Store) (port.Authori
 	return a, closeAll(closer), err
 }
 
+func (b builder) scanner(ctx context.Context) (port.DefinitionScanner, func(), error) {
+	u, ok := b.one(config.PortScanner)
+	if !ok {
+		return nil, func() {}, nil
+	}
+	s, closer, err := openAdapter(ctx, b.reg, Scanners, u, b.env(config.PortScanner))
+	return s, closeAll(closer), err
+}
+
+func (b builder) suggester(ctx context.Context) (port.DescriptionSuggester, func(), error) {
+	u, ok := b.one(config.PortSuggester)
+	if !ok {
+		return nil, func() {}, nil
+	}
+	s, closer, err := openAdapter(ctx, b.reg, Suggesters, u, b.env(config.PortSuggester))
+	return s, closeAll(closer), err
+}
+
 func openAuthorizer(_ context.Context, env Env) (port.Authorizer, func(), error) {
 	s := env.Config.Service()
 	return table.New(env.Store, env.Clock, table.Settings{DestructiveMax: s.DestructiveMax, ForceAsk: s.ForceAsk}), nil, nil

@@ -29,6 +29,9 @@ type SkillPreview struct {
 	Digest         string              `json:"digest"`
 	Files          []SkillFileView     `json:"files"`
 	Keys           []string            `json:"keys"`
+	Needs          port.SkillNeeds     `json:"needs"`
+	Compat         []ClientCompat      `json:"compat"`
+	Warnings       []CompatWarning     `json:"warnings"`
 }
 
 // KeyAccess is the owner's choice for one access key on one skill.
@@ -90,14 +93,16 @@ func safeSource(s port.SkillSource) port.SkillSource {
 }
 
 func (c *Console) skillPreview(e skillcatalog.Entry) SkillPreview {
-	keys := []string{}
-	for _, a := range live(c.allAgents()) {
+	keys, agents := []string{}, live(c.allAgents())
+	for _, a := range agents {
 		keys = append(keys, a.Name)
 	}
+	needs, compat := e.Needs(e.SkillFiles())
 	return SkillPreview{Name: e.Name, Category: e.Category, Source: port.SkillSource{Repository: e.Source.Repository, Path: e.Source.Path, Commit: e.Source.Commit, URL: httpsOnly(e.Source.URL)},
 		Licence: port.SkillLicence{SPDX: e.License.SPDX, From: e.License.From, Redistributable: e.License.Redistributable}, Redistribution: e.Redistribution(),
 		HasScripts: e.HasScriptsDeclaredOrSeen(),
-		Digest:     e.Digest(), Files: fileViews(e.SkillFiles()), Keys: keys}
+		Digest:     e.Digest(), Files: fileViews(e.SkillFiles()), Keys: keys,
+		Needs: needs, Compat: compatViews(compat), Warnings: CompatWarnings(compat, c.appsOf(agents))}
 }
 
 func (c *Console) skillFunction(ctx context.Context, conn string) (port.Function, error) {
@@ -251,9 +256,11 @@ func (c *Console) Skills(ctx context.Context) ([]SkillSummary, error) {
 			continue
 		}
 		s := m.Skill
+		needs, compat := installedNeeds(s)
 		sum := SkillSummary{ID: string(conn.ID), Alias: conn.Alias, Title: firstOf(m.Title, s.Name), Description: m.Description, Publisher: skillcatalog.Publisher(s.Source.Repository, m.Publisher.Name), Version: conn.Listing.Version,
 			SkillPreview: SkillPreview{Name: s.Name, Category: s.Category, Source: safeSource(s.Source), Licence: s.Licence, Redistribution: s.Redistribution, HasScripts: s.HasScripts,
-				Files: fileViews(s.Files), Keys: []string{}}, Access: []KeyAccess{}}
+				Files: fileViews(s.Files), Keys: []string{},
+				Needs: needs, Compat: compatViews(compat), Warnings: CompatWarnings(compat, c.appsOf(agents))}, Access: []KeyAccess{}}
 		if f, err := c.skillFunction(ctx, string(conn.ID)); err == nil {
 			sum.State = string(f.State)
 		}

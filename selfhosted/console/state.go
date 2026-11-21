@@ -47,6 +47,7 @@ type Agent struct {
 	ConnectedAt time.Time `json:"connected_at,omitzero"`
 	Seen        bool      `json:"seen,omitempty"`
 	SignedOutAt time.Time `json:"signed_out_at,omitzero"`
+	App         string    `json:"app,omitempty"`
 }
 
 // StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value, and the person it belongs to.
@@ -272,11 +273,24 @@ func (s *State) PutAgent(a Agent) error {
 		case ok && a.Owner != "" && a.Owner != old.Owner:
 			return ErrNameTaken
 		case ok:
-			a.Owner, a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen = old.Owner, old.ViaBrowser, old.ClientID, old.ConnectedAt, old.Seen
+			a.Owner, a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen, a.App = old.Owner, old.ViaBrowser, old.ClientID, old.ConnectedAt, old.Seen, old.App
 		case a.Owner == "":
 			return invalid("the access key %s has no owner", a.Name)
 		}
 		put(&d.Agents, a.Name, a)
+		return nil
+	})
+}
+
+// SetAgentApp records which AI app the owner picked for the access key name; an empty id clears it.
+func (s *State) SetAgentApp(name, app string) error {
+	return s.update(func(d *stateFile) error {
+		a, ok := d.Agents[name]
+		if !ok {
+			return notFound("no agent is named %s", name)
+		}
+		a.App = app
+		d.Agents[name] = a
 		return nil
 	})
 }

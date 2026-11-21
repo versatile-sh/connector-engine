@@ -609,14 +609,33 @@ func (c *Console) setActivitySettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "cannot save the activity settings")
 		return
 	}
+	if in.Retention != nil {
+		c.auditActivity(r, "activity.retention.changed", map[string]string{"retention": string(*in.Retention)})
+	}
 	c.activitySettings(w, r)
 }
 
-func (c *Console) deleteActivity(w http.ResponseWriter, _ *http.Request) {
+func rfc(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
+}
+
+func (c *Console) auditActivity(r *http.Request, action string, detail map[string]string) {
+	u, _ := signedInUser(r.Context())
+	_ = c.State.update(func(d *stateFile) error {
+		record(d, u.Person, action, "activity", detail)
+		return nil
+	})
+}
+
+func (c *Console) deleteActivity(w http.ResponseWriter, r *http.Request) {
 	if err := c.Activity.DeleteAll(); err != nil {
 		writeError(w, http.StatusInternalServerError, "cannot delete the activity")
 		return
 	}
+	c.auditActivity(r, "activity.deleted", map[string]string{"scope": "all"})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -678,6 +697,7 @@ func (c *Console) pruneActivity(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "cannot delete the activity")
 			return
 		}
+		c.auditActivity(r, "activity.deleted", map[string]string{"from": rfc(from), "to": rfc(to), "calls": strconv.Itoa(count)})
 	}
 	writeJSON(w, http.StatusOK, PruneResult{Count: count, Deleted: !in.DryRun})
 }

@@ -32,7 +32,7 @@ The setting only governs the console's own records and the engine rows shown bes
 
 ## Delete a period
 
-**Delete a period** opens a window with either **Older than** (1, 7, 30 or 90 days) or **Between days** (two days you pick). It counts what the period holds before it deletes, says "N calls will be deleted" and deletes only on **Delete these calls**. Captured calls go from the files, and the engine rows of that period stop showing here. Only an Owner can do this; the console logs each deletion (period and number of captured calls) in its own log.
+**Delete a period** opens a window with either **Older than** (1, 7, 30 or 90 days) or **Between days** (two days you pick). It counts what the period holds before it deletes, says "N calls will be deleted" and deletes only on **Delete these calls**. Captured calls go from the files, and the engine rows of that period stop showing here. Only an Owner can do this; each deletion, and each change of how long calls are kept, goes in the console audit with who did it.
 
 ```sh
 vsh activity prune --older-than 30d

@@ -124,6 +124,7 @@ type activityRig struct {
 	base     string
 	engine   *fakeEngine
 	activity *console.Activity
+	state    *console.State
 	dir      string
 	b        *browser
 	token    string
@@ -165,7 +166,7 @@ func newActivityRig(t *testing.T) *activityRig {
 	var setup struct{ CSRF string }
 	b.ok("POST", "/api/setup", map[string]string{"username": "me", "password": "correct horse battery"}, &setup)
 	b.csrf = setup.CSRF
-	return &activityRig{t: t, base: base, engine: fe, activity: act, dir: filepath.Join(dir, "activity"), b: b, token: agentToken("claude-code", "claude-code-s1")}
+	return &activityRig{t: t, base: base, engine: fe, activity: act, state: state, dir: filepath.Join(dir, "activity"), b: b, token: agentToken("claude-code", "claude-code-s1")}
 }
 
 func (r *activityRig) answer(h http.HandlerFunc) {

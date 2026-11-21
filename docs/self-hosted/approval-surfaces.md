@@ -42,7 +42,7 @@ Everything new lives in three places:
 
 | Option | Verdict |
 |---|---|
-| A. An `ApprovalChannel` inside the engine (mapped as "form elicitation"), so the gateway elicits itself | Rejected for this work. It modifies the engine core, and this work keeps the engine core unchanged |
+| A. An `ApprovalChannel` inside the engine (mapped as "form elicitation"), so the gateway elicits itself | Rejected. The answer to an elicitation comes from the client program, not from a person, wherever the request is sent from; it would also modify the engine core |
 | B. Decide from the answer to an MCP elicitation on the agent's own session | Rejected. The answer comes from the client program, not from a person: a client that answers every prompt with "accept" would approve its own calls, in the name of the key's owner |
 | C. Chat bots in a separate `cmd/approval-relay` container | Rejected. The console already holds the owner's state, the person token and the decision rules. A second process would need copies of all three |
 | D. Chat bots inside the console, and a host helper for desktop popups | **Chosen**. The console runs in Docker and cannot show a host notification |

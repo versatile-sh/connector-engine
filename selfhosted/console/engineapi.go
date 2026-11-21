@@ -183,8 +183,8 @@ func (e *Engine) credentials(ctx context.Context, conn string) ([]port.Credentia
 	return list[port.Credential](ctx, e, "/v1/credentials"+q("connector", conn))
 }
 
-func (e *Engine) pendingApprovals(ctx context.Context, agent, session string) ([]port.Approval, error) {
-	return list[port.Approval](ctx, e, "/v1/approvals"+q("state", string(port.ApprovalPending), "agent", agent, "session", session))
+func (e *Engine) pendingApprovals(ctx context.Context) ([]port.Approval, error) {
+	return list[port.Approval](ctx, e, "/v1/approvals"+q("state", string(port.ApprovalPending)))
 }
 
 func (e *Engine) approval(ctx context.Context, id string) (approvalDetail, error) {

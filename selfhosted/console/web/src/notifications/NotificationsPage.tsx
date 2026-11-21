@@ -29,7 +29,9 @@ export function NotificationsPage() {
         <div className="@container">
           <div className="grid gap-6 @5xl:grid-cols-2">
             <DevicesSection devices={data.data.devices} />
-            <ChannelsSection channels={data.data.channels} />
+            <div className="@5xl:col-span-2">
+              <ChannelsSection channels={data.data.channels} />
+            </div>
           </div>
         </div>
       ) : null}

@@ -16,10 +16,7 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted/console/sealed"
 )
 
-const (
-	linkKind  = "link"
-	stateKind = "mrtr"
-)
+const linkKind = "link"
 
 var errBadToken = errors.New("the link is not valid or has expired")
 

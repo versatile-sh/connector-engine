@@ -586,7 +586,7 @@ func (c *Console) MintAgent(ctx context.Context, name string, ttl time.Duration,
 
 // Approvals lists the calls waiting for the owner.
 func (c *Console) Approvals(ctx context.Context) ([]port.Approval, error) {
-	out, err := c.Engine.pendingApprovals(ctx, "", "")
+	out, err := c.Engine.pendingApprovals(ctx)
 	for i := range out {
 		out[i].Arguments = nil
 	}

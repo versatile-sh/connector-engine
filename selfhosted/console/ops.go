@@ -13,7 +13,8 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-// FunctionView is one function of a connector as the console shows it: its class, what it does by nature, and the owner's choice read back from the engine's grants.
+// FunctionView is one function of a connector as the console shows it: its class, what it does by nature, the owner's choice read back from the engine's grants,
+// and whether on still asks because a review or its server declares it destructive.
 type FunctionView struct {
 	Name        string     `json:"name"`
 	Title       string     `json:"title,omitempty"`
@@ -22,6 +23,7 @@ type FunctionView struct {
 	Kind        port.Class `json:"kind"`
 	State       string     `json:"state"`
 	Access      Access     `json:"access"`
+	Capped      bool       `json:"capped,omitempty"`
 }
 
 // ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far, the permission sets that hold a profile for it, and whose credential its calls use with who signed in.
@@ -129,7 +131,7 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 				continue
 			}
 			title, desc := describe(f.Definition)
-			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f, m), State: string(f.State), Access: functionAccess(f, rows)})
+			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f, m), State: string(f.State), Access: functionAccess(f, rows), Capped: declaredDestructive(f, m)})
 		}
 		if s.Profiles, err = c.profiles(ctx, string(conn.ID), agentRows); err != nil {
 			return nil, err
@@ -288,6 +290,11 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 		return nil
 	}
 	return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorOf(name), Mode: a.mode(), DefinitionHash: f.DefinitionHash})
+}
+
+func declaredDestructive(f port.Function, m port.Manifest) bool {
+	base, source := listing.Base(f, m)
+	return (source == port.ClassSourceReviewed || source == port.ClassSourceAnnotationRaise) && base.Effective() == port.ClassDestructive && f.Class.Effective() == port.ClassDestructive
 }
 
 func (c *Console) classByNature(ctx context.Context, conn string, f port.Function) (port.Function, error) {

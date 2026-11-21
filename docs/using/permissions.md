@@ -34,7 +34,7 @@ The engine treats each function as read, write or destructive.
 | the server declares `destructiveHint: true` | keeps destructive: on asks once a session, and the row says "asks once a session" |
 | neither | sets read when the server's `readOnlyHint` says so, else write |
 
-- On its first start after an update, the console raises once every function whose class lies below its reviewed or declared class. Each raise drops the session answers of that function and is listed under **Changes** on the People page. An operator can still set a class through the engine API.
+- On the first start after this version, every class below a reviewed or declared class is raised once, including one set through the engine API; lower it again through the API if that was intended. Each raise drops the session answers of that function and is listed under **Changes** on the People page. A connector the console cannot read then is skipped with a warning in its log, and later starts raise nothing.
 
 ## Per-key profiles
 

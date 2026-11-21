@@ -10,7 +10,7 @@ export function KindLabel({ kind }: { kind: Kind }) {
   return <span className={`font-mono text-xs whitespace-nowrap ${TONE[kind]}`}>{t(`kind.${kind}`)}</span>;
 }
 
-/** The flag on a row set on whose class counts as deleting: the engine still asks once in each session. */
+/** The flag on a row set on whose review or server declares it destructive: the engine still asks once in each session. */
 export function AsksOnce() {
   const t = useT();
   return (

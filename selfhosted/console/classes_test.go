@@ -2,7 +2,10 @@ package console_test
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,7 +49,7 @@ func (r *rig) heldAtOnce(function string) {
 func TestEnablingADeclaredDestructiveFunctionKeepsTheCap(t *testing.T) {
 	r := newRig(t)
 	r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/functions/purge", map[string]string{"access": "on"}, nil)
-	if f := r.function("purge"); f.Class != port.ClassDestructive || f.Access != console.AccessOn {
+	if f := r.function("purge"); f.Class != port.ClassDestructive || f.Access != console.AccessOn || !f.Capped {
 		t.Fatalf("purge after on: %+v", f)
 	}
 	r.heldAtOnce("purge")
@@ -57,7 +60,7 @@ func TestEnablingAnUnreviewedFunctionClassesItByItsHints(t *testing.T) {
 	for _, name := range []string{"create", "search"} {
 		r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/functions/"+name, map[string]string{"access": "on"}, nil)
 	}
-	if f := r.function("create"); f.Class != port.ClassWrite {
+	if f := r.function("create"); f.Class != port.ClassWrite || f.Capped {
 		t.Fatalf("create after on: %+v", f)
 	}
 	if f := r.function("search"); f.Class != port.ClassRead {
@@ -93,7 +96,7 @@ func TestACappedFunctionIsNotOfferedAlways(t *testing.T) {
 	ran(t, <-pending, "purge")
 }
 
-func TestUpgradeRepairRaisesConsoleLoweredClasses(t *testing.T) {
+func TestTheFirstStartRaisesLoweredClassesAndALaterStartKeepsAnAPILowering(t *testing.T) {
 	r := newRig(t)
 	ctx := console.WithActor(context.Background(), "console")
 	r.engineClass("purge", port.ClassWrite)
@@ -139,7 +142,7 @@ func TestUpgradeRepairRaisesConsoleLoweredClasses(t *testing.T) {
 		t.Fatal(err)
 	}
 	if f := r.function("purge"); f.Class != port.ClassWrite || raised() != 1 {
-		t.Fatalf("a second repair changed a deliberate lowering: %+v, %d raises", f, raised())
+		t.Fatalf("a later start changed a class set through the API: %+v, %d raises", f, raised())
 	}
 }
 
@@ -172,5 +175,43 @@ func TestAReviewedClassIsTheFloorForTheRepairAndForOn(t *testing.T) {
 	r.b.ok("PUT", "/api/connectors/"+r.conn.ID+"/functions/search", map[string]string{"access": "on"}, nil)
 	if f := r.function("search"); f.Class != port.ClassWrite {
 		t.Fatalf("search reviewed as a change, turned on: %+v", f)
+	}
+}
+
+type refuseVersion struct {
+	next    http.RoundTripper
+	listing string
+}
+
+func (v refuseVersion) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.URL.Path == "/v1/listings/version" && req.URL.Query().Get("name") == v.listing {
+		return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader(`{"code":"internal","detail":"refused"}`)), Header: http.Header{}, Request: req}, nil
+	}
+	return v.next.RoundTrip(req)
+}
+
+func TestTheFirstStartSkipsAConnectorItCannotReadAndRepairsTheOthers(t *testing.T) {
+	r := newRig(t)
+	ctx := console.WithActor(context.Background(), "console")
+	var imported struct{ Connector string }
+	r.b.ok("POST", "/api/import", map[string]any{"mcp": newToolServer(t, "maps", "route").URL + "/mcp", "local": true}, &imported)
+	var list struct{ Connectors []console.ConnectorSummary }
+	r.b.ok("GET", "/api/connectors", nil, &list)
+	broken := list.Connectors[slices.IndexFunc(list.Connectors, func(c console.ConnectorSummary) bool { return c.ID == imported.Connector })]
+	r.engineClass("purge", port.ClassWrite)
+	r.c.Engine.HTTP = &http.Client{Timeout: time.Minute, Transport: refuseVersion{next: http.DefaultTransport, listing: broken.Listing}}
+	if err := r.c.RepairClasses(ctx); err != nil {
+		t.Fatal(err)
+	}
+	r.c.Engine.HTTP = nil
+	if f := r.function("purge"); f.Class != port.ClassDestructive || !r.c.State.ClassesRepaired() {
+		t.Fatalf("purge after a pass with a broken connector: %+v, done %v", f, r.c.State.ClassesRepaired())
+	}
+	r.engineClass("purge", port.ClassWrite)
+	if err := r.c.RepairClasses(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if f := r.function("purge"); f.Class != port.ClassWrite {
+		t.Fatalf("a later start repaired again: %+v", f)
 	}
 }

@@ -11,7 +11,7 @@ import { FunctionTools } from "./FunctionTools";
 import { AsksOnce, KindLabel } from "./KindLabel";
 import type { Lens } from "./lens";
 import { toggledOne } from "./selection";
-import { accessCounts } from "./summary";
+import { accessCounts, asksOnce } from "./summary";
 
 const TONE = { on: "paper", ask: "lime", off: "muted" } as const;
 
@@ -64,7 +64,7 @@ export function Functions({ connector, lens, scope, copy }: FunctionsProps) {
                       flags={
                         <>
                           <KindLabel kind={fn.kind} />
-                          {lens.accessOf(fn.name, fn.access) === "on" && (fn.class === "" || fn.class === "destructive") ? <AsksOnce /> : null}
+                          {asksOnce(fn, lens.accessOf(fn.name, fn.access)) ? <AsksOnce /> : null}
                           {fn.state !== "active" ? (
                             <Tag tone="amber" dot title={fn.state === "quarantined" ? t("detail.quarantined") : undefined}>
                               {fn.state}

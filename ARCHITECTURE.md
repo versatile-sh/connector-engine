@@ -86,6 +86,7 @@ The strictest mode wins across layers. `core/evaluate` holds the steps and `core
 - `ask` holds the call. The gateway waits up to `approval.holdWindow` (20 s), then answers `pending_approval` with an id the agent polls through `approval_status` or drops with `approval_cancel`.
 - A person decides through the operator API, the console, or an approval surface.
 - An approved call runs once. A repeated identical call (same session, same call hash) attaches to the open record instead of opening a new one.
+- A forwarded call is never sent again. When its result cannot be recorded, the agent gets `outcome_unknown`, the failure is logged with the call id, and the row stays `started` until the worker sweeps it.
 - States: `pending`, `approved`, `executing`, `executed`, `failed`, `outcome_unknown`, `denied`, `expired`, `cancelled`. `core/approval` holds the transitions; the worker runs the timers and a denial brake.
 
 ## Pinning and quarantine

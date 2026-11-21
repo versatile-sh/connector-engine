@@ -2,10 +2,12 @@ package sqlite_test
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -217,5 +219,30 @@ func TestMigratesALivePostgresStore(t *testing.T) {
 		return err
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestOpenKeepsAndRefusesANewerSchema(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "store.db")
+	open(t, path).Close()
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec(`PRAGMA user_version = 5`); err != nil {
+		t.Fatal(err)
+	}
+	raw.Close()
+	if s, err := sqlite.Open(ctx, path); err == nil {
+		s.Close()
+		t.Fatal("a newer schema must be refused")
+	} else if !strings.Contains(err.Error(), "version 5") {
+		t.Fatalf("error does not name the versions: %v", err)
+	}
+	raw, _ = sql.Open("sqlite", path)
+	defer raw.Close()
+	var v int
+	if err := raw.QueryRow(`PRAGMA user_version`).Scan(&v); err != nil || v != 5 {
+		t.Fatalf("user_version = %d, %v; want 5 untouched", v, err)
 	}
 }

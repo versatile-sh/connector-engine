@@ -67,6 +67,29 @@ func (s *Store) Migrate(ctx context.Context) error {
 		CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY)`); err != nil {
 		return fail(err)
 	}
+	known := make(map[string]bool, len(files))
+	for _, f := range files {
+		known[f] = true
+	}
+	rows, err := q.Query(ctx, `SELECT version FROM schema_migrations`)
+	if err != nil {
+		return fail(err)
+	}
+	for rows.Next() {
+		var v string
+		if err := rows.Scan(&v); err != nil {
+			rows.Close()
+			return fail(err)
+		}
+		if !known[v] {
+			rows.Close()
+			return port.Errorf(port.CodeConflict, "database has migration %s this binary does not know; upgrade the binary instead of downgrading", v)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fail(err)
+	}
 	for _, f := range files {
 		var done bool
 		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = $1)`, f).Scan(&done); err != nil {

@@ -108,6 +108,12 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := q.QueryRowContext(ctx, `PRAGMA user_version`).Scan(&version); err != nil {
 		return fail(err)
 	}
+	if version > len(files) {
+		return port.Errorf(port.CodeConflict, "database schema is version %d but this binary knows %d; upgrade the binary instead of downgrading", version, len(files))
+	}
+	if version == len(files) {
+		return nil
+	}
 	for i := version; i < len(files); i++ {
 		ddl, err := migrations.ReadFile(files[i])
 		if err != nil {

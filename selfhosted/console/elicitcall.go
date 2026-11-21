@@ -150,7 +150,13 @@ func (c *Console) elicitCall(w http.ResponseWriter, r *http.Request, body []byte
 	first := make(chan engineAnswer, 1)
 	go func() { first <- c.toEngine(ctx, r, body, m.ID) }()
 	id, ans, done := c.bindCall(ctx, first, agent, session, calledFunction(p), time.Now())
+	if id != "" && !done && !c.engineAccepts(ctx, r) {
+		id = ""
+	}
 	if id == "" {
+		if !done {
+			ans = <-first
+		}
 		c.passAnswer(w, r, ans)
 		return true
 	}
@@ -173,6 +179,12 @@ func (c *Console) elicitCall(w http.ResponseWriter, r *http.Request, body []byte
 	}
 	c.askOnStream(w, r, body, m, v, agent, first, ans, done)
 	return true
+}
+
+// engineAccepts reports whether the engine, which checks the signature, takes the request's bearer; the claims the console reads are unsigned.
+func (c *Console) engineAccepts(ctx context.Context, r *http.Request) bool {
+	ping := c.toEngine(ctx, r, []byte(`{"jsonrpc":"2.0","id":"ce-verify","method":"ping"}`), json.RawMessage(`"ce-verify"`))
+	return ping.err == nil && ping.status != http.StatusUnauthorized
 }
 
 func (c *Console) bindCall(ctx context.Context, first chan engineAnswer, agent, session, function string, start time.Time) (string, engineAnswer, bool) {

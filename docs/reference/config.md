@@ -43,7 +43,7 @@ Secrets are never written in the files. A key ending in `Ref` takes a reference:
 | `server.grpcListen` | `:9090` | gRPC; `""` turns it off |
 | `server.operatorListen` | `""` (off) | the operator API |
 | `server.publicURL` | `""` | the address clients use; the default for both audiences |
-| `server.snapshot` | `false` | `GET`/`PUT /v1/snapshot` on the operator listener, for backups; returns plaintext keys |
+| `server.snapshot` | `false` | `GET`/`PUT /v1/snapshot` on the operator listener, for backups; returns plaintext keys; `PUT` takes an optional `by` person, records the restore as theirs (else `system`), and answers the rows per kind, the warning count and the first 20 warnings |
 | `auth.issuers` | `[]` | trusted OIDC issuers ([OIDC](../enterprise/oidc.md)) |
 | `auth.audience`, `auth.manageAudience` | `server.publicURL` | `aud` of agent and person tokens |
 | `auth.agentTokenMaxLifetime` | `1h` | the longest agent token accepted |

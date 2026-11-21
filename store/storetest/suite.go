@@ -37,33 +37,36 @@ type env struct {
 // Run executes the whole suite, each case on a fresh store from newStore.
 func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 	cases := map[string]func(*env){
-		"tenant isolation":          isolation,
-		"cross-tenant matrix":       crossTenantMatrix,
-		"installation rows":         installationRows,
-		"unit of work":              unitOfWork,
-		"read only":                 readOnly,
-		"outbox order per stream":   outboxOrder,
-		"concurrent emit":           concurrentEmit,
-		"conditional approval":      conditionalApproval,
-		"one open record per call":  oneOpenRecord,
-		"concurrent decisions":      concurrentDecisions,
-		"conditional call":          conditionalCall,
-		"revisions":                 revisions,
-		"grant key":                 grantKey,
-		"counted grant reservation": countedReservation,
-		"concurrent reservation":    concurrentReservation,
-		"grant row keeps use count": writingAGrantRowKeepsItsUseCount,
-		"due work":                  dueWork,
-		"inbox":                     inbox,
-		"scope validation":          scopeValidation,
-		"records":                   records,
-		"skill version":             skillVersion,
-		"roles and groups":          rolesAndGroups,
-		"calls clients and syncs":   callsClientsAndSyncs,
-		"purge tenant":              purgeTenant,
-		"prune history":             pruneHistory,
-		"snapshot and restore":      snapshotRestore,
-		"restore normalizes agent":  restoreNormalizesAgent,
+		"tenant isolation":                 isolation,
+		"cross-tenant matrix":              crossTenantMatrix,
+		"installation rows":                installationRows,
+		"unit of work":                     unitOfWork,
+		"read only":                        readOnly,
+		"outbox order per stream":          outboxOrder,
+		"concurrent emit":                  concurrentEmit,
+		"conditional approval":             conditionalApproval,
+		"one open record per call":         oneOpenRecord,
+		"concurrent decisions":             concurrentDecisions,
+		"conditional call":                 conditionalCall,
+		"revisions":                        revisions,
+		"grant key":                        grantKey,
+		"counted grant reservation":        countedReservation,
+		"concurrent reservation":           concurrentReservation,
+		"grant row keeps use count":        writingAGrantRowKeepsItsUseCount,
+		"due work":                         dueWork,
+		"inbox":                            inbox,
+		"scope validation":                 scopeValidation,
+		"records":                          records,
+		"skill version":                    skillVersion,
+		"roles and groups":                 rolesAndGroups,
+		"calls clients and syncs":          callsClientsAndSyncs,
+		"purge tenant":                     purgeTenant,
+		"prune history":                    pruneHistory,
+		"snapshot and restore":             snapshotRestore,
+		"restore normalizes agent":         restoreNormalizesAgent,
+		"restore refuses broken snapshots": restoreRefusesBrokenSnapshots,
+		"restore records itself":           restoreRecordsItself,
+		"restore keeps the first warnings": restoreKeepsTheFirstWarnings,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -996,9 +999,12 @@ func snapshotRestore(e *env) {
 
 	s, o := e.fresh()
 	dst := s.(port.Snapshotter)
+	restored := want
+	restored.Pending++
 	for range 2 {
-		e.must(dst.Restore(ctx, snap))
-		e.same(want, viewOf(e, s, o))
+		_, err := dst.Restore(ctx, snap, "operator")
+		e.must(err)
+		e.same(restored, viewOf(e, s, o))
 	}
 	e.must(s.Write(ctx, scopeA, func(tx port.Tx) error {
 		ev, err := tx.Emit(port.Event{Type: "connector.connector.updated", Tenant: "ta", Subject: "c1", Time: t0})
@@ -1015,15 +1021,16 @@ func snapshotRestore(e *env) {
 		broken.Tables[name] = append(slices.Clone(rows), json.RawMessage(`"not a row"`))
 	}
 	before := viewOf(e, e.s, e.o)
-	if err := src.Restore(ctx, broken); err == nil {
+	if _, err := src.Restore(ctx, broken, "operator"); err == nil {
 		e.t.Fatal("a broken snapshot was restored")
 	}
 	e.same(before, viewOf(e, e.s, e.o))
-	if err := src.Restore(ctx, port.Snapshot{Store: "elsewhere"}); !port.IsCode(err, port.CodeInvalidArgument) {
+	if _, err := src.Restore(ctx, port.Snapshot{Store: "elsewhere"}, "operator"); !port.IsCode(err, port.CodeInvalidArgument) {
 		e.t.Fatalf("a snapshot of another store: %v", err)
 	}
-	e.must(src.Restore(ctx, snap))
-	e.same(want, viewOf(e, e.s, e.o))
+	_, err = src.Restore(ctx, snap, "operator")
+	e.must(err)
+	e.same(restored, viewOf(e, e.s, e.o))
 }
 
 // LegacyGrants writes, in tenant ta, rows an older release could store: a user row naming an agent and three pairs of agent rows whose keys differ only by agent.
@@ -1100,6 +1107,7 @@ func restoreNormalizesAgent(e *env) {
 	snap, err := src.Snapshot(ctx)
 	e.must(err)
 	s, _ := e.fresh()
-	e.must(s.(port.Snapshotter).Restore(ctx, snap))
+	_, err = s.(port.Snapshotter).Restore(ctx, snap, "operator")
+	e.must(err)
 	CheckCanonicalGrants(e.t, s)
 }

@@ -1,4 +1,4 @@
-import type { SkillFacts, SkillSource } from "../api";
+import type { SkillFacts, SkillLicence, SkillSource } from "../api";
 
 /** A size the way the file list shows it: bytes, then KB and MB with one decimal. */
 export function formatBytes(bytes: number): string {
@@ -9,6 +9,9 @@ export function formatBytes(bytes: number): string {
 
 /** The first seven characters of a commit, as a page about it shows it. */
 export const shortCommit = (commit: string) => commit.slice(0, 7);
+
+/** Whether a catalog states a licence for a skill: an SPDX id other than `NONE`. */
+export const hasLicence = (licence: SkillLicence): licence is SkillLicence & { spdx: string } => Boolean(licence.spdx) && licence.spdx !== "NONE";
 
 /** The total size of a skill's files. */
 export const totalBytes = (files: readonly { bytes: number }[]) => files.reduce((sum, file) => sum + file.bytes, 0);

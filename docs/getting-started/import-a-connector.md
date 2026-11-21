@@ -23,7 +23,7 @@ A link opens the same review, after sign-in. Directories such as the versatile.s
 | `http://127.0.0.1:7465/import?listing=<https URL of a listing>` | a review of a listing in the Manifest format |
 | `http://127.0.0.1:7465/import?listing=<https URL of a skill catalog entry>` | a review of a skill (`kind: skill`) |
 
-The review shows the origin, title, icon, publisher and each function's proposed choice.
+The page shows the origin, title, icon, publisher and version (a skill's licence and short commit) at the top, the review below it, and a card with who may load it, the notice that nothing is installed yet, and the **Add** button. On a wide screen the card stays beside the review; on a narrow screen the **Add** button is in a bar at the bottom of the page.
 
 ## What the engine does on import
 

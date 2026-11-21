@@ -5,7 +5,7 @@ import { testChannel } from "../mutations";
 import { InlineConfirm } from "../ui/InlineConfirm";
 import { button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
-import { setupsOf, textOf } from "./setup";
+import { kindTitle } from "./setup";
 import { rowMotion, type RowPhase } from "../ui/kept";
 import type { useRemove } from "./useRemove";
 
@@ -16,7 +16,6 @@ type ChannelRowProps = { channel: ChannelView; kinds: readonly ChannelKindView[]
 /** One channel: its label and kind, its status, the owner id and the last characters of its secret, a Test message, and an inline Remove. */
 export function ChannelRow({ channel, kinds, remove, phase }: ChannelRowProps) {
   const t = useT();
-  const setup = setupsOf(kinds).find((s) => s.kind === channel.kind);
   const test = useMutation(testChannel);
   const asking = remove.asking(channel.id);
   const failed = test.isError ? errorText(test.error) : test.data && !test.data.ok ? (test.data.error ?? t("notify.channels.testFailed")) : undefined;
@@ -26,7 +25,7 @@ export function ChannelRow({ channel, kinds, remove, phase }: ChannelRowProps) {
         <div className="min-w-0 grow basis-full @md:basis-0">
           <p title={channel.label} className="truncate font-medium">{channel.label}</p>
           <p className="flex flex-wrap gap-x-3 font-mono text-xs text-muted [overflow-wrap:anywhere]">
-            <span>{setup ? textOf(t, setup.titleKey, setup.title) : channel.kind}</span>
+            <span>{kindTitle(t, kinds, channel.kind)}</span>
             {channel.owner ? <span translate="no">{t("notify.channels.owner", { id: channel.owner })}</span> : null}
             {channel.secret_hint ? <span translate="no">••••{channel.secret_hint}</span> : null}
           </p>

@@ -47,6 +47,12 @@ export function setupsOf(kinds: readonly ChannelKindView[]): Setup[] {
   });
 }
 
+/** The title of a channel kind in the viewer's language, else the server's English, else the kind's own name. */
+export function kindTitle(t: Translate, kinds: readonly ChannelKindView[], kind: string): string {
+  const setup = setupsOf(kinds).find((s) => s.kind === kind);
+  return setup ? textOf(t, setup.titleKey, setup.title) : kind;
+}
+
 /** A translated text when the console has one, else the server's English. */
 export const textOf = (t: Translate, key: MessageKey | undefined, fallback: string) => (key ? t(key) : fallback);
 

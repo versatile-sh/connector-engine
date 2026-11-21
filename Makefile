@@ -14,7 +14,7 @@ CONSOLE_PORT ?= 7465
 export CONSOLE_PORT
 ENGINE   := $(if $(filter headless,$(PROFILE)),engine-headless,engine)
 
-.PHONY: up down logs ps cli admin build test vendor layering check semgrep
+.PHONY: up down logs ps cli admin build test vendor layering vlint check semgrep
 
 up: vendor
 	$(COMPOSE) --profile $(PROFILE) up -d --build
@@ -46,11 +46,17 @@ vendor:
 
 check:
 	go vet ./...
+	$(MAKE) --no-print-directory vlint
 	$(MAKE) --no-print-directory test
 	$(MAKE) --no-print-directory semgrep
 
 layering:
 	scripts/check-layering.sh
+
+VLINT := go run github.com/versatile-sh/go-lint/cmd/vlint@v0.2.0
+
+vlint:
+	$(VLINT) -baseline lint/vlint.baseline ./...
 
 test: layering
 	go test -race -timeout 30m ./...

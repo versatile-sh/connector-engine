@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/versatile-sh/connector-engine/authz"
-	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/authz/facts"
 	"github.com/versatile-sh/connector-engine/catalog"
 	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
 	"github.com/versatile-sh/connector-engine/core/listing"
@@ -221,7 +221,7 @@ func (s *Service) viewerOf(ctx context.Context, p port.Principal) (viewer, error
 }
 
 func (v viewer) view(tx port.Tx, workspace port.WorkspaceID) (corecatalog.View, error) {
-	return table.View(tx, v.tenant, []port.WorkspaceID{workspace}, v.groups)
+	return facts.View(tx, v.tenant, []port.WorkspaceID{workspace}, v.groups)
 }
 
 // ListingFilter narrows ListListings; zero fields match all.
@@ -303,7 +303,7 @@ func (s *Service) ListOfferedListings(ctx context.Context, p port.Principal) ([]
 	}
 	var out []port.Listing
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
-		v, err := table.View(tx, p.Claims.Tenant, nil, nil)
+		v, err := facts.View(tx, p.Claims.Tenant, nil, nil)
 		if err != nil {
 			return err
 		}

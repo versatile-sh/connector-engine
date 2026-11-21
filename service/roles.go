@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/versatile-sh/connector-engine/authz"
-	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/authz/facts"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -25,9 +25,9 @@ func validRole(r port.RoleAssignment) error {
 	switch {
 	case r.Person == "" || r.Scope == "":
 		return port.Errorf(port.CodeInvalidArgument, "a role names a person and a scope")
-	case !table.Known(r.Role):
+	case !facts.Known(r.Role):
 		return port.Errorf(port.CodeInvalidArgument, "unknown role %q", r.Role)
-	case (table.Role(r.Role) == table.Operator) != (r.Tenant == port.Installation):
+	case (facts.Role(r.Role) == facts.Operator) != (r.Tenant == port.Installation):
 		return port.Errorf(port.CodeInvalidArgument, "the operator role is the installation's alone, every other role belongs to a tenant")
 	case r.Tenant != port.Installation && !authz.Covers(authz.Tenant(string(r.Tenant)), r.Scope):
 		return port.Errorf(port.CodeInvalidArgument, "scope %q is outside tenant %s", r.Scope, r.Tenant)

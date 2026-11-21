@@ -1,4 +1,5 @@
-package table
+// Package facts loads the catalog view and the evaluation facts of a tenant from a transaction, and names the delegated roles; it is the store-side input every Authorizer may share.
+package facts
 
 import (
 	"time"
@@ -54,10 +55,11 @@ func LoadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.Connect
 	if err != nil {
 		return evaluate.Facts{}, err
 	}
-	return loadFacts(tx, now, s, connector, groups, set, grants)
+	return LoadFactsWith(tx, now, s, connector, groups, set, grants)
 }
 
-func loadFacts(tx port.Tx, now time.Time, s port.Subject, connector port.ConnectorID, groups map[port.PersonID][]port.GroupID, set Settings, grants []port.Grant) (evaluate.Facts, error) {
+// LoadFactsWith is LoadFacts over grants the caller already read.
+func LoadFactsWith(tx port.Tx, now time.Time, s port.Subject, connector port.ConnectorID, groups map[port.PersonID][]port.GroupID, set Settings, grants []port.Grant) (evaluate.Facts, error) {
 	c, err := tx.GetConnector(connector)
 	if port.IsCode(err, port.CodeNotFound) {
 		return evaluate.Facts{}, nil

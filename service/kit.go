@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/authz/facts"
 	"github.com/versatile-sh/connector-engine/catalog"
 	"github.com/versatile-sh/connector-engine/core/approval"
 	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
@@ -9,12 +9,12 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-func (s *Service) settings() table.Settings {
-	return table.Settings{DestructiveMax: s.cfg.DestructiveMax, ForceAsk: s.cfg.ForceAsk}
+func (s *Service) settings() facts.Settings {
+	return facts.Settings{DestructiveMax: s.cfg.DestructiveMax, ForceAsk: s.cfg.ForceAsk}
 }
 
 func (s *Service) facts(tx port.Tx, sub port.Subject, connector port.ConnectorID, groups map[port.PersonID][]port.GroupID) (evaluate.Facts, error) {
-	return table.LoadFacts(tx, s.now(), sub, connector, groups, s.settings())
+	return facts.LoadFacts(tx, s.now(), sub, connector, groups, s.settings())
 }
 
 func (s *Service) cancelPending(tx port.Tx, f port.ApprovalFilter, reason port.Code, keep func(port.Approval) bool) (int, error) {
@@ -82,5 +82,5 @@ func (s *Service) putGrant(tx port.Tx, g port.Grant, by string) error {
 }
 
 func (s *Service) view(tx port.Tx, tenant port.TenantID, workspace port.WorkspaceID, groups map[port.PersonID][]port.GroupID) (corecatalog.View, error) {
-	return table.View(tx, tenant, []port.WorkspaceID{workspace}, groups)
+	return facts.View(tx, tenant, []port.WorkspaceID{workspace}, groups)
 }

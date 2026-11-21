@@ -17,6 +17,7 @@ const (
 	PortStore   = "store"
 	PortSecrets = "secrets"
 	PortAuth    = "auth"
+	PortAuthz   = "authz"
 	PortRuntime = "runtime"
 	PortSource  = "source"
 	PortSink    = "sink"
@@ -71,12 +72,15 @@ func (c Config) AdaptersSpec() adapters.Spec {
 	ports := map[string]adapters.PortSpec{
 		PortStore:   {Default: use(adapters.TierBuiltin, "postgres"), Stateful: true},
 		PortSecrets: {Default: c.secretsDefault(), Stateful: true, Sensitive: true},
-		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Builtins: []string{"jwks", "local"}, Sensitive: true, Weak: []string{"builtin:local"}},
+		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Sensitive: true, Weak: []string{"builtin:local"}},
 		PortRuntime: {Default: c.runtimeDefault(), Multi: true},
 		PortSource:  {Default: c.sourceDefault(), Multi: true},
 		PortSink:    {Default: use(adapters.TierBuiltin, "log")},
 		PortFilter:  {Default: c.filterDefault()},
 		PortIndex:   {Default: use(adapters.TierBuiltin, "lexical")},
+	}
+	if c.hasBuiltinBeyond(PortAuthz, "table") {
+		ports[PortAuthz] = adapters.PortSpec{Default: use(adapters.TierBuiltin, "table"), Sensitive: true}
 	}
 	c.declare(ports)
 	return adapters.Spec{Engine: Engine, EnvPrefix: EnvPrefix, Acknowledgements: Acknowledgements, Ports: ports, Validate: c.validateAdapters}

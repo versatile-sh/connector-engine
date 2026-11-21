@@ -69,3 +69,29 @@ func TestAListingWhoseServerIsOnThisComputerIsRefused(t *testing.T) {
 		}
 	}
 }
+
+func TestAListingFileIsPreviewedFromItsText(t *testing.T) {
+	raw, err := os.ReadFile("../../source/files/testdata/notes.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := previewConsole(t, &console.Console{Fetch: func(context.Context, string, int64) ([]byte, error) {
+		t.Fatal("a listing given as text was fetched")
+		return nil, nil
+	}})
+	var pv console.Preview
+	b.ok("POST", "/api/preview", map[string]any{"listing_text": string(raw)}, &pv)
+	if pv.Kind != "listing" || pv.Name == "" || pv.URL != "" || pv.RemoteURL != "https://mcp.example.com/mcp" {
+		t.Fatalf("preview of a listing file: %+v", pv)
+	}
+	for _, body := range []map[string]any{
+		{"listing_text": string(raw), "listing": "https://listings.example/notes.yaml"},
+		{"listing_text": string(raw), "mcp": "https://mcp.example.com/mcp"},
+		{"listing_text": "kind: skill\nname: x\n"},
+		{"listing_text": "not: a listing"},
+	} {
+		if status, out := b.send("POST", "/api/preview", body, nil); status != http.StatusBadRequest {
+			t.Fatalf("%v: %d %s", body, status, out)
+		}
+	}
+}

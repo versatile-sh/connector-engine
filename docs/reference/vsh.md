@@ -30,7 +30,7 @@ Management, as the signed-in user of the console:
 ```text
 vsh status [--data DIR]
 vsh login [--user NAME] [--password-stdin] | logout
-vsh connectors [list] | show NAME | import URL [--mcp] [--local] [--yes] | remove NAME [--yes]
+vsh connectors [list] | show NAME | import URL|FILE [--mcp] [--local] [--yes] | remove NAME [--yes]
 vsh keys [list] | create NAME [--ttl 720h] | revoke NAME [--yes]
 vsh access CONNECTOR [FUNCTION] on|off|ask [--key NAME] [--kind read|write|destructive]
 vsh access CONNECTOR --key NAME follow|custom
@@ -103,7 +103,7 @@ NAME         TITLE        FUNCTIONS  KEYS  STATE
 check-notes  Check notes  4          0     enabled
 ```
 
-`import` reads a listing URL, or an MCP server's address with `--mcp` (`--local` allows one on this machine or its network). It shows what the console proposes and asks before it installs, unless `--yes`. A connector that needs a sign-in is signed in to from the console's Connectors page. `remove` asks before it deletes the connector and its credentials.
+`import` reads a listing URL, a listing file on this machine (at most 60 KiB, sent to the console as `listing_text`), or an MCP server's address with `--mcp` (`--local` allows one on this machine or its network). A skill comes from its catalog URL, never a file. A connector installed from a file has no listing address, so a setup export points at its server's address instead, as it does for any connector without a recorded listing. It shows what the console proposes and asks before it installs, unless `--yes`. A connector that needs a sign-in is signed in to from the console's Connectors page. `remove` asks before it deletes the connector and its credentials.
 
 ### keys
 

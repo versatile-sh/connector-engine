@@ -193,6 +193,19 @@ func TestManageAnInstallAsTheSignedInUser(t *testing.T) {
 		t.Fatalf("after remove: %s", out)
 	}
 
+	listing := filepath.Join(t.TempDir(), "crm.json")
+	raw, err := os.ReadFile("../../../source/files/testdata/crm.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(listing, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if out := w.ok("", "connectors", "import", listing, "--yes"); !strings.Contains(out, "installed") {
+		t.Fatalf("import from a file: %s", out)
+	}
+	w.fails(command.ExitUsage, "neither a URL nor a file", "connectors", "import", filepath.Join(t.TempDir(), "missing.yaml"), "--yes")
+
 	w.ok("", "logout")
 	w.fails(command.ExitAuth, "vsh login", "keys")
 	if files, _ := filepath.Glob(filepath.Join(w.config, "sessions", "*.json")); len(files) != 0 {

@@ -9,6 +9,7 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -78,7 +79,7 @@ func connectorsCommand() *command.Command {
 			}
 			return e.print(k, func(w io.Writer) { showConnector(w, k) })
 		}, opts{}),
-		leaf("import", "<listing-url>", "Install a connector or a skill from its listing, or an MCP server with --mcp.", func(fs *flag.FlagSet) {
+		leaf("import", "<listing-url|file>", "Install a connector from its listing URL or file, a skill from its catalog URL, or an MCP server with --mcp.", func(fs *flag.FlagSet) {
 			fs.BoolVar(&mcpURL, "mcp", false, "the address is an MCP server, not a listing")
 			fs.BoolVar(&local, "local", false, "allow an MCP server on this machine or its network")
 			fs.BoolVar(&yes, "yes", false, "skip the confirmation")
@@ -86,9 +87,9 @@ func connectorsCommand() *command.Command {
 			if err := e.args(1, "the listing or MCP address"); err != nil {
 				return err
 			}
-			req := map[string]any{"listing": e.X.Args[0]}
-			if mcpURL {
-				req = map[string]any{"mcp": e.X.Args[0], "local": local}
+			req, err := importRequest(e.X.Args[0], mcpURL, local)
+			if err != nil {
+				return err
 			}
 			var p console.Preview
 			if err := e.Client.Do(ctx, http.MethodPost, "/api/preview", req, &p); err != nil {
@@ -135,6 +136,29 @@ func connectorsCommand() *command.Command {
 	}}
 }
 
+const maxListingFile = 60 << 10
+
+func importRequest(src string, mcpURL, local bool) (map[string]any, error) {
+	if mcpURL {
+		return map[string]any{"mcp": src, "local": local}, nil
+	}
+	if u, err := url.Parse(src); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		return map[string]any{"listing": src}, nil
+	}
+	st, err := os.Stat(src)
+	if err != nil {
+		return nil, command.Fail(command.ExitUsage, "give a listing's http(s) address or a listing file", "%s is neither a URL nor a file: %v", src, err)
+	}
+	if st.Size() > maxListingFile {
+		return nil, command.Fail(command.ExitUsage, "publish it and import it by its URL", "%s is %d bytes; a listing file holds at most %d", src, st.Size(), maxListingFile)
+	}
+	raw, err := os.ReadFile(src)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"listing_text": string(raw)}, nil
+}
+
 func connectorState(k console.ConnectorSummary) string {
 	switch {
 	case k.Blocked != "":
@@ -176,7 +200,11 @@ func showConnector(w io.Writer, k console.ConnectorSummary) {
 }
 
 func showPreview(w io.Writer, p console.Preview) {
-	fmt.Fprintf(w, "%s (%s) from %s\n", p.Title, p.Kind, p.Host)
+	from := p.Host
+	if from == "" {
+		from = "a file"
+	}
+	fmt.Fprintf(w, "%s (%s) from %s\n", p.Title, p.Kind, from)
 	if p.Warning != "" {
 		fmt.Fprintln(w, "warning:", p.Warning)
 	}

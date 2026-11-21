@@ -15,6 +15,7 @@ import (
 type importRequest struct {
 	MCP          string            `json:"mcp,omitempty"`
 	Listing      string            `json:"listing,omitempty"`
+	ListingText  string            `json:"listing_text,omitempty"`
 	Local        bool              `json:"local,omitempty"`
 	HeaderSecret bool              `json:"header_secret,omitempty"`
 	Choices      map[string]Access `json:"choices,omitempty"`
@@ -49,10 +50,19 @@ type Preview struct {
 }
 
 func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, error) {
+	given := 0
+	for _, v := range []string{in.MCP, in.Listing, in.ListingText} {
+		if v != "" {
+			given++
+		}
+	}
 	switch {
-	case in.MCP != "" && in.Listing == "":
+	case given != 1:
+	case in.MCP != "":
 		return previewMCP(ctx, strings.TrimSpace(in.MCP), in, Reach{Local: in.Local, LoopbackHost: c.LoopbackHost})
-	case in.Listing != "" && in.MCP == "":
+	case in.ListingText != "":
+		return c.previewListingText(ctx, []byte(in.ListingText))
+	default:
 		src := strings.TrimSpace(in.Listing)
 		body, err := c.get()(ctx, src, maxListingBytes)
 		if err != nil {
@@ -64,7 +74,21 @@ func (c *Console) buildPreview(ctx context.Context, in importRequest) (Preview, 
 		}
 		return c.previewListing(ctx, src, u.Host, body)
 	}
-	return Preview{}, invalid("give exactly one of mcp or listing")
+	return Preview{}, invalid("give exactly one of mcp, listing or listing_text")
+}
+
+func (c *Console) previewListingText(ctx context.Context, body []byte) (Preview, error) {
+	if skillcatalog.Kind(body) == string(port.KindSkill) {
+		return Preview{}, invalid("a skill is imported from its catalog address, not from a file")
+	}
+	p, err := c.previewListing(ctx, "", "", body)
+	if err != nil {
+		return Preview{}, err
+	}
+	if u, err := url.Parse(p.Icon); err != nil || !u.IsAbs() {
+		p.Icon, p.manifest.Icon = "", ""
+	}
+	return p, nil
 }
 
 func previewMCP(ctx context.Context, raw string, in importRequest, reach Reach) (Preview, error) {

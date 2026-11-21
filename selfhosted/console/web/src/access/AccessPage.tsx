@@ -95,7 +95,7 @@ export function AccessPage({ endpoint }: { endpoint: string }) {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-10">
-        <PageTitle section={t("nav.access")} title={t("keys.title")}>
+        <PageTitle title={t("keys.title")}>
           {t("keys.intro")}
         </PageTitle>
       </header>

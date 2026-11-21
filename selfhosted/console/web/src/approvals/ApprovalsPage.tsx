@@ -88,7 +88,7 @@ export function ApprovalsPage() {
   return (
     <section aria-labelledby="page-title">
       <header className="mb-10">
-        <PageTitle section={t("nav.approvals")} title={t("approvals.title")} count={approvals.isSuccess ? list.length : undefined} scope={scope === "everyone" ? t("scope.count") : undefined}>
+        <PageTitle title={t("approvals.title")} count={approvals.isSuccess ? list.length : undefined} scope={scope === "everyone" ? t("scope.count") : undefined}>
           {t("approvals.intro")}
         </PageTitle>
         {offered ? <ScopeSwitch scope={scope} onChange={(next) => navigate(scopedHref(path, query, next), { replace: true, keepScroll: true })} className="mt-6" /> : null}

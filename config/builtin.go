@@ -26,12 +26,13 @@ const (
 	SettingNumber = adapters.ConfigNumber
 )
 
-// Builtin declares an adapter of a port: its name (selected as builtin:<Name>, or the memory tier when Name is memory), its capabilities, the settings it accepts and the checks it adds to connector-engine.yaml once selected.
+// Builtin declares an adapter of a port: its name (selected as builtin:<Name>, or the memory tier when Name is memory), its capabilities, the settings it accepts, the ones it requires and the checks it adds to connector-engine.yaml once selected.
 type Builtin struct {
 	Port         string
 	Name         string
 	Capabilities []string
 	Settings     map[string]SettingKind
+	Require      []string
 	Check        func(c Config, acknowledged func(string) bool) Findings
 }
 
@@ -84,11 +85,18 @@ func (c Config) declare(ports map[string]adapters.PortSpec) {
 func (c Config) builtinFindings(f adapters.File) Findings {
 	var fs Findings
 	for _, b := range c.builtins {
-		if b.Check != nil && slices.ContainsFunc(f.Ports[b.Port].Use, func(s string) bool {
+		if (b.Check != nil || len(b.Require) > 0) && slices.ContainsFunc(f.Ports[b.Port].Use, func(s string) bool {
 			u, err := adapters.ParseUse(s)
 			return err == nil && selection(u) == b.Selection()
 		}) {
-			fs = append(fs, b.Check(c, f.Acknowledged)...)
+			if b.Check != nil {
+				fs = append(fs, b.Check(c, f.Acknowledged)...)
+			}
+			for _, key := range b.Require {
+				if v, _ := f.Ports[b.Port].Config[key].(string); v == "" {
+					fs = append(fs, Finding{Level: LevelError, Where: "ports." + b.Port + ".config." + key, Message: b.Selection() + " needs the setting " + key})
+				}
+			}
 		}
 	}
 	return fs

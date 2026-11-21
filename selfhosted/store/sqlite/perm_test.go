@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/versatile-sh/connector-engine/port"
-	"github.com/versatile-sh/connector-engine/store/sqlite"
+	"github.com/versatile-sh/connector-engine/selfhosted/store/sqlite"
 )
 
 func TestTheDatabaseAndItsWALFilesAreOnlyTheOwners(t *testing.T) {

@@ -487,19 +487,26 @@ func (c *Console) listActivity(w http.ResponseWriter, r *http.Request) {
 		c.fail(w, err)
 		return
 	}
-	all, err := everyone(r, CapActivityAny)
+	rows, err := c.scopedRows(r, captures, facts, f.agent)
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
+	writeJSON(w, http.StatusOK, pageOf(rows, f))
+}
+
+func (c *Console) scopedRows(r *http.Request, captures []Capture, facts engineFacts, agent string) ([]joined, error) {
+	all, err := everyone(r, CapActivityAny)
+	if err != nil {
+		return nil, err
+	}
 	u, _ := signedInUser(r.Context())
 	person := r.URL.Query().Get("person")
-	rows := c.owned(join(captures, facts, c.separator(r.Context(), firstAgent(f.agent, captures))))
-	rows = slices.DeleteFunc(rows, func(j joined) bool {
+	rows := c.owned(join(captures, facts, c.separator(r.Context(), firstAgent(agent, captures))))
+	return slices.DeleteFunc(rows, func(j joined) bool {
 		p := j.row.Owner.Person
 		return !all && p != u.Person || all && person != "" && p != person || c.Activity.Hidden(j.row.At)
-	})
-	writeJSON(w, http.StatusOK, pageOf(rows, f))
+	}), nil
 }
 
 func (c *Console) owned(rows []joined) []joined {

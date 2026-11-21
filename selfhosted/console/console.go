@@ -120,6 +120,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("POST /api/activity/prune", c.withActivity(c.pruneActivity))
 	rt.handle("GET /api/activity/settings", c.withActivity(c.activitySettings))
 	rt.handle("PUT /api/activity/settings", c.withActivity(c.setActivitySettings))
+	rt.handle("GET /api/activity/summary", c.withActivity(c.activitySummary))
 	rt.handle("GET /api/activity/{id}", c.withActivity(c.activityDetail))
 	agent := c.gateMCP(c.refuseRevoked(c.capture(c.elicitProxy(c.agentProxy()))))
 	for _, m := range []string{"GET", "POST", "DELETE"} {

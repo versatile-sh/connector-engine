@@ -95,7 +95,7 @@ export function ApprovalsPage() {
       <PageHeader title={t("approvals.title")} count={approvals.isSuccess ? list.length : undefined} scope={scope === "everyone" ? t("scope.count") : undefined}>
         {t("approvals.intro")}
       </PageHeader>
-      {scopeSwitch && (drawn || approvals.isError) ? <Toolbar>{scopeSwitch}</Toolbar> : null}
+      {scopeSwitch && drawn ? <Toolbar>{scopeSwitch}</Toolbar> : null}
       {approvals.isError ? <Notice>{errorText(approvals.error)}</Notice> : null}
       {decide.isError ? <Notice>{errorText(decide.error)}</Notice> : null}
       {cancel.isError ? <Notice>{errorText(cancel.error)}</Notice> : null}

@@ -7,7 +7,7 @@ import { ApprovalsPage } from "./approvals/ApprovalsPage.tsx";
 import { ConnectorsPage } from "./connectors/ConnectorsPage.tsx";
 import { NotificationsPage } from "./notifications/NotificationsPage.tsx";
 import { SkillsPage } from "./skills/SkillsPage.tsx";
-import { CONNECTOR, ONE_OWNER, pageData } from "./testing/fixtures.ts";
+import { CONNECTOR, ONE_OWNER, TEAM_OWNER, pageData } from "./testing/fixtures.ts";
 import { renderMarkup } from "./testing/render.ts";
 
 mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-11-20T12:00:00Z") });
@@ -59,8 +59,8 @@ describe("ConnectorsPage", () => {
       assert.match(head, /<\/h1><span class="rounded-full bg-paper\/10[^"]*">2<\/span><div class="flex flex-wrap items-center gap-2 sm:ml-auto"><button[^>]*>.*Import<\/button><\/div>/);
     });
 
-    test("fills the width with 18rem-or-wider columns", () => {
-      assert.match(html, /<ul class="grid grid-cols-\[repeat\(auto-fill,minmax\(min\(100%,18rem\),1fr\)\)\] gap-6">/);
+    test("fills the width with 17rem-or-wider columns", () => {
+      assert.match(html, /<ul class="grid grid-cols-\[repeat\(auto-fill,minmax\(min\(100%,17rem\),1fr\)\)\] gap-6">/);
     });
 
     test("pins each card's access bar and facts to the card's foot", () => {
@@ -82,6 +82,27 @@ describe("ConnectorsPage", () => {
 
     test("lets the filter take the free width of its row, at most 24rem", () => {
       assert.match(html, /class="[^"]*min-w-0 flex-1 basis-48 sm:max-w-sm[^"]*"/);
+    });
+  });
+});
+
+describe("ApprovalsPage", () => {
+  const scopes = (html: string) => html.split('aria-label="Whose rows"').length - 1;
+  const team = (approvals: unknown[]) => pageData(TEAM_OWNER).map(([key, value]) => (key[0] === "approvals" ? ([key, { approvals }] as const) : ([key, value] as const)));
+
+  describe("for a viewer who may see everyone's calls", () => {
+    test("draws Mine or Everyone once over the held calls", () => {
+      assert.equal(scopes(renderMarkup(createElement(ApprovalsPage), { data: pageData(TEAM_OWNER) })), 1);
+    });
+
+    test("draws it once while nothing is held", () => {
+      assert.equal(scopes(renderMarkup(createElement(ApprovalsPage), { data: team([]) })), 1);
+    });
+
+    test("draws it once when the list failed to load", () => {
+      const html = renderMarkup(createElement(ApprovalsPage), { data: team([]), failed: [["approvals"]] });
+      assert.match(html, /The console is down\./);
+      assert.equal(scopes(html), 1);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type MouseEvent } from "react";
 
 const subscribe = (onChange: () => void) => {
   window.addEventListener("popstate", onChange);
@@ -24,3 +24,10 @@ export function navigate(to: string, { replace = false, keepScroll = false }: { 
   }
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
+
+/** The click handler of a link drawn as an anchor: a plain click moves within the console without reloading, and a modified one (new tab, new window, download) is left to the browser. */
+export const openLink = (href: string) => (event: MouseEvent) => {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  navigate(href);
+};

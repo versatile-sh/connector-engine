@@ -111,6 +111,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("POST /api/agents/seen", c.seeAgents)
 	rt.handle("POST /api/onboarding/dismiss", c.dismissOnboarding)
 	rt.handle("GET /api/approvals", c.listApprovals)
+	rt.handle("GET /api/approvals/recent", c.recentDecisions)
 	rt.handle("POST /api/approvals/{id}", c.decide)
 	rt.handle("POST /api/approvals/{id}/cancel", c.cancelApproval)
 	rt.handle("GET /api/icon", c.icon)

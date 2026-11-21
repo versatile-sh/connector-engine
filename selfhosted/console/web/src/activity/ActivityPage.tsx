@@ -91,7 +91,7 @@ export function ActivityPage({ endpoint }: { endpoint: string }) {
               </div>
             ) : (
               <div className="px-1">
-                <EmptyState heading="h3" title={t("activity.empty.title")} body={t("activity.empty.body", { endpoint })} />
+                <EmptyState bare heading="h3" icon="activity" title={t("activity.empty.title")} body={t("activity.empty.body", { endpoint })} />
               </div>
             )}
           </section>

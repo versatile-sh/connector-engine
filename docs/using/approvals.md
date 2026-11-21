@@ -4,6 +4,10 @@
 
 A function set to **ask** holds the call until a person decides. This page shows where you can answer and what each answer does.
 
+## The Approvals page
+
+The **Approvals** page keeps the calls that wait for you in its main column, each with the function, its connector, a preview of its arguments, when it was asked, when it runs out and the answers below; with none waiting it says so in one card. Under them it lists the last ten decisions (approved, denied, expired, who answered and when), and beside them the connectors and functions currently set to **Ask**, each linking to its connector, and where a held call reaches you: this console, the AI app, the computers paired for popups and the chat channels, with a link to **Notifications**. A Member sees only their own calls; with several users an Owner or Admin can switch to everyone's.
+
 ## What the app sees
 
 1. The gateway holds the call for up to `approval.holdWindow` (20 s).

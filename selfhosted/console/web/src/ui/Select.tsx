@@ -2,7 +2,8 @@ import { useEffect, useEffectEvent, useId, useReducer, useRef, type KeyboardEven
 import { useT } from "../i18n/I18nProvider";
 import { Icon } from "./Icon";
 import { SearchBox } from "./SearchBox";
-import { CLOSED, isMove, listbox, matching, placement, SEARCH_FROM } from "./select";
+import { place, within } from "./popup";
+import { CLOSED, isMove, listbox, matching, SEARCH_FROM } from "./select";
 import { CONTROL } from "./styles";
 
 /** One choice of a `Select`: the value it sets, the text it shows and an optional leading icon. */
@@ -10,23 +11,7 @@ export type SelectOption<T extends string> = { value: T; text: string; icon?: Re
 
 type SelectProps<T extends string> = { label: string; value: T | undefined; options: readonly SelectOption<T>[]; onChange(value: T): void; disabled?: boolean; placeholder?: string; className?: string };
 
-const PLACED = ["--select-top", "--select-bottom", "--select-left", "--select-width", "--select-room"];
-
-function place(list: HTMLElement, trigger: HTMLElement) {
-  for (const name of PLACED) list.style.removeProperty(name);
-  const viewport = { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight };
-  const at = placement(trigger.getBoundingClientRect(), { width: list.offsetWidth, height: list.offsetHeight }, viewport);
-  list.toggleAttribute("data-up", at.up);
-  if (at.up) list.style.setProperty("--select-bottom", `${at.bottom}px`);
-  else list.style.setProperty("--select-top", `${at.top}px`);
-  list.style.setProperty("--select-left", `${at.left}px`);
-  list.style.setProperty("--select-width", `${at.width}px`);
-  list.style.setProperty("--select-room", `${at.room}px`);
-}
-
 const reveal = (row: HTMLElement | null) => row?.scrollIntoView({ block: "nearest" });
-
-const within = (target: EventTarget | null, ...elements: (HTMLElement | null)[]) => target instanceof Node && elements.some((element) => element?.contains(target));
 
 /** The one dropdown, controlled as a native select (with no value it shows `placeholder`, a dash unless given, so it can also list actions): the field at control height with the chosen option and a chevron, opening a list in raised ink under it, or over it near the bottom, or as a sheet from the bottom on a phone. The row under the keyboard or the pointer is paper at 10%, the chosen one has a check, and past eight options a filter tops the list, focused at once only with a fine pointer so a phone's keyboard does not cover the list. The keyboard is the select-only combobox's: the arrows, Home, End, typing a name, Enter or Space to choose, Escape to close; the list closes on a click or focus outside it and follows its field as the page scrolls. */
 export function Select<T extends string>({ label, value, options, onChange, disabled = false, placeholder = "—", className = "" }: SelectProps<T>) {

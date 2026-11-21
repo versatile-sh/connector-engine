@@ -9,8 +9,7 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-// Of maps the transport error of a call: the context's own error, unavailable when it never left or the engine refused it,
-// otherwise outcome_unknown.
+// Of maps the transport error of a call: the context's own error, unavailable when it never left or the engine refused it, otherwise outcome_unknown.
 func Of(ctx context.Context, err error, format string, args ...any) error {
 	var op *net.OpError
 	var dns *net.DNSError

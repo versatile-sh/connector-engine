@@ -200,7 +200,6 @@ func (c *Console) DecideChoice(ctx context.Context, id string, choice surface.Ch
 	return v, lost, nil
 }
 
-// allowAfterRun allows the approval's function or skill for the calling key, as the actor who chose it, once the approved call has run, and records a failure on the approval.
 func (c *Console) allowAfterRun(ctx context.Context, v ApprovalView) {
 	ctx, cancel := context.WithTimeout(ctx, allowWait)
 	defer cancel()

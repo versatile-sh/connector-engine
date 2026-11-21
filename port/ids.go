@@ -9,8 +9,7 @@ var (
 	subjectKinds   = map[string]bool{"person": true, "agent_owner": true, "on_behalf_of": true, "subject": true}
 )
 
-// CheckIDs takes kind, id pairs and refuses a malformed non-empty id or the reserved "installation".
-// People are issuer subjects (printable ASCII without "/" or space, at most 255); every other id is [A-Za-z0-9._-]{1,128}.
+// CheckIDs takes kind, id pairs and refuses a malformed non-empty id or the reserved "installation". People are issuer subjects (printable ASCII without "/" or space, at most 255); every other id is [A-Za-z0-9._-]{1,128}.
 func CheckIDs(pairs ...string) error {
 	for i := 0; i+1 < len(pairs); i += 2 {
 		kind, id := pairs[i], pairs[i+1]

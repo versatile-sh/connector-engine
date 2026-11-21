@@ -386,6 +386,9 @@ export type ApprovalView = {
   always_error?: string;
 };
 
+/** One held call that was answered or ran out of time, as GET /api/approvals/recent lists it: what it asked for, the key that asked, how it ended, who answered and when. */
+export type DecisionRow = { id: string; agent: string; connector: string; function: string; class?: string; state: string; decided_by?: string; channel?: string; at: string; owner?: RowOwner };
+
 /** What POST /api/approvals/{id}/decide answers: the record now, and whether someone else had decided it first. */
 export type Decision = { outcome: ApprovalView; already_decided: boolean };
 

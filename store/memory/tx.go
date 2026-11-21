@@ -620,6 +620,18 @@ func (t *tx) MarkInbox(id string, at time.Time) (bool, error) {
 	return true, nil
 }
 
+func (t *tx) SetInboxPayload(id string, payload []byte) error {
+	if !t.write {
+		return port.Errorf(port.CodeInternal, "write in a read transaction")
+	}
+	t.d.inboxData[t.inboxKey(id)] = slices.Clone(payload)
+	return nil
+}
+
+func (t *tx) InboxPayload(id string) ([]byte, error) {
+	return slices.Clone(t.d.inboxData[t.inboxKey(id)]), nil
+}
+
 func roleKey(r port.RoleAssignment) string {
 	return key(string(r.Tenant), string(r.Person), r.Role, r.Scope, r.Issuer)
 }

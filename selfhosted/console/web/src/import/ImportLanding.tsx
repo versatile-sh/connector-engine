@@ -2,13 +2,12 @@ import { errorText, type ImportSource } from "../api";
 import { Frame } from "../Frame";
 import { useT } from "../i18n/I18nProvider";
 import { navigate } from "../router";
-import { Display } from "../ui/Display";
-import { Arrow, Icon } from "../ui/Icon";
 import { Notice } from "../ui/Notice";
-import { CAPTION, PANEL, SKELETON_LINE, TITLE, button } from "../ui/styles";
-import { Choices, ChoicesSkeleton } from "./Choices";
-import { Identity } from "./Identity";
-import { SkillChoice } from "./SkillChoice";
+import { PANEL, button } from "../ui/styles";
+import { LandingActions } from "./LandingActions";
+import { LandingHeader } from "./LandingHeader";
+import { LandingReading, LandingReview } from "./LandingReview";
+import { LandingSummary } from "./LandingSummary";
 import { useImport } from "./useImport";
 
 const hostOf = (raw: string) => {
@@ -19,85 +18,42 @@ const hostOf = (raw: string) => {
   }
 };
 
-/** An install link opened from outside, as the site's connector page: who the connector is in the headline, what it may do in one panel, and nothing installed before Install. */
+/** An install link opened from outside, in one centred composition: the link's identity on top, then from `lg` two cards side by side, the review on the left and a sticky decision card on the right that holds who may load it, the notice and the actions; below `lg` one column that ends in a solid bar of actions in the flow, so it never covers the end of the review. Nothing is installed before Add. */
 export function ImportLanding({ source }: { source: ImportSource }) {
   const t = useT();
   const { preview, install, request, accessOf, choose, skillAccess, setSkillAccess } = useImport(source);
-  const host = hostOf(source.listing ?? source.mcp ?? "");
+  const url = source.listing ?? source.mcp ?? "";
+  const actions = preview.isSuccess ? (
+    <LandingActions
+      label={t(preview.data.skill ? "import.addSkill" : "import.addConnector")}
+      pending={install.isPending}
+      error={install.isError ? errorText(install.error) : undefined}
+      onInstall={() => install.mutate(request, { onSuccess: ({ connector }) => navigate(connector ? `/connectors/${encodeURIComponent(connector)}` : "/skills") })}
+      onCancel={() => navigate("/connectors")}
+    />
+  ) : null;
   return (
-    <Frame width="wide" home>
-      <div className="flex w-full flex-1 flex-col justify-start">
-        <p className={`${CAPTION} [overflow-wrap:anywhere]`} translate="no">
-          {t("import.linkEyebrow", { host })}
-        </p>
-        <header className="mt-6 mb-10">
-          {preview.isSuccess ? (
-            <div className="swap-in">
-              <Identity preview={preview.data} as="h1" />
-            </div>
-          ) : preview.isError ? (
-            <Display className="[overflow-wrap:anywhere]">{host}</Display>
-          ) : (
-            <div aria-hidden="true" className="flex items-center gap-5">
-              <div className="shimmer size-16 rounded-2xl" />
-              <div className="flex-1">
-                <div className={`${SKELETON_LINE} h-11 w-72 max-w-full`} />
-                <div className={`${SKELETON_LINE} mt-3 h-3 w-40`} />
-              </div>
-            </div>
-          )}
-          <p className="mt-6 flex max-w-xl items-start gap-2 text-sm text-pretty text-muted">
-            <Icon name="shield" className="mt-0.5 size-4" />
-            {t("import.untrusted")}
-          </p>
-        </header>
-        <section aria-labelledby="choose-title" className={`${PANEL} p-4 sm:p-8`}>
-          <h2 id="choose-title" className={TITLE}>
-            {t(preview.data?.skill ? "import.skillChoose" : "import.choose")}
-          </h2>
-          <p className="mt-1 text-sm text-pretty text-muted">{t(preview.data?.skill ? "import.skillChooseIntro" : "import.chooseIntro")}</p>
-          <div className="mt-5">
-            {preview.isPending ? (
-              <div role="status" aria-live="polite">
-                <p className={`${CAPTION} mb-3 truncate`}>{t("import.reading", { url: source.listing ?? source.mcp ?? "" })}</p>
-                <ChoicesSkeleton rows={5} />
-              </div>
-            ) : preview.isError ? (
-              <div className="flex flex-col items-start gap-5">
-                <Notice>{errorText(preview.error)}</Notice>
-                <button type="button" className={button({ variant: "secondary" })} onClick={() => navigate("/")}>
-                  {t("import.home")}
-                </button>
-              </div>
-            ) : (
-              <div className="swap-in">
-                {preview.data.warning ? <Notice className="mb-4">{preview.data.warning}</Notice> : null}
-                {preview.data.skill ? <SkillChoice skill={preview.data.skill} access={skillAccess} onChange={setSkillAccess} /> : <Choices tools={preview.data.tools} accessOf={accessOf} choose={choose} />}
-              </div>
-            )}
-          </div>
-        </section>
-        {preview.isSuccess ? (
-          <div className="sticky bottom-0 z-20 mt-6 border-t border-line bg-ink/90 py-4 backdrop-blur-md">
-            <p role="alert" className="min-h-5 text-sm text-amber-400">
-              {install.isError ? errorText(install.error) : ""}
-            </p>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <button type="button" className={button({ variant: "quiet" })} onClick={() => navigate("/")}>
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                disabled={install.isPending}
-                className={button()}
-                onClick={() => install.mutate(request, { onSuccess: ({ connector }) => navigate(connector ? `/connectors/${encodeURIComponent(connector)}` : "/skills") })}
-              >
-                {install.isPending ? t("import.installing") : preview.data.skill ? t("import.addSkill") : t("import.install", { count: preview.data.tools.length })}
-                <Arrow />
-              </button>
+    <Frame width="split" home>
+      <div className="flex w-full min-w-0 flex-1 flex-col justify-start gap-10">
+        <LandingHeader host={hostOf(url)} preview={preview} />
+        {preview.isError ? (
+          <section className={`${PANEL} mx-auto flex w-full max-w-2xl flex-col items-start gap-5 p-5 sm:p-6`}>
+            <Notice>{errorText(preview.error)}</Notice>
+            <button type="button" className={button({ variant: "secondary" })} onClick={() => navigate("/")}>
+              {t("import.home")}
+            </button>
+          </section>
+        ) : (
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-10">
+            <section aria-labelledby={preview.isSuccess ? "review-title" : undefined} className={`${PANEL} min-w-0 p-5 sm:p-6`}>
+              {preview.isSuccess ? <LandingReview preview={preview.data} accessOf={accessOf} choose={choose} /> : <LandingReading url={url} />}
+            </section>
+            <div className={`${PANEL} p-5 sm:p-6 lg:sticky lg:top-6`}>
+              <LandingSummary preview={preview.data} accessOf={accessOf} skillAccess={skillAccess} onSkillAccess={setSkillAccess} actions={actions} />
             </div>
           </div>
-        ) : null}
+        )}
+        {actions ? <div className="sticky bottom-0 z-20 -mx-5 -mb-10 border-t border-line bg-ink px-5 py-3 sm:-mx-8 sm:-mb-14 sm:px-8 lg:hidden">{actions}</div> : null}
       </div>
     </Frame>
   );

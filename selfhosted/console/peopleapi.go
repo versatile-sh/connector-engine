@@ -29,7 +29,7 @@ type PersonRow struct {
 	MayReset  bool      `json:"may_reset"`
 }
 
-// LinkRow is a link still waiting as the People list shows it; its token is never part of it.
+// LinkRow is a link still waiting as the People list shows it, with whether the viewer may revoke it; its token is never part of it.
 type LinkRow struct {
 	ID        string    `json:"id"`
 	Purpose   Purpose   `json:"purpose"`
@@ -38,6 +38,7 @@ type LinkRow struct {
 	CreatedBy string    `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
+	MayRevoke bool      `json:"may_revoke"`
 }
 
 func (c *Console) publicURL() string {
@@ -60,9 +61,9 @@ func (c *Console) listPeople(w http.ResponseWriter, r *http.Request) {
 	}
 	links := []LinkRow{}
 	for _, inv := range c.State.Links() {
-		links = append(links, LinkRow{ID: inv.ID, Purpose: inv.Purpose, Role: inv.Role, Person: inv.Person, CreatedBy: inv.CreatedBy, CreatedAt: inv.CreatedAt, ExpiresAt: inv.ExpiresAt})
+		links = append(links, LinkRow{ID: inv.ID, Purpose: inv.Purpose, Role: inv.Role, Person: inv.Person, CreatedBy: inv.CreatedBy, CreatedAt: inv.CreatedAt, ExpiresAt: inv.ExpiresAt, MayRevoke: mayRevokeFor(viewer, inv)})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"people": people, "invites": links, "audit": c.State.Audit(auditPageSize)})
+	writeJSON(w, http.StatusOK, map[string]any{"people": people, "invites": links, "audit": c.State.Audit(auditPageSize), "signup": c.State.Signup()})
 }
 
 func (c *Console) linkJSON(w http.ResponseWriter, l NewLink, err error) {

@@ -78,8 +78,7 @@ func (s *Service) acceptOne(tx port.Tx, c port.Connector, name string, seen port
 		Hash: string(f.DefinitionHash), Class: string(f.Class), ClassSource: string(f.ClassSource), By: by})
 }
 
-// AcceptFunction clears a quarantine at the hash the admin saw and sets the class again; keepOverlay carries the
-// active overlay to that hash, else it is superseded.
+// AcceptFunction clears a quarantine at the hash the admin saw and sets the class again; keepOverlay carries the active overlay to that hash, else it is superseded.
 func (s *Service) AcceptFunction(ctx context.Context, p port.Principal, id port.ConnectorID, name string, seen port.Hash, keepOverlay bool) (AcceptResult, error) {
 	var out AcceptResult
 	err := s.functionTx(ctx, p, id, authz.FunctionManage, "AcceptFunction", func(tx port.Tx, c port.Connector) (err error) {
@@ -113,11 +112,14 @@ func (s *Service) AcceptInstructions(ctx context.Context, p port.Principal, id p
 		if !ok {
 			return port.Errorf(port.CodeInvalidTransition, "connector %s has no instructions to accept", id)
 		}
+		old := c.InstructionsHash
 		c.InstructionsHash = port.Hash(pending)
 		delete(c.Config, pendingInstructions)
 		var err error
-		out, err = tx.PutConnector(c, c.Revision)
-		return err
+		if out, err = tx.PutConnector(c, c.Revision); err != nil {
+			return err
+		}
+		return s.record(tx, c.Tenant, actor(p), string(id), evInstructionsAccept, catalog.InstructionsAccepted{Connector: string(id), OldHash: string(old), NewHash: pending, By: actor(p)})
 	})
 	return out, err
 }
@@ -130,12 +132,17 @@ func (s *Service) ClassifyFunction(ctx context.Context, p port.Principal, id por
 		if err != nil {
 			return err
 		}
+		old := f.Class
 		f, eff := pinning.Reclassify(f, class, port.ClassSourceAdmin)
 		if err := s.applyEffects(tx, c, name, eff, actor(p)); err != nil {
 			return err
 		}
 		out = f
-		return tx.PutFunction(f)
+		if err := tx.PutFunction(f); err != nil {
+			return err
+		}
+		return s.record(tx, c.Tenant, actor(p), string(id), evFunctionClass, catalog.FunctionClassChanged{Connector: string(id), Function: name, Hash: string(f.DefinitionHash),
+			OldClass: string(old), NewClass: string(f.Class), By: actor(p)})
 	})
 	return out, err
 }
@@ -161,6 +168,7 @@ func (s *Service) SetFunctionDisabled(ctx context.Context, p port.Principal, id 
 		if err != nil {
 			return err
 		}
+		old := f.State
 		switch {
 		case disabled && f.State != port.FunctionDisabled:
 			f.PreviousState, f.State = f.State, port.FunctionDisabled
@@ -176,7 +184,11 @@ func (s *Service) SetFunctionDisabled(ctx context.Context, p port.Principal, id 
 			return port.Errorf(port.CodeInvalidTransition, "function %s is %s", name, f.State)
 		}
 		out = f
-		return tx.PutFunction(f)
+		if err := tx.PutFunction(f); err != nil {
+			return err
+		}
+		return s.record(tx, c.Tenant, actor(p), string(id), evFunctionState, catalog.FunctionStateChanged{Connector: string(id), Function: name,
+			OldState: string(old), NewState: string(f.State), By: actor(p)})
 	})
 	return out, err
 }
@@ -196,7 +208,10 @@ func (s *Service) SetProjection(ctx context.Context, p port.Principal, id port.C
 		}
 		f.Projection = on
 		out = f
-		return tx.PutFunction(f)
+		if err := tx.PutFunction(f); err != nil {
+			return err
+		}
+		return s.record(tx, c.Tenant, actor(p), string(id), evFunctionProjection, catalog.FunctionProjectionChanged{Connector: string(id), Function: name, Projection: on, By: actor(p)})
 	})
 	return out, err
 }

@@ -3,8 +3,6 @@ import { useState } from "react";
 import { errorText } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { ImportDialog } from "../import/ImportDialog";
-import { SetupGuide } from "../onboarding/SetupGuide";
-import { useSetup } from "../onboarding/useSetup";
 import { useViewer } from "../people/useViewer";
 import { connectorsQuery } from "../queries";
 import { navigate, useLocation } from "../router";
@@ -18,22 +16,20 @@ import { ConnectorCard, ConnectorCardSkeleton } from "./ConnectorCard";
 import { HubCard } from "./HubCard";
 import { PasteBox } from "./PasteBox";
 
-/** Every installed connector as a grid of cards straight on the content surface, with a filter in the toolbar past six of them, the first-run guide above it, and the import window. `/import` with no link opens the window at once. */
+/** Every installed connector as a grid of cards straight on the content surface, with a filter in the toolbar past six of them, and the import window. `/import` with no link opens the window at once. */
 export function ConnectorsPage() {
   const t = useT();
   const { path } = useLocation();
   const connectors = useQuery(connectorsQuery);
-  const setup = useSetup();
   const manage = useViewer().can("connectors.manage");
   const [importing, setImporting] = useState<{ initial?: string } | undefined>(path === "/import" ? {} : undefined);
   const open = (initial?: string) => setImporting(initial ? { initial } : {});
   const close = () => {
     setImporting(undefined);
-    if (path === "/import") navigate("/", { replace: true });
+    if (path === "/import") navigate("/connectors", { replace: true });
   };
   const list = connectors.data ?? [];
   const empty = connectors.isSuccess && list.length === 0;
-  const covered = empty && manage && !(setup.settled && !setup.visible);
   return (
     <section aria-labelledby="page-title" className={PAGE}>
       <PageHeader
@@ -50,8 +46,7 @@ export function ConnectorsPage() {
       >
         {t("connectors.intro")}
       </PageHeader>
-      {manage ? <SetupGuide onPaste={open} /> : null}
-      {covered ? null : connectors.isError ? (
+      {connectors.isError ? (
         <Notice
           action={
             <button type="button" className={button({ variant: "secondary", size: "xs" })} onClick={() => void connectors.refetch()}>
@@ -68,9 +63,9 @@ export function ConnectorsPage() {
           ))}
         </ul>
       ) : empty ? (
-        <EmptyState title={t("connectors.empty.title")} body={manage ? t("connectors.empty.body") : t("connectors.empty.byAdmins")}>
+        <EmptyState icon="plug" title={t("connectors.empty.title")} body={manage ? t("connectors.empty.body") : t("connectors.empty.byAdmins")}>
           {manage ? (
-            <div className="flex max-w-2xl flex-col gap-5">
+            <div className="flex w-full flex-col gap-5 text-left">
               <HubCard />
               <PasteBox onPaste={open} />
             </div>

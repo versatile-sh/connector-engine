@@ -90,3 +90,29 @@ func TestARelistThatLostARaceRunsAgain(t *testing.T) {
 		}
 	}
 }
+
+func TestAHandleThatLostItsAnswerIsStartedAgainOncePerFailedCall(t *testing.T) {
+	for _, code := range []port.Code{port.CodeUnavailable, port.CodeOutcomeUnknown} {
+		t.Run(string(code), func(t *testing.T) {
+			w := newWorld(t, opts{reviewed: true})
+			w.acceptAll()
+			w.allowAll("x")
+			x := w.agent("x", "s1")
+			want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "first call")
+			starts, stops := w.Runtime.Starts, w.Runtime.Stops
+
+			w.Runtime.Handle("search", func(json.RawMessage) (port.Result, error) {
+				return port.Result{}, port.Errorf(code, "connection lost")
+			})
+			if w.call(x, "s__search", `{}`).Status == service.OutcomeResult {
+				t.Fatal("a failed call is not a result")
+			}
+			want(t, w.Runtime.Stops, stops+1, "the failed handle is dropped")
+			w.Runtime.Handle("search", nil)
+			want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "the next call works")
+			want(t, w.Runtime.Starts, starts+1, "started once")
+			want(t, w.call(x, "s__search", `{}`).Status, service.OutcomeResult, "and the call after")
+			want(t, w.Runtime.Starts, starts+1, "no further start")
+		})
+	}
+}

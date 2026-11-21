@@ -39,6 +39,8 @@ export CN_DATABASE_URL='postgres://cn:<password>@db.internal:5432/connector_engi
 
 The engine applies its embedded migrations at start, serialised by an advisory lock, so two instances starting together do not race. There is no separate migrate step.
 
+Stop every older instance before a new release starts. Migration `0003_canonical_grants` rewrites the grant rows once, and an older instance still writes and deletes them the old way.
+
 ## Tenants
 
 Each tenant has its own key-encryption key; removing a tenant destroys the key, so its sealed data cannot be opened again.

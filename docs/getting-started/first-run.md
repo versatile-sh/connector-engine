@@ -10,13 +10,13 @@ Open `http://127.0.0.1:7465` (or the `CONSOLE_PORT` you chose). The console list
 
 ## 2. Create the owner account
 
-The first screen asks for a username and a password. It becomes the Owner, and whoever reaches a new console first creates it, so open it before anyone else can. Add other people later from Account, People ([roles](../self-hosted/person.md#roles-and-ownership)).
+The first screen asks for a username and a password. It becomes the Owner, and whoever reaches a new console first creates it, so open it before anyone else can (on a shared address, set `CONSOLE_SETUP_TOKEN` and the screen asks for it). Add other people later from Account, People ([roles](../self-hosted/person.md#roles-and-ownership)).
 
 Have a backup from another machine? Choose **Restore from a backup** on the same screen instead ([account and backup](../using/account-backup.md#restore)).
 
 ## 3. Import a connector
 
-Paste the URL of an MCP server on the **Connectors** page, or open an install link. Review its functions, then confirm. See [import a connector](import-a-connector.md).
+After you sign in, the **Dashboard** opens with a short checklist (the account, a first connector, a first AI app) that ticks itself and hides when all three are done. Open **Connectors** in the sidebar and paste the URL of an MCP server, or open an install link. Review its functions, then confirm. See [import a connector](import-a-connector.md).
 
 ## 4. Choose what may run
 

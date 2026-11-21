@@ -170,3 +170,31 @@ func TestAUserCannotSeeOrChangeAnotherUsersChannelsDevicesOrApps(t *testing.T) {
 		t.Fatal("bob's channel no longer works")
 	}
 }
+
+func TestTheNotificationsListServesEveryChannelKindWithItsFields(t *testing.T) {
+	r := newRig(t)
+	alice := r.member("p-alice", "alice")
+	var list struct {
+		Kinds []struct {
+			Kind        string
+			Title       string
+			Interactive bool
+			Fields      []struct {
+				Name     string
+				Secret   bool
+				Optional bool
+			}
+		}
+	}
+	alice.ok("GET", "/api/notifications", nil, &list)
+	byKind := map[string]bool{}
+	for _, k := range list.Kinds {
+		byKind[k.Kind] = k.Interactive
+		if k.Title == "" || len(k.Fields) == 0 {
+			t.Errorf("kind %s is served without a title or fields", k.Kind)
+		}
+	}
+	if len(byKind) != 6 || !byKind["slack"] || byKind["ntfy"] {
+		t.Fatalf("kinds served: %v", byKind)
+	}
+}

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/versatile-sh/connector-engine/authz"
-	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/authz/facts"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -25,9 +25,9 @@ func validRole(r port.RoleAssignment) error {
 	switch {
 	case r.Person == "" || r.Scope == "":
 		return port.Errorf(port.CodeInvalidArgument, "a role names a person and a scope")
-	case !table.Known(r.Role):
+	case !facts.Known(r.Role):
 		return port.Errorf(port.CodeInvalidArgument, "unknown role %q", r.Role)
-	case (table.Role(r.Role) == table.Operator) != (r.Tenant == port.Installation):
+	case (facts.Role(r.Role) == facts.Operator) != (r.Tenant == port.Installation):
 		return port.Errorf(port.CodeInvalidArgument, "the operator role is the installation's alone, every other role belongs to a tenant")
 	case r.Tenant != port.Installation && !authz.Covers(authz.Tenant(string(r.Tenant)), r.Scope):
 		return port.Errorf(port.CodeInvalidArgument, "scope %q is outside tenant %s", r.Scope, r.Tenant)
@@ -97,7 +97,12 @@ func (s *Service) PutGroupMember(ctx context.Context, p port.Principal, m port.G
 	if err := port.CheckIDs("person", string(m.Person), "group", string(m.Group)); err != nil {
 		return m, err
 	}
-	return m, s.write(ctx, scope, "PutGroupMember", func(tx port.Tx) error { return tx.PutMember(m) })
+	return m, s.write(ctx, scope, "PutGroupMember", func(tx port.Tx) error {
+		if err := tx.PutMember(m); err != nil {
+			return err
+		}
+		return tx.Audit(port.AuditRow{At: s.now(), Tenant: m.Tenant, Actor: actor(p), Action: "group.put", Subject: string(m.Person), Detail: map[string]any{"group": m.Group}})
+	})
 }
 
 // DeleteGroupMember removes a person from a group of the caller's tenant.
@@ -107,7 +112,12 @@ func (s *Service) DeleteGroupMember(ctx context.Context, p port.Principal, m por
 	if err != nil || m.Tenant == port.Installation {
 		return orRefused(err)
 	}
-	return s.write(ctx, scope, "DeleteGroupMember", func(tx port.Tx) error { return tx.DeleteMember(m) })
+	return s.write(ctx, scope, "DeleteGroupMember", func(tx port.Tx) error {
+		if err := tx.DeleteMember(m); err != nil {
+			return err
+		}
+		return tx.Audit(port.AuditRow{At: s.now(), Tenant: m.Tenant, Actor: actor(p), Action: "group.delete", Subject: string(m.Person), Detail: map[string]any{"group": m.Group}})
+	})
 }
 
 // ListGroupMembers returns the memberships of the caller's tenant.

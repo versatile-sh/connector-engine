@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/assets/banner-hero.svg" alt="connector-engine: every MCP connector, one gateway you control. You decide what each AI app may run, and see every call it makes." width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/banner-hero-dark.svg">
+    <img src="docs/assets/readme/banner-hero-light.svg" alt="connector-engine: every MCP connector, one gateway you control. You decide what each AI app may run, and see every call it makes." width="100%">
+  </picture>
 </p>
 
 <p align="center">
@@ -28,7 +31,10 @@ Every function is pinned by hash, so a tool that changes is held until you accep
 
 <a id="install"></a>
 
-![Install in one line](docs/assets/section-readme-install.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/section-install-dark.svg">
+  <img src="docs/assets/readme/section-install-light.svg" alt="Install in one line" width="100%">
+</picture>
 
 | Platform | Command | |
 |---|---|---|
@@ -63,7 +69,10 @@ Open the console, create your account, import a connector: [First run](docs/gett
 
 <a id="use"></a>
 
-![Use it with any AI app](docs/assets/section-readme-use.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/section-use-dark.svg">
+  <img src="docs/assets/readme/section-use-light.svg" alt="Use it with any AI app" width="100%">
+</picture>
 
 ```sh
 claude mcp add --transport http versatile http://127.0.0.1:7465/mcp
@@ -86,9 +95,20 @@ vsh approvals
 
 <a id="how-it-works"></a>
 
-![How it works](docs/assets/section-readme-how.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/section-how-it-works-dark.svg">
+  <img src="docs/assets/readme/section-how-it-works-light.svg" alt="How it works" width="100%">
+</picture>
 
-![How a call flows. AI apps such as Claude Code, Cursor and Codex call connector-engine over MCP. The gateway checks each function's permission: off hides it, on runs it with the stored credential, ask waits for your approval in the self-hosted console. Allowed calls reach remote and local MCP servers, REST and gRPC connectors. The gateway also keeps approvals, activity and skills.](docs/assets/diagram-flow.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/diagram-call-dark.svg">
+  <img src="docs/assets/readme/diagram-call-light.svg" alt="How one tool call runs. An AI app sends tools/call to the gateway, which verifies the token and hands the call to the service. The service asks the Authorizer, which answers allow, ask or deny. On ask the app gets pending_approval and the call waits for a person. On allow the service calls the connector runtime with the credential, gets a filtered result back and answers the app; the event goes to the outbox in the same transaction." width="100%">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/diagram-approval-dark.svg">
+  <img src="docs/assets/readme/diagram-approval-light.svg" alt="The life of an approval. It starts pending. A person approves or denies it, or it expires or is cancelled. An approved call runs once: executing ends executed, failed, or outcome_unknown when no answer came back." width="100%">
+</picture>
 
 1. An AI app lists and calls tools on one endpoint, `/mcp`.
 2. The engine checks the app's permission for that function: off, on, or ask. Off answers like an unknown tool; ask waits for you to approve in the console, a desktop popup or chat.
@@ -96,7 +116,10 @@ vsh approvals
 
 <a id="features"></a>
 
-![What you get](docs/assets/section-readme-features.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/section-features-dark.svg">
+  <img src="docs/assets/readme/section-features-light.svg" alt="What you get" width="100%">
+</picture>
 
 | | | |
 |---|---|---|
@@ -109,7 +132,10 @@ vsh approvals
 
 <a id="docs"></a>
 
-![Read the docs](docs/assets/section-readme-docs.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/section-docs-dark.svg">
+  <img src="docs/assets/readme/section-docs-light.svg" alt="Read the docs" width="100%">
+</picture>
 
 | Read | To |
 |---|---|
@@ -120,11 +146,21 @@ vsh approvals
 | [Reference](docs/README.md#reference) | configuration, `vsh`, API, events |
 | [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) | how it is built, how to contribute, how to report a vulnerability |
 
-## Other ways to deploy
+<a id="other-ways-to-deploy"></a>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/section-other-ways-to-deploy-dark.svg">
+  <img src="docs/assets/readme/section-other-ways-to-deploy-light.svg" alt="Other ways to deploy" width="100%">
+</picture>
 
 Community templates for Render, Railway and Fly.io, not tested by maintainers: [`deploy/providers/`](deploy/providers/README.md).
 
-## License
+<a id="license"></a>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/section-license-dark.svg">
+  <img src="docs/assets/readme/section-license-light.svg" alt="License" width="100%">
+</picture>
 
 Copyright (C) 2026 Versatile (versatile.sh)
 

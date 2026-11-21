@@ -14,6 +14,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/auth/jwks"
 	"github.com/versatile-sh/connector-engine/auth/local"
+	"github.com/versatile-sh/connector-engine/authz/table"
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/credential"
 	"github.com/versatile-sh/connector-engine/internal/egress"
@@ -202,14 +203,60 @@ func (t localTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 const localIssuerHost = "local-issuer.invalid"
 
-func (b builder) verifier(local http.Handler, localName string) (port.PrincipalVerifier, error) {
-	c := jwks.Config{MaxLifetime: b.cfg.Auth.AgentTokenMaxLifetime, Now: b.clock.Now}
-	for _, i := range b.cfg.Auth.Issuers {
+func (b builder) verifier(ctx context.Context, local http.Handler) (port.PrincipalVerifier, func(), error) {
+	u, ok := b.one(config.PortAuth)
+	if !ok {
+		u = adapters.Use{Tier: adapters.TierBuiltin, Name: "jwks"}
+	}
+	env := b.env(config.PortAuth)
+	env.LocalKeys, env.LocalName = local, b.cfg.Auth.LocalIssuer.Name
+	v, closer, err := openAdapter(ctx, b.reg, Verifiers, u, env)
+	return v, closeAll(closer), err
+}
+
+func openVerifier(_ context.Context, env Env) (port.PrincipalVerifier, func(), error) {
+	c := jwks.Config{MaxLifetime: env.Config.Auth.AgentTokenMaxLifetime, Now: env.Clock.Now}
+	for _, i := range env.Config.Auth.Issuers {
 		c.Issuers = append(c.Issuers, jwks.Issuer{Name: i.Name, URL: i.URL})
 	}
-	if local != nil {
-		c.Issuers = append(c.Issuers, jwks.Issuer{Name: localName, URL: "http://" + localIssuerHost + "/jwks"})
-		c.Client = &http.Client{Transport: localTransport{local}, Timeout: 10 * time.Second}
+	if env.LocalKeys != nil {
+		c.Issuers = append(c.Issuers, jwks.Issuer{Name: env.LocalName, URL: "http://" + localIssuerHost + "/jwks"})
+		c.Client = &http.Client{Transport: localTransport{env.LocalKeys}, Timeout: 10 * time.Second}
 	}
-	return jwks.New(c)
+	v, err := jwks.New(c)
+	return v, nil, err
+}
+
+func (b builder) authorizer(ctx context.Context, store port.Store) (port.Authorizer, func(), error) {
+	u, ok := b.one(config.PortAuthz)
+	if !ok {
+		u = adapters.Use{Tier: adapters.TierBuiltin, Name: "table"}
+	}
+	env := b.env(config.PortAuthz)
+	env.Store = store
+	a, closer, err := openAdapter(ctx, b.reg, Authorizers, u, env)
+	return a, closeAll(closer), err
+}
+
+func (b builder) scanner(ctx context.Context) (port.DefinitionScanner, func(), error) {
+	u, ok := b.one(config.PortScanner)
+	if !ok {
+		return nil, func() {}, nil
+	}
+	s, closer, err := openAdapter(ctx, b.reg, Scanners, u, b.env(config.PortScanner))
+	return s, closeAll(closer), err
+}
+
+func (b builder) suggester(ctx context.Context) (port.DescriptionSuggester, func(), error) {
+	u, ok := b.one(config.PortSuggester)
+	if !ok {
+		return nil, func() {}, nil
+	}
+	s, closer, err := openAdapter(ctx, b.reg, Suggesters, u, b.env(config.PortSuggester))
+	return s, closeAll(closer), err
+}
+
+func openAuthorizer(_ context.Context, env Env) (port.Authorizer, func(), error) {
+	s := env.Config.Service()
+	return table.New(env.Store, env.Clock, table.Settings{DestructiveMax: s.DestructiveMax, ForceAsk: s.ForceAsk}), nil, nil
 }

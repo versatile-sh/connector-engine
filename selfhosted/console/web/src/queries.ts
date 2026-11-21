@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { activityViewOf, apiQueryOf, KEPT_DAYS, type ActivityFilter } from "./activity/activity";
 import type { Scope } from "./people/viewer";
-import { api, setCsrf, type Account, type LinkFacts, type PeopleData, type ActivityData, type ActivityDetail, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type Effect, type NotificationsData, type PrunePeriod, type PruneResult, type Session, type Skill, type SlotView } from "./api";
+import { api, setCsrf, type Account, type LinkFacts, type PeopleData, type ActivityData, type ActivityDetail, type ActivitySummary, type ActivitySettings, type Agent, type Approval, type ApprovalView, type Connector, type DecisionRow, type Effect, type NotificationsData, type PrunePeriod, type PruneResult, type Session, type Skill, type SlotView } from "./api";
 
 /** Who is here: whether the owner exists and is signed in, the endpoint, and the guide's dismissal; it also arms the CSRF token. */
 export const sessionQuery = queryOptions({
@@ -81,6 +81,30 @@ export const scopedApprovalsQuery = (scope: Scope) =>
         refetchInterval: 4_000,
       });
 
+/** How often the recent decisions are read again, so an answer given in a chat or a desktop popup shows here too. */
+export const DECISIONS_POLL_MS = 15_000;
+
+/** The last decisions a scope shows, newest first: the user's own, or everyone's. It sits under the approvals key, so answering a call reads it again, and keeps the last answer on screen while a scope change loads. */
+export const recentDecisionsQuery = (scope: Scope) =>
+  queryOptions({
+    queryKey: [...approvalsQuery.queryKey, "recent", scope],
+    queryFn: () => api<{ decisions: DecisionRow[] }>("GET", `/api/approvals/recent${scope === "everyone" ? "?scope=everyone" : ""}`),
+    select: (data) => data.decisions,
+    refetchInterval: DECISIONS_POLL_MS,
+    placeholderData: keepPreviousData,
+  });
+
+/** One held call as its own page reads it, once, for the arguments a card previews; the key sits under the call's own, so answering it reads it again. */
+export const approvalArgsQuery = (id: string) =>
+  queryOptions({
+    queryKey: ["approval", id, "arguments"],
+    queryFn: () => api<ApprovalView>("GET", `/api/approvals/${encodeURIComponent(id)}`),
+    select: (view) => view.arguments,
+    staleTime: Infinity,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
 /** The key every activity page shares, whatever its filter. */
 export const activityKey = ["activity"] as const;
 
@@ -98,6 +122,21 @@ export const activityQuery = (filter: ActivityFilter, keptDays = KEPT_DAYS) =>
 
 /** How often the first page of the activity is read again. */
 export const ACTIVITY_POLL_MS = 10_000;
+
+/** How often the dashboard's summary is read again: a seven-day read is heavier than a page of calls, so it waits longer than the activity page. */
+export const DASHBOARD_POLL_MS = 30_000;
+
+/** What the dashboard shows for a scope, from one read of the console: the viewer's own calls, or everyone's. It sits under the activity key so deleting calls reads it again, and a scope change keeps the last answer on screen until the new one arrives. */
+export const dashboardQuery = (scope: Scope) =>
+  queryOptions({
+    queryKey: [...activityKey, "summary", scope],
+    queryFn: () => api<ActivitySummary>("GET", `/api/activity/summary${scope === "everyone" ? "?scope=everyone" : ""}`),
+    refetchInterval: DASHBOARD_POLL_MS,
+    placeholderData: keepPreviousData,
+  });
+
+/** The access keys a scope of the dashboard counts: the user's own, as `keysQuery`, which marks nothing as seen, or everyone's. */
+export const dashboardKeysQuery = (scope: Scope) => (scope === "mine" ? keysQuery : scopedKeysQuery("everyone"));
 
 /** How many calls a period holds, counted by the console without deleting any. */
 export const activityPruneQuery = (period: PrunePeriod) =>

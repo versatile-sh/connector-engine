@@ -49,8 +49,8 @@ export const PAGE = "flex flex-col gap-6";
 /** The grid of cards a page lists: as many 17rem-or-wider columns as the width holds, 1.5rem apart, so the cards fill the surface on a wide screen and stack on a phone. */
 export const CARD_GRID = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-6";
 
-/** The two-column body of a page whose side column is the shared facts or the secondary lists: the main column takes the rest, the side one is 20rem, 2.5rem apart from `lg`. */
-export const SPLIT = "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10";
+/** The two-column body of a page whose side column is the shared facts or the secondary lists: the main column takes the rest, the side one is 20rem, 2.5rem apart from `xl`. */
+export const SPLIT = "grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-10";
 
 /** Small mono uppercase label over a page title, as the site's directory eyebrow. */
 export const EYEBROW = "font-mono text-[0.6875rem] tracking-[0.14em] text-muted uppercase";

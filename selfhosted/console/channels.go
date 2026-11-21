@@ -10,17 +10,22 @@ import (
 	"github.com/versatile-sh/connector-engine/selfhosted/surface/webhook"
 )
 
+var channelKinds = append([]surface.Kind{discord.Kind, slack.Kind, telegram.Kind}, webhook.Kinds...)
+
+func kindOf(name string) (surface.Kind, bool) {
+	for _, k := range channelKinds {
+		if k.Name == name {
+			return k, true
+		}
+	}
+	return surface.Kind{}, false
+}
+
 // DefaultChannel builds the built-in approval channel of a kind from its stored settings.
 func DefaultChannel(kind string, s map[string]string) (surface.Channel, error) {
-	switch kind {
-	case "discord":
-		return discord.New(discord.Config{Token: s["token"], OwnerUserID: s["owner_user_id"]})
-	case "slack":
-		return slack.New(slack.Config{AppToken: s["app_token"], BotToken: s["bot_token"], OwnerUserID: s["owner_user_id"]})
-	case "telegram":
-		return telegram.New(telegram.Config{Token: s["token"], OwnerUserID: s["owner_user_id"]})
-	case "ntfy", "discord_webhook", "slack_webhook":
-		return webhook.New(webhook.Config{Kind: kind, URL: s["url"], Token: s["token"]})
+	k, ok := kindOf(kind)
+	if !ok {
+		return nil, fmt.Errorf("channel kind %q is not built in", kind)
 	}
-	return nil, fmt.Errorf("channel kind %q is not built in", kind)
+	return k.New(s)
 }

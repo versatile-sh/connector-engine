@@ -8,6 +8,7 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/service"
 	st "github.com/versatile-sh/connector-engine/service/servicetest"
+	"github.com/versatile-sh/connector-engine/store/memory"
 )
 
 const (
@@ -48,6 +49,7 @@ type opts struct {
 	ceiling  port.Ceiling
 	reviewed bool
 	auth     bool
+	store    st.Store
 	tune     []func(*service.Config, *service.Deps)
 }
 
@@ -56,7 +58,10 @@ func newWorld(t *testing.T, o opts) *world {
 	if o.ceiling == "" {
 		o.ceiling = port.CeilingFull
 	}
-	w := &world{Env: st.New(t, o.tune...), t: t}
+	if o.store == nil {
+		o.store = memory.New()
+	}
+	w := &world{Env: st.NewOn(t, o.store, o.tune...), t: t}
 	w.defs, w.hashes, _ = definitions("Searches", "Creates an issue")
 	_, _, list := definitions("Searches", "Creates an issue")
 	w.Runtime.SetDefinitions(listing, list...)

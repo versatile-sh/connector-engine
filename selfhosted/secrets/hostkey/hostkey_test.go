@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -169,9 +170,37 @@ func TestMigrationOverTheSocketKeepsEveryRecordAndRunsAgain(t *testing.T) {
 	if got, err := again.Open(ctx, "ta", sealed); err != nil || string(got) != "secret" {
 		t.Fatalf("after restart: %q %v", got, err)
 	}
-	if r, err := send(t, socket, hostkey.OpRevert, ""); err != nil || r.Protection != "plaintext" {
+	if r, err := send(t, socket, hostkey.OpRevert, ""); err == nil && r.Error == "" {
+		t.Fatalf("a keyless revert unwrapped the root key: %+v", r)
+	}
+	if again.Form() != local.Wrapped {
+		t.Fatalf("a keyless revert changed the form to %s", again.Form())
+	}
+	if r, err := send(t, socket, hostkey.OpRevert, key); err != nil || r.Protection != "plaintext" {
 		t.Fatalf("revert: %+v %v", r, err)
 	}
+}
+
+func TestListenMovesTheSocketIntoPlaceAt0600AndLeavesNothingBehind(t *testing.T) {
+	path := socketIn(t)
+	dir := filepath.Dir(path)
+	lis, err := hostkey.Listen(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lis.Close()
+	si, err := os.Stat(path)
+	if err != nil || si.Mode().Perm() != 0o600 {
+		t.Fatalf("socket %v %v", si, err)
+	}
+	if left, _ := filepath.Glob(filepath.Join(dir, ".sock-*")); len(left) != 0 {
+		t.Fatalf("left behind %v", left)
+	}
+	c, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatalf("the moved socket does not accept: %v", err)
+	}
+	c.Close()
 }
 
 func TestCancellingTheWaitReturns(t *testing.T) {

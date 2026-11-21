@@ -12,6 +12,7 @@ import {
   navView,
   parseCollapsed,
   railOf,
+  sectionOf,
   saveCollapsed,
   serializeCollapsed,
   shellAt,
@@ -42,7 +43,7 @@ describe("the sidebar's links", () => {
   test("hold every section once, Gateway before Settings", () => {
     assert.deepEqual(
       NAV_GROUPS.map((group) => group.items.map((item) => item.section)),
-      [["connectors", "skills", "access", "approvals", "activity"], ["notifications", "account"]],
+      [["dashboard", "connectors", "skills", "access", "approvals", "activity"], ["notifications", "account"]],
     );
   });
 
@@ -82,10 +83,41 @@ describe("navView", () => {
   });
 });
 
+describe("sectionOf", () => {
+  describe("on the front pages", () => {
+    test("opens the dashboard at the root", () => assert.equal(sectionOf("/"), "dashboard"));
+    test("opens the connectors at /connectors", () => assert.equal(sectionOf("/connectors"), "connectors"));
+    test("keeps a connector's own page in the connectors", () => {
+      assert.equal(sectionOf("/connectors/c1"), "connectors");
+      assert.equal(sectionOf("/connectors/a%2Fb"), "connectors");
+    });
+    test("opens the connectors for the import window", () => assert.equal(sectionOf("/import"), "connectors"));
+  });
+
+  describe("on the other sections' paths", () => {
+    test("maps each to its own section", () => {
+      const paths = { "/skills": "skills", "/access": "access", "/agents": "access", "/approvals": "approvals", "/activity": "activity", "/notifications": "notifications", "/account": "account", "/account/people": "account" } as const;
+      for (const [path, section] of Object.entries(paths)) assert.equal(sectionOf(path), section, path);
+    });
+  });
+
+  describe("on a path the console does not know", () => {
+    test("opens the dashboard", () => {
+      assert.equal(sectionOf("/nope"), "dashboard");
+      assert.equal(sectionOf("/constructor"), "dashboard");
+    });
+  });
+
+  test("gives every link of the sidebar the section it opens", () => {
+    for (const item of NAV_GROUPS.flatMap((group) => group.items)) assert.equal(sectionOf(item.href), item.section, item.href);
+  });
+});
+
 describe("crumbOf", () => {
   test("names the group and the link of a section", () => {
     assert.deepEqual(crumbOf("activity"), { group: "nav.group.gateway", label: "nav.activity" });
     assert.deepEqual(crumbOf("account"), { group: "nav.group.settings", label: "nav.account" });
+    assert.deepEqual(crumbOf("dashboard"), { group: "nav.group.gateway", label: "nav.dashboard" });
   });
 });
 

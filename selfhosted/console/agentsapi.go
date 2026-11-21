@@ -5,6 +5,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/selfhosted/surface"
+	"github.com/versatile-sh/connector-engine/source/skillcompat"
 	"slices"
 	"strings"
 	"time"
@@ -48,11 +49,19 @@ func (c *Console) mintAgent(w http.ResponseWriter, r *http.Request) {
 		Name     string `json:"name"`
 		TTLHours int    `json:"ttl_hours"`
 		Slot     string `json:"slot"`
+		App      string `json:"app"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
+	if _, ok := skillcompat.Find(in.App); in.App != "" && !ok {
+		c.fail(w, invalid("unknown app %q", in.App))
+		return
+	}
 	tok, err := c.MintAgent(r.Context(), in.Name, time.Duration(in.TTLHours)*time.Hour, in.Slot)
+	if err == nil && in.App != "" {
+		err = c.State.SetAgentApp(tok.Agent, in.App)
+	}
 	if err != nil {
 		c.fail(w, err)
 		return

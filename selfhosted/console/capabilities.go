@@ -87,6 +87,7 @@ var routeCapabilities = map[string]Capability{
 	"POST /api/invites":                          CapPeopleManage,
 	"DELETE /api/invites/{id}":                   CapPeopleReset,
 	"POST /api/people/{person}/reset":            CapPeopleReset,
+	"PUT /api/people/signup":                     CapPeopleManage,
 	"PUT /api/people/{person}/role":              CapPeopleManage,
 	"DELETE /api/people/{person}":                CapPeopleManage,
 	"GET /api/account":                           CapAccountOwn,
@@ -126,9 +127,11 @@ var routeCapabilities = map[string]Capability{
 	"GET /api/oauth/requests/{id}":               CapKeysOwn,
 	"POST /api/oauth/requests/{id}":              CapKeysOwn,
 	"GET /api/approvals":                         CapApprovalsOwn,
+	"GET /api/approvals/recent":                  CapApprovalsOwn,
 	"POST /api/approvals/{id}":                   CapApprovalsOwn,
 	"POST /api/approvals/{id}/cancel":            CapApprovalsAny,
 	"GET /api/activity":                          CapActivityOwn,
+	"GET /api/activity/summary":                  CapActivityOwn,
 	"GET /api/activity/{id}":                     CapActivityOwn,
 	"GET /api/activity/settings":                 CapActivityOwn,
 	"PUT /api/activity/settings":                 CapActivitySettings,
@@ -145,7 +148,7 @@ var routeCapabilities = map[string]Capability{
 }
 
 var publicRoutes = []string{
-	"GET /api/session", "GET /api/ready", "POST /api/setup", "POST /api/login",
+	"GET /api/session", "GET /api/ready", "POST /api/setup", "POST /api/login", "POST /api/signup",
 	"GET /oauth/callback", "GET /oauth/authorize",
 	"GET /mcp", "POST /mcp", "DELETE /mcp",
 	"GET /.well-known/oauth-protected-resource", "OPTIONS /.well-known/oauth-protected-resource",
@@ -191,6 +194,10 @@ func (c *Console) gate(pattern string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if c.State.HasOwner() {
 			checked(w, r)
+			return
+		}
+		if !c.setupTokenOK(r) {
+			writeJSON(w, http.StatusForbidden, apiError{Error: "the setup token is missing or wrong", Code: "setup_token"})
 			return
 		}
 		next(w, r)

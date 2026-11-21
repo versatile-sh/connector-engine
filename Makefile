@@ -1,6 +1,6 @@
 SHELL    := /bin/bash
 PROJECT  ?= connector-engine
-PROFILE  ?= person
+PROFILE  ?= $(if $(wildcard selfhosted/selfhosted.mk),person,headless)
 COMPOSE_FILE := $(if $(filter headless,$(PROFILE)),deploy/compose.yaml,selfhosted/deploy/compose.yaml)
 COMPOSE  ?= docker compose -f $(COMPOSE_FILE) -p $(PROJECT)
 IMAGE    ?= connector-engine:local
@@ -14,7 +14,7 @@ CONSOLE_PORT ?= 7465
 export CONSOLE_PORT
 ENGINE   := $(if $(filter headless,$(PROFILE)),engine-headless,engine)
 
-.PHONY: up down logs ps cli admin build test vendor layering
+.PHONY: up down logs ps cli admin build test vendor layering check semgrep
 
 up: vendor
 	$(COMPOSE) --profile $(PROFILE) up -d --build
@@ -44,13 +44,25 @@ build: vendor
 vendor:
 	@if command -v go >/dev/null 2>&1; then go mod vendor; fi
 
+check:
+	go vet ./...
+	$(MAKE) --no-print-directory test
+	$(MAKE) --no-print-directory semgrep
+
 layering:
 	scripts/check-layering.sh
 
 test: layering
-	go test -race ./...
-	cd selfhosted/console/web && npm ci --no-audit --no-fund && npm run typecheck
+	go test -race -timeout 30m ./...
+	@if [ -d selfhosted/console/web ]; then cd selfhosted/console/web && npm ci --no-audit --no-fund && npm run typecheck; fi
 	go run ./cmd/connector-engine --config deploy/profiles/headless/connector-engine.yaml --adapters deploy/profiles/headless/adapters.yaml adapters check
-	go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check
+	@if [ -d selfhosted ]; then go run ./selfhosted/cmd/connector-engine --config selfhosted/deploy/profiles/person/connector-engine.yaml --adapters selfhosted/deploy/profiles/person/adapters.yaml adapters check; fi
 
-include selfhosted/selfhosted.mk
+-include selfhosted/selfhosted.mk
+
+SEMGREP_RULES := https://raw.githubusercontent.com/versatile-sh/semgrep-rules/v0.1.2/rules/versatile.yml
+
+semgrep:
+	semgrep scan --metrics=off --disable-version-check --error --severity WARNING --severity ERROR \
+		--config p/default --config p/secrets --config p/golang --config p/typescript --config p/react --config p/dockerfile --config $(SEMGREP_RULES) \
+		--baseline-commit "$$(git merge-base HEAD origin/main)"

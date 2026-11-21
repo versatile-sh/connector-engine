@@ -12,12 +12,14 @@ import { Notice } from "../ui/Notice";
 import { CAPTION, LEAD, SKELETON_LINE, SUBTITLE, SURFACE, TITLE, WELL, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { LinkSheet, type LinkFor } from "./LinkSheet";
-import { mayRevoke, nameOf, timeLeft } from "./people";
+import { nameOf, timeLeft } from "./people";
 import { PersonRow } from "./PersonRow";
+import { SignupSetting } from "./SignupSetting";
 import { useViewer } from "./useViewer";
 
 const AUDIT: Partial<Record<string, MessageKey>> = {
   "user.created": "audit.user.created",
+  "signup.changed": "audit.signup.changed",
   "invite.created": "audit.invite.created",
   "invite.revoked": "audit.invite.revoked",
   "reset.created": "audit.reset.created",
@@ -37,7 +39,6 @@ const AUDIT: Partial<Record<string, MessageKey>> = {
 
 function Links({ data }: { data: PeopleData }) {
   const t = useT();
-  const viewer = useViewer();
   const revoke = useMutation(revokeLink);
   const now = useNow(false);
   if (data.invites.length === 0) return null;
@@ -57,7 +58,7 @@ function Links({ data }: { data: PeopleData }) {
             <li key={link.id} className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line px-4 py-3 last:border-b-0 sm:px-5 ${revoke.isPending && revoke.variables === link.id ? "opacity-60" : ""}`}>
               <span className="min-w-0 grow basis-40 text-sm">{what}</span>
               <span className={CAPTION}>{t(left.unit === "day" ? "people.leftDays" : "people.leftHours", { count: left.count })}</span>
-              {mayRevoke(viewer, link) ? (
+              {link.may_revoke ? (
                 <button type="button" disabled={revoke.isPending} className={button({ variant: "danger", size: "xs" })} aria-label={t("people.revokeLabel", { link: what })} onClick={() => revoke.mutate(link.id)}>
                   {t("common.revoke")}
                 </button>
@@ -89,7 +90,7 @@ function Changes({ data }: { data: PeopleData }) {
     >
       <ol className="border-t border-line">
         {data.audit.map((entry) => {
-          const key = AUDIT[entry.action];
+          const key = entry.action === "user.created" && entry.actor === entry.target ? "audit.user.signedUp" : AUDIT[entry.action];
           return (
             <li key={`${entry.at}-${entry.action}-${entry.target}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-b border-line px-4 py-2.5 text-sm last:border-b-0">
               <span className="min-w-0 grow basis-56">
@@ -153,6 +154,7 @@ export function PeopleTab() {
               <PersonRow key={person.person} person={person} viewer={viewer} onReset={(target) => setMaking({ purpose: "reset", person: target })} />
             ))}
           </ul>
+          {viewer.can("people.manage") ? <SignupSetting settings={data.signup} /> : null}
           <Links data={data} />
           <Changes data={data} />
         </>

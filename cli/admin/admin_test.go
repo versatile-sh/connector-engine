@@ -115,3 +115,11 @@ func TestHelpAndFlagErrorsNeverPrintTheToken(t *testing.T) {
 		}
 	}
 }
+
+func TestCallHelpExitsZeroAndPrintsTheUsage(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := admin.Command(&out, &errOut, nil).Run(context.Background(), []string{"call", "--help"})
+	if code != 0 || !strings.Contains(out.String(), "vsh admin call") {
+		t.Fatalf("exit %d, out %q, err %q", code, out.String(), errOut.String())
+	}
+}

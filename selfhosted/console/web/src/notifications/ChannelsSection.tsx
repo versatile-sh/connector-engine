@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ChannelView } from "../api";
+import type { ChannelKindView, ChannelView } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { removeChannel } from "../mutations";
 import { Icon } from "../ui/Icon";
@@ -11,7 +11,7 @@ import { Section } from "./Section";
 import { useRemove } from "./useRemove";
 
 /** Chat apps: the channels held calls are sent to, each with its status, a test and an inline remove, and the window that adds one. */
-export function ChannelsSection({ channels }: { channels: ChannelView[] }) {
+export function ChannelsSection({ channels, kinds }: { channels: ChannelView[]; kinds: ChannelKindView[] }) {
   const t = useT();
   const [adding, setAdding] = useState(false);
   const remove = useRemove(removeChannel);
@@ -34,11 +34,11 @@ export function ChannelsSection({ channels }: { channels: ChannelView[] }) {
       ) : (
         <ul className={WELL}>
           {drawn.map(({ row: channel, phase }) => (
-            <ChannelRow key={channel.id} phase={phase} channel={channel} remove={remove} />
+            <ChannelRow key={channel.id} phase={phase} channel={channel} kinds={kinds} remove={remove} />
           ))}
         </ul>
       )}
-      {adding ? <AddChannelDialog onClose={() => setAdding(false)} /> : null}
+      {adding ? <AddChannelDialog kinds={kinds} onClose={() => setAdding(false)} /> : null}
     </Section>
   );
 }

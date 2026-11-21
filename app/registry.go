@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/credential"
@@ -15,7 +16,7 @@ import (
 // Port names a port of the engine and the Go type its adapters provide.
 type Port[T any] struct{ name string }
 
-// The ports a build registers adapters on; auth is the core's own.
+// The ports a build registers adapters on; Authorizers is selected only when a build registers an adapter besides the built-in table.
 var (
 	Stores   = Port[port.Store]{config.PortStore}
 	Secrets  = Port[port.SecretStore]{config.PortSecrets}
@@ -24,6 +25,11 @@ var (
 	Sinks    = Port[port.EventSink]{config.PortSink}
 	Filters  = Port[port.ResultFilter]{config.PortFilter}
 	Indexes  = Port[port.ToolIndex]{config.PortIndex}
+
+	Verifiers   = Port[port.PrincipalVerifier]{config.PortAuth}
+	Authorizers = Port[port.Authorizer]{config.PortAuthz}
+	Scanners    = Port[port.DefinitionScanner]{config.PortScanner}
+	Suggesters  = Port[port.DescriptionSuggester]{config.PortSuggester}
 )
 
 // Adapter declares an adapter of a port; Register sets its Port.
@@ -76,14 +82,16 @@ func openAdapter[T any](ctx context.Context, r *Registry, p Port[T], u adapters.
 
 // Env is what a factory may read: the configuration, the settings of its port in adapters.yaml, references, the clock, the log, and the ports opened before it.
 type Env struct {
-	Config   config.Config
-	Settings map[string]any
-	Lookup   func(string) string
-	Clock    port.Clock
-	Log      *slog.Logger
-	Store    port.Store
-	Secrets  port.SecretStore
-	Applier  credential.Applier
+	Config    config.Config
+	Settings  map[string]any
+	Lookup    func(string) string
+	Clock     port.Clock
+	Log       *slog.Logger
+	Store     port.Store
+	Secrets   port.SecretStore
+	Applier   credential.Applier
+	LocalKeys http.Handler
+	LocalName string
 }
 
 // Setting returns the string setting key of the port, or "".

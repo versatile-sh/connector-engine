@@ -160,7 +160,7 @@ func TestAProviderSignInCompletesAsThePersonWhoBeganIt(t *testing.T) {
 	c.connects.add("s1", "https://issuer.test", "p-bob")
 	w := httptest.NewRecorder()
 	c.oauthCallback(w, httptest.NewRequest(http.MethodGet, "/oauth/callback?state=s1&code=c1", nil))
-	if loc := w.Header().Get("Location"); loc != "/?oauth=connected" {
+	if loc := w.Header().Get("Location"); loc != "/connectors?oauth=connected" {
 		t.Fatalf("the callback went to %q", loc)
 	}
 	if _, writes, _ := rec.seen(); !slices.Equal(writes, []string{"POST /v1/credentials:complete as p-bob"}) {
@@ -175,7 +175,7 @@ func TestAProviderSignInBegunByAnotherUserIsRefusedInThisUsersBrowser(t *testing
 	req.AddCookie(sessionOf(t, c.State, "owner"))
 	w := httptest.NewRecorder()
 	c.oauthCallback(w, req)
-	if loc := w.Header().Get("Location"); loc != "/?oauth=wrong_user" {
+	if loc := w.Header().Get("Location"); loc != "/connectors?oauth=wrong_user" {
 		t.Fatalf("the callback went to %q", loc)
 	}
 	if _, writes, _ := rec.seen(); len(writes) != 0 {

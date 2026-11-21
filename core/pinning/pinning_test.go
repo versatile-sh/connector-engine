@@ -61,6 +61,14 @@ func TestDefinitionHash(t *testing.T) {
 	}
 }
 
+func TestCallHashGolden(t *testing.T) {
+	a := port.Approval{Tenant: "t", Agent: "a", Connector: "c", Function: "f", DefinitionHash: "h"}
+	got, err := pinning.CallHash(a, []byte(`{"b":[1,{"y":"é","x":null}],"a":{"k":1.5,"j":"v"}}`))
+	if err != nil || got != "1e5ebbd2001716ff5e945e3ee01f688e19e22aa54f75e1ad91dd5c2155320071" {
+		t.Fatalf("call_hash of a fixed call changed: %s %v", got, err)
+	}
+}
+
 func TestReconcile(t *testing.T) {
 	pinned := []port.Function{
 		{Name: "a", DefinitionHash: "a1", State: port.FunctionActive},

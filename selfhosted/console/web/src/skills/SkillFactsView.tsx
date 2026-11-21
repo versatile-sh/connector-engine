@@ -3,7 +3,8 @@ import { useT } from "../i18n/I18nProvider";
 import { Disclosure } from "../ui/Disclosure";
 import { Notice } from "../ui/Notice";
 import { WELL } from "../ui/styles";
-import { formatBytes, shortCommit, skillWarnings, sourceLink, totalBytes } from "./summary";
+import { SkillCompatView, CompatWarnings } from "./SkillCompatView";
+import { formatBytes, hasLicence, shortCommit, skillWarnings, sourceLink, totalBytes } from "./summary";
 
 type SkillFactsViewProps = { skill: SkillFacts; unbound?: string[] | undefined };
 
@@ -12,9 +13,10 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
   const t = useT();
   const warnings = skillWarnings({ ...skill, unbound });
   const link = sourceLink(skill.source);
-  const licence = skill.licence.spdx && skill.licence.spdx !== "NONE" ? t("skills.licence", { spdx: skill.licence.spdx }) : t("skills.noLicence");
+  const licence = hasLicence(skill.licence) ? t("skills.licence", { spdx: skill.licence.spdx }) : t("skills.noLicence");
   return (
     <div className="flex flex-col gap-4">
+      <CompatWarnings skill={skill} />
       {warnings.length > 0 ? (
         <div className="flex flex-col gap-2">
           {warnings.map((warning) => (
@@ -38,6 +40,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
           <span className="sr-only"> {t("common.opensNewTab")}</span>
         </dd>
       </dl>
+      <SkillCompatView skill={skill} />
       <Disclosure
         className={WELL}
         summary={

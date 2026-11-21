@@ -13,6 +13,8 @@ A connector is one tool server behind the gateway. AI apps never reach it direct
 | `grpc` | a gRPC service, through reflection or the Buf Schema Registry |
 | `skill` | a skill package (files, no server); see [skills](skills.md) |
 
+In a `declarative` function, a value that fills a `{name}` part of the path is one path segment: printable ASCII with no space and none of `/ \ % ? # ;`, never empty and never only dots. Any other value is refused before a request is sent. A function's path starts with `/`.
+
 Keys differ only in permissions ([functions and permissions](permissions.md)). Whose credential a call uses is the connector's credential mode.
 
 ## Credential mode

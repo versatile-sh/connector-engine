@@ -33,7 +33,7 @@ export function NotificationsPage() {
             <ElicitSection apps={data.data.apps} />
             <DevicesSection devices={data.data.devices} />
             <div className="@5xl:col-span-2">
-              <ChannelsSection channels={data.data.channels} />
+              <ChannelsSection channels={data.data.channels} kinds={data.data.kinds} />
             </div>
           </div>
         </div>

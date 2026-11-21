@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/versatile-sh/connector-engine/authz"
-	"github.com/versatile-sh/connector-engine/authz/table"
+	"github.com/versatile-sh/connector-engine/authz/facts"
 	"github.com/versatile-sh/connector-engine/catalog"
 	corecatalog "github.com/versatile-sh/connector-engine/core/catalog"
 	"github.com/versatile-sh/connector-engine/core/listing"
@@ -221,7 +221,7 @@ func (s *Service) viewerOf(ctx context.Context, p port.Principal) (viewer, error
 }
 
 func (v viewer) view(tx port.Tx, workspace port.WorkspaceID) (corecatalog.View, error) {
-	return table.View(tx, v.tenant, []port.WorkspaceID{workspace}, v.groups)
+	return facts.View(tx, v.tenant, []port.WorkspaceID{workspace}, v.groups)
 }
 
 // ListingFilter narrows ListListings; zero fields match all.
@@ -303,7 +303,7 @@ func (s *Service) ListOfferedListings(ctx context.Context, p port.Principal) ([]
 	}
 	var out []port.Listing
 	err := s.d.Store.Read(ctx, port.Scope{Tenant: p.Claims.Tenant}, func(tx port.Tx) error {
-		v, err := table.View(tx, p.Claims.Tenant, nil, nil)
+		v, err := facts.View(tx, p.Claims.Tenant, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -405,16 +405,14 @@ func (s *Service) SetListingStarter(ctx context.Context, p port.Principal, ref p
 	return out, err
 }
 
-// StatusChange is the result of a listing status change: the listing, and either the operation of the operator's fan-out
-// or, for a private listing, the connectors it blocks.
+// StatusChange is the result of a listing status change: the listing, and either the operation of the operator's fan-out or, for a private listing, the connectors it blocks.
 type StatusChange struct {
 	Listing   port.Listing       `json:"listing"`
 	Operation *port.Operation    `json:"operation,omitempty"`
 	Blocked   []port.ConnectorID `json:"blocked,omitempty"`
 }
 
-// ChangeListingStatus is quarantineListing, deprecateListing, withdrawListing and restoreListing: the status maps to
-// quarantined, deprecated, deleted and active; version names one version, empty the listing.
+// ChangeListingStatus is quarantineListing, deprecateListing, withdrawListing and restoreListing: the status maps to quarantined, deprecated, deleted and active; version names one version, empty the listing.
 func (s *Service) ChangeListingStatus(ctx context.Context, p port.Principal, ref port.ListingRef, version string, status port.ListingStatus, reason string) (StatusChange, error) {
 	var out StatusChange
 	scope, action, resource := port.Scope{Installation: true}, authz.ListingStatusInst, authz.Installation

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { PEOPLE, TEAM_ADMIN, TEAM_OWNER } from "../testing/fixtures.ts";
 import { viewerOf } from "./viewer.ts";
-import { actionValue, isLoopbackLink, mayReset, mayRevoke, nameOf, rowActionsOf, timeLeft } from "./people.ts";
+import { actionValue, isLoopbackLink, nameOf, rowActionsOf, timeLeft } from "./people.ts";
 
-const [alice, carol, bob] = PEOPLE.people;
+const [alice, , bob] = PEOPLE.people;
 const owner = viewerOf(TEAM_OWNER);
 const admin = viewerOf(TEAM_ADMIN);
 
@@ -25,42 +25,14 @@ describe("rowActionsOf", () => {
     });
 
     test("offers nothing on an Owner", () => {
-      assert.deepEqual(rowActionsOf(admin, alice), []);
+      assert.deepEqual(rowActionsOf(admin, { ...alice, you: false, may_reset: false }), []);
     });
   });
-});
 
-describe("mayReset", () => {
-  test("lets an Owner reset an Admin", () => {
-    assert.equal(mayReset(owner, carol), true);
-  });
-
-  test("refuses an Admin an equal account", () => {
-    assert.equal(mayReset(admin, { ...carol, person: "p-dan", you: false }), false);
-  });
-
-  test("follows the server's may_reset", () => {
-    assert.deepEqual([mayReset(admin, { ...carol, may_reset: true }), mayReset(owner, { ...carol, may_reset: false })], [true, false]);
-  });
-
-  test("refuses anyone their own row", () => {
-    assert.equal(mayReset(admin, { ...carol, you: true, role: "member" }), false);
-  });
-});
-
-describe("mayRevoke", () => {
-  const reset = { id: "r1", purpose: "reset", role: "member", person: "p-bob", created_by: "p-carol", created_at: "", expires_at: "" } as const;
-
-  test("lets an Admin revoke the reset link they made", () => {
-    assert.equal(mayRevoke(admin, reset), true);
-  });
-
-  test("refuses an Admin a join link", () => {
-    assert.equal(mayRevoke(admin, { ...reset, purpose: "join" }), false);
-  });
-
-  test("lets an Owner revoke any link", () => {
-    assert.equal(mayRevoke(owner, { ...reset, created_by: "p-x" }), true);
+  describe("when the server says a row may not be reset", () => {
+    test("offers no reset, whatever the viewer's role", () => {
+      assert.deepEqual(rowActionsOf(owner, { ...bob, may_reset: false }).map(actionValue), ["role:owner", "role:admin", "remove"]);
+    });
   });
 });
 

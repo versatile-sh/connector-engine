@@ -3,8 +3,10 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/core/grant"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -107,7 +109,7 @@ func (d *data) tables(x *snapshotData) map[string]snapshotTable {
 		"pauses": &d.pauses, "tombstones": &d.tombstones, "credentials": &d.credentials, "overlays": &d.overlays, "calls": &d.calls,
 		"clients": &d.clients, "source_syncs": &d.syncs, "exposures": &d.exposures, "operations": &d.operations, "fanouts": &d.fanouts,
 		"roles": &d.roles, "members": &d.members, "audit": slice[storedRow[port.AuditRow]]{&x.audit}, "events": slice[storedEvent]{&x.events},
-		"streams": whole[map[string]int64]{&d.streams}, "inbox": whole[map[string]time.Time]{&d.inbox},
+		"streams": whole[map[string]int64]{&d.streams}, "inbox": whole[map[string]time.Time]{&d.inbox}, "inbox_data": whole[map[string][]byte]{&d.inboxData},
 	}
 }
 
@@ -167,6 +169,20 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 	}
 	if work.inbox == nil {
 		work.inbox = map[string]time.Time{}
+	}
+	if work.inboxData == nil {
+		work.inboxData = map[string][]byte{}
+	}
+	var tenants []port.TenantID
+	for _, r := range work.grants.rows {
+		tenants = append(tenants, r.tenant)
+	}
+	slices.Sort(tenants)
+	in := func(tenant port.TenantID) (port.Tx, error) {
+		return &tx{d: &work, scope: port.Scope{Tenant: tenant}, write: true}, nil
+	}
+	if err := grant.RewriteTenants(slices.Compact(tenants), in, time.Now().UTC()); err != nil {
+		return err
 	}
 	s.d = work
 	return nil

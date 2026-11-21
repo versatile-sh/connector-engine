@@ -1,0 +1,69 @@
+{
+ "version": 1,
+ "clients": [
+  {
+   "id": "claude-code",
+   "name": "Claude Code",
+   "native_skills": true,
+   "shell": true,
+   "files": true,
+   "web": true
+  },
+  {
+   "id": "codex-cli",
+   "name": "Codex CLI",
+   "native_skills": true,
+   "shell": true,
+   "files": true,
+   "web": true
+  },
+  {
+   "id": "cursor",
+   "name": "Cursor",
+   "native_skills": true,
+   "shell": true,
+   "files": true,
+   "web": true
+  },
+  {
+   "id": "gemini-cli",
+   "name": "Gemini CLI",
+   "native_skills": true,
+   "shell": true,
+   "files": true,
+   "web": true
+  },
+  {
+   "id": "vscode-copilot",
+   "name": "VS Code Copilot",
+   "native_skills": true,
+   "shell": true,
+   "files": true,
+   "web": true
+  },
+  {
+   "id": "opencode",
+   "name": "opencode / oh-my-pi",
+   "native_skills": true,
+   "shell": true,
+   "files": true,
+   "web": true
+  },
+  {
+   "id": "claude-desktop",
+   "name": "Claude Desktop",
+   "native_skills": true,
+   "shell": false,
+   "files": false,
+   "web": false
+  },
+  {
+   "id": "chat-mcp",
+   "name": "ChatGPT and other chat-only MCP clients",
+   "native_skills": false,
+   "shell": false,
+   "files": false,
+   "web": false
+  }
+ ]
+}

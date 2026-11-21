@@ -106,6 +106,9 @@ func Core() *Registry {
 		}
 		return f, nil, nil
 	})
+	Register(r, Verifiers, Adapter{Name: "jwks"}, openVerifier)
+	Register(r, Verifiers, Adapter{Name: "local"}, openVerifier)
+	Register(r, Authorizers, Adapter{Name: "table"}, openAuthorizer)
 	Register(r, Indexes, Adapter{Name: "lexical"}, func(context.Context, Env) (port.ToolIndex, func(), error) { return lexical.New(), nil, nil })
 	return r
 }

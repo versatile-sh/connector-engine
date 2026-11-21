@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -79,6 +80,38 @@ func TestLoadingAnEntry(t *testing.T) {
 		}
 		if m.Skill.Redistribution != port.RedistributionMetadataOnly || fetched != 1 || m.Skill.Files[0].Content != nil {
 			t.Fatalf("%s fetched %d", m.Skill.Redistribution, fetched)
+		}
+	})
+	t.Run("the requirements and per-client status are derived from the bundled files, labelled derived", func(t *testing.T) {
+		m, err := skillcatalog.Load(ctx, fixture(t, nil), entryURL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		status := map[string]string{}
+		for _, c := range m.Skill.Compat {
+			status[c.Client] = c.Status
+			if c.Source != "derived" {
+				t.Errorf("%s source %q", c.Client, c.Source)
+			}
+		}
+		if !slices.Contains(m.Skill.Needs.Runtimes, "bash") || status["claude-code"] != "full" || status["claude-desktop"] != "no" {
+			t.Fatalf("%+v %v", m.Skill.Needs, status)
+		}
+	})
+	t.Run("the catalog's own compat is kept, sanitised and always derived", func(t *testing.T) {
+		raw := strings.Replace(entry(t, "pdf.yaml"), "trust_level: \"unreviewed\"\n", `trust_level: "unreviewed"
+requires: {tools: [Bash], runtimes: [python], network: false, mcp: []}
+compat:
+  - {client: gemini-cli, status: instructions, reasons: [no-web, made-up], source: tested}
+  - {client: cursor, status: bogus, reasons: [ok], source: derived}
+`, 1)
+		e, err := skillcatalog.Parse([]byte(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		needs, compat := e.Needs(e.SkillFiles())
+		if !slices.Equal(needs.Runtimes, []string{"python"}) || len(compat) != 1 || compat[0].Client != "gemini-cli" || compat[0].Source != "derived" || !slices.Equal(compat[0].Reasons, []string{"no-web"}) {
+			t.Fatalf("%+v %+v", needs, compat)
 		}
 	})
 	t.Run("a file whose bytes do not match its sha256 is refused", func(t *testing.T) {

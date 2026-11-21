@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/versatile-sh/connector-engine/core/grant"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -131,8 +133,38 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot) error {
 				}
 			}
 		}
-		return nil
+		var owners []port.TenantID
+		for tenant := range byTenant {
+			owners = append(owners, port.TenantID(tenant))
+		}
+		slices.Sort(owners)
+		return t.canonicalGrants(owners)
 	})
+}
+
+const canonicalGrantsMigration = "migrations/0003_canonical_grants.sql"
+
+func migrateGrants(ctx context.Context, q pgx.Tx) error {
+	t := &tx{ctx: ctx, q: q, scope: port.Scope{Installation: true}}
+	if _, err := t.exec(`ALTER TABLE records NO FORCE ROW LEVEL SECURITY`); err != nil {
+		return err
+	}
+	tenants, err := many[port.TenantID](t, `SELECT DISTINCT tenant_id FROM records WHERE kind = 'grant' ORDER BY tenant_id`)
+	if err != nil {
+		return err
+	}
+	if _, err := t.exec(`ALTER TABLE records FORCE ROW LEVEL SECURITY`); err != nil {
+		return err
+	}
+	return t.canonicalGrants(tenants)
+}
+
+func (t *tx) canonicalGrants(tenants []port.TenantID) error {
+	in := func(tenant port.TenantID) (port.Tx, error) { return t, t.as(string(tenant)) }
+	if err := grant.RewriteTenants(tenants, in, time.Now().UTC()); err != nil {
+		return err
+	}
+	return t.as("")
 }
 
 var _ port.Snapshotter = (*Store)(nil)

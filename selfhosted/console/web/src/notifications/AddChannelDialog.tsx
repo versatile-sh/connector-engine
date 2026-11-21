@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { errorText, type ChannelKind } from "../api";
+import { errorText, type ChannelKind, type ChannelKindView } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { addChannel } from "../mutations";
 import { CopyBox } from "../ui/CopyBox";
@@ -8,21 +8,22 @@ import { Field } from "../ui/Field";
 import { Notice } from "../ui/Notice";
 import { Sheet } from "../ui/Sheet";
 import { OPTION_CARD, button } from "../ui/styles";
-import { SETUP, SETUPS, SLACK_MANIFEST, missingFields, settingsFor } from "./setup";
+import { SLACK_MANIFEST, missingFields, setupsOf, settingsFor, textOf, type Setup } from "./setup";
 
-function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
+function SetupForm({ setup, onSaved }: { setup: Setup; onSaved(): void }) {
   const t = useT();
-  const setup = SETUP[kind];
+  const kind = setup.kind;
+  const title = textOf(t, setup.titleKey, setup.title);
   const [label, setLabel] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
   const save = useMutation(addChannel);
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (missingFields(setup, values).length > 0) return;
-    save.mutate({ kind, label: label.trim() || t(setup.title), settings: settingsFor(setup, values) }, { onSuccess: onSaved });
+    save.mutate({ kind, label: label.trim() || title, settings: settingsFor(setup, values) }, { onSuccess: onSaved });
   };
   return (
-    <form onSubmit={onSubmit} className="swap-in mt-5" aria-label={t(setup.title)}>
+    <form onSubmit={onSubmit} className="swap-in mt-5" aria-label={title}>
       {setup.interactive ? null : (
         <Notice live={false} className="mb-4">{t(kind === "ntfy" ? "notify.add.ntfyWarning" : "notify.add.notifyOnly")}</Notice>
       )}
@@ -38,11 +39,11 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
       </ol>
       {kind === "slack" ? <CopyBox label={t("notify.add.manifest")} text={SLACK_MANIFEST} className="mt-4" /> : null}
       <div className="mt-5 border-t border-line pt-4">
-        <Field label={t("notify.field.label")} hint={t("notify.field.labelHint")} placeholder={t(setup.title)} value={label} onChange={(event) => setLabel(event.target.value)} autoComplete="off" />
+        <Field label={t("notify.field.label")} hint={t("notify.field.labelHint")} placeholder={title} value={label} onChange={(event) => setLabel(event.target.value)} autoComplete="off" />
         {setup.fields.map((field) => (
           <Field
             key={field.name}
-            label={t(field.label)}
+            label={textOf(t, field.labelKey, field.label)}
             hint={field.optional ? t("common.optional") : field.secret ? t("notify.field.secretHint") : undefined}
             type={field.secret ? "password" : "text"}
             autoComplete="off"
@@ -66,22 +67,24 @@ function SetupForm({ kind, onSaved }: { kind: ChannelKind; onSaved(): void }) {
 }
 
 /** The centered window that adds a channel: pick a kind, follow its steps outside the console, paste the values back; secrets are never shown again. */
-export function AddChannelDialog({ onClose }: { onClose(): void }) {
+export function AddChannelDialog({ kinds, onClose }: { kinds: readonly ChannelKindView[]; onClose(): void }) {
   const t = useT();
+  const setups = setupsOf(kinds);
   const [kind, setKind] = useState<ChannelKind | undefined>();
+  const chosen = setups.find((setup) => setup.kind === kind);
   return (
     <Sheet title={t("notify.add.title")} closeLabel={t("common.close")} onClose={onClose} wide>
       <div className="@container">
         <p className="text-sm text-pretty text-muted">{t("notify.add.pick")}</p>
         <div role="group" aria-label={t("notify.add.kind")} className="mt-3 grid grid-cols-2 gap-2 @xl:grid-cols-3">
-          {SETUPS.map((setup) => (
+          {setups.map((setup) => (
             <button key={setup.kind} type="button" aria-pressed={kind === setup.kind} className={OPTION_CARD} onClick={() => setKind(setup.kind)}>
-              <span className="text-sm font-medium">{t(setup.title)}</span>
+              <span className="text-sm font-medium">{textOf(t, setup.titleKey, setup.title)}</span>
               <span className="font-mono text-xs text-muted">{t(setup.interactive ? "notify.add.buttons" : "notify.add.linkOnly")}</span>
             </button>
           ))}
         </div>
-        {kind ? <SetupForm key={kind} kind={kind} onSaved={onClose} /> : null}
+        {chosen ? <SetupForm key={chosen.kind} setup={chosen} onSaved={onClose} /> : null}
       </div>
     </Sheet>
   );

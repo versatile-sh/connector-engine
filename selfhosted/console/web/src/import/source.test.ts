@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { readSource } from "./source.ts";
+import { linkOf, readSource } from "./source.ts";
 
 const plain = { local: false, headerSecret: false };
 
@@ -51,5 +51,26 @@ describe("readSource", () => {
         assert.deepEqual(readSource(text, "mcp", plain), { ok: false });
       });
     }
+  });
+});
+
+describe("linkOf", () => {
+  const listing = "?listing=" + encodeURIComponent("https://versatile.sh/l/linear.yaml");
+  const mcp = "?mcp=" + encodeURIComponent("https://mcp.example.com/mcp");
+
+  for (const path of ["/import", "/", "/connectors"]) {
+    describe(`on ${path}`, () => {
+      test("reads a listing link", () => assert.deepEqual(linkOf(path, new URLSearchParams(listing)), { listing: "https://versatile.sh/l/linear.yaml" }));
+      test("reads an MCP link", () => assert.deepEqual(linkOf(path, new URLSearchParams(mcp)), { mcp: "https://mcp.example.com/mcp" }));
+      test("prefers the listing when both are given", () => assert.deepEqual(linkOf(path, new URLSearchParams(listing + "&" + mcp.slice(1))), { listing: "https://versatile.sh/l/linear.yaml" }));
+      test("reads nothing from an empty link", () => assert.equal(linkOf(path, new URLSearchParams("?listing=&mcp=")), undefined));
+      test("reads nothing without a link", () => assert.equal(linkOf(path, new URLSearchParams()), undefined));
+    });
+  }
+
+  describe("on a page that is not a front page", () => {
+    test("reads nothing, so a link never opens over Access or Activity", () => {
+      for (const path of ["/access", "/activity", "/connectors/c1", "/skills"]) assert.equal(linkOf(path, new URLSearchParams(listing)), undefined, path);
+    });
   });
 });

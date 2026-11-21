@@ -47,6 +47,7 @@ type Agent struct {
 	ConnectedAt time.Time `json:"connected_at,omitzero"`
 	Seen        bool      `json:"seen,omitempty"`
 	SignedOutAt time.Time `json:"signed_out_at,omitzero"`
+	App         string    `json:"app,omitempty"`
 }
 
 // StoredSession is a console session as the state file keeps it, keyed by the SHA-256 of its cookie value, and the person it belongs to.
@@ -57,6 +58,7 @@ type StoredSession struct {
 }
 
 type stateFile struct {
+	Format              int                          `json:"format"`
 	Owner               *Owner                       `json:"owner,omitempty"`
 	Users               map[string]User              `json:"users,omitempty"`
 	LegacyPerson        string                       `json:"legacy_person,omitempty"`
@@ -77,6 +79,7 @@ type stateFile struct {
 	NewKeyLimits        map[string]map[string]Access `json:"new_key_limits,omitempty"`
 	Slots               map[string]KeySlot           `json:"key_slots,omitempty"`
 	Credentials         map[string]CredentialMode    `json:"credential_modes,omitempty"`
+	Signup              SignupSettings               `json:"signup,omitzero"`
 }
 
 // Origin is where a connector or a skill was imported from, as the import asked for it, so a setup file can import it again.
@@ -104,6 +107,7 @@ func OpenState(path, person string) (*State, error) {
 	s := &State{path: path, person: person}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
+		s.data.Format = stateFormat
 		return s, nil
 	}
 	if err != nil {
@@ -112,9 +116,34 @@ func OpenState(path, person string) (*State, error) {
 	if err := json.Unmarshal(raw, &s.data); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	migrateSlots(&s.data)
-	migrateUsers(&s.data, person)
+	if err := upgradeState(&s.data, person); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
 	return s, nil
+}
+
+const stateFormat = 2
+
+var stateSteps = []func(d *stateFile, person string){
+	func(d *stateFile, person string) {
+		migrateSlots(d)
+		migrateUsers(d, person)
+	},
+	func(d *stateFile, _ string) { d.Signup = SignupSettings{Role: RoleMember} },
+}
+
+func upgradeState(d *stateFile, person string) error {
+	if d.Format > stateFormat {
+		return fmt.Errorf("the state file has format %d and this console reads up to format %d: run a newer console, or restore a backup made by this one", d.Format, stateFormat)
+	}
+	if d.Format < 0 {
+		return fmt.Errorf("the state file has format %d", d.Format)
+	}
+	for _, step := range stateSteps[d.Format:] {
+		step(d, person)
+	}
+	d.Format = stateFormat
+	return nil
 }
 
 var errUnchanged = errors.New("unchanged")
@@ -246,11 +275,24 @@ func (s *State) PutAgent(a Agent) error {
 		case ok && a.Owner != "" && a.Owner != old.Owner:
 			return ErrNameTaken
 		case ok:
-			a.Owner, a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen = old.Owner, old.ViaBrowser, old.ClientID, old.ConnectedAt, old.Seen
+			a.Owner, a.ViaBrowser, a.ClientID, a.ConnectedAt, a.Seen, a.App = old.Owner, old.ViaBrowser, old.ClientID, old.ConnectedAt, old.Seen, old.App
 		case a.Owner == "":
 			return invalid("the access key %s has no owner", a.Name)
 		}
 		put(&d.Agents, a.Name, a)
+		return nil
+	})
+}
+
+// SetAgentApp records which AI app the owner picked for the access key name; an empty id clears it.
+func (s *State) SetAgentApp(name, app string) error {
+	return s.update(func(d *stateFile) error {
+		a, ok := d.Agents[name]
+		if !ok {
+			return notFound("no agent is named %s", name)
+		}
+		a.App = app
+		d.Agents[name] = a
 		return nil
 	})
 }

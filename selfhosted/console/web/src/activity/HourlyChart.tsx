@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { HourCount } from "../api";
 import type { Locale } from "../i18n";
 import { useLocale, useT } from "../i18n/I18nProvider";
@@ -33,8 +34,8 @@ function Stack({ bar, x, max, label }: { bar: Bar; x: number; max: number; label
   );
 }
 
-/** The calls of the period as stacked bars, per hour over up to two days and per local day beyond, quiet paper for answered calls, full paper for waiting ones and colour only for failed and denied ones, with a legend; screen readers get the same numbers as a table. */
-export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
+/** The calls of the period as stacked bars, per hour over up to two days and per local day beyond, quiet paper for answered calls, full paper for waiting ones and colour only for failed and denied ones, with a legend and, when given, a control of the page beside its caption; screen readers get the same numbers as a table. */
+export function HourlyChart({ hours, aside }: { hours: readonly HourCount[]; aside?: ReactNode }) {
   const t = useT();
   const locale = useLocale();
   const bars = barsOf(hours);
@@ -47,11 +48,14 @@ export function HourlyChart({ hours }: { hours: readonly HourCount[] }) {
   const labelOf = (bar: Bar) => t("activity.chart.bar", { when: whenOf(bar, locale), total: bar.total, ok: bar.ok, failed: bar.failed, denied: bar.denied, waiting: bar.waiting });
   return (
     <figure aria-labelledby="chart-title" className={`${SURFACE} min-w-0 p-5 sm:p-6`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+      <div className={`flex flex-wrap justify-between gap-x-4 gap-y-2 ${aside ? "items-center" : "items-baseline gap-y-1"}`}>
         <figcaption id="chart-title" className={TITLE}>
           {title}
         </figcaption>
-        <span className={CAPTION}>{t("activity.chart.summary", { total, max: total === 0 ? 0 : max, unit: t(daily ? "activity.chart.day" : "activity.chart.hour") })}</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className={CAPTION}>{t("activity.chart.summary", { total, max: total === 0 ? 0 : max, unit: t(daily ? "activity.chart.day" : "activity.chart.hour") })}</span>
+          {aside}
+        </div>
       </div>
       <svg aria-hidden="true" viewBox={`0 0 ${width} ${HEIGHT}`} preserveAspectRatio="none" className="mt-5 block h-36 w-full overflow-visible">
         <line x1={0} x2={width} y1={HEIGHT - 0.5} y2={HEIGHT - 0.5} vectorEffect="non-scaling-stroke" className="stroke-line-strong" />

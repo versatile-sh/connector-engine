@@ -2,6 +2,8 @@
 package grant
 
 import (
+	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -34,9 +36,12 @@ type Policy struct {
 	AlwaysMax time.Duration
 }
 
-// Validate refuses, with code row_refused, a row whose selector, mode, scope, hash, expiry or max_uses the grant rules forbid.
+// Validate refuses, with code row_refused, a row whose selector, mode, scope, agent, hash, expiry or max_uses the grant rules forbid.
 func Validate(g port.Grant, p Policy) error {
 	refuse := func(why string) error { return port.Errorf(port.CodeRowRefused, "%s", why) }
+	if g.Agent != "" && g.ScopeKind != port.ScopeSession && (g.ScopeKind != port.ScopeAgent || string(g.Agent) != g.ScopeID) {
+		return refuse("only a session row names an agent; an agent row may repeat its own")
+	}
 	sel := g.Selector
 	if kind := port.ItemKind(sel); sel != port.SelectorAll && !validClass(sel) && !(strings.HasPrefix(sel, port.SelectorFunction) && len(sel) > len(port.SelectorFunction)) && !(kind != "" && len(sel) > len(kind)) {
 		return refuse("unknown selector " + sel)
@@ -214,4 +219,134 @@ func Confirm(g port.Grant, f port.Function) (port.Grant, error) {
 	}
 	g.DefinitionHash = f.DefinitionHash
 	return g, nil
+}
+
+// Normalize clears agent on every row but a session row: evaluation reads it nowhere else, so the row answers as before.
+func Normalize(g port.Grant) port.Grant {
+	if g.ScopeKind != port.ScopeSession {
+		g.Agent = ""
+	}
+	return g
+}
+
+// ConflictReason is the reason of the deny that replaces rows which came to share a key and none of which decides every instant.
+const ConflictReason = "rows_conflicted"
+
+// Canonical normalizes rows; of rows that then share a key, those dead at now go and the rest become the one that decides every later instant, or one permanent deny.
+func Canonical(rows []port.Grant, now time.Time) []port.Grant {
+	groups := map[string][]port.Grant{}
+	var keys []string
+	for _, g := range rows {
+		g = Normalize(g)
+		k := g.Key()
+		if groups[k] == nil {
+			keys = append(keys, k)
+		}
+		groups[k] = append(groups[k], g)
+	}
+	out := make([]port.Grant, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, merged(groups[k], now))
+	}
+	return out
+}
+
+func merged(rows []port.Grant, now time.Time) port.Grant {
+	slices.SortFunc(rows, func(a, b port.Grant) int { return strings.Compare(string(a.ID), string(b.ID)) })
+	live := slices.DeleteFunc(slices.Clone(rows), func(g port.Grant) bool { return !Live(g, now) })
+	switch len(live) {
+	case 0:
+		return rows[0]
+	case 1:
+		return live[0]
+	}
+	for _, r := range live {
+		if decides(r, live) {
+			return r
+		}
+	}
+	g := live[0]
+	g.Mode, g.ExpiresAt, g.MaxUses, g.Uses, g.Origin = port.ModeDeny, time.Time{}, 0, 0, port.OriginSettings
+	g.CreatedBy, g.CreatedAt, g.Reason = "system", now, ConflictReason
+	return g
+}
+
+func decides(r port.Grant, rows []port.Grant) bool {
+	if r.MaxUses != 0 {
+		return false
+	}
+	for _, s := range rows {
+		switch {
+		case strictness(s.Mode) < strictness(r.Mode),
+			s.Mode == r.Mode && (r.Mode == port.ModeAllow || r.Mode == port.ModeAskOnce) && s.DefinitionHash != r.DefinitionHash,
+			!r.ExpiresAt.IsZero() && (s.ExpiresAt.IsZero() || s.ExpiresAt.After(r.ExpiresAt)):
+			return false
+		}
+	}
+	return true
+}
+
+// Rewrite stores Canonical of the rows tx lists, deleting merged rows first; each merge is audited with its original rows, and cleared agents with a count.
+func Rewrite(tx port.Tx, now time.Time) error {
+	rows, err := tx.ListGrants(port.GrantFilter{})
+	if err != nil || len(rows) == 0 {
+		return err
+	}
+	out := Canonical(rows, now)
+	kept, byKey := make(map[port.GrantID]port.Grant, len(out)), make(map[string]port.Grant, len(out))
+	for _, g := range out {
+		kept[g.ID], byKey[g.Key()] = g, g
+	}
+	group := map[port.GrantID][]port.Grant{}
+	for _, g := range rows {
+		id := byKey[Normalize(g).Key()].ID
+		group[id] = append(group[id], g)
+	}
+	var changed []port.Grant
+	cleared := 0
+	for _, g := range rows {
+		k, ok := kept[g.ID]
+		switch {
+		case !ok:
+			if err := tx.DeleteGrant(g.ID); err != nil {
+				return err
+			}
+		case !reflect.DeepEqual(k, g):
+			changed = append(changed, k)
+			if len(group[g.ID]) == 1 {
+				cleared++
+			}
+		}
+	}
+	for _, g := range changed {
+		if err := tx.PutGrant(g); err != nil {
+			return err
+		}
+	}
+	for _, g := range out {
+		if len(group[g.ID]) > 1 {
+			if err := tx.Audit(port.AuditRow{At: now, Tenant: g.Tenant, Actor: "system", Action: "grant.merged", Subject: string(g.ID),
+				Detail: map[string]any{"rows": group[g.ID], "kept": g}}); err != nil {
+				return err
+			}
+		}
+	}
+	if cleared == 0 {
+		return nil
+	}
+	return tx.Audit(port.AuditRow{At: now, Tenant: rows[0].Tenant, Actor: "system", Action: "grant.agent_cleared", Subject: "grants", Detail: map[string]any{"count": cleared}})
+}
+
+// RewriteTenants runs Rewrite at now once per tenant, in the unit of work in returns for it.
+func RewriteTenants(tenants []port.TenantID, in func(port.TenantID) (port.Tx, error), now time.Time) error {
+	for _, tenant := range tenants {
+		tx, err := in(tenant)
+		if err != nil {
+			return err
+		}
+		if err := Rewrite(tx, now); err != nil {
+			return err
+		}
+	}
+	return nil
 }

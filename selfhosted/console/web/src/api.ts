@@ -43,6 +43,8 @@ export type Session = {
   signed_in: boolean;
   csrf?: string;
   mcp_url: string;
+  setup_token_required?: boolean;
+  signup_open?: boolean;
   onboarding_dismissed?: boolean;
   key_protection?: KeyProtection;
   user?: SessionUser;
@@ -142,6 +144,18 @@ export type SkillSource = { repository: string; path: string; commit: string; ur
 /** The licence a catalog states for a skill. */
 export type SkillLicence = { spdx?: string; from?: string; redistributable: boolean };
 
+/** What a skill asks of the app that runs it, derived from its files. */
+export type SkillNeeds = { tools: string[]; runtimes: string[]; network: boolean; mcp: string[] };
+
+/** How well an AI app can use a skill: full, instructions only, or not at all. */
+export type CompatStatus = "full" | "instructions" | "no";
+
+/** A skill's derived status in one AI app, with machine reasons; never a tested result. */
+export type ClientCompat = { client: string; name: string; status: CompatStatus; reasons: string[]; source: "derived" };
+
+/** An AI app behind this gateway's access keys that cannot fully use a skill, with those keys. */
+export type CompatWarning = ClientCompat & { keys: string[] };
+
 /** What a skill is before or after it is imported: provenance, licence, scripts and files. */
 export type SkillFacts = {
   name: string;
@@ -153,6 +167,9 @@ export type SkillFacts = {
   digest?: string;
   files: { path: string; bytes: number }[];
   keys: string[];
+  needs: SkillNeeds;
+  compat: ClientCompat[];
+  warnings: CompatWarning[];
 };
 
 /** One access key's choice on one skill. */
@@ -279,6 +296,15 @@ export type ActivityData = {
   agents: string[];
 };
 
+/** How many calls a stretch of time held and how many of them failed or were denied. */
+export type WindowCount = { total: number; failed: number };
+
+/** How many calls one access key made and how many of them failed or were denied. */
+export type KeyCount = { agent: string; total: number; failed: number };
+
+/** What GET /api/activity/summary answers: the last 24 hours, by hour, against the 24 before them, and over the last seven days the calls by hour, by connector and by access key, and the newest ones. */
+export type ActivitySummary = { at: string; total: number; day: WindowCount; previous_day: WindowCount; day_hours: HourCount[]; hours: HourCount[]; connectors: ConnectorCount[]; keys: KeyCount[]; recent: ActivityCall[] };
+
 /** How long the console keeps calls: none, a number of days or for ever. */
 export type Keep = "off" | "7d" | "30d" | "90d" | "forever";
 
@@ -295,6 +321,12 @@ export type PruneResult = { count: number; deleted: boolean };
 export type ApiError = { status: number; message: string; code?: string | undefined };
 
 let csrfToken = "";
+let setupToken = "";
+
+/** Sets the setup token the first-run requests carry as `X-Setup-Token`. */
+export const setSetupToken = (token: string) => {
+  setupToken = token;
+};
 
 /** Sets the CSRF token every mutating request carries. */
 export const setCsrf = (token: string | undefined) => {
@@ -320,6 +352,7 @@ async function send(method: string, path: string, body?: unknown): Promise<Respo
   const form = body instanceof FormData;
   if (body !== undefined && !form) headers["Content-Type"] = "application/json";
   if (method !== "GET" && csrfToken) headers["X-CSRF-Token"] = csrfToken;
+  if (setupToken) headers["X-Setup-Token"] = setupToken;
   const response = await fetch(path, {
     method,
     headers,
@@ -386,11 +419,20 @@ export type ApprovalView = {
   always_error?: string;
 };
 
+/** One held call that was answered or ran out of time, as GET /api/approvals/recent lists it: what it asked for, the key that asked, how it ended, who answered and when. */
+export type DecisionRow = { id: string; agent: string; connector: string; function: string; class?: string; state: string; decided_by?: string; channel?: string; at: string; owner?: RowOwner };
+
 /** What POST /api/approvals/{id}/decide answers: the record now, and whether someone else had decided it first. */
 export type Decision = { outcome: ApprovalView; already_decided: boolean };
 
-/** Where a notification can go: chat bots that take clicks, and notify-only pushes and webhooks. */
-export type ChannelKind = "discord" | "slack" | "telegram" | "ntfy" | "discord_webhook" | "slack_webhook";
+/** The name of a channel kind as the server lists it in `NotificationsData.kinds`. */
+export type ChannelKind = string;
+
+/** One setting a channel kind takes, as the server describes it. */
+export type ChannelFieldView = { name: string; label: string; placeholder?: string; secret: boolean; optional?: boolean };
+
+/** A channel kind the server can build: what to ask for, and whether it takes answers or only notifies. */
+export type ChannelKindView = { kind: ChannelKind; title: string; interactive: boolean; fields: ChannelFieldView[] };
 
 /** An approval channel as the console lists it, secrets left out. */
 export type ChannelView = {
@@ -409,7 +451,7 @@ export type ChannelView = {
 export type DeviceView = { id: string; name: string; created_at: string; last_seen?: string };
 
 /** What GET /api/notifications answers; it never carries a secret. */
-export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[]; apps: { name: string; elicit: boolean }[] };
+export type NotificationsData = { channels: ChannelView[]; devices: DeviceView[]; apps: { name: string; elicit: boolean }[]; kinds: ChannelKindView[] };
 
 /** A computer just paired for desktop popups: its key, shown once, and the command that uses it. */
 export type PairedDevice = { device: DeviceView; key: string; command: string };
@@ -468,19 +510,22 @@ export type SlotChoice = { action: "keep" } | { action: "apply"; key: string } |
 export type SetupOptions = { slots?: Record<string, SlotChoice>; existing_keys?: boolean };
 
 /** One user of this console as the People tab lists them: when they joined, how many keys they hold, and whether they are the viewer. */
-export type Person = { person: string; username: string; role: Role; created_at: string; keys: number; you: boolean; may_reset?: boolean };
+export type Person = { person: string; username: string; role: Role; created_at: string; keys: number; you: boolean; may_reset: boolean };
 
 /** What a link is for: joining with a role, or setting a new password for one user. */
 export type LinkPurpose = "join" | "reset";
 
 /** A join or reset link that has not been used yet; its token is never shown again. */
-export type PendingLink = { id: string; purpose: LinkPurpose; role: Role; person: string; created_by: string; created_at: string; expires_at: string };
+export type PendingLink = { id: string; purpose: LinkPurpose; role: Role; person: string; created_by: string; created_at: string; expires_at: string; may_revoke: boolean };
 
 /** One entry of the console's own record of changes to people and access: who did what to whom. */
 export type AuditEntry = { at: string; actor: string; action: string; target: string; detail?: Record<string, string> };
 
 /** What GET /api/people answers: the people, the links still waiting and the newest changes, newest first. */
-export type PeopleData = { people: Person[]; invites: PendingLink[]; audit: AuditEntry[] };
+export type PeopleData = { people: Person[]; invites: PendingLink[]; audit: AuditEntry[]; signup: SignupSettings };
+
+/** Whether anyone may create an account on the sign-in screen, and the role that account gets. */
+export type SignupSettings = { enabled: boolean; role: "member" | "admin" };
 
 /** A join or reset link just made: shown once, with when it stops working. */
 export type NewLink = { id: string; link: string; expires_at: string };

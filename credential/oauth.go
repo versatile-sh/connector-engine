@@ -25,8 +25,7 @@ type metadata struct {
 	RevocationEndpoint    string `json:"revocation_endpoint"`
 }
 
-// Broker is the OAuthBroker for pre-registered clients: PKCE S256, a bound state, single-flight refresh and revocation.
-// Issuer requests go through HTTP, or a zero egress guard when nil, and never follow a redirect.
+// Broker is the OAuthBroker for pre-registered clients: PKCE S256, a bound state, single-flight refresh and revocation. Issuer requests go through HTTP, or a zero egress guard when nil, and never follow a redirect.
 type Broker struct {
 	HTTP *http.Client
 
@@ -46,7 +45,7 @@ func (b *Broker) client() *http.Client {
 		if b.HTTP != nil {
 			c = new(*b.HTTP)
 		}
-		c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+		c.CheckRedirect = noRedirect
 		b.http = c
 	})
 	return b.http

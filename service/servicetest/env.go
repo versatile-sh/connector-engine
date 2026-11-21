@@ -15,12 +15,18 @@ import (
 	"github.com/versatile-sh/connector-engine/store/memory"
 )
 
-// Env is a Service wired over the memory store, the table authorizer and the fakes, with a worker on the same clock.
+// Store is a store with its outbox, the backing of an Env.
+type Store interface {
+	port.Store
+	port.Outbox
+}
+
+// Env is a Service wired over a store, the table authorizer and the fakes, with a worker on the same clock.
 type Env struct {
 	T       *testing.T
 	Ctx     context.Context
 	Clock   *Clock
-	Store   *memory.Store
+	Store   Store
 	Secrets *Secrets
 	Runtime *Runtime
 	Auth    *table.Authorizer
@@ -32,10 +38,16 @@ type Env struct {
 // Epoch is the fake time every Env starts at.
 var Epoch = time.Date(2026, 11, 18, 9, 0, 0, 0, time.UTC)
 
-// New builds an Env; tune may change the config and the dependencies before the Service is built.
+// New builds an Env over the memory store; tune may change the config and the dependencies before the Service is built.
 func New(t *testing.T, tune ...func(*service.Config, *service.Deps)) *Env {
 	t.Helper()
-	e := &Env{T: t, Ctx: context.Background(), Clock: NewClock(Epoch), Store: memory.New(), Secrets: NewSecrets(), Runtime: NewRuntime()}
+	return NewOn(t, memory.New(), tune...)
+}
+
+// NewOn builds an Env over store; tune may change the config and the dependencies before the Service is built.
+func NewOn(t *testing.T, store Store, tune ...func(*service.Config, *service.Deps)) *Env {
+	t.Helper()
+	e := &Env{T: t, Ctx: context.Background(), Clock: NewClock(Epoch), Store: store, Secrets: NewSecrets(), Runtime: NewRuntime()}
 	cfg := service.DefaultConfig()
 	e.Auth = table.New(e.Store, e.Clock, table.Settings{DestructiveMax: cfg.DestructiveMax})
 	deps := service.Deps{Store: e.Store, Clock: e.Clock, Authorizer: e.Auth, Secrets: e.Secrets, Runtime: e.Runtime, NewID: e.id}

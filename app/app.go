@@ -16,7 +16,6 @@ import (
 
 	"github.com/versatile-sh/connector-engine/artifact/digest"
 	"github.com/versatile-sh/connector-engine/auth/local"
-	"github.com/versatile-sh/connector-engine/authz/table"
 	"github.com/versatile-sh/connector-engine/config"
 	"github.com/versatile-sh/connector-engine/credential"
 	"github.com/versatile-sh/connector-engine/gateway"
@@ -136,9 +135,15 @@ func (a *App) compose(ctx context.Context, b builder) error {
 	if a.issuer != nil {
 		localKeys = a.issuer.Handler()
 	}
-	if a.Verifier, err = b.verifier(localKeys, a.Config.Auth.LocalIssuer.Name); err != nil {
+	if a.Verifier, closer, err = b.verifier(ctx, localKeys); err != nil {
 		return fmt.Errorf("auth: %w", err)
 	}
+	a.closers = append(a.closers, closer)
+	authorizer, closer, err := b.authorizer(ctx, store)
+	if err != nil {
+		return fmt.Errorf("authz: %w", err)
+	}
+	a.closers = append(a.closers, closer)
 	if ref := a.Config.Auth.Operator.TokenRef; ref != "" {
 		if a.operator, err = resolveRef(b.lookup, ref); err != nil {
 			return fmt.Errorf("auth.operator.tokenRef: %w", err)
@@ -153,10 +158,21 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		return err
 	}
 	a.closers = append(a.closers, closer)
+	scanner, closer, err := b.scanner(ctx)
+	if err != nil {
+		return fmt.Errorf("scanner: %w", err)
+	}
+	a.closers = append(a.closers, closer)
+	suggester, closer, err := b.suggester(ctx)
+	if err != nil {
+		return fmt.Errorf("suggester: %w", err)
+	}
+	a.closers = append(a.closers, closer)
 	a.Service, err = service.New(service.Deps{
+		Scanner: scanner, Suggester: suggester,
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
-		Authorizer: table.New(store, a.Clock, table.Settings{DestructiveMax: svcCfg.DestructiveMax, ForceAsk: svcCfg.ForceAsk}),
-		Broker:     &credential.Broker{HTTP: b.guard(b.issuerHosts()).Client()}, Registrar: credential.NewRegistrar(clients...).WithStore(store, secrets),
+		Authorizer: authorizer, Log: a.log,
+		Broker: &credential.Broker{HTTP: b.guard(b.issuerHosts()).Client()}, Registrar: credential.NewRegistrar(clients...).WithStore(store, secrets),
 	}, svcCfg)
 	if err != nil {
 		return err

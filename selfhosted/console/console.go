@@ -38,14 +38,15 @@ type Console struct {
 	Restart       func()
 	LoopbackHost  string
 	ManagersGroup string
+	SetupToken    string
 
-	loginMu       sync.Mutex
 	inviteMu      sync.Mutex
 	restoring     sync.Mutex
 	reconciling   sync.Mutex
 	keying        sync.Mutex
 	passwordFails lockout
 	inviteFails   minuteWindow
+	signupHits    lockout
 	icons         iconCache
 	connects      connectStates
 	as            authServer
@@ -68,6 +69,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("POST /api/invites", c.createInvite)
 	rt.handle("DELETE /api/invites/{id}", c.revokeInvite)
 	rt.handle("POST /api/people/{person}/reset", c.createReset)
+	rt.handle("PUT /api/people/signup", c.setSignup)
 	rt.handle("PUT /api/people/{person}/role", c.setRole)
 	rt.handle("DELETE /api/people/{person}", c.removePerson)
 	rt.handle("POST /api/invite/inspect", c.inspectInvite)
@@ -75,6 +77,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("GET /api/ready", c.ready)
 	rt.handle("POST /api/setup", c.setup)
 	rt.handle("POST /api/login", c.login)
+	rt.handle("POST /api/signup", c.signup)
 	rt.handle("POST /api/logout", c.logout)
 	rt.handle("GET /api/account", c.account)
 	rt.handle("PUT /api/account/password", c.changePassword)
@@ -111,6 +114,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("POST /api/agents/seen", c.seeAgents)
 	rt.handle("POST /api/onboarding/dismiss", c.dismissOnboarding)
 	rt.handle("GET /api/approvals", c.listApprovals)
+	rt.handle("GET /api/approvals/recent", c.recentDecisions)
 	rt.handle("POST /api/approvals/{id}", c.decide)
 	rt.handle("POST /api/approvals/{id}/cancel", c.cancelApproval)
 	rt.handle("GET /api/icon", c.icon)
@@ -119,6 +123,7 @@ func (c *Console) routes(rt *router) {
 	rt.handle("POST /api/activity/prune", c.withActivity(c.pruneActivity))
 	rt.handle("GET /api/activity/settings", c.withActivity(c.activitySettings))
 	rt.handle("PUT /api/activity/settings", c.withActivity(c.setActivitySettings))
+	rt.handle("GET /api/activity/summary", c.withActivity(c.activitySummary))
 	rt.handle("GET /api/activity/{id}", c.withActivity(c.activityDetail))
 	agent := c.gateMCP(c.refuseRevoked(c.capture(c.elicitProxy(c.agentProxy()))))
 	for _, m := range []string{"GET", "POST", "DELETE"} {

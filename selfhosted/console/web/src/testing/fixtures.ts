@@ -1,5 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
-import type { Account, ActivityData, ActivitySettings, Approval, Capability, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
+import type { Account, ActivityData, ActivitySettings, ActivitySummary, DecisionRow, Approval, Capability, ChannelKindView, Connector, NotificationsData, PeopleData, Session, Skill, SlotView } from "../api";
 import type { KeysData } from "../queries";
 
 /** Every capability a lone Owner holds. */
@@ -96,6 +96,13 @@ export const APPROVAL = {
   choices: ["once", "always", "deny"],
 } as const satisfies Approval;
 
+/** Three decisions, newest first: an allowed call, a denied one and one that ran out of time. */
+export const DECISIONS = [
+  { id: "d1", agent: "laptop", connector: "c1", function: "send_message", class: "write", state: "executed", decided_by: "alice", channel: "console", at: "2026-11-20T11:55:00Z", owner: ALICE },
+  { id: "d2", agent: "laptop", connector: "c1", function: "delete_message", class: "write", state: "denied", decided_by: "alice", channel: "discord", at: "2026-11-20T09:00:00Z", owner: ALICE },
+  { id: "d3", agent: "phone", connector: "c1", function: "send_message", state: "expired", at: "2026-11-19T12:00:00Z", owner: ALICE },
+] as const satisfies readonly DecisionRow[];
+
 /** A day of activity with one call. */
 export const ACTIVITY = {
   from: "2026-11-19T00:00:00Z",
@@ -107,21 +114,56 @@ export const ACTIVITY = {
   agents: ["laptop"],
 } as const satisfies ActivityData;
 
+const dayHours = (): ActivitySummary["hours"] => Array.from({ length: 25 }, (_, at) => ({ start: new Date(Date.parse("2026-11-19T11:00:00Z") + at * 3_600_000).toISOString(), ok: at === 20 ? 2 : 0, error: at === 22 ? 1 : 0, denied: 0, pending: 0, running: 0 }));
+
+const hours = (count: number): ActivitySummary["hours"] => Array.from({ length: count }, (_, at) => ({ start: new Date(Date.parse("2026-11-13T12:00:00Z") + at * 3_600_000).toISOString(), ok: at % 5 === 0 ? 2 : 0, error: at === count - 3 ? 1 : 0, denied: 0, pending: 0, running: 0 }));
+
+/** A week with calls: three in the last day against two the day before, one of them failed, over two connectors and two access keys. */
+export const SUMMARY = {
+  at: "2026-11-20T12:00:00Z",
+  total: 7,
+  day: { total: 3, failed: 1 },
+  previous_day: { total: 2, failed: 0 },
+  day_hours: dayHours(),
+  hours: hours(169),
+  connectors: [
+    { connector: "c1", alias: "gmail", total: 5, failed: 1 },
+    { alias: "gone", total: 2, failed: 0 },
+  ],
+  keys: [
+    { agent: "laptop", total: 6, failed: 1 },
+    { agent: "phone", total: 1, failed: 0 },
+  ],
+  recent: [{ id: "k1", at: "2026-11-20T11:00:00Z", agent: "laptop", connector: "c1", alias: "gmail", function: "list_messages", class: "read", outcome: "ok", duration_ms: 120, captured: true, owner: ALICE }],
+} as const satisfies ActivitySummary;
+
+/** A week with no calls at all. */
+export const QUIET = { at: "2026-11-20T12:00:00Z", total: 0, day: { total: 0, failed: 0 }, previous_day: { total: 0, failed: 0 }, day_hours: dayHours().map((hour) => ({ ...hour, ok: 0, error: 0 })), hours: hours(169).map((hour) => ({ ...hour, ok: 0, error: 0 })), connectors: [], keys: [], recent: [] } as const satisfies ActivitySummary;
+
 const SETTINGS = { record_arguments: false, record_results: false, retention: "30d", retention_days: 30 } as const satisfies ActivitySettings;
 
-const NOTIFICATIONS = { channels: [], devices: [], apps: [] } as const satisfies NotificationsData;
+/** The channel kinds as GET /api/notifications lists them. */
+export const CHANNEL_KINDS = [
+  { kind: "discord", title: "Discord", interactive: true, fields: [{ name: "token", label: "Bot token", secret: true }, { name: "owner_user_id", label: "Your Discord user id", secret: false }] },
+  { kind: "slack", title: "Slack", interactive: true, fields: [{ name: "app_token", label: "App-level token", placeholder: "xapp-", secret: true }, { name: "bot_token", label: "Bot token", placeholder: "xoxb-", secret: true }, { name: "owner_user_id", label: "Your Slack member id", secret: false }] },
+  { kind: "ntfy", title: "ntfy", interactive: false, fields: [{ name: "url", label: "Topic URL", secret: true }, { name: "token", label: "Access token", secret: true, optional: true }] },
+  { kind: "future_chat", title: "Future chat", interactive: true, fields: [{ name: "key", label: "Key", secret: true }] },
+] as const satisfies ChannelKindView[];
+
+const NOTIFICATIONS = { channels: [], devices: [], apps: [], kinds: CHANNEL_KINDS } as const satisfies NotificationsData;
 
 const ACCOUNT = { username: "alice", last_export: "2026-11-19T00:00:00Z" } as const satisfies Account;
 
 /** The people of a team of three, a pending invite and one change. */
 export const PEOPLE = {
   people: [
-    { person: "owner", username: "alice", role: "owner", created_at: "2026-11-01T00:00:00Z", keys: 1, you: true },
-    { person: "p-carol", username: "carol", role: "admin", created_at: "2026-11-02T00:00:00Z", keys: 0, you: false },
-    { person: "p-bob", username: "bob", role: "member", created_at: "2026-11-03T00:00:00Z", keys: 3, you: false },
+    { person: "owner", username: "alice", role: "owner", created_at: "2026-11-01T00:00:00Z", keys: 1, you: true, may_reset: false },
+    { person: "p-carol", username: "carol", role: "admin", created_at: "2026-11-02T00:00:00Z", keys: 0, you: false, may_reset: true },
+    { person: "p-bob", username: "bob", role: "member", created_at: "2026-11-03T00:00:00Z", keys: 3, you: false, may_reset: true },
   ],
-  invites: [{ id: "i1", purpose: "join", role: "member", person: "", created_by: "owner", created_at: "2026-11-19T00:00:00Z", expires_at: "2026-11-22T00:00:00Z" }],
+  invites: [{ id: "i1", purpose: "join", role: "member", person: "", created_by: "owner", created_at: "2026-11-19T00:00:00Z", expires_at: "2026-11-22T00:00:00Z", may_revoke: true }],
   audit: [{ at: "2026-11-03T00:00:00Z", actor: "owner", action: "user.created", target: "p-bob" }],
+  signup: { enabled: false, role: "member" },
 } as const satisfies PeopleData;
 
 const SKILLS: Skill[] = [];
@@ -135,7 +177,11 @@ export const pageData = (session: Session): readonly (readonly [QueryKey, unknow
   [["agents"], KEYS],
   [["agents", "page"], KEYS],
   [["approvals"], { approvals: [APPROVAL] }],
+  [["approvals", "recent", "mine"], { decisions: DECISIONS }],
+  [["approvals", "recent", "everyone"], { decisions: DECISIONS }],
   [["activity", { range: "24h" }, 30], { pages: [ACTIVITY], pageParams: [""] }],
+  [["activity", "summary", "mine"], SUMMARY],
+  [["activity", "summary", "everyone"], SUMMARY],
   [["activity-settings"], SETTINGS],
   [["notifications"], NOTIFICATIONS],
   [["account"], ACCOUNT],

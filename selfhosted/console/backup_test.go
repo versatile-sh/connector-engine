@@ -462,6 +462,7 @@ func TestABackupFromBeforeMultiUserRestoresItsOwner(t *testing.T) {
 	}
 	st["owner"], _ = json.Marshal(users["owner"])
 	delete(st, "users")
+	delete(st, "format")
 	files["console/state.json"], _ = json.Marshal(st)
 	var old bytes.Buffer
 	if err := backup.Seal(&old, []byte(passphrase), m, files); err != nil {

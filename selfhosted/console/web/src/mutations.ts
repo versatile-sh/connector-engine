@@ -1,5 +1,5 @@
 import { mutationOptions, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type Keep, type PrunePeriod, type PruneResult, type AgentToken, type ApprovalChoice, type CredentialMode, type NewLink, type Role, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session, type SetupOptions } from "./api";
+import { api, apiFile, setCsrf, type Access, type Connector, type ProfileMode, type BackupSummary, type SetupResult, type ActivitySettings, type Keep, type PrunePeriod, type PruneResult, type AgentToken, type ApprovalChoice, type CredentialMode, type NewLink, type Role, type ChannelKind, type ChannelView, type Decision, type ImportSource, type PairedDevice, type Session, type SetupOptions, type SignupSettings } from "./api";
 import { accountQuery, peopleQuery, activityKey, activitySettingsQuery, approvalQuery, approvalsQuery, connectorsQuery, keysQuery, notificationsQuery, sessionQuery, skillsQuery, slotsQuery } from "./queries";
 
 const invalidate = (client: QueryClient, ...keys: QueryKey[]) => Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
@@ -39,6 +39,21 @@ export const signIn = mutationOptions({
   },
 });
 
+/** Creates an account from the sign-in screen when sign-up is open; the answer arms the CSRF token and the session is read again. */
+export const signUp = mutationOptions({
+  mutationFn: (credentials: { username: string; password: string }) => api<{ csrf: string }>("POST", "/api/signup", credentials),
+  onSuccess: (result, _credentials, _onMutate, { client }) => {
+    setCsrf(result.csrf);
+    return invalidate(client, sessionQuery.queryKey);
+  },
+});
+
+/** Saves the Owner's sign-up choice; the people and the session, which tells the sign-in screen, are read again. */
+export const saveSignup = mutationOptions({
+  mutationFn: (settings: SignupSettings) => api("PUT", "/api/people/signup", settings),
+  onSuccess: (_data, _settings, _onMutate, { client }) => invalidate(client, peopleQuery.queryKey, sessionQuery.queryKey),
+});
+
 /** Ends the owner's session, forgets every other answer and reads the session again, so the sign-in screen shows at once. */
 export const signOut = mutationOptions({
   mutationFn: () => api("POST", "/api/logout"),
@@ -60,13 +75,13 @@ export const dismissGuide = mutationOptions({
 
 /** Allows or denies an AI app asking to connect by OAuth; allowing takes the owner's password and may give the new key a permission set. */
 export const decideConsent = mutationOptions({
-  mutationFn: ({ request, approve, password, slot }: { request: string; approve: boolean; password: string; slot?: string | undefined }) =>
+  mutationFn: ({ request, approve, password, slot }: { request: string; approve: boolean; password: string; slot?: string | undefined; app?: string | undefined }) =>
     api<{ redirect: string }>("POST", `/api/oauth/requests/${at(request)}`, approve ? { approve, password, slot } : { approve }),
 });
 
 /** Makes an access key, with a permission set's permissions when one is named; its token is in this answer only. */
 export const mintKey = mutationOptions({
-  mutationFn: (key: { name: string; ttl_hours: number; slot?: string | undefined }) => api<AgentToken>("POST", "/api/agents", key),
+  mutationFn: (key: { name: string; ttl_hours: number; slot?: string | undefined; app?: string | undefined }) => api<AgentToken>("POST", "/api/agents", key),
   onSuccess: (_token, key, _onMutate, { client }) => invalidate(client, keysQuery.queryKey, sessionQuery.queryKey, ...(key.slot ? [slotsQuery.queryKey, connectorsQuery.queryKey] : [])),
 });
 

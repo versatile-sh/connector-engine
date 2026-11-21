@@ -7,6 +7,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+
+	"github.com/versatile-sh/connector-engine/core/args"
 )
 
 type tokenClaims struct {
@@ -16,7 +18,8 @@ type tokenClaims struct {
 	IssuedAt   float64 `json:"iat"`
 }
 
-// bearerClaims reads the agent, session, person and issue time of a bearer JWT without checking its signature: the engine checks it, and the console only uses them to refuse or to label a call it answered.
+// bearerClaims reads a bearer token's claims without checking its signature: only to refuse a revoked key, which the engine would reject anyway,
+// and to key per-app settings. It never labels activity; a label needs a request the engine accepted.
 func bearerClaims(header string) (tokenClaims, bool) {
 	scheme, raw, found := strings.Cut(header, " ")
 	parts := strings.Split(strings.TrimSpace(raw), ".")
@@ -28,10 +31,23 @@ func bearerClaims(header string) (tokenClaims, bool) {
 		return tokenClaims{}, false
 	}
 	var claims tokenClaims
-	if json.Unmarshal(payload, &claims) != nil || claims.Agent == "" {
+	if args.Parse(payload) != nil || json.Unmarshal(payload, &claims) != nil || claims.Agent == "" || !exactNames(payload) {
 		return tokenClaims{}, false
 	}
 	return claims, true
+}
+
+func exactNames(payload []byte) bool {
+	var names map[string]json.RawMessage
+	_ = json.Unmarshal(payload, &names)
+	for name := range names {
+		for _, claim := range []string{"agent", "session", "on_behalf_of", "iat"} {
+			if name != claim && strings.EqualFold(name, claim) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (c *Console) refuseRevoked(next http.Handler) http.Handler {
@@ -83,7 +99,6 @@ func (c *Console) agentProxy() http.Handler {
 	}
 }
 
-// engineDown answers an agent request the engine did not take with 503, a Retry-After and a JSON-RPC error that says the gateway is locked or not answering.
 func (c *Console) engineDown(w http.ResponseWriter) {
 	message := "the gateway is not answering; after a restart it stays locked until you run make unlock on this computer, then retry"
 	if c.Secrets.Locked() {

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, test } from "node:test";
-import { QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, QueryClient } from "@tanstack/react-query";
 import type { ApprovalView } from "./api.ts";
-import { activityQuery, ALWAYS_WAIT_MS, approvalPolls, keysPageQuery } from "./queries.ts";
+import { activityKey, activityQuery, ALWAYS_WAIT_MS, approvalPolls, DASHBOARD_POLL_MS, dashboardKeysQuery, dashboardQuery, keysPageQuery, keysQuery, scopedKeysQuery } from "./queries.ts";
 
 const realFetch = globalThis.fetch;
 
@@ -113,5 +113,59 @@ describe("activityQuery", () => {
     test("stops once more pages are loaded, so a long list is not read again and again", () => {
       assert.equal(polls(3), false);
     });
+  });
+});
+
+describe("dashboardQuery", () => {
+  const summary = { at: "2026-11-20T12:00:00Z", total: 0, day: { total: 0, failed: 0 }, previous_day: { total: 0, failed: 0 }, hours: [], connectors: [], keys: [], recent: [] };
+
+  function answer() {
+    const calls: string[] = [];
+    globalThis.fetch = async (input, init) => {
+      calls.push(`${init?.method ?? "GET"} ${String(input)}`);
+      return new Response(JSON.stringify(summary), { status: 200 });
+    };
+    return calls;
+  }
+
+  describe("for the viewer's own calls", () => {
+    test("reads the summary once, with no scope in the request", async () => {
+      const calls = answer();
+      await new QueryClient().fetchQuery(dashboardQuery("mine"));
+      assert.deepEqual(calls, ["GET /api/activity/summary"]);
+    });
+  });
+
+  describe("for everyone's calls", () => {
+    test("asks for the everyone scope", async () => {
+      const calls = answer();
+      await new QueryClient().fetchQuery(dashboardQuery("everyone"));
+      assert.deepEqual(calls, ["GET /api/activity/summary?scope=everyone"]);
+    });
+  });
+
+  test("keeps one answer per scope under the activity key, so deleting calls reads it again", () => {
+    assert.deepEqual(dashboardQuery("mine").queryKey, [...activityKey, "summary", "mine"]);
+    assert.deepEqual(dashboardQuery("everyone").queryKey, [...activityKey, "summary", "everyone"]);
+  });
+
+  test("keeps the last answer on screen while a scope change loads", () => {
+    assert.equal(dashboardQuery("everyone").placeholderData, keepPreviousData);
+  });
+
+  test("reads again no faster than every half minute", () => {
+    assert.ok(DASHBOARD_POLL_MS >= 30_000);
+    assert.equal(dashboardQuery("mine").refetchInterval, DASHBOARD_POLL_MS);
+  });
+});
+
+describe("dashboardKeysQuery", () => {
+  test("counts the viewer's own keys without marking any as seen", () => {
+    assert.equal(dashboardKeysQuery("mine"), keysQuery);
+    assert.notEqual(dashboardKeysQuery("mine").queryKey, keysPageQuery.queryKey);
+  });
+
+  test("counts everyone's keys as the Access page lists them", () => {
+    assert.deepEqual(dashboardKeysQuery("everyone").queryKey, scopedKeysQuery("everyone").queryKey);
   });
 });

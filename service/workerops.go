@@ -7,6 +7,7 @@ import (
 
 	"github.com/versatile-sh/connector-engine/catalog"
 	"github.com/versatile-sh/connector-engine/core/approval"
+	"github.com/versatile-sh/connector-engine/core/args"
 	"github.com/versatile-sh/connector-engine/core/evaluate"
 	"github.com/versatile-sh/connector-engine/port"
 )
@@ -45,6 +46,7 @@ func (s *Service) RetainApproval(ctx context.Context, tenant port.TenantID, id p
 }
 
 // MarkExecutionUnknown moves an executing record to outcome_unknown with its audit row and connector.call.outcome_unknown once the deadline plus grace passed.
+// It writes the call, then streams, then the approval, the order of every write of an executing record, so it never deadlocks with the settle.
 func (s *Service) MarkExecutionUnknown(ctx context.Context, tenant port.TenantID, id port.ApprovalID) error {
 	return s.d.Store.Write(ctx, port.Scope{Tenant: tenant}, func(tx port.Tx) error {
 		a, err := tx.GetApproval(id)
@@ -55,17 +57,16 @@ func (s *Service) MarkExecutionUnknown(ctx context.Context, tenant port.TenantID
 		if err != nil {
 			return nil
 		}
-		if err := tx.UpdateApproval(unk, port.ApprovalExecuting); err != nil {
-			return err
-		}
 		call, ok, err := tx.LatestCall(a.Session, a.CallHash)
 		if err != nil {
 			return err
 		}
-		if !ok || call.Approval != id || call.State != port.CallStarted {
-			return nil
+		if ok && call.Approval == id && call.State == port.CallStarted {
+			if err := s.callUnknown(tx, call); err != nil {
+				return err
+			}
 		}
-		return s.callUnknown(tx, call)
+		return tx.UpdateApproval(unk, port.ApprovalExecuting)
 	})
 }
 
@@ -174,6 +175,7 @@ func (s *Service) RefreshDueCredentials(ctx context.Context, tenant port.TenantI
 }
 
 type heldRun struct {
+	Bad    bool
 	A      port.Approval
 	Conn   port.Connector
 	Bind   port.Binding
@@ -219,11 +221,14 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 	if err != nil || !ok {
 		return err
 	}
-	if _, err := s.Relist(ctx, tenant, h.A.Connector); err != nil && s.now().Sub(h.A.DecidedAt) <= s.cfg.Approval.ExecuteWithin {
-		return err
+	h.Bad = args.Parse(h.Args) != nil
+	if !h.Bad {
+		if _, err := s.Relist(ctx, tenant, h.A.Connector); err != nil && s.now().Sub(h.A.DecidedAt) <= s.cfg.Approval.ExecuteWithin {
+			return err
+		}
 	}
 	ext, err := s.d.Authorizer.Evaluate(ctx, port.Query{Tenant: tenant, Workspace: h.A.Workspace, Agent: h.A.Agent, AgentOwner: h.Sub.AgentOwner, OnBehalfOf: h.A.OnBehalfOf,
-		Caller: port.CallerModel, Session: h.A.Session, Connector: h.A.Connector, Function: h.A.Function, Class: h.A.Class, Arguments: nonEmpty(h.Args)})
+		Caller: port.CallerModel, Session: h.A.Session, Connector: h.A.Connector, Function: h.A.Function, Class: h.A.Class, Arguments: h.evaluated()})
 	if err != nil {
 		return err
 	}
@@ -275,6 +280,13 @@ func (s *Service) ExecuteApproved(ctx context.Context, tenant port.TenantID, id 
 	return err
 }
 
+func (h heldRun) evaluated() []byte {
+	if h.Bad {
+		return nil
+	}
+	return nonEmpty(h.Args)
+}
+
 func nonEmpty(b []byte) []byte {
 	if len(b) == 0 {
 		return []byte("{}")
@@ -287,12 +299,14 @@ func (s *Service) recheck(tx port.Tx, h heldRun, cur port.Approval, ext port.Acc
 	if err != nil {
 		return "", nil, nil, err
 	}
-	d := evaluate.Evaluate(f, evaluate.Request{Subject: h.Sub, Function: cur.Function, Now: s.now(), Arguments: nonEmpty(h.Args), Call: true})
+	d := evaluate.Evaluate(f, evaluate.Request{Subject: h.Sub, Function: cur.Function, Now: s.now(), Arguments: h.evaluated(), Call: true})
 	switch fn := f.Functions[cur.Function]; {
 	case d.Mode == port.ModeDeny:
 		return d.Reason, nil, nil, nil
 	case ext.Mode == port.ModeDeny:
 		return ext.Reason, nil, nil, nil
+	case h.Bad:
+		return port.CodeInvalidArgument, nil, nil, nil
 	case fn.DefinitionHash != cur.DefinitionHash:
 		return port.CodeDefinitionChanged, nil, nil, nil
 	}

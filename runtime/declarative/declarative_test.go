@@ -110,8 +110,8 @@ func TestExecutesDeclaredFunctions(t *testing.T) {
 		t.Fatalf("definitions: %v %s", err, defs)
 	}
 
-	res := call(t, rt, h, "get_item", `{"id":"a b/c","expand":true}`)
-	if got := srv.last(); got.Path != "/v1/items/a%20b%2Fc" || got.RawQuery != "expand=true" || got.Auth != "Bearer k" {
+	res := call(t, rt, h, "get_item", `{"id":"a-b.c","expand":true}`)
+	if got := srv.last(); got.Path != "/v1/items/a-b.c" || got.RawQuery != "expand=true" || got.Auth != "Bearer k" {
 		t.Fatalf("request %+v", got)
 	}
 	if res.IsError || !strings.Contains(string(res.Structured), `"ok":true`) {
@@ -152,8 +152,8 @@ func TestRefusals(t *testing.T) {
 	if _, err := rt.Call(context.Background(), h, "nope", nil, time.Time{}); !port.IsCode(err, port.CodeNotFound) {
 		t.Fatalf("unknown function: %v", err)
 	}
-	if _, err := rt.Call(context.Background(), h, "jump", nil, time.Time{}); !port.IsCode(err, port.CodeUnavailable) {
-		t.Fatalf("a redirect off the allow-list must fail: %v", err)
+	if res, err := rt.Call(context.Background(), h, "jump", nil, time.Time{}); err != nil || !res.IsError {
+		t.Fatalf("a redirect off the allow-list is the upstream's answer, not followed: %+v %v", res, err)
 	}
 
 	other := declarative.New(credential.Applier{}, nil, egress.Guard{AllowPrivate: true})

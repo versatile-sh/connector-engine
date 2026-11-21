@@ -29,7 +29,9 @@ Dependencies point inward: adapters import `port`, `core` imports only `port`, a
 | `EventSink` | deliver CloudEvents | `log`, `webhook` (Standard Webhooks signatures) |
 | `ResultFilter` | redact secrets in results | `builtin` |
 | `ToolIndex` | search the functions granted to an agent | `lexical` |
-| `Authorizer` | evaluate calls and role questions | the built-in table in `authz/table` |
+| `PrincipalVerifier` (`auth`) | verify an agent or person token | `jwks`, `local` |
+| `DefinitionScanner` (`scanner`), `DescriptionSuggester` (`suggester`) | scan a definition at pin time; propose an overlay description | none built in: a port joins `adapters.yaml` once a build registers an adapter on it, and `vsh admin overlays suggest` answers `unavailable` until then |
+| `Authorizer` (`authz`) | evaluate calls and role questions | the built-in table in `authz/table` (`authz` joins `adapters.yaml` once a build registers another adapter) |
 
 `adapters.yaml` selects one adapter per port (several for runtimes and sources). `connector-engine adapters check` validates the selection the way boot does.
 
@@ -55,6 +57,11 @@ AI app ──MCP──▶ gateway (/mcp)
 
 - `tools/list` follows the same path with `Authorizer.Search`, so an agent sees only functions it may call.
 - A denied function answers exactly like an unknown one: an agent cannot probe what exists.
+- The authorizer is asked first, without arguments when they fail the parse, so a denied function still answers like an unknown one; only an allowed function answers `invalid_argument`, and nothing is forwarded or re-listed.
+- Arguments are read once by `core/args` before the token scan, the schema check and the call hash. It refuses an object that repeats a key at any depth.
+- It refuses a top-level value that is not an object; `null` and absent arguments are accepted.
+- It refuses data after the top-level value.
+- The gateway's own tools (`find`, `call`, approval and skill tools) apply the same parse to their parameters, and `call` also refuses wrapper keys that differ from `name`, `arguments` and `fields` only by case.
 - Every event is written to the outbox inside the use case's transaction. `relay/` delivers it at least once, in order. Schema URIs (`https://agents-control.dev/...`) are stable wire identifiers.
 
 ## Grants
@@ -74,11 +81,16 @@ Evaluation walks four grant layers, then caps the result:
 
 The strictest mode wins across layers. `core/evaluate` holds the steps and `core/grant` the row rules.
 
+- Only a session row names an agent. A tenant, workspace or user row with `agent` set is refused with `row_refused`. An agent row may repeat its own id, and it is stored without it. A list filtered by `agent` therefore returns session rows only.
+- Removing a binding deletes the agent's session rows and agent rows on that connector, never a workspace or user row.
+- Stores from older releases are rewritten to this form by migration `0003_canonical_grants`, and every restore does the same. Evaluation never read `agent` outside session rows, so a rewritten row answers as before. Rows that come to share a key first lose those already expired or used up, since they can never apply again. The rest are replaced by the one that decides every instant: the strictest, without `max_uses`, that lives at least as long as the others. When no row does, they become one `deny` without expiry, created by `system` with reason `rows_conflicted`. Each merge leaves a `grant.merged` audit row that holds the original rows, so a person can restore them by hand. A tenant whose rows only lost their `agent` gets one `grant.agent_cleared` audit row with the count.
+
 ## Approvals
 
 - `ask` holds the call. The gateway waits up to `approval.holdWindow` (20 s), then answers `pending_approval` with an id the agent polls through `approval_status` or drops with `approval_cancel`.
 - A person decides through the operator API, the console, or an approval surface.
 - An approved call runs once. A repeated identical call (same session, same call hash) attaches to the open record instead of opening a new one.
+- A forwarded call is never sent again. When its result cannot be recorded, the agent gets `outcome_unknown`, the failure is logged with the call id, and the row stays `started` until the worker sweeps it.
 - States: `pending`, `approved`, `executing`, `executed`, `failed`, `outcome_unknown`, `denied`, `expired`, `cancelled`. `core/approval` holds the transitions; the worker runs the timers and a denial brake.
 
 ## Pinning and quarantine
@@ -103,7 +115,7 @@ Each profile is a pair of `connector-engine.yaml` and `adapters.yaml` under `dep
 `selfhosted/` holds everything only a person's own machine needs: the console, the approval surfaces (desktop, Discord, Slack, Telegram, webhook), the host keychain (`selfhosted/secrets/hostkey`, `selfhosted/cli/keychain`), desktop notifications, and the install without Docker (`selfhosted/standalone`), which runs the engine and the console in one process over the `sqlite` store.
 
 - Dependency direction: `selfhosted/` imports the core; no core package imports `selfhosted/`. `scripts/check-layering.sh` enforces it in `make test` and CI.
-- Composition: every adapter of the store, secrets, runtime, source, sink, filter and index ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. The auth port (`jwks`, `local`) and the `Authorizer` are the core's own and are wired in `app/build.go` and `app/app.go`, outside the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or builds a tree with `cli.Root` and runs it with `command.Main` (`vsh`). `selfhosted/selfhosted.go` lists the self-hosted adapters and commands; `selfhosted/cmd/vsh/main.go` adds the TUI, `manage` and the `standalone` lifecycle commands itself.
+- Composition: every adapter of the store, secrets, runtime, source, sink, filter, index, auth and authz ports, the engine's own included, is registered in an `app.Registry` by port and name: `app.Register(r, app.Secrets, app.Adapter{Name: "hostkey", ...}, open)`. `app.Core()` returns the engine's own; `app/build.go` opens what `adapters.yaml` selects through the registry. Each main builds its registry and its extra subcommands and passes them to `app.Main` (engine) or builds a tree with `cli.Root` and runs it with `command.Main` (`vsh`). `selfhosted/selfhosted.go` lists the self-hosted adapters and commands; `selfhosted/cmd/vsh/main.go` adds the TUI, `manage` and the `standalone` lifecycle commands itself.
 
 ```go
 // cmd/connector-engine: the core alone

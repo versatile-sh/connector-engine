@@ -290,6 +290,10 @@ func TestTokenInArgumentsIsRefused(t *testing.T) {
 				t.Fatalf("token in arguments: %v %v", res, err)
 			}
 		}
+		res, err := callTool(cs, "s__search", json.RawMessage(`{"q":"see `+escaped(tok)+`","q":"clean"}`))
+		if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeInvalidArgument) {
+			t.Fatalf("token in the first of two duplicated keys: %v %v", res, err)
+		}
 		if w.Runtime.CallsTo("search") != 0 {
 			t.Fatal("the call was forwarded")
 		}
@@ -511,4 +515,52 @@ func TestTheGatewayMarksItsOwnErrorsOnly(t *testing.T) {
 			t.Fatalf("an upstream error that looks like a gateway one is not marked: %v %v", upstream, err)
 		}
 	})
+}
+
+func TestMetaToolArgumentsAreStrict(t *testing.T) {
+	eachEra(t, func(t *testing.T, version string) {
+		w := newWorld(t, options{})
+		w.bind("x")
+		w.row(port.ScopeAgent, "x", "fn:search", port.ModeAllow)
+		cs, _ := w.agent("x", "s1", version)
+		for name, args := range map[string]string{
+			"duplicated wrapper key": `{"name":"s__search","arguments":{"q":1},"arguments":{"q":2}}`,
+			"duplicated nested key":  `{"name":"s__search","arguments":{"q":1,"q":2}}`,
+			"case variant beside":    `{"name":"s__search","arguments":{"q":1},"Arguments":{"q":2}}`,
+			"case variant instead":   `{"name":"s__search","Arguments":{"q":2}}`,
+			"case variant of name":   `{"NAME":"s__search","arguments":{}}`,
+		} {
+			res, err := callTool(cs, "call", json.RawMessage(args))
+			if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeInvalidArgument) {
+				t.Fatalf("%s: %v %v", name, res, err)
+			}
+		}
+		if w.Runtime.CallsTo("search") != 0 {
+			t.Fatal("a refused wrapper was forwarded")
+		}
+		res, err := callTool(cs, "call", map[string]any{"name": "s__search", "arguments": map[string]any{"q": "a"}})
+		if err != nil || res.IsError || w.Runtime.CallsTo("search") != 1 {
+			t.Fatalf("a normal call: %v %v", res, err)
+		}
+	})
+}
+
+func TestMetaToolsRefuseABadPayloadAndNeverEchoTheToken(t *testing.T) {
+	w := newWorld(t, options{cfg: skillsOn})
+	w.bind("x")
+	cs, tok := w.agent("x", "s1", "2026-07-28")
+	for tool, args := range map[string]string{
+		"approval_status": `{"approval_id":"a","approval_id":"b"}`,
+		"approval_cancel": `{"approval_id":"a","approval_id":"b"}`,
+		"skill_list":      `{"x":1,"x":2}`,
+		"skill_load":      `{"skill":"a","skill":"b"}`,
+		"find":            `{"query":"a","query":"b"}`,
+		"call":            `{"` + tok + `":1,"` + tok + `":2}`,
+	} {
+		res, err := callTool(cs, tool, json.RawMessage(args))
+		raw, _ := json.Marshal(res)
+		if err != nil || !res.IsError || structuredOf(t, res)["code"] != string(port.CodeInvalidArgument) || strings.Contains(string(raw), tok) {
+			t.Fatalf("%s: %s %v", tool, raw, err)
+		}
+	}
 }

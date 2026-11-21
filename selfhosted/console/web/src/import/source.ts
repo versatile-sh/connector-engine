@@ -28,3 +28,13 @@ export function readSource(text: string, kind: SourceKind, options: { local: boo
   if (kind === "listing") return { ok: true, kind, source: { listing: url.href } };
   return { ok: true, kind, source: { mcp: url.href, ...(options.local ? { local: true } : {}), ...(options.headerSecret ? { header_secret: true } : {}) } };
 }
+
+const LINK_PATHS: ReadonlySet<string> = new Set(["/import", "/", "/connectors"]);
+
+/** The address an install link in the console's address carries, `?listing=` or `?mcp=`: on `/import`, where the site sends them, and on the front pages `/` and `/connectors`, where older links and pasted ones land. */
+export function linkOf(path: string, query: URLSearchParams): { listing: string } | { mcp: string } | undefined {
+  if (!LINK_PATHS.has(path)) return undefined;
+  const listing = query.get("listing");
+  const mcp = query.get("mcp");
+  return listing ? { listing } : mcp ? { mcp } : undefined;
+}

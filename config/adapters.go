@@ -12,16 +12,19 @@ import (
 
 // Engine and ports of the adapters file; each port also reads CN_<PORT> from the environment.
 const (
-	Engine      = "connector-engine"
-	EnvPrefix   = "CN"
-	PortStore   = "store"
-	PortSecrets = "secrets"
-	PortAuth    = "auth"
-	PortRuntime = "runtime"
-	PortSource  = "source"
-	PortSink    = "sink"
-	PortFilter  = "filter"
-	PortIndex   = "index"
+	Engine        = "connector-engine"
+	EnvPrefix     = "CN"
+	PortStore     = "store"
+	PortSecrets   = "secrets"
+	PortAuth      = "auth"
+	PortAuthz     = "authz"
+	PortScanner   = "scanner"
+	PortSuggester = "suggester"
+	PortRuntime   = "runtime"
+	PortSource    = "source"
+	PortSink      = "sink"
+	PortFilter    = "filter"
+	PortIndex     = "index"
 )
 
 func use(tier string, names ...string) []string {
@@ -71,12 +74,20 @@ func (c Config) AdaptersSpec() adapters.Spec {
 	ports := map[string]adapters.PortSpec{
 		PortStore:   {Default: use(adapters.TierBuiltin, "postgres"), Stateful: true},
 		PortSecrets: {Default: c.secretsDefault(), Stateful: true, Sensitive: true},
-		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Builtins: []string{"jwks", "local"}, Sensitive: true, Weak: []string{"builtin:local"}},
+		PortAuth:    {Default: use(adapters.TierBuiltin, "jwks"), Sensitive: true, Weak: []string{"builtin:local"}},
 		PortRuntime: {Default: c.runtimeDefault(), Multi: true},
 		PortSource:  {Default: c.sourceDefault(), Multi: true},
 		PortSink:    {Default: use(adapters.TierBuiltin, "log")},
 		PortFilter:  {Default: c.filterDefault()},
 		PortIndex:   {Default: use(adapters.TierBuiltin, "lexical")},
+	}
+	if c.hasBuiltinBeyond(PortAuthz, "table") {
+		ports[PortAuthz] = adapters.PortSpec{Default: use(adapters.TierBuiltin, "table"), Sensitive: true}
+	}
+	for _, name := range []string{PortScanner, PortSuggester} {
+		if c.hasBuiltinBeyond(name, "") {
+			ports[name] = adapters.PortSpec{}
+		}
 	}
 	c.declare(ports)
 	return adapters.Spec{Engine: Engine, EnvPrefix: EnvPrefix, Acknowledgements: Acknowledgements, Ports: ports, Validate: c.validateAdapters}

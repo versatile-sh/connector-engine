@@ -4,11 +4,11 @@ import { useT } from "./i18n/I18nProvider";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { navigate } from "./router";
 
-type FrameProps = { width: "narrow" | "wide"; home?: boolean; children: ReactNode };
+type FrameProps = { width: "narrow" | "wide" | "split"; home?: boolean; children: ReactNode };
 
-const WIDTH = { narrow: "max-w-xl", wide: "max-w-6xl" } as const;
+const WIDTH = { narrow: "max-w-xl", wide: "max-w-6xl", split: "max-w-5xl" } as const;
 
-/** The frame of a page that stands outside the console's sections, as setup, sign-in, an install link, an app's consent and one held call: the site's grid and light, the wordmark and the language on top, and one centred column, narrow for a decision, wide for an editorial page. */
+/** The frame of a page that stands outside the console's sections, as setup, sign-in, an install link, an app's consent and one held call: the site's grid and light, the wordmark and the language on top, and one centred column, narrow for a decision, wide for an editorial page, split (64rem) for a review of two columns. */
 export function Frame({ width, home = false, children }: FrameProps) {
   const t = useT();
   return (

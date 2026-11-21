@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -141,6 +142,20 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 	if skills.Skills[0].Publisher != "example" {
 		t.Fatalf("the publisher is not the repository owner: %q", skills.Skills[0].Publisher)
 	}
+	t.Run("the preview and the installed skill carry the derived requirements and per-app status", func(t *testing.T) {
+		for name, sk := range map[string]console.SkillPreview{"preview": *pv.Skill, "installed": skills.Skills[0].SkillPreview} {
+			status := map[string]string{}
+			for _, e := range sk.Compat {
+				if e.Source != "derived" {
+					t.Errorf("%s: %s source %q", name, e.Client, e.Source)
+				}
+				status[e.Client] = e.Status
+			}
+			if !slices.Contains(sk.Needs.Runtimes, "bash") || status["claude-code"] != "full" || status["claude-desktop"] != "no" || status["chat-mcp"] != "no" {
+				t.Errorf("%s: %+v %v", name, sk.Needs, status)
+			}
+		}
+	})
 	if status, _ := b.send("PUT", "/api/skills/no-such/keys/claude-code", map[string]string{"access": "on"}, nil); status < 400 {
 		t.Fatalf("a key choice on an unknown skill: %d", status)
 	}
@@ -262,6 +277,22 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "skill_load", Arguments: map[string]any{"skill": "pdf-2"}})
 		if err != nil || res.IsError || structuredOf(t, res)["content"] != nil || !strings.Contains(textOf(res), "metadata_only") {
 			t.Fatalf("%v %s", err, textOf(res))
+		}
+	})
+	t.Run("a key minted for an app that cannot run the skill's scripts warns on the skill and in the preview, never blocks", func(t *testing.T) {
+		if status, _ := b.send("POST", "/api/agents", map[string]any{"name": "bad", "app": "no-such-app"}, nil); status != http.StatusBadRequest {
+			t.Fatalf("an unknown app: %d", status)
+		}
+		b.ok("POST", "/api/agents", map[string]any{"name": "desk", "app": "claude-desktop"}, nil)
+		b.ok("GET", "/api/skills", nil, &skills)
+		w := skills.Skills[0].Warnings
+		if len(w) != 1 || w[0].Client != "claude-desktop" || w[0].Status != "no" || !slices.Equal(w[0].Reasons, []string{"runs-bundled-code"}) || !slices.Equal(w[0].Keys, []string{"desk"}) {
+			t.Fatalf("warnings: %+v", w)
+		}
+		var again console.Preview
+		b.ok("POST", "/api/preview", map[string]any{"listing": link}, &again)
+		if len(again.Skill.Warnings) != 1 || again.Skill.Warnings[0].Client != "claude-desktop" {
+			t.Fatalf("preview warnings: %+v", again.Skill.Warnings)
 		}
 	})
 }

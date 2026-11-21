@@ -72,7 +72,7 @@ func (r *Runtime) Start(_ context.Context, _ port.Connector, m port.Manifest, se
 	}
 	in := &instance{
 		base:   strings.TrimRight(m.REST.BaseURL, "/"),
-		client: &http.Client{Transport: credential.Transport{Base: transport, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}},
+		client: credential.NewClient(credential.Transport{Base: transport, Applier: r.applier, Ref: secrets, AllowHosts: m.Egress.AllowHosts}),
 		order:  m.REST.Functions,
 		byName: map[string]port.RESTFunction{},
 	}
@@ -138,6 +138,9 @@ func (r *Runtime) Call(ctx context.Context, h port.Handle, function string, argu
 	if err != nil || len(body) > maxResponse {
 		return port.Result{}, port.Errorf(port.CodeUnavailable, "%s %s: the response is unreadable or over %d bytes", f.Method, f.Path, maxResponse)
 	}
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		body = []byte(credential.RedirectNote(resp.StatusCode, resp.Header.Get("Location")))
+	}
 	return result(resp.StatusCode, body), nil
 }
 
@@ -194,9 +197,26 @@ func expandPath(path string, args map[string]json.RawMessage) (string, error) {
 			missing = port.Errorf(port.CodeInvalidArgument, "path parameter %s is one scalar", name)
 			return m
 		}
-		return url.PathEscape(vs[0])
+		seg, ok := segment(vs[0])
+		if !ok {
+			missing = port.Errorf(port.CodeInvalidArgument, "path parameter %s is one path segment: no / \\ %% ? # ; no space, no non-ASCII character, not empty, not only dots", name)
+			return m
+		}
+		return seg
 	})
 	return out, missing
+}
+
+func segment(v string) (string, bool) {
+	if strings.Trim(v, ".") == "" {
+		return "", false
+	}
+	for i := 0; i < len(v); i++ {
+		if c := v[i]; c <= ' ' || c > '~' || strings.IndexByte(`/\%?#;`, c) >= 0 {
+			return "", false
+		}
+	}
+	return url.PathEscape(v), true
 }
 
 func splitArguments(f port.RESTFunction, args map[string]json.RawMessage) (query, body map[string]json.RawMessage) {

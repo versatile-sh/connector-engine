@@ -185,6 +185,8 @@ type Tx interface {
 
 	SeenInbox(id string) (bool, error)
 	MarkInbox(id string, at time.Time) (bool, error)
+	SetInboxPayload(id string, payload []byte) error
+	InboxPayload(id string) ([]byte, error)
 }
 
 // Retention is how long a Store keeps the rows only history reads: delivered events, idempotency keys, audit rows and finished calls; zero keeps them forever.

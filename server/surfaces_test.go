@@ -92,9 +92,12 @@ func TestHTTPRolesRoundTripAndIdempotentRetry(t *testing.T) {
 	if code, _, _ := s.do(t, http.MethodPut, "/v1/roles", admin, "k1", role); code != http.StatusOK {
 		t.Fatalf("put: %d", code)
 	}
-	role["role"] = "auditor"
 	if code, _, _ := s.do(t, http.MethodPut, "/v1/roles", admin, "k1", role); code != http.StatusOK {
-		t.Fatalf("retry: %d", code)
+		t.Fatalf("identical retry: %d", code)
+	}
+	role["role"] = "auditor"
+	if code, out, _ := s.do(t, http.MethodPut, "/v1/roles", admin, "k1", role); code != http.StatusConflict {
+		t.Fatalf("the same key with another body: %d %v", code, out)
 	}
 	code, out, _ := s.do(t, http.MethodGet, "/v1/roles?tenant=t1&person=bia", admin, "", nil)
 	items, _ := out["items"].([]any)

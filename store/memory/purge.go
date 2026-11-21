@@ -50,6 +50,7 @@ func (s *Store) PurgeTenant(ctx context.Context, tenant port.TenantID) (map[stri
 	counts["events"] = before - len(d.events)
 	prefix := key(string(tenant), "")
 	maps.DeleteFunc(d.inbox, func(k string, _ time.Time) bool { return strings.HasPrefix(k, prefix) })
+	maps.DeleteFunc(d.inboxData, func(k string, _ []byte) bool { return strings.HasPrefix(k, prefix) })
 	return counts, nil
 }
 

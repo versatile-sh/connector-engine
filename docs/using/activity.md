@@ -16,6 +16,7 @@ The **Activity** page lists every call an AI app made through the console's `/mc
 - The engine itself keeps only a hash of the arguments, plus its audit rows and call records (90 days in the `person` profile, `retention.audit` and `retention.calls`).
 - **Delete all activity** removes the files and hides older engine call records from the page. Only an Owner can delete activity, and only Owners and Admins change what is kept.
 - The page loads the newest 50 calls and **Load more calls** reads the next 50; the filters (range, connector, key, outcome, search) run on the console, so the counts, the chart and the connector list cover every matching call, not only the loaded ones. The list refreshes every 10 seconds while only the first page is loaded.
+- The **Dashboard**, the console's first page, summarises the same calls: the last 24 hours against the 24 before, the busiest connectors and keys of the week, and the newest eight calls. It reads them from the same record, so its day total matches **24 hours** here, and it refreshes every 30 seconds.
 - With several users, each sees the calls of their own keys; Owners and Admins can also see everyone's ([roles and ownership](../self-hosted/person.md#roles-and-ownership)).
 
 ## How long calls are kept

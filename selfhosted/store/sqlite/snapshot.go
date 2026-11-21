@@ -60,6 +60,8 @@ type rows struct {
 	outbox  []outboxRow
 	audit   []auditRow
 	inbox   []inboxRow
+	heads   []headRow
+	changes []port.PermissionChange
 }
 
 // Snapshot copies every row of every tenant and of the installation in one read transaction, in the row shape of the Postgres store.
@@ -100,20 +102,28 @@ func (s *Store) Snapshot(ctx context.Context) (port.Snapshot, error) {
 		}); err != nil {
 			return err
 		}
-		r.inbox, err = scan(t, `SELECT tenant_id, id, at, coalesce(payload, '') FROM inbox ORDER BY tenant_id, id`, func(q *sql.Rows) (v inboxRow, err error) {
+		if r.inbox, err = scan(t, `SELECT tenant_id, id, at, coalesce(payload, '') FROM inbox ORDER BY tenant_id, id`, func(q *sql.Rows) (v inboxRow, err error) {
 			var at string
 			if err = q.Scan(&v.Tenant, &v.ID, &at, &v.Payload); err == nil {
 				v.At, err = time.Parse(time.RFC3339Nano, at)
 			}
 			return v, err
-		})
+		}); err != nil {
+			return err
+		}
+		if r.heads, err = scan(t, `SELECT tenant_id, revision FROM permission_head ORDER BY tenant_id`, func(q *sql.Rows) (v headRow, err error) {
+			return v, q.Scan(&v.Tenant, &v.Revision)
+		}); err != nil {
+			return err
+		}
+		r.changes, err = t.permissionChanges(`ORDER BY tenant_id, revision, seq`)
 		return err
 	})
 	if err != nil {
 		return port.Snapshot{}, err
 	}
 	snap := port.Snapshot{Store: snapshotStore, Schema: postgres.SchemaOf(migrations), Tables: map[string][]json.RawMessage{}}
-	for name, table := range map[string]any{"records": r.records, "streams": r.streams, "outbox": r.outbox, "audit": r.audit, "inbox": r.inbox} {
+	for name, table := range map[string]any{"records": r.records, "streams": r.streams, "outbox": r.outbox, "audit": r.audit, "inbox": r.inbox, "permission_head": r.heads, "permission_changes": r.changes} {
 		if snap.Tables[name], err = encodeRows(table); err != nil {
 			return port.Snapshot{}, port.Errorf(port.CodeInternal, "snapshot %s: %v", name, err)
 		}
@@ -159,7 +169,13 @@ func decodeSnapshot(snap port.Snapshot) (r rows, err error) {
 	if r.audit, err = decodeRows(snap, "audit", func(v auditRow) bool { return v.ID > 0 && object(v.Doc) }); err != nil {
 		return r, err
 	}
-	r.inbox, err = decodeRows(snap, "inbox", func(v inboxRow) bool { return v.ID != "" })
+	if r.inbox, err = decodeRows(snap, "inbox", func(v inboxRow) bool { return v.ID != "" }); err != nil {
+		return r, err
+	}
+	if r.heads, err = decodeRows(snap, "permission_head", func(v headRow) bool { return v.Revision >= 0 }); err != nil {
+		return r, err
+	}
+	r.changes, err = decodeRows(snap, "permission_changes", func(v port.PermissionChange) bool { return v.Revision > 0 && v.Seq > 0 && v.Kind != "" && v.Key != "" })
 	return r, err
 }
 
@@ -221,6 +237,9 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 			if _, err := t.exec(`INSERT INTO inbox (tenant_id, id, at, payload) VALUES (?3, ?4, ?5, ?6)`, v.Tenant, v.ID, stamp(v.At), v.Payload); err != nil {
 				return err
 			}
+		}
+		if err := t.importPermissions(r.heads, r.changes); err != nil {
+			return err
 		}
 		tenants, err := many[port.TenantID](t, `SELECT DISTINCT tenant_id FROM records WHERE kind IN ('grant', 'connector', 'binding') ORDER BY tenant_id`)
 		if err != nil {

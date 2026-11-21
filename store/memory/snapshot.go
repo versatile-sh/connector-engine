@@ -114,6 +114,7 @@ func (d *data) tables(x *snapshotData) map[string]snapshotTable {
 		"clients": &d.clients, "source_syncs": &d.syncs, "exposures": &d.exposures, "operations": &d.operations, "fanouts": &d.fanouts,
 		"roles": &d.roles, "members": &d.members, "audit": slice[storedRow[port.AuditRow]]{&x.audit}, "events": slice[storedEvent]{&x.events},
 		"streams": whole[map[string]int64]{&d.streams}, "inbox": whole[map[string]time.Time]{&d.inbox}, "inbox_data": whole[map[string][]byte]{&d.inboxData},
+		"permission_head": whole[map[port.TenantID]int64]{&d.permHeads}, "permission_changes": slice[port.PermissionChange]{&d.permChanges},
 	}
 }
 
@@ -183,6 +184,13 @@ func (s *Store) Restore(ctx context.Context, snap port.Snapshot, by string) (por
 	if work.inboxData == nil {
 		work.inboxData = map[string][]byte{}
 	}
+	if work.permHeads == nil {
+		work.permHeads = map[port.TenantID]int64{}
+	}
+	if err := port.CheckPermissionLog(work.permHeads, work.permChanges); err != nil {
+		return port.Restored{}, err
+	}
+	keepLivePermissions(&work, s.d)
 	var tenants []port.TenantID
 	for _, r := range work.grants.rows {
 		tenants = append(tenants, r.tenant)

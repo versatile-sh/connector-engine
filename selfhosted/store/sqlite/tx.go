@@ -53,9 +53,10 @@ const (
 )
 
 type tx struct {
-	ctx   context.Context
-	q     *sql.Tx
-	scope port.Scope
+	ctx    context.Context
+	q      *sql.Tx
+	scope  port.Scope
+	locked bool
 }
 
 func (t *tx) args(a ...any) []any {

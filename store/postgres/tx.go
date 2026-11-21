@@ -50,9 +50,10 @@ const (
 )
 
 type tx struct {
-	ctx   context.Context
-	q     pgx.Tx
-	scope port.Scope
+	ctx    context.Context
+	q      pgx.Tx
+	scope  port.Scope
+	locked bool
 }
 
 func one[T any](t *tx, sql string, args ...any) (v T, err error) {

@@ -166,6 +166,12 @@ func TestMigratesALivePostgresStore(t *testing.T) {
 		if _, err := tx.MarkInbox("m1", t0); err != nil {
 			return err
 		}
+		if _, err := tx.LockPermissions(); err != nil {
+			return err
+		}
+		if _, err := tx.AppendPermissionChanges([]port.PermissionChange{{At: t0, Actor: "a", Op: "createGrant", Kind: "grant", Key: "g1", Before: json.RawMessage(`{"b":[1,{"k":null}],"a":"é"}`)}}); err != nil {
+			return err
+		}
 		if _, err := tx.Emit(port.Event{Type: "connector.connector.installed", Tenant: "local", Time: t0}); err != nil {
 			return err
 		}
@@ -195,9 +201,13 @@ func TestMigratesALivePostgresStore(t *testing.T) {
 			seen, err3 := tx.SeenInbox("m1")
 			audit, err4 := tx.ListAudit("c1")
 			events, err5 := tx.EventsAfter(port.SourceOf("local"), 0, 0)
-			raw, _ := json.Marshal([]any{cs, gs, seen, audit, events})
+			changes, err6 := tx.ListPermissionChanges(0, 0, 0)
+			if len(changes) != 1 || changes[0].After != nil {
+				t.Errorf("changes %+v", changes)
+			}
+			raw, _ := json.Marshal([]any{cs, gs, seen, audit, events, changes})
 			out = string(raw)
-			for _, err := range []error{err1, err2, err3, err4, err5} {
+			for _, err := range []error{err1, err2, err3, err4, err5, err6} {
 				if err != nil {
 					return err
 				}

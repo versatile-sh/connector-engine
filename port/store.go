@@ -7,9 +7,11 @@ import (
 )
 
 // Scope is what a unit of work may touch: the rows of one tenant, the installation tables, or both.
+// A Consistent Read sees all its statements at one point in time; memory and SQLite reads always do, Postgres reads then run at repeatable read.
 type Scope struct {
 	Tenant       TenantID
 	Installation bool
+	Consistent   bool
 }
 
 // Store runs units of work; every write of state, audit and outbox rows happens in one Write.
@@ -125,6 +127,14 @@ type Tx interface {
 	PutGrant(g Grant) error
 	DeleteGrant(id GrantID) error
 	ReserveGrants(ids []GrantID) error
+
+	// LockPermissions holds the scope tenant's revision until the Write ends and returns it, zero before any change.
+	// It is the first statement of a transaction that will append; an append without it is refused.
+	LockPermissions() (int64, error)
+	// AppendPermissionChanges logs changes, checked by PermissionChanges, under the next revision of the scope tenant and returns it.
+	AppendPermissionChanges(changes []PermissionChange) (int64, error)
+	// ListPermissionChanges lists the scope tenant's changes after position (revision, seq) in that order; limit <= 0 means all.
+	ListPermissionChanges(revision int64, seq int, limit int) ([]PermissionChange, error)
 
 	GetApproval(id ApprovalID) (Approval, error)
 	ListApprovals(f ApprovalFilter) ([]Approval, error)

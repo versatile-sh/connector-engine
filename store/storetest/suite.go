@@ -67,6 +67,12 @@ func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 		"restore refuses broken snapshots": restoreRefusesBrokenSnapshots,
 		"restore records itself":           restoreRecordsItself,
 		"restore keeps the first warnings": restoreKeepsTheFirstWarnings,
+		"permission revision":              revisionGrowsByOnePerWritingTransaction,
+		"permission values":                permissionValuesAsGiven,
+		"permission paging":                permissionChangesPage,
+		"permission tenant scope":          permissionLogIsTenantScoped,
+		"permission consistent read":       consistentReadSeesOneRevision,
+		"permission log on restore":        restoreKeepsTheLivePermissionLog,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -840,12 +846,15 @@ func purgeTenant(e *env) {
 				tx.PutRole(port.RoleAssignment{Tenant: tenant, Person: "p", Role: "approver", Scope: "t/" + string(tenant)}),
 				tx.PutListing(port.Listing{Ref: port.ListingRef{Owner: tenant, Name: "io.x/own"}}))
 		}))
+		e.appendChanges(scope, change("g", `{}`))
 	}
 	fill(scopeA)
 	fill(scopeB)
 	counts, err := purger.PurgeTenant(ctx, "ta")
 	e.must(err)
-	e.same([]int{1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"]})
+	e.same([]int{1, 1, 1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"], counts["permission_changes"], counts["permission_head"]})
+	e.same([]string{"tbg"}, append(keysOf(e.changes(scopeA, 0, 0, 0)), keysOf(e.changes(scopeB, 0, 0, 0))...))
+	e.same(int64(0), e.lockedRevision(scopeA))
 	for scope, want := range map[port.Scope]int{scopeA: 0, scopeB: 1} {
 		e.must(e.read(port.Scope{Tenant: scope.Tenant, Installation: true}, func(tx port.Tx) error {
 			conns, err1 := tx.ListConnectors(port.ConnectorFilter{})

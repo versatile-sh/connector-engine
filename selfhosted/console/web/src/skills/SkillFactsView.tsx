@@ -6,10 +6,10 @@ import { WELL } from "../ui/styles";
 import { SkillCompatView, CompatWarnings } from "./SkillCompatView";
 import { formatBytes, hasLicence, shortCommit, skillWarnings, sourceLink, totalBytes } from "./summary";
 
-type SkillFactsViewProps = { skill: SkillFacts; unbound?: string[] | undefined };
+type SkillFactsViewProps = { skill: SkillFacts; unbound?: string[] | undefined; details?: boolean };
 
-/** What a skill is: its warnings first (scripts, no licence, a missing connector), then licence, source at its commit, and every file with its size. */
-export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
+/** What a skill is: its warnings first (scripts, no licence, a missing connector), then licence, source at its commit, the compact compatibility of the AI apps (with its table behind Details when `details`), and every file with its size. */
+export function SkillFactsView({ skill, unbound, details = false }: SkillFactsViewProps) {
   const t = useT();
   const warnings = skillWarnings({ ...skill, unbound });
   const link = sourceLink(skill.source);
@@ -40,7 +40,7 @@ export function SkillFactsView({ skill, unbound }: SkillFactsViewProps) {
           <span className="sr-only"> {t("common.opensNewTab")}</span>
         </dd>
       </dl>
-      <SkillCompatView skill={skill} />
+      <SkillCompatView skill={skill} details={details} />
       <Disclosure
         className={WELL}
         summary={

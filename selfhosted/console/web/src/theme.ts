@@ -1,0 +1,91 @@
+
+/** The theme that is drawn. */
+export type Theme = "light" | "dark";
+
+/** A point of the viewport, in pixels. */
+export type Point = { x: number; y: number };
+
+const KEY = "console.theme";
+const COLORS: Record<Theme, string> = { light: "#f4f4f0", dark: "#0e1116" };
+const REVEAL_MS = 450;
+
+/** The saved theme when it is a known one, else null: follow the system. */
+export function pickTheme(saved: string | null): Theme | null {
+  return saved === "light" || saved === "dark" ? saved : null;
+}
+
+/** The theme to draw: the saved one, else what the system prefers. */
+export function resolveTheme(saved: Theme | null, systemLight: boolean): Theme {
+  return saved ?? (systemLight ? "light" : "dark");
+}
+
+/** The other theme. */
+export function otherTheme(theme: Theme): Theme {
+  return theme === "light" ? "dark" : "light";
+}
+
+/** How far past the farthest corner the reveal ends, so its edge leaves the screen while still moving fast. */
+export const REVEAL_OVERSHOOT = 1.5;
+
+/** The radius the reveal ends at: past the viewport's farthest corner from the point, by REVEAL_OVERSHOOT. */
+export function revealRadius(from: Point, width: number, height: number): number {
+  return Math.hypot(Math.max(from.x, width - from.x), Math.max(from.y, height - from.y)) * REVEAL_OVERSHOOT;
+}
+
+const systemLight = () => window.matchMedia("(prefers-color-scheme: light)");
+
+function saved(): Theme | null {
+  try {
+    return pickTheme(window.localStorage.getItem(KEY));
+  } catch {
+    return null;
+  }
+}
+
+function draw(theme: Theme) {
+  document.documentElement.dataset.theme = theme;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COLORS[theme]);
+}
+
+function drawSaved() {
+  draw(resolveTheme(saved(), systemLight().matches));
+}
+
+/** Keeps the page in step with the system and with other tabs; call once at start. */
+export function startTheme() {
+  drawSaved();
+  systemLight().addEventListener("change", drawSaved);
+  window.addEventListener("storage", (event) => event.key === KEY && drawSaved());
+}
+
+/** Draws the other theme and keeps it; with a view-transition browser and motion allowed, the new theme grows as a circle from `from`. */
+export function toggleTheme(from: Point) {
+  const next = otherTheme(currentTheme());
+  try {
+    window.localStorage.setItem(KEY, next);
+  } catch {
+    draw(next);
+    return;
+  }
+  if (!document.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    draw(next);
+    return;
+  }
+  const { innerWidth: width, innerHeight: height } = window;
+  const at = `${(from.x / width) * 100}% ${(from.y / height) * 100}%`;
+  const radius = `${(revealRadius(from, width, height) / (Math.hypot(width, height) / Math.SQRT2)) * 100}%`;
+  const root = document.documentElement;
+  root.classList.add("theme-swap");
+  const transition = document.startViewTransition(() => draw(next));
+  void transition.ready.then(() =>
+    root.animate(
+      { clipPath: [`circle(0% at ${at})`, `circle(${radius} at ${at})`] },
+      { duration: REVEAL_MS, easing: "cubic-bezier(0.65, 0, 0.35, 1)", pseudoElement: "::view-transition-new(root)" },
+    ),
+  );
+  void transition.finished.finally(() => root.classList.remove("theme-swap"));
+}
+
+function currentTheme(): Theme {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}

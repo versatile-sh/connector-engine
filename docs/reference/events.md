@@ -38,6 +38,7 @@ Each type's JSON Schema has the `$id` `https://agents-control.dev/connector-engi
 | credentials | `connector.credential.connected`, `needs_reauth`, `revoked` |
 | catalog and listings | `connector.listing.imported`, `reviewed`, `created`, `status_changed`, `connector.catalog.rule_changed`, `policy_changed`, `offer_changed` |
 | tenants | `connector.tenant.created`, `removed` |
+| snapshots | `connector.snapshot.restored` |
 | overlays | `connector.overlay.changed`, `suggested` |
 
 The engine also consumes three outside facts: `session.ended`, `agent.removed`, `person.removed`.

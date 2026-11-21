@@ -9,18 +9,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/versatile-sh/connector-engine/core/listing"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-// FunctionView is one function of a connector as the console shows it: its class, what it does by nature, and the owner's choice read back from the engine's grants.
+// FunctionView is one function of a connector as the console shows it: its class, what it does by nature or by an estimate from its name, the owner's choice
+// read back from the engine's grants, and whether on still asks because a review or its server declares it destructive.
 type FunctionView struct {
 	Name        string     `json:"name"`
 	Title       string     `json:"title,omitempty"`
 	Description string     `json:"description,omitempty"`
 	Class       port.Class `json:"class"`
 	Kind        port.Class `json:"kind"`
+	Estimated   bool       `json:"estimated,omitempty"`
 	State       string     `json:"state"`
 	Access      Access     `json:"access"`
+	Capped      bool       `json:"capped,omitempty"`
 }
 
 // ConnectorSummary is one installed connector with its listing's presentation, its functions and items, the profile of each access key made so far, the permission sets that hold a profile for it, and whose credential its calls use with who signed in.
@@ -95,7 +99,8 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 		}
 		s := ConnectorSummary{ID: string(conn.ID), Alias: conn.Alias, Enabled: conn.Enabled, Blocked: v.Blocked, Listing: conn.Listing.Listing.Name, Version: conn.Listing.Version, Title: conn.Alias,
 			Mode: c.State.CredentialMode(string(conn.ID)), Modes: []CredentialMode{}}
-		if m, err := c.Engine.manifest(ctx, conn); err == nil {
+		m, err := c.Engine.manifest(ctx, conn)
+		if err == nil {
 			s.Modes = credentialModes(m)
 			if m.Kind == port.KindSkill {
 				continue
@@ -127,7 +132,8 @@ func (c *Console) Connectors(ctx context.Context) ([]ConnectorSummary, error) {
 				continue
 			}
 			title, desc := describe(f.Definition)
-			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: Nature(f), State: string(f.State), Access: functionAccess(f, rows)})
+			kind, estimated := Nature(f, m)
+			s.Functions = append(s.Functions, FunctionView{Name: f.Name, Title: title, Description: desc, Class: f.Class, Kind: kind, Estimated: estimated, State: string(f.State), Access: functionAccess(f, rows), Capped: declaredDestructive(f, m)})
 		}
 		if s.Profiles, err = c.profiles(ctx, string(conn.ID), agentRows); err != nil {
 			return nil, err
@@ -177,7 +183,7 @@ func (c *Console) function(ctx context.Context, conn, name string) (port.Functio
 	return port.Function{}, &EngineError{Status: http.StatusNotFound, Code: "not_found", Detail: "function " + name + " not found"}
 }
 
-// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature (write for destructive, so on is never capped to ask), replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every bound key the item rows of the connector.
+// SetAccess writes the owner's choice for one function or item: it accepts a quarantined definition the owner now sees, classes a function read or write by its nature unless a review or its server declares its class, which it keeps, replaces its workspace row (none for off; ask is ask_once so a session answer is possible), and gives every bound key the item rows of the connector.
 func (c *Console) SetAccess(ctx context.Context, conn, name string, a Access) error {
 	results, err := c.SetAccessAll(ctx, conn, []string{name}, a)
 	if err != nil {
@@ -270,12 +276,8 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 			return err
 		}
 	}
-	class := port.ClassWrite
-	if Nature(f) == port.ClassRead {
-		class = port.ClassRead
-	}
-	if !item && class != f.Class {
-		if f, err = c.Engine.setClass(ctx, conn, name, class); err != nil {
+	if !item {
+		if f, err = c.classByNature(ctx, conn, f); err != nil {
 			return err
 		}
 	}
@@ -290,6 +292,33 @@ func (c *Console) writeAccess(ctx context.Context, conn, name string, a Access) 
 		return nil
 	}
 	return c.Engine.createGrant(ctx, port.Grant{ScopeKind: port.ScopeWorkspace, ScopeID: c.Engine.Workspace, Connector: port.ConnectorID(conn), Selector: port.SelectorOf(name), Mode: a.mode(), DefinitionHash: f.DefinitionHash})
+}
+
+func declaredDestructive(f port.Function, m port.Manifest) bool {
+	base, source := listing.Base(f, m)
+	return (source == port.ClassSourceReviewed || source == port.ClassSourceAnnotationRaise) && base.Effective() == port.ClassDestructive && f.Class.Effective() == port.ClassDestructive
+}
+
+func (c *Console) classByNature(ctx context.Context, conn string, f port.Function) (port.Function, error) {
+	v, err := c.Engine.connector(ctx, conn)
+	if err != nil {
+		return f, err
+	}
+	m, err := c.Engine.manifest(ctx, v)
+	if err != nil {
+		return f, err
+	}
+	if _, source := listing.Base(f, m); source == port.ClassSourceReviewed || source == port.ClassSourceAnnotationRaise {
+		return f, nil
+	}
+	class := port.ClassWrite
+	if kind, estimated := Nature(f, m); kind == port.ClassRead && !estimated {
+		class = port.ClassRead
+	}
+	if class == f.Class {
+		return f, nil
+	}
+	return c.Engine.setClass(ctx, conn, f.Name, class)
 }
 
 func (c *Console) freeAlias(ctx context.Context, base string) (string, error) {

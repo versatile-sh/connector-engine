@@ -2,6 +2,7 @@
 package listing
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"slices"
@@ -146,6 +147,23 @@ func Class(in ClassInput) (port.Class, port.ClassSource, port.Class) {
 		return port.ClassDestructive, port.ClassSourceAnnotationRaise, suggested
 	}
 	return port.ClassNone, port.ClassSourceDefault, suggested
+}
+
+// Base is the class of f that the pinned manifest m gives without any admin class: an item reads, then the review, the declaration, the default.
+func Base(f port.Function, m port.Manifest) (port.Class, port.ClassSource) {
+	if port.ItemKind(f.Name) != "" {
+		return port.ClassRead, port.ClassSourceItem
+	}
+	var d struct {
+		Annotations *port.Annotations `json:"annotations"`
+	}
+	_ = json.Unmarshal(f.Definition, &d)
+	in := ClassInput{Hash: f.DefinitionHash, Review: m.Review, Annotations: d.Annotations}
+	if i := slices.IndexFunc(m.Functions, func(def port.FunctionDef) bool { return def.Name == f.Name }); i >= 0 {
+		in.ReviewedClass = m.Functions[i].Class
+	}
+	class, source, _ := Class(in)
+	return class, source
 }
 
 func suggest(in ClassInput) port.Class {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: selfhosted/scripts/keychain.sh unlock|migrate|revert|status|recovery|import, with COMPOSE, VSH and PROJECT set by make"
+usage="usage: selfhosted/scripts/keychain.sh unlock|migrate|revert|status|recovery|import, with COMPOSE, VSH and PROJECT set by the mise tasks"
 op="${1:?$usage}"
 read -r -a compose <<<"${COMPOSE:?$usage}"
 vsh="${VSH:-}"
@@ -33,7 +33,7 @@ unlock() {
     0)
       for service in engine console; do
         report "$service" key unlock
-        if [ "$protection" = plaintext ]; then warn "the $service root key is still a plaintext file; run: make keychain-migrate"; fi
+        if [ "$protection" = plaintext ]; then warn "the $service root key is still a plaintext file; run: mise run keychain-migrate"; fi
       done
       ;;
     3)

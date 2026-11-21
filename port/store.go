@@ -7,9 +7,11 @@ import (
 )
 
 // Scope is what a unit of work may touch: the rows of one tenant, the installation tables, or both.
+// A Consistent Read sees all its statements at one point in time; memory and SQLite reads always do, Postgres reads then run at repeatable read.
 type Scope struct {
 	Tenant       TenantID
 	Installation bool
+	Consistent   bool
 }
 
 // Store runs units of work; every write of state, audit and outbox rows happens in one Write.
@@ -121,9 +123,18 @@ type Tx interface {
 
 	GetGrant(id GrantID) (Grant, error)
 	ListGrants(f GrantFilter) ([]Grant, error)
+	// PutGrant writes every field but Uses: a new row starts at zero and an existing row keeps its count, which only ReserveGrants and a restore change.
 	PutGrant(g Grant) error
 	DeleteGrant(id GrantID) error
 	ReserveGrants(ids []GrantID) error
+
+	// LockPermissions holds the scope tenant's revision until the Write ends and returns it, zero before any change.
+	// It is the first statement of a transaction that will append; an append without it is refused.
+	LockPermissions() (int64, error)
+	// AppendPermissionChanges logs changes, checked by PermissionChanges, under the next revision of the scope tenant and returns it.
+	AppendPermissionChanges(changes []PermissionChange) (int64, error)
+	// ListPermissionChanges lists the scope tenant's changes after position (revision, seq) in that order; limit <= 0 means all.
+	ListPermissionChanges(revision int64, seq int, limit int) ([]PermissionChange, error)
 
 	GetApproval(id ApprovalID) (Approval, error)
 	ListApprovals(f ApprovalFilter) ([]Approval, error)
@@ -207,14 +218,22 @@ type TenantPurger interface {
 	PurgeTenant(ctx context.Context, tenant TenantID) (map[string]int, error)
 }
 
-// Snapshot is every row of a store in the store's own encoding, tagged with the kind of store that wrote it.
+// Snapshot is every row of a store in the store's own encoding, tagged with the kind of store and the schema version that wrote it; zero is an unversioned snapshot.
 type Snapshot struct {
 	Store  string                       `json:"store"`
+	Schema int                          `json:"schema,omitempty"`
 	Tables map[string][]json.RawMessage `json:"tables"`
 }
 
-// Snapshotter is the capability of a Store to copy every row in one consistent read and to replace every row with a Snapshot of its kind in one transaction.
+// Restored is what an applied restore holds: its rows per kind, how many kept rows name something it lacks, and the first of them.
+type Restored struct {
+	Counts       map[string]int `json:"counts"`
+	WarningCount int            `json:"warning_count"`
+	Warnings     []string       `json:"warnings,omitempty"`
+}
+
+// Snapshotter copies every row of a Store in one read and replaces them all with a checked Snapshot, recording who restored it.
 type Snapshotter interface {
 	Snapshot(ctx context.Context) (Snapshot, error)
-	Restore(ctx context.Context, s Snapshot) error
+	Restore(ctx context.Context, s Snapshot, by string) (Restored, error)
 }

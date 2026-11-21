@@ -2,7 +2,7 @@
 
 Everything the `person` profile adds to the core engine: the local console, the approval surfaces, the `hostkey` secrets and `sqlite` store adapters, the `vsh keychain` and `vsh notify` commands, their binaries, the compose files and scripts that run them on a person's own machine, and the install without Docker that runs them as one binary.
 
-The dependency direction is one way: `selfhosted/` imports the core, and no core package imports `selfhosted/`. `scripts/check-layering.sh` (part of `make test`) enforces it, test imports included.
+The dependency direction is one way: `selfhosted/` imports the core, and no core package imports `selfhosted/`. `scripts/check-layering.sh` (part of `mise run test`) enforces it, test imports included.
 
 ## Composition
 
@@ -38,13 +38,12 @@ A third-party adapter works the same way: one package with a `Register(r *app.Re
 | `standalone/` | the install without Docker: data directory, one-process supervisor, control socket, lifecycle commands |
 | `cli/keychain`, `cli/notify` | the host keychain and the host notification helper |
 | `deploy/compose.yaml` | includes `../../deploy/compose.yaml` (init, Postgres) and adds `engine` and `console` |
-| `deploy/profiles/person`, `deploy/check`, `deploy/compose.check.yaml` | the profile and the override `make check` runs |
-| `scripts/` | `console-check.sh` (`make check`), `keychain.sh` (`make unlock`, `make keychain-*`) |
-| `selfhosted.mk` | the make targets above, included by the root `Makefile` |
+| `deploy/profiles/person`, `deploy/check`, `deploy/compose.check.yaml` | the profile and the override `mise run check:stack` runs |
+| `scripts/` | `console-check.sh` (`mise run check:stack`), `keychain.sh` (`mise run unlock` and the `keychain-*` tasks) |
 
 ## Run
 
-From the repository root, as before: `make up`, `make unlock`, `make notify`, `make check`, and `make export`, `make import FILE=...`, `make reset-password` for [backups and the account](../docs/using/account-backup.md). The compose project stays `connector-engine`, so the volumes of an existing install are reused. `deploy/compose.yaml` is included through Compose `include`, which needs Docker Compose 2.20 or newer.
+From the repository root, as before: `mise run up`, `mise run unlock`, `mise run notify`, `mise run check`, and `mise run export`, `mise run import -- ...`, `mise run reset-password` for [backups and the account](../docs/using/account-backup.md). The compose project stays `connector-engine`, so the volumes of an existing install are reused. `deploy/compose.yaml` is included through Compose `include`, which needs Docker Compose 2.20 or newer.
 
 ## Data and backups
 
@@ -59,7 +58,7 @@ Everything an install knows lives in four Docker volumes of the project:
 
 `docker compose down -v`, `docker system prune --volumes` and `docker volume prune -a` delete these volumes. That loses everything, and the keychain cannot bring it back, because the keychain holds only the key that unwraps the root keys. Export a backup before you run any of them.
 
-A full backup (`make export`, or Account → Backups → Export) is one encrypted file. It holds a consistent snapshot of the engine's database, both key stores with their root keys in plaintext, and the console's state and activity. It opens on a new machine without the old keychain, and the import wraps the root keys again with the new machine's keychain. The `secrets` volume is not in it: a new install writes its own. The format is in [account and backup](../docs/using/account-backup.md#full-backups). User documentation: [the person profile](../docs/self-hosted/person.md).
+A full backup (`mise run export`, or Account → Backups → Export) is one encrypted file. It holds a consistent snapshot of the engine's database, both key stores with their root keys in plaintext, and the console's state and activity. It opens on a new machine without the old keychain, and the import wraps the root keys again with the new machine's keychain. The `secrets` volume is not in it: a new install writes its own. The format is in [account and backup](../docs/using/account-backup.md#full-backups). User documentation: [the person profile](../docs/self-hosted/person.md).
 
 ## Run without Docker
 

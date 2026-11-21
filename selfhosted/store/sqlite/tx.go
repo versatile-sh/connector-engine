@@ -46,15 +46,17 @@ const (
 	revisedSQL = `INSERT INTO records AS r (kind, k, tenant_id, uniq, rev, doc)
 		SELECT ?3, ?4, ?5, ?6, 1, ?7
 		WHERE ?8 <= 0 OR EXISTS (SELECT 1 FROM records WHERE kind = ?3 AND k = ?4 AND rev = ?8)
-		ON CONFLICT (kind, k) DO UPDATE SET doc = excluded.doc, uniq = excluded.uniq, rev = r.rev + 1
+		ON CONFLICT (kind, k) DO UPDATE SET doc = CASE WHEN r.kind = 'grant' AND json_extract(r.doc, '$.uses') IS NOT NULL
+			THEN json_set(excluded.doc, '$.uses', json_extract(r.doc, '$.uses')) ELSE excluded.doc END, uniq = excluded.uniq, rev = r.rev + 1
 		WHERE (?8 < 0 OR r.rev = ?8) AND r.tenant_id = excluded.tenant_id
 		RETURNING rev`
 )
 
 type tx struct {
-	ctx   context.Context
-	q     *sql.Tx
-	scope port.Scope
+	ctx    context.Context
+	q      *sql.Tx
+	scope  port.Scope
+	locked bool
 }
 
 func (t *tx) args(a ...any) []any {

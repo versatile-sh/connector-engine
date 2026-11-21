@@ -96,7 +96,7 @@ vsh connectors show check-notes
 ```text
 Check notes (mcp) from 127.0.0.1:7999
   write        ask   create
-  destructive  ask   mystery
+  read         on    mystery  (estimated from its name)
   destructive  ask   purge
   read         on    search
 installed Check notes
@@ -232,7 +232,7 @@ vsh admin tenants create t1
 
 `vsh admin --help` prints this list from the binary. `call <operationId>` reaches every operation of the [API](api.md), including those without a group.
 
-In the `person` profile, `make admin ARGS="tenants create t2"` runs it from the image with the generated operator token.
+In the `person` profile, `mise run admin -- tenants create t2` runs it from the image with the generated operator token.
 
 ## tools
 
@@ -246,7 +246,7 @@ vsh tools call github__create_issue --args '{"title":"Hello"}' --out result.json
 
 - It writes the full answer to `--out` and prints a summary.
 - A held call prints its `approval_id`; poll it with `vsh tools call approval_status --args '{"approval_id":"<id>"}'`.
-- In the `person` profile, `make cli ARGS="tools list"` runs it from the image.
+- In the `person` profile, `mise run cli -- tools list` runs it from the image.
 
 ## skills export
 
@@ -257,9 +257,9 @@ Writes every skill granted to the agent into `DIR/<skill>/`. See [skills](../usi
 | Command | Does |
 |---|---|
 | `vsh keychain ensure --name connector-engine` | creates the unlock key in the OS keychain if missing |
-| `vsh keychain get --name connector-engine` | prints it (used by `make unlock` on a pipe) |
+| `vsh keychain get --name connector-engine` | prints it (used by `mise run unlock` on a pipe) |
 | `vsh keychain import --name connector-engine` | reads it on stdin |
 | `vsh keychain delete --name connector-engine` | removes it |
-| `vsh notify` | desktop popups for calls waiting for approval (`make notify`) |
+| `vsh notify` | desktop popups for calls waiting for approval (`mise run notify`) |
 
 `--name` is the compose project (`PROJECT`, default `connector-engine`). See [the keychain](../self-hosted/keychain.md).

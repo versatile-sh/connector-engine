@@ -17,7 +17,7 @@ export const PANEL = "vignette-top rounded-2xl border border-line bg-ink-raised"
 /** A sunken box inside a panel or a card: a list of rows, a block of text, the next step. */
 export const WELL = "rounded-xl border border-line bg-ink";
 
-const LIT = "relative isolate transition-colors duration-300 ease-(--ease-settle) before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-[radial-gradient(ellipse_75%_100%_at_50%_0%,rgb(198_244_50/0.1),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:border-lime/30 hover:before:opacity-100 focus-visible:border-lime/30 focus-visible:before:opacity-100";
+const LIT = "relative isolate transition-colors duration-300 ease-(--ease-settle) before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:bg-[radial-gradient(ellipse_75%_100%_at_50%_0%,var(--lime-glow),transparent_70%)] before:opacity-0 before:transition-opacity before:duration-300 hover:border-lime/30 hover:before:opacity-100 focus-visible:border-lime/30 focus-visible:before:opacity-100";
 
 /** A card of a grid on the content surface, from the site's directory: a raised card whose border warms and whose top edge lights lime on hover or keyboard focus. */
 export const LIT_CARD = `${SURFACE} ${LIT}`;
@@ -76,7 +76,7 @@ export const SKELETON_LINE = "shimmer rounded-full";
 type ButtonOptions = { variant?: "primary" | "secondary" | "quiet" | "danger"; size?: "xs" | "sm" | "md" };
 
 const BUTTON_VARIANT = {
-  primary: "bg-paper text-ink hover:bg-white focus-visible:bg-white disabled:opacity-60",
+  primary: "bg-paper text-ink hover:bg-paper-bright focus-visible:bg-paper-bright disabled:opacity-60",
   secondary: "border border-line-strong text-paper hover:border-paper/50 focus-visible:border-paper/60 disabled:opacity-50",
   quiet: "text-muted hover:bg-paper/10 hover:text-paper focus-visible:bg-paper/10 focus-visible:text-paper disabled:opacity-50",
   danger: "border border-amber-400/40 text-amber-400 hover:border-amber-400 focus-visible:border-amber-400 disabled:opacity-50",

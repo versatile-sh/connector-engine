@@ -95,6 +95,13 @@ type InstructionsAccepted struct {
 	By        string `json:"by"`
 }
 
+// SnapshotRestored is event 45: a snapshot replaced every row; counts are its rows per kind, warnings the kept rows that name something it lacks.
+type SnapshotRestored struct {
+	By       string         `json:"by"`
+	Counts   map[string]int `json:"counts"`
+	Warnings int            `json:"warnings"`
+}
+
 // FunctionRemoved is event 8.
 type FunctionRemoved struct {
 	Connector string `json:"connector"`

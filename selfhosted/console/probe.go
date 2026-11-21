@@ -3,14 +3,20 @@ package console
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
+	"net/http"
 	"net/url"
+	"regexp"
+	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/versatile-sh/connector-engine/core/listing"
 	"github.com/versatile-sh/connector-engine/port"
 )
 
@@ -59,6 +65,7 @@ type ProbedTool struct {
 	ReadOnly    bool       `json:"read_only"`
 	Destructive bool       `json:"destructive"`
 	Kind        port.Class `json:"kind"`
+	Estimated   bool       `json:"estimated,omitempty"`
 	Proposed    Access     `json:"proposed"`
 }
 
@@ -76,18 +83,18 @@ type Probed struct {
 	Items       []Item       `json:"items"`
 }
 
-// Propose pre-classifies a tool from its hints, which come from an untrusted server: only readOnlyHint true is on; anything else waits for the owner.
-func Propose(a *mcp.ToolAnnotations) (readOnly, destructive bool, proposed Access) {
-	if a != nil && a.ReadOnlyHint {
-		return true, false, AccessOn
+// Propose pre-classifies a tool from its hints, which come from an untrusted server, or from its name when it declares none: only a read is on.
+func Propose(name string, a *mcp.ToolAnnotations) (kind port.Class, estimated bool, proposed Access) {
+	kind, estimated = KindOf(name, a)
+	if kind == port.ClassRead {
+		return kind, estimated, AccessOn
 	}
-	destructive = a == nil || a.DestructiveHint == nil || *a.DestructiveHint
-	return false, destructive, AccessAsk
+	return kind, estimated, AccessAsk
 }
 
 func probedTool(name, title, description string, hints *mcp.ToolAnnotations) ProbedTool {
-	ro, de, prop := Propose(hints)
-	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: ro, Destructive: de, Kind: KindOf(ro, de), Proposed: prop}
+	kind, estimated, proposed := Propose(name, hints)
+	return ProbedTool{Name: name, Title: title, Description: description, ReadOnly: !estimated && kind == port.ClassRead, Destructive: !estimated && kind == port.ClassDestructive, Kind: kind, Estimated: estimated, Proposed: proposed}
 }
 
 func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
@@ -97,28 +104,77 @@ func hintsOf(a *port.Annotations) *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{ReadOnlyHint: a.ReadOnlyHint != nil && *a.ReadOnlyHint, DestructiveHint: a.DestructiveHint}
 }
 
-// KindOf names what a tool does by its hints: read, destructive (the MCP default when not read-only) or write.
-func KindOf(readOnly, destructive bool) port.Class {
+// KindOf names what a tool does by its hints: read or destructive as declared, write when it declares it does not delete.
+// A tool that declares neither gets Estimate of its name, with estimated true.
+func KindOf(name string, a *mcp.ToolAnnotations) (kind port.Class, estimated bool) {
 	switch {
-	case readOnly:
-		return port.ClassRead
-	case destructive:
-		return port.ClassDestructive
+	case a != nil && a.ReadOnlyHint:
+		return port.ClassRead, false
+	case a == nil || a.DestructiveHint == nil:
+		return Estimate(name), true
+	case *a.DestructiveHint:
+		return port.ClassDestructive, false
 	}
-	return port.ClassWrite
+	return port.ClassWrite, false
 }
 
-// Nature is what an installed function does: its reviewed class when it has one, else what its MCP hints say.
-func Nature(f port.Function) port.Class {
-	if f.ClassSource == port.ClassSourceReviewed && f.Class != port.ClassNone {
-		return f.Class
+var (
+	destructiveVerbs = wordSet("delete", "remove", "trash", "destroy", "drop", "purge", "revoke", "cancel", "archive", "erase", "wipe", "unlink", "uninstall", "terminate")
+	writeVerbs       = wordSet("create", "update", "send", "write", "post", "add", "set", "upload", "edit", "book", "submit", "publish", "copy", "move", "rename", "share", "invite", "assign", "upsert", "insert", "put", "patch", "modify", "change", "save", "apply", "merge", "close", "reopen", "approve", "reject", "complete", "start", "stop", "run", "execute", "trigger", "schedule", "reply", "comment", "react", "pin", "unpin", "star", "mark", "enable", "disable", "restore", "import", "attach", "link", "transfer", "pay", "charge", "refund", "deploy", "commit", "push", "duplicate", "convert", "generate", "make", "new", "manage", "batch", "bulk", "toggle", "lock", "unlock", "subscribe", "unsubscribe", "follow", "unfollow", "like", "tag", "label", "move", "resolve", "invoke", "call", "fill", "replace", "append", "clear", "reset", "clone", "sync", "install", "register", "upgrade", "retry", "rerun", "build", "claim", "rotate", "grant", "revert", "rollback")
+	camelBoundary    = regexp.MustCompile(`([a-z0-9])([A-Z])`)
+	nonWord          = regexp.MustCompile(`[^a-z0-9]+`)
+)
+
+func wordSet(words ...string) map[string]bool {
+	set := make(map[string]bool, len(words))
+	for _, w := range words {
+		set[w] = true
+	}
+	return set
+}
+
+// Estimate guesses a tool's class from the verbs in its name, by the MCP catalog's rule: a destructive verb, else a write verb, else read.
+func Estimate(name string) port.Class {
+	words := nonWord.Split(strings.ToLower(camelBoundary.ReplaceAllString(name, "${1}_${2}")), -1)
+	switch {
+	case slices.ContainsFunc(words, func(w string) bool { return destructiveVerbs[w] }):
+		return port.ClassDestructive
+	case slices.ContainsFunc(words, func(w string) bool { return writeVerbs[w] }):
+		return port.ClassWrite
+	}
+	return port.ClassRead
+}
+
+// Nature is what an installed function does: its reviewed class in the pinned manifest m when it has one, else what KindOf says.
+func Nature(f port.Function, m port.Manifest) (kind port.Class, estimated bool) {
+	if class, source := listing.Base(f, m); source == port.ClassSourceReviewed {
+		return class, false
 	}
 	var d struct {
 		Annotations *mcp.ToolAnnotations `json:"annotations"`
 	}
 	_ = json.Unmarshal(f.Definition, &d)
-	readOnly, destructive, _ := Propose(d.Annotations)
-	return KindOf(readOnly, destructive)
+	return KindOf(f.Name, d.Annotations)
+}
+
+// ErrSignInRequired means the server answered 401: it lists its functions only to a signed-in client.
+var ErrSignInRequired = errors.New("asks you to sign in before it lists its functions")
+
+type signInGate struct {
+	next  http.RoundTripper
+	asked atomic.Bool
+}
+
+func (g *signInGate) RoundTrip(r *http.Request) (*http.Response, error) {
+	next := g.next
+	if next == nil {
+		next = http.DefaultTransport
+	}
+	res, err := next.RoundTrip(r)
+	if err == nil && res.StatusCode == http.StatusUnauthorized {
+		g.asked.Store(true)
+	}
+	return res, err
 }
 
 // Probe connects to an MCP server (server/discover for 2026-07-28, initialize before), reads its server info and lists its tools.
@@ -132,7 +188,12 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 	client := mcp.NewClient(&mcp.Implementation{Name: "connector-console", Version: "0"}, nil)
 	httpClient := reach.Client()
 	httpClient.Timeout = 0
+	gate := &signInGate{next: httpClient.Transport}
+	httpClient.Transport = gate
 	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: u.String(), HTTPClient: httpClient, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
+	if err != nil && gate.asked.Load() {
+		return Probed{}, unreachable(fmt.Errorf("%s: %w", u.Host, ErrSignInRequired))
+	}
 	if err != nil {
 		return Probed{}, unreachable(fmt.Errorf("could not connect to %s: %w", u.Host, err))
 	}

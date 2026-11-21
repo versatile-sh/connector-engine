@@ -45,6 +45,8 @@ func crossTenantMatrix(e *env) {
 			tx.PutRole(role), tx.PutMember(member),
 			tx.Audit(port.AuditRow{At: t0, Tenant: "ta", Actor: "u1", Action: "x", Subject: "s1"}))
 	}))
+	e.appendChanges(scopeA, change("ta-g", `{"mode":"allow"}`))
+	e.appendChanges(inst, change("inst-g", `{"mode":"allow"}`))
 	e.must(e.write(inst, func(tx port.Tx) error {
 		_, err := tx.Emit(port.Event{Type: "inst-event", Time: t0})
 		return errors.Join(err, tx.PutOperation(port.Operation{ID: "inst-o2", Kind: "removeTenant", CreatedAt: t0}),
@@ -95,6 +97,7 @@ func crossTenantMatrix(e *env) {
 		look(tx.ListFanOuts())
 		look(tx.EventsAfter(port.SourceOf(port.Installation), 0, 0))
 		look(tx.DueWork(t0.Add(48*time.Hour), 0))
+		look(tx.ListPermissionChanges(0, 0, 0))
 		return nil
 	}))
 	raw, err := json.Marshal(seen)
@@ -152,6 +155,12 @@ func crossTenantMatrix(e *env) {
 		func(tx port.Tx) error { return tx.PutListing(port.Listing{Ref: private, Status: port.ListingActive}) },
 		func(tx port.Tx) error { _, err := tx.Emit(port.Event{Type: "x", Tenant: "ta", Time: t0}); return err },
 		func(tx port.Tx) error { return tx.Audit(port.AuditRow{At: t0, Tenant: "ta", Action: "x"}) },
+		func(tx port.Tx) error { _, err := tx.LockPermissions(); return err },
+		func(tx port.Tx) error {
+			_, err := tx.LockPermissions()
+			_, err2 := tx.AppendPermissionChanges([]port.PermissionChange{{Tenant: "ta", Kind: "grant", Key: "ta-x", After: json.RawMessage(`1`)}})
+			return errors.Join(err, err2)
+		},
 	} {
 		_ = e.write(scopeB, attack)
 	}

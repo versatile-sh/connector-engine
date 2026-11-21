@@ -7,12 +7,12 @@ Your data lives in volumes, apart from the code, so an update replaces the code 
 ## Docker, from a clone
 
 ```sh
-make export                 # a full backup first, in case you need to go back
+mise run export                 # a full backup first, in case you need to go back
 git pull
-make up                     # rebuilds the image and restarts the stack
+mise run up                     # rebuilds the image and restarts the stack
 ```
 
-`make up` rebuilds with `--build`, then runs `make unlock` and prints:
+`mise run up` rebuilds with `--build`, then runs `mise run unlock` and prints:
 
 ```text
 console: http://127.0.0.1:7465   agent endpoint: http://127.0.0.1:7465/mcp
@@ -36,7 +36,7 @@ Set `CONNECTOR_ENGINE_VERSION=v0.1.0` to install a given release instead of the 
 ## Going back
 
 1. Check out the previous tag (or reinstall the previous version).
-2. Restore the backup you made before updating: `make import FILE=...`.
+2. Restore the backup you made before updating: `mise run import -- ...`.
 
 A backup from a newer format is refused by an older build, so keep the backup you took before the update.
 

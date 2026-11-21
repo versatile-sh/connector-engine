@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-usage="usage: selfhosted/scripts/account.sh reset-password (RESET_USER names the user)|export [--yes]|import FILE [--yes], with COMPOSE and UNLOCK set by make; MODE=setup exports a shareable setup"
+usage="usage: selfhosted/scripts/account.sh reset-password (RESET_USER names the user)|export [--yes]|import FILE [--yes], with COMPOSE and UNLOCK set by the mise tasks; MODE=setup exports a shareable setup"
 op="${1:?$usage}"
 shift
 read -r -a compose <<<"${COMPOSE:?$usage}"

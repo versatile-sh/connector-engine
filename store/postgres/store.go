@@ -117,7 +117,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 	return fail(q.Commit(ctx))
 }
 
-// Read runs fn in a read-only transaction scoped to scope.
+// Read runs fn in a read-only transaction scoped to scope, at repeatable read when the scope is Consistent.
 func (s *Store) Read(ctx context.Context, scope port.Scope, fn func(port.Tx) error) error {
 	return s.run(ctx, scope, modeRead, func(t *tx) error { return fn(t) })
 }
@@ -152,6 +152,9 @@ func (s *Store) run(ctx context.Context, scope port.Scope, m mode, fn func(*tx) 
 	opts := pgx.TxOptions{}
 	if m == modeRead {
 		opts.AccessMode = pgx.ReadOnly
+	}
+	if m == modeRead && scope.Consistent {
+		opts.IsoLevel = pgx.RepeatableRead
 	}
 	q, err := s.pool.BeginTx(ctx, opts)
 	if err != nil {

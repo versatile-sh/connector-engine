@@ -85,7 +85,7 @@ Everything new lives in three places:
 |---|---|
 | `once` | `:decide` `approve` |
 | `session` | `:decide` `approve_for_session`. Offered only when the record's `mode` is `ask_once` |
-| `always` | `:decide` `approve`, then, once the approved call has run, `SetAccess(connector, function, on)`, or `SetSkillAccess(connector, key, on)` for a skill. The function or skill turns On in the console. It waits because execution re-checks access, and replacing the "ask" row earlier would cancel the run. If the console restarts in that window, the flip is lost and the call ran once. "Always" is offered only when the console could read the function's nature |
+| `always` | `:decide` `approve`, then, once the approved call has run, `SetAccess(connector, function, on)`, or `SetSkillAccess(connector, key, on)` for a skill. The function or skill turns On in the console. It waits because execution re-checks access, and replacing the "ask" row earlier would cancel the run. If the console restarts in that window, the flip is lost and the call ran once. "Always" is offered only when the console could read the function's nature and its class does not count as destructive, since on would still ask once a session |
 | `deny` | `:decide` `deny` |
 
 `DecideApproval` answers a lost race with the current record and no error. The use case compares the returned state and decider with the requested ones and reports `already_decided` with the actual outcome. A surface never claims a decision it did not make.
@@ -138,7 +138,7 @@ Messages name the connector, the function, the app and the expiry. They never in
 - The cursor is kept in the console state. On the very first start there is no cursor, and the relay does not replay history as notifications: a `requested` event is notified only when its approval is pending at that moment.
 - After a restart, the pending list is announced once. The relay remembers notified ids, so nothing is announced twice.
 - The relay runs only when at least one channel or paired device is configured.
-- Channel secrets are sealed by the console's `sealed.Box`. While the box is locked, before `make unlock` in the person profile, chat channels show an error. The relay rebuilds them as soon as the box unlocks.
+- Channel secrets are sealed by the console's `sealed.Box`. While the box is locked, before `mise run unlock` in the person profile, chat channels show an error. The relay rebuilds them as soon as the box unlocks.
 
 ### 4.4 Desktop popups (`vsh notify`)
 

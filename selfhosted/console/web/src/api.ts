@@ -55,15 +55,17 @@ export type Session = {
 /** How the root keys of the engine and the console rest: waiting for the host's unlock key, a plaintext file, or wrapped by a key in the OS keychain. */
 export type KeyProtection = "" | "locked" | "plaintext" | "wrapped";
 
-/** One function of a connector as the console shows it: its text, class and access. */
+/** One function of a connector as the console shows it: its text, class and access, and whether on still asks because a review or its server declares it destructive. */
 export type FunctionView = {
   name: string;
   title?: string;
   description?: string;
   class: string;
   kind: Kind;
+  estimated?: boolean;
   state: string;
   access: Access;
+  capped?: boolean;
 };
 
 /** What a connector item is: the server's instructions, a prompt or a resource. */
@@ -135,6 +137,7 @@ export type ProbedTool = {
   read_only: boolean;
   destructive: boolean;
   kind: Kind;
+  estimated?: boolean;
   proposed: Access;
 };
 
@@ -181,6 +184,7 @@ export type Skill = SkillFacts & {
   alias: string;
   title: string;
   description?: string;
+  icon?: string;
   publisher?: string;
   version: string;
   state: string;
@@ -202,6 +206,7 @@ export type Preview = {
   version: string;
   remote_url?: string;
   website_url?: string;
+  page_url?: string;
   protocol?: string;
   auth?: string[];
   tools: ProbedTool[];
@@ -211,7 +216,7 @@ export type Preview = {
 };
 
 /** Where an import reads from: an MCP address, a catalog listing or a local command. */
-export type ImportSource = { mcp?: string; listing?: string; local?: boolean; header_secret?: boolean };
+export type ImportSource = { mcp?: string; listing?: string; page?: string; local?: boolean; header_secret?: boolean };
 
 /** An agent key of the console: its name, expiry and whether a browser session made it. */
 export type Agent = { name: string; expires_at: string; via_browser?: boolean; new: boolean; signed_out_at?: string; owner?: RowOwner };

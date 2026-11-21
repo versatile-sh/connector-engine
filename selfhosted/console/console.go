@@ -1,6 +1,7 @@
 package console
 
 import (
+	"context"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -48,12 +49,14 @@ type Console struct {
 	inviteFails   minuteWindow
 	signupHits    lockout
 	icons         iconCache
+	iconTries     iconTries
 	connects      connectStates
 	as            authServer
 	surf          surfaces
 	signing       signingKey
 	sep           separatorCache
 	writing       sync.Map
+	probe         func(context.Context, string, Reach) (Probed, error)
 }
 
 // Handler returns every route behind the guard, each gated by the capability the route table declares or listed as public.

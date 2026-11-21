@@ -37,32 +37,42 @@ type env struct {
 // Run executes the whole suite, each case on a fresh store from newStore.
 func Run(t *testing.T, newStore func(t *testing.T) (port.Store, port.Outbox)) {
 	cases := map[string]func(*env){
-		"tenant isolation":          isolation,
-		"cross-tenant matrix":       crossTenantMatrix,
-		"installation rows":         installationRows,
-		"unit of work":              unitOfWork,
-		"read only":                 readOnly,
-		"outbox order per stream":   outboxOrder,
-		"concurrent emit":           concurrentEmit,
-		"conditional approval":      conditionalApproval,
-		"one open record per call":  oneOpenRecord,
-		"concurrent decisions":      concurrentDecisions,
-		"conditional call":          conditionalCall,
-		"revisions":                 revisions,
-		"grant key":                 grantKey,
-		"counted grant reservation": countedReservation,
-		"concurrent reservation":    concurrentReservation,
-		"due work":                  dueWork,
-		"inbox":                     inbox,
-		"scope validation":          scopeValidation,
-		"records":                   records,
-		"skill version":             skillVersion,
-		"roles and groups":          rolesAndGroups,
-		"calls clients and syncs":   callsClientsAndSyncs,
-		"purge tenant":              purgeTenant,
-		"prune history":             pruneHistory,
-		"snapshot and restore":      snapshotRestore,
-		"restore normalizes agent":  restoreNormalizesAgent,
+		"tenant isolation":                 isolation,
+		"cross-tenant matrix":              crossTenantMatrix,
+		"installation rows":                installationRows,
+		"unit of work":                     unitOfWork,
+		"read only":                        readOnly,
+		"outbox order per stream":          outboxOrder,
+		"concurrent emit":                  concurrentEmit,
+		"conditional approval":             conditionalApproval,
+		"one open record per call":         oneOpenRecord,
+		"concurrent decisions":             concurrentDecisions,
+		"conditional call":                 conditionalCall,
+		"revisions":                        revisions,
+		"grant key":                        grantKey,
+		"counted grant reservation":        countedReservation,
+		"concurrent reservation":           concurrentReservation,
+		"grant row keeps use count":        writingAGrantRowKeepsItsUseCount,
+		"due work":                         dueWork,
+		"inbox":                            inbox,
+		"scope validation":                 scopeValidation,
+		"records":                          records,
+		"skill version":                    skillVersion,
+		"roles and groups":                 rolesAndGroups,
+		"calls clients and syncs":          callsClientsAndSyncs,
+		"purge tenant":                     purgeTenant,
+		"prune history":                    pruneHistory,
+		"snapshot and restore":             snapshotRestore,
+		"restore normalizes agent":         restoreNormalizesAgent,
+		"restore refuses broken snapshots": restoreRefusesBrokenSnapshots,
+		"restore records itself":           restoreRecordsItself,
+		"restore keeps the first warnings": restoreKeepsTheFirstWarnings,
+		"permission revision":              revisionGrowsByOnePerWritingTransaction,
+		"permission values":                permissionValuesAsGiven,
+		"permission paging":                permissionChangesPage,
+		"permission tenant scope":          permissionLogIsTenantScoped,
+		"permission consistent read":       consistentReadSeesOneRevision,
+		"permission log on restore":        restoreKeepsTheLivePermissionLog,
 	}
 	for name, fn := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -536,6 +546,52 @@ func countedReservation(e *env) {
 	e.code(e.write(scopeB, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g2"}) }), port.CodeNotFound)
 }
 
+func writingAGrantRowKeepsItsUseCount(e *env) {
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "g1", "fn:f", 3)) }))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
+	e.must(e.write(scopeA, func(tx port.Tx) error {
+		g := agentGrant("ta", "g1", "fn:f", 3)
+		g.DefinitionHash = "h2"
+		if err := tx.PutGrant(g); err != nil {
+			return err
+		}
+		fresh := agentGrant("ta", "g2", "*", 3)
+		fresh.Uses = 2
+		return tx.PutGrant(fresh)
+	}))
+	e.must(e.read(scopeA, func(tx port.Tx) error {
+		g1, _ := tx.GetGrant("g1")
+		g2, err := tx.GetGrant("g2")
+		e.same([]any{"h2", 2, 0}, []any{g1.DefinitionHash, g1.Uses, g2.Uses})
+		return err
+	}))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
+	e.code(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }), port.CodeGrantExhausted)
+
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "g3", "class:read", 50)) }))
+	var wg sync.WaitGroup
+	for i := range 20 {
+		wg.Go(func() {
+			err := e.write(scopeA, func(tx port.Tx) error {
+				if i%2 == 0 {
+					return tx.ReserveGrants([]port.GrantID{"g3"})
+				}
+				return tx.PutGrant(agentGrant("ta", "g3", "class:read", 50))
+			})
+			if err != nil {
+				e.t.Errorf("a write of g3 failed: %v", err)
+			}
+		})
+	}
+	wg.Wait()
+	e.must(e.read(scopeA, func(tx port.Tx) error {
+		g, err := tx.GetGrant("g3")
+		e.same(10, g.Uses)
+		return err
+	}))
+}
+
 func concurrentReservation(e *env) {
 	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.PutGrant(agentGrant("ta", "g1", "fn:f", 3)) }))
 	var won atomic.Int32
@@ -790,12 +846,15 @@ func purgeTenant(e *env) {
 				tx.PutRole(port.RoleAssignment{Tenant: tenant, Person: "p", Role: "approver", Scope: "t/" + string(tenant)}),
 				tx.PutListing(port.Listing{Ref: port.ListingRef{Owner: tenant, Name: "io.x/own"}}))
 		}))
+		e.appendChanges(scope, change("g", `{}`))
 	}
 	fill(scopeA)
 	fill(scopeB)
 	counts, err := purger.PurgeTenant(ctx, "ta")
 	e.must(err)
-	e.same([]int{1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"]})
+	e.same([]int{1, 1, 1, 1, 1, 1, 1}, []int{counts["connectors"], counts["roles"], counts["listings"], counts["offers"], counts["audit"], counts["permission_changes"], counts["permission_head"]})
+	e.same([]string{"tbg"}, append(keysOf(e.changes(scopeA, 0, 0, 0)), keysOf(e.changes(scopeB, 0, 0, 0))...))
+	e.same(int64(0), e.lockedRevision(scopeA))
 	for scope, want := range map[port.Scope]int{scopeA: 0, scopeB: 1} {
 		e.must(e.read(port.Scope{Tenant: scope.Tenant, Installation: true}, func(tx port.Tx) error {
 			conns, err1 := tx.ListConnectors(port.ConnectorFilter{})
@@ -923,7 +982,7 @@ func snapshotRestore(e *env) {
 			tx.PutListing(port.Listing{Ref: port.ListingRef{Name: "io.x/svc"}, Source: "own", Publisher: "x", Status: port.ListingActive}))
 	}))
 	e.must(e.write(scopeA, func(tx port.Tx) error {
-		g := agentGrant("ta", "g1", "*", 0)
+		g := agentGrant("ta", "g1", "*", 3)
 		g.ExpiresAt = t0.Add(time.Hour)
 		_, err := tx.PutConnector(connector("ta", "c1"), port.AnyRevision)
 		_, err2 := tx.MarkInbox("m1", t0)
@@ -932,6 +991,7 @@ func snapshotRestore(e *env) {
 		return errors.Join(err, err2, err3, err4, tx.PutGrant(g), tx.CreateApproval(pending("ta", "a1", "h1")),
 			tx.Audit(port.AuditRow{Tenant: "ta", Actor: "a", Action: "install", Subject: "c1", At: t0}))
 	}))
+	e.must(e.write(scopeA, func(tx port.Tx) error { return tx.ReserveGrants([]port.GrantID{"g1"}) }))
 	e.must(e.write(scopeB, func(tx port.Tx) error {
 		_, err := tx.PutConnector(connector("tb", "c2"), port.AnyRevision)
 		return err
@@ -940,7 +1000,7 @@ func snapshotRestore(e *env) {
 	e.must(err)
 	e.must(e.o.MarkDelivered(ctx, []string{first[0].ID}))
 	want := viewOf(e, e.s, e.o)
-	if want.Due == 0 || want.Pending != 1 || len(want.Audit) != 1 || !want.Seen || len(want.Events) != 2 {
+	if want.Due == 0 || want.Pending != 1 || len(want.Grants) != 1 || want.Grants[0].Uses != 1 || len(want.Audit) != 1 || !want.Seen || len(want.Events) != 2 {
 		e.t.Fatalf("the seed is not what the case checks: %+v", want)
 	}
 	snap, err := src.Snapshot(ctx)
@@ -948,9 +1008,12 @@ func snapshotRestore(e *env) {
 
 	s, o := e.fresh()
 	dst := s.(port.Snapshotter)
+	restored := want
+	restored.Pending++
 	for range 2 {
-		e.must(dst.Restore(ctx, snap))
-		e.same(want, viewOf(e, s, o))
+		_, err := dst.Restore(ctx, snap, "operator")
+		e.must(err)
+		e.same(restored, viewOf(e, s, o))
 	}
 	e.must(s.Write(ctx, scopeA, func(tx port.Tx) error {
 		ev, err := tx.Emit(port.Event{Type: "connector.connector.updated", Tenant: "ta", Subject: "c1", Time: t0})
@@ -967,15 +1030,16 @@ func snapshotRestore(e *env) {
 		broken.Tables[name] = append(slices.Clone(rows), json.RawMessage(`"not a row"`))
 	}
 	before := viewOf(e, e.s, e.o)
-	if err := src.Restore(ctx, broken); err == nil {
+	if _, err := src.Restore(ctx, broken, "operator"); err == nil {
 		e.t.Fatal("a broken snapshot was restored")
 	}
 	e.same(before, viewOf(e, e.s, e.o))
-	if err := src.Restore(ctx, port.Snapshot{Store: "elsewhere"}); !port.IsCode(err, port.CodeInvalidArgument) {
+	if _, err := src.Restore(ctx, port.Snapshot{Store: "elsewhere"}, "operator"); !port.IsCode(err, port.CodeInvalidArgument) {
 		e.t.Fatalf("a snapshot of another store: %v", err)
 	}
-	e.must(src.Restore(ctx, snap))
-	e.same(want, viewOf(e, e.s, e.o))
+	_, err = src.Restore(ctx, snap, "operator")
+	e.must(err)
+	e.same(restored, viewOf(e, e.s, e.o))
 }
 
 // LegacyGrants writes, in tenant ta, rows an older release could store: a user row naming an agent and three pairs of agent rows whose keys differ only by agent.
@@ -1052,6 +1116,7 @@ func restoreNormalizesAgent(e *env) {
 	snap, err := src.Snapshot(ctx)
 	e.must(err)
 	s, _ := e.fresh()
-	e.must(s.(port.Snapshotter).Restore(ctx, snap))
+	_, err = s.(port.Snapshotter).Restore(ctx, snap, "operator")
+	e.must(err)
 	CheckCanonicalGrants(e.t, s)
 }

@@ -85,7 +85,7 @@ export function SideNav({ section, waiting, rail, onNavigate }: SideNavProps) {
                     <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit]">
                       <span
                         key={iris.at}
-                        className="iris absolute -translate-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(245_245_242/0.16),transparent)] opacity-0"
+                        className="iris absolute -translate-1/2 rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--color-paper)_16%,transparent),transparent)] opacity-0"
                         style={{ left: iris.x, top: iris.y, width: iris.r * 2, height: iris.r * 2 }}
                       />
                     </span>

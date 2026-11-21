@@ -75,7 +75,7 @@ const postgresSnapshot = `{"store": "postgres", "tables": {
   "records": [
     {"kind": "tenant", "k": "local", "tenant_id": "local", "uniq": null, "rev": 1, "doc": {"id": "local", "state": "active", "created_at": "2026-11-18T03:04:05+00:00"}},
     {"kind": "connector", "k": "c1", "tenant_id": "local", "uniq": null, "rev": 3, "doc": {"id": "c1", "tenant": "local", "workspace": "default", "alias": "notes", "enabled": true}},
-    {"kind": "grant", "k": "g1", "tenant_id": "local", "uniq": "abc", "rev": 1, "doc": {"id": "g1", "tenant": "local", "scope_kind": "agent", "scope_id": "x", "connector": "c1", "expires_at": "2026-11-18T04:04:05.5+00:00"}},
+    {"kind": "grant", "k": "g1", "tenant_id": "local", "uniq": "abc", "rev": 1, "doc": {"id": "g1", "tenant": "local", "scope_kind": "agent", "scope_id": "x", "connector": "c1", "selector": "*", "mode": "allow", "origin": "settings", "expires_at": "2026-11-18T04:04:05.5+00:00"}},
     {"kind": "approval", "k": "a1", "tenant_id": "local", "uniq": "local\u001fs1\u001fh", "rev": 1, "doc": {"id": "a1", "tenant": "local", "session": "s1", "call_hash": "h", "state": "pending", "created_at": "2026-11-18T03:04:05+00:00", "expires_at": "2026-11-18T03:05:05.123456+00:00"}}
   ],
   "streams": [{"stream": "connector-engine/local", "tenant_id": "local", "last": 2}],
@@ -93,7 +93,7 @@ func TestRestoresAPostgresSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := open(t, filepath.Join(t.TempDir(), "store.db"))
-	if err := s.Restore(ctx, snap); err != nil {
+	if _, err := s.Restore(ctx, snap, "operator"); err != nil {
 		t.Fatal(err)
 	}
 	local := port.Scope{Tenant: "local"}
@@ -125,7 +125,7 @@ func TestRestoresAPostgresSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	pending, err := s.Pending(ctx, 0)
-	if err != nil || len(pending) != 1 || pending[0].ID != "e2" {
+	if err != nil || len(pending) != 2 || pending[0].ID != "e2" || pending[1].Type != "connector.snapshot.restored" {
 		t.Fatalf("pending %+v, %v", pending, err)
 	}
 	if err := s.Write(ctx, local, func(tx port.Tx) error {
@@ -166,6 +166,12 @@ func TestMigratesALivePostgresStore(t *testing.T) {
 		if _, err := tx.MarkInbox("m1", t0); err != nil {
 			return err
 		}
+		if _, err := tx.LockPermissions(); err != nil {
+			return err
+		}
+		if _, err := tx.AppendPermissionChanges([]port.PermissionChange{{At: t0, Actor: "a", Op: "createGrant", Kind: "grant", Key: "g1", Before: json.RawMessage(`{"b":[1,{"k":null}],"a":"é"}`)}}); err != nil {
+			return err
+		}
 		if _, err := tx.Emit(port.Event{Type: "connector.connector.installed", Tenant: "local", Time: t0}); err != nil {
 			return err
 		}
@@ -184,7 +190,7 @@ func TestMigratesALivePostgresStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	dst := open(t, filepath.Join(t.TempDir(), "store.db"))
-	if err := dst.Restore(ctx, snap); err != nil {
+	if _, err := dst.Restore(ctx, snap, "operator"); err != nil {
 		t.Fatal(err)
 	}
 	view := func(s port.Store) string {
@@ -195,9 +201,13 @@ func TestMigratesALivePostgresStore(t *testing.T) {
 			seen, err3 := tx.SeenInbox("m1")
 			audit, err4 := tx.ListAudit("c1")
 			events, err5 := tx.EventsAfter(port.SourceOf("local"), 0, 0)
-			raw, _ := json.Marshal([]any{cs, gs, seen, audit, events})
+			changes, err6 := tx.ListPermissionChanges(0, 0, 0)
+			if len(changes) != 1 || changes[0].After != nil {
+				t.Errorf("changes %+v", changes)
+			}
+			raw, _ := json.Marshal([]any{cs, gs, seen, audit, events, changes})
 			out = string(raw)
-			for _, err := range []error{err1, err2, err3, err4, err5} {
+			for _, err := range []error{err1, err2, err3, err4, err5, err6} {
 				if err != nil {
 					return err
 				}

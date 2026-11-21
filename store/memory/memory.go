@@ -110,6 +110,8 @@ type data struct {
 	streams     map[string]int64
 	inbox       map[string]time.Time
 	inboxData   map[string][]byte
+	permHeads   map[port.TenantID]int64
+	permChanges []port.PermissionChange
 }
 
 func (d data) clone() data {
@@ -122,6 +124,7 @@ func (d data) clone() data {
 	d.roles, d.members = d.roles.clone(), d.members.clone()
 	d.audit, d.events = slices.Clone(d.audit), slices.Clone(d.events)
 	d.streams, d.inbox, d.inboxData = maps.Clone(d.streams), maps.Clone(d.inbox), maps.Clone(d.inboxData)
+	d.permHeads, d.permChanges = maps.Clone(d.permHeads), slices.Clone(d.permChanges)
 	return d
 }
 
@@ -146,6 +149,7 @@ func New() *Store {
 		exposures: newTable[port.Exposure](tenantRows), operations: newTable[port.Operation](tenantRows),
 		fanouts: newTable[port.FanOut](tenantRows), roles: newTable[port.RoleAssignment](tenantRows),
 		members: newTable[port.GroupMember](tenantRows), streams: map[string]int64{}, inbox: map[string]time.Time{}, inboxData: map[string][]byte{},
+		permHeads: map[port.TenantID]int64{},
 	}}
 }
 

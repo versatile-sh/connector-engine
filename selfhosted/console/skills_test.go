@@ -142,6 +142,27 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 	if skills.Skills[0].Publisher != "example" {
 		t.Fatalf("the publisher is not the repository owner: %q", skills.Skills[0].Publisher)
 	}
+	t.Run("the entry's icon reaches the preview, the installed skill and the API", func(t *testing.T) {
+		const icon = "https://versatile.sh/avatars/example.png"
+		if pv.Icon != icon || skills.Skills[0].Icon != icon {
+			t.Fatalf("preview %q, installed %q", pv.Icon, skills.Skills[0].Icon)
+		}
+		var raw struct{ Skills []map[string]any }
+		b.ok("GET", "/api/skills", nil, &raw)
+		if raw.Skills[0]["icon"] != icon {
+			t.Fatalf("the API does not return the icon: %v", raw.Skills[0]["icon"])
+		}
+		if o, _ := state.OriginOf(imported.Skill); o.Icon != icon {
+			t.Fatalf("the console state keeps %q", o.Icon)
+		}
+	})
+	t.Run("an entry without an icon has none in the preview", func(t *testing.T) {
+		var bare console.Preview
+		b.ok("POST", "/api/preview", map[string]any{"listing": catalogBase + "pdf-unlicensed.yaml"}, &bare)
+		if bare.Icon != "" {
+			t.Fatalf("%q", bare.Icon)
+		}
+	})
 	t.Run("the preview and the installed skill carry the derived requirements and per-app status", func(t *testing.T) {
 		for name, sk := range map[string]console.SkillPreview{"preview": *pv.Skill, "installed": skills.Skills[0].SkillPreview} {
 			status := map[string]string{}
@@ -277,6 +298,36 @@ func TestASkillImportedByDeepLinkIsServedThroughMCP(t *testing.T) {
 		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "skill_load", Arguments: map[string]any{"skill": "pdf-2"}})
 		if err != nil || res.IsError || structuredOf(t, res)["content"] != nil || !strings.Contains(textOf(res), "metadata_only") {
 			t.Fatalf("%v %s", err, textOf(res))
+		}
+	})
+	t.Run("an installed skill without an icon gets the one its listing carries when the list is read, and keeps it", func(t *testing.T) {
+		const icon = "https://versatile.sh/avatars/later.png"
+		unlicensed := catalogBase + "pdf-unlicensed.yaml"
+		iconOf := func(list []console.SkillSummary) string {
+			i := slices.IndexFunc(list, func(s console.SkillSummary) bool { return s.Alias == "pdf-2" })
+			if i < 0 {
+				t.Fatalf("pdf-2 is not installed: %+v", list)
+			}
+			return list[i].Icon
+		}
+		before, err := c.Skills(context.Background())
+		if err != nil || iconOf(before) != "" {
+			t.Fatalf("%v, icon %q before the list is read", err, iconOf(before))
+		}
+		listing, err := os.ReadFile(filepath.Join(fixtureDir, "pdf-unlicensed.yaml"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		catalog.tampered[unlicensed] = string(listing) + "icon: " + icon + "\n"
+		var read struct{ Skills []console.SkillSummary }
+		b.ok("GET", "/api/skills", nil, &read)
+		if got := iconOf(read.Skills); got != icon {
+			t.Fatalf("the API lists %q", got)
+		}
+		delete(catalog.tampered, unlicensed)
+		after, err := c.Skills(context.Background())
+		if err != nil || iconOf(after) != icon {
+			t.Fatalf("%v, icon %q once the listing no longer has it", err, iconOf(after))
 		}
 	})
 	t.Run("a key minted for an app that cannot run the skill's scripts warns on the skill and in the preview, never blocks", func(t *testing.T) {

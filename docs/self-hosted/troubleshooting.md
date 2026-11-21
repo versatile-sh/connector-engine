@@ -5,19 +5,19 @@
 Find the message you see, then run the fix. Start with the logs when nothing matches:
 
 ```sh
-make logs
+mise run logs
 ```
 
 ## The stack
 
 | You see | Cause | Fix |
 |---|---|---|
-| an AI app gets `the gateway is locked: run make unlock on this computer, then retry` | the engine restarted (reboot, crash, `docker restart`) and waits for its unlock key | `make unlock` |
-| `the gateway is not answering; after a restart it stays locked until you run make unlock on this computer, then retry` | the engine is down or still locked while the console is unlocked | `make unlock`; if it persists, `make logs` |
-| the engine log says `waiting for the host to deliver the unlock key` | same as above | `make unlock` |
-| an approval link answers 503 | the console is locked | `make unlock`, then open the link again |
-| `make up` fails with a bind error on port 7465 | another program uses the port | `make up CONSOLE_PORT=9123` and keep it in `selfhosted/deploy/.env` |
-| `make up` fails on `include` | Docker Compose older than 2.20 | update Docker Compose |
+| an AI app gets `the gateway is locked: run mise run unlock on this computer, then retry` | the engine restarted (reboot, crash, `docker restart`) and waits for its unlock key | `mise run unlock` |
+| `the gateway is not answering; after a restart it stays locked until you run mise run unlock on this computer, then retry` | the engine is down or still locked while the console is unlocked | `mise run unlock`; if it persists, `mise run logs` |
+| the engine log says `waiting for the host to deliver the unlock key` | same as above | `mise run unlock` |
+| an approval link answers 503 | the console is locked | `mise run unlock`, then open the link again |
+| `mise run up` fails with a bind error on port 7465 | another program uses the port | `CONSOLE_PORT=9123 mise run up` and keep it in `selfhosted/deploy/.env` |
+| `mise run up` fails on `include` | Docker Compose older than 2.20 | update Docker Compose |
 | `no Go on this host: the keychain is skipped` | Go is not installed, so `bin/vsh` cannot be built | install Go, or accept a plaintext root key (the console warns) |
 | `keychain-migrate needs an OS keychain and bin/vsh` | no Secret Service on Linux (`secret-tool` missing), or no Go | install `libsecret-tools` (or `libsecret`) and Go, then retry |
 
@@ -25,9 +25,9 @@ make logs
 
 | You see | Fix |
 |---|---|
-| forgot the password | `make reset-password` on the machine that runs the console |
+| forgot the password | `mise run reset-password` on the machine that runs the console |
 | `too many wrong passwords, try again in a minute` | wait a minute: 5 tries a minute |
-| the console warns about a plaintext root key | `make keychain-migrate` ([keychain](keychain.md)) |
+| the console warns about a plaintext root key | `mise run keychain-migrate` ([keychain](keychain.md)) |
 | an AI app cannot sign in | check its redirect: loopback `http` or an app scheme (`cursor:`, `vscode:`); see [connect an AI app](../getting-started/connect-an-app.md#endpoints-the-app-uses) |
 
 ## Connectors
@@ -58,4 +58,4 @@ adapters ok
 
 ## Still stuck
 
-Open an issue with the output of `make ps` and the relevant lines of `make logs`. Report security problems privately ([SECURITY.md](../../SECURITY.md)).
+Open an issue with the output of `mise run ps` and the relevant lines of `mise run logs`. Report security problems privately ([SECURITY.md](../../SECURITY.md)).

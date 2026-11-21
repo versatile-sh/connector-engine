@@ -19,7 +19,7 @@ An approved call runs once. A repeated identical call in the same session attach
 |---|---|
 | Allow once | this call runs |
 | Allow for this session | this call and the same function for the rest of the session, labelled with how long ("Allow for up to 8 hours") |
-| Always allow this app | the function is allowed for the calling key only: every other key keeps its former access as its own override, then the default rises to "on" ([details](permissions.md#always-allow-this-app)) |
+| Always allow this app | the function is allowed for the calling key only: every other key keeps its former access as its own override, then the default rises to "on" ([details](permissions.md#always-allow-this-app)); offered to Owners and Admins only |
 | Deny | the call is refused |
 
 ### Who decides

@@ -14,7 +14,8 @@ The **Activity** page lists every call an AI app made through the console's `/mc
 
 - Records go to `activity/YYYY-MM-DD.jsonl` beside the console's state file, mode 0600, kept 30 days.
 - The engine itself keeps only a hash of the arguments, plus its audit rows and call records (90 days in the `person` profile, `retention.audit` and `retention.calls`).
-- **Delete all activity** removes the files and hides older engine call records from the page.
+- **Delete all activity** removes the files and hides older engine call records from the page. Only an Owner can delete activity, and only Owners and Admins change what is kept.
+- With several users, each sees the calls of their own keys; Owners and Admins can also see everyone's ([roles and ownership](../self-hosted/person.md#roles-and-ownership)).
 
 ## Headless
 

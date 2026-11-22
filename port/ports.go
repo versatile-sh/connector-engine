@@ -204,8 +204,8 @@ type OAuthBroker interface {
 	Revoke(ctx context.Context, c OAuthClient, token []byte) error
 }
 
-// ClientRegistrar resolves the OAuth client for an issuer: pre-registered, CIMD, DCR, then manual.
-type ClientRegistrar interface {
+// ClientResolver resolves the OAuth client for an issuer: pre-registered, CIMD, DCR, then manual.
+type ClientResolver interface {
 	Resolve(ctx context.Context, tenant TenantID, issuer string) (OAuthClient, error)
 }
 

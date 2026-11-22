@@ -20,20 +20,20 @@ import (
 // Deps are the ports a Service runs on; Store, Clock, Authorizer, Secrets and Runtime are required.
 // Log receives the operational failures a caller is not told about; nil discards them.
 type Deps struct {
-	Store      port.Store
-	Clock      port.Clock
-	Authorizer port.Authorizer
-	Secrets    port.SecretStore
-	Runtime    port.ConnectorRuntime
-	Sources    map[string]port.ListingSource
-	Verifier   port.ArtifactVerifier
-	Broker     port.OAuthBroker
-	Registrar  port.ClientRegistrar
-	Filter     port.ResultFilter
-	Scanner    port.DefinitionScanner
-	Suggester  port.DescriptionSuggester
-	NewID      func() string
-	Log        *slog.Logger
+	Store          port.Store
+	Clock          port.Clock
+	Authorizer     port.Authorizer
+	Secrets        port.SecretStore
+	Runtime        port.ConnectorRuntime
+	Sources        map[string]port.ListingSource
+	Verifier       port.ArtifactVerifier
+	Broker         port.OAuthBroker
+	ClientResolver port.ClientResolver
+	Filter         port.ResultFilter
+	Scanner        port.DefinitionScanner
+	Suggester      port.DescriptionSuggester
+	NewID          func() string
+	Log            *slog.Logger
 }
 
 // Service runs the use cases over its ports.

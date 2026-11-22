@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -114,7 +115,7 @@ func (s *Service) InstallConnector(ctx context.Context, p port.Principal, in Ins
 	c := port.Connector{ID: port.ConnectorID(s.d.NewID()), Tenant: tenant, Workspace: in.Workspace, Alias: in.Alias, Listing: lv.Ref, Enabled: true,
 		Config: in.Config, CallTimeout: in.CallTimeout, ApprovalTimeout: in.ApprovalTimeout}
 	fns, meta, err := s.captureFunctions(ctx, c, lv.Manifest)
-	if err != nil {
+	if err != nil && !errors.Is(err, errSignInNeeded) {
 		return out, err
 	}
 	c.InstructionsHash = pinning.InstructionsHash(meta.Instructions)
@@ -235,7 +236,7 @@ func (s *Service) reconcile(ctx context.Context, tenant port.TenantID, id port.C
 	next := c
 	next.Listing.Version = m.Version
 	captured, meta, err := s.captureFunctions(ctx, next, m)
-	if err != nil {
+	if err != nil && !(errors.Is(err, errSignInNeeded) && len(pinned) == 0) {
 		return res, err
 	}
 	merged, changes := pinning.Reconcile(pinned, captured)

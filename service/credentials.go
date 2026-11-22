@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"net/netip"
+	"net/url"
 	"slices"
 	"time"
 
@@ -94,7 +96,8 @@ type ConnectStart struct {
 }
 
 // BeginConnect starts an authorization for the signed-in person; CompleteConnect refuses any other person.
-func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector port.ConnectorID, owner port.OwnerKind) (ConnectStart, error) {
+// The client is the stored or configured one of the issuer, else one registered for app, else client_registration_required.
+func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector port.ConnectorID, owner port.OwnerKind, app port.ClientApp) (ConnectStart, error) {
 	var out ConnectStart
 	if s.d.Broker == nil || s.d.ClientResolver == nil {
 		return out, port.Errorf(port.CodeUnavailable, "no OAuth broker is configured")
@@ -123,7 +126,10 @@ func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector 
 		return out, port.Errorf(port.CodeInvalidArgument, "listing %s has no OAuth authorization", c.Listing.Listing)
 	}
 	spec := m.Auth[i]
-	client, err := s.d.ClientResolver.Resolve(ctx, c.Tenant, spec.Issuer)
+	if err := checkClientApp(app); err != nil {
+		return out, err
+	}
+	client, err := s.d.ClientResolver.Acquire(ctx, c.Tenant, spec.Issuer, app)
 	if err != nil {
 		return out, err
 	}
@@ -133,7 +139,7 @@ func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector 
 	}
 	slices.Sort(scopes)
 	req := port.AuthorizationRequest{Client: client, Resource: spec.Resource, Scopes: slices.Compact(scopes), State: s.d.NewID(), Verifier: s.d.NewID()}
-	url, err := s.d.Broker.Begin(ctx, req)
+	to, err := s.d.Broker.Begin(ctx, req)
 	if err != nil {
 		return out, err
 	}
@@ -142,7 +148,7 @@ func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector 
 	maps.DeleteFunc(s.connect, func(_ string, v pendingConnect) bool { return now.After(v.Expires) })
 	s.connect[req.State] = pendingConnect{Tenant: c.Tenant, Person: p.Person, Connector: connector, Owner: owner, OwnerID: ownerID, Request: req, Expires: now.Add(10 * time.Minute)}
 	s.mu.Unlock()
-	return ConnectStart{State: req.State, URL: url}, nil
+	return ConnectStart{State: req.State, URL: to}, nil
 }
 
 // CompleteConnect exchanges the code and seals the tokens for the person the connect was begun for.
@@ -166,8 +172,31 @@ func (s *Service) CompleteConnect(ctx context.Context, p port.Principal, state, 
 	if err != nil {
 		return port.Credential{}, err
 	}
-	return s.storeCredential(ctx, actor(p), c, CredentialInput{Connector: pend.Connector, OwnerKind: pend.Owner, OwnerID: pend.OwnerID, Kind: port.CredentialOAuth2User,
+	cred, err := s.storeCredential(ctx, actor(p), c, CredentialInput{Connector: pend.Connector, OwnerKind: pend.Owner, OwnerID: pend.OwnerID, Kind: port.CredentialOAuth2User,
 		Issuer: pend.Request.Client.Issuer, Resource: pend.Request.Resource, Secret: secret, Scopes: tokens.Scopes, ExpiresAt: tokens.ExpiresAt}, pend.Request.Client.Registration)
+	if err == nil {
+		if _, rerr := s.Relist(ctx, pend.Tenant, pend.Connector); rerr != nil {
+			s.d.Log.WarnContext(ctx, "listing functions after sign-in failed", "connector", string(pend.Connector), "code", string(port.CodeOf(rerr)))
+		}
+	}
+	return cred, err
+}
+
+func loopback(host string) bool {
+	ip, err := netip.ParseAddr(host)
+	return host == "localhost" || err == nil && ip.IsLoopback()
+}
+
+func checkClientApp(app port.ClientApp) error {
+	for _, raw := range []string{app.RedirectURL, app.MetadataURL} {
+		if raw == "" {
+			continue
+		}
+		if u, err := url.Parse(raw); err != nil || u.Host == "" || u.User != nil || u.Fragment != "" || u.Scheme != "https" && !(u.Scheme == "http" && loopback(u.Hostname())) {
+			return port.Errorf(port.CodeInvalidArgument, "the redirect and the client metadata addresses are https, or loopback http")
+		}
+	}
+	return nil
 }
 
 // RefreshCredential refreshes one credential under its revision; invalid_grant (unauthenticated) moves it to needs_reauth.

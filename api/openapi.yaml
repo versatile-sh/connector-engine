@@ -324,9 +324,15 @@ components:
       type: object
     BeginConnectRequest:
       properties:
+        client_metadata_url:
+          type: string
+        client_name:
+          type: string
         id:
           type: string
         owner:
+          type: string
+        redirect_url:
           type: string
       required:
         - id
@@ -556,9 +562,18 @@ components:
       properties:
         client_id:
           type: string
+        expires_at:
+          format: date-time
+          type: string
         issuer:
           type: string
         redirect_url:
+          type: string
+        registration:
+          type: string
+        registration_access_token:
+          $ref: '#/components/schemas/Sealed'
+        registration_client_uri:
           type: string
         secret:
           $ref: '#/components/schemas/Sealed'
@@ -3242,7 +3257,13 @@ paths:
           application/json:
             schema:
               properties:
+                client_metadata_url:
+                  type: string
+                client_name:
+                  type: string
                 owner:
+                  type: string
+                redirect_url:
                   type: string
               required:
                 - owner

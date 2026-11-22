@@ -168,11 +168,13 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		return fmt.Errorf("suggester: %w", err)
 	}
 	a.closers = append(a.closers, closer)
+	issuerHTTP := b.guard(b.issuerHosts()).Client()
+	discovery := &credential.Discoverer{HTTP: issuerHTTP}
 	a.Service, err = service.New(service.Deps{
 		Scanner: scanner, Suggester: suggester,
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
 		Authorizer: authorizer, Log: a.log,
-		Broker: &credential.Broker{HTTP: b.guard(b.issuerHosts()).Client()}, ClientResolver: credential.NewClientResolver(clients...).WithStore(store, secrets),
+		Broker: &credential.Broker{HTTP: issuerHTTP, Discovery: discovery}, ClientResolver: credential.NewClientResolver(clients...).WithStore(store, secrets).WithClock(a.Clock).WithDiscovery(discovery),
 	}, svcCfg)
 	if err != nil {
 		return err

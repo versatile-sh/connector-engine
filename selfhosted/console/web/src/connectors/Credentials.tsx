@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { errorText, type Connector, type CredentialMode } from "../api";
+import { errorCode, errorText, type Connector, type CredentialMode } from "../api";
 import { useT } from "../i18n/I18nProvider";
 import { connectOAuth, sealHeader, setCredentialMode } from "../mutations";
 import { useViewer } from "../people/useViewer";
@@ -10,6 +10,11 @@ import { CAPTION, HAIRLINE, SUBTITLE, WELL, button } from "../ui/styles";
 import { Tag } from "../ui/Tag";
 import { credentialsViewOf, type CredentialsView } from "./credentials";
 import { isActive } from "./summary";
+
+function useConnectRefusal() {
+  const t = useT();
+  return (error: unknown) => (errorCode(error) === "client_registration_required" ? t("creds.manualClient") : errorText(error));
+}
 
 function WhoSignsIn({ connector, view }: { connector: Connector; view: CredentialsView }) {
   const t = useT();
@@ -46,6 +51,7 @@ export function Credentials({ connector }: { connector: Connector }) {
   const [clientSecret, setClientSecret] = useState("");
   const saveHeader = useMutation(sealHeader);
   const connect = useMutation(connectOAuth);
+  const connectRefusal = useConnectRefusal();
   const needed = view.needed;
   const onHeader = (event: FormEvent) => {
     event.preventDefault();
@@ -92,7 +98,7 @@ export function Credentials({ connector }: { connector: Connector }) {
       {view.forms && own && !manage && auth.includes("oauth2_user") ? (
         <form onSubmit={onOAuth} className="mt-5 border-t border-line pt-4">
           <p role="alert" className="mb-2 text-sm text-amber-400 empty:hidden">
-            {connect.isError ? errorText(connect.error) : ""}
+            {connect.isError ? connectRefusal(connect.error) : ""}
           </p>
           <button type="submit" disabled={connect.isPending} className={`${button({ variant: view.signedIn ? "secondary" : "primary", size: "sm" })} w-full`}>
             {t(view.signedIn ? "creds.signInAgain" : "creds.signIn", { title: connector.title })}
@@ -102,7 +108,7 @@ export function Credentials({ connector }: { connector: Connector }) {
         <form onSubmit={onOAuth} className="mt-5 border-t border-line pt-4">
           <h3 className="mb-3 text-sm font-medium">{t("creds.oauth")}</h3>
           <Field label={t("creds.clientId")} hint={t("creds.clientIdHint")} mono value={clientID} onChange={(event) => setClientID(event.target.value)} />
-          <Field label={t("creds.clientSecret")} hint={t("common.optional")} error={connect.isError ? errorText(connect.error) : undefined} type="password" autoComplete="off" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} />
+          <Field label={t("creds.clientSecret")} hint={t("common.optional")} error={connect.isError ? connectRefusal(connect.error) : undefined} type="password" autoComplete="off" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} />
           <button type="submit" disabled={connect.isPending} className={`${button({ variant: "primary", size: "sm" })} w-full`}>
             {t("creds.connect")}
           </button>

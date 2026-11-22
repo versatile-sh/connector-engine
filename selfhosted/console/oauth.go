@@ -166,6 +166,7 @@ var appRoutes = []appRoute{
 	{http.MethodGet, "/.well-known/oauth-protected-resource/mcp", (*Console).protectedResource},
 	{http.MethodGet, "/.well-known/oauth-authorization-server", (*Console).authServerMetadata},
 	{http.MethodPost, "/oauth/register", (*Console).register},
+	{http.MethodGet, clientMetadataPath, (*Console).clientMetadata},
 	{http.MethodPost, "/oauth/token", (*Console).token},
 }
 
@@ -248,6 +249,31 @@ func (c *Console) register(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"client_id": cl.ID, "client_id_issued_at": now.Unix(), "client_name": cl.Name, "redirect_uris": cl.RedirectURIs,
+		"grant_types": []string{"authorization_code", "refresh_token"}, "response_types": []string{"code"}, "token_endpoint_auth_method": "none",
+	})
+}
+
+const (
+	clientMetadataPath = "/oauth/client.json"
+	clientAppName      = "connector-engine"
+)
+
+func (c *Console) clientMetadataURL() string {
+	u, err := url.Parse(c.PublicURL)
+	if err != nil || u.Scheme != "https" || u.Host == "" || loopbackName(u.Hostname()) {
+		return ""
+	}
+	return strings.TrimRight(c.PublicURL, "/") + clientMetadataPath
+}
+
+func (c *Console) clientMetadata(w http.ResponseWriter, _ *http.Request) {
+	id := c.clientMetadataURL()
+	if id == "" {
+		writeError(w, http.StatusNotFound, "this console has no public https address")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"client_id": id, "client_name": clientAppName, "client_uri": strings.TrimRight(c.PublicURL, "/"), "redirect_uris": []string{c.OAuthRedirect},
 		"grant_types": []string{"authorization_code", "refresh_token"}, "response_types": []string{"code"}, "token_endpoint_auth_method": "none",
 	})
 }

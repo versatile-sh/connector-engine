@@ -365,18 +365,54 @@ func (c *Console) installListing(ctx context.Context, m port.Manifest, aliasBase
 	if err != nil {
 		return conn, nil, err
 	}
+	if err := c.acceptListed(ctx, conn, fns); err != nil {
+		return conn, nil, err
+	}
+	return conn, fns, c.Engine.setLevel(ctx, conn, port.LevelCustom)
+}
+
+func (c *Console) acceptListed(ctx context.Context, conn string, fns []port.Function) error {
 	seen := map[string]port.Hash{}
 	for _, f := range fns {
 		if f.State == port.FunctionQuarantined && port.ItemKind(f.Name) == "" {
 			seen[f.Name] = f.DefinitionHash
 		}
 	}
-	if len(seen) > 0 {
-		if err := c.Engine.accept(ctx, conn, seen); err != nil {
-			return conn, nil, err
+	if len(seen) == 0 {
+		return nil
+	}
+	return c.Engine.accept(ctx, conn, seen)
+}
+
+func (c *Console) applyChoices(ctx context.Context, conn string, fns []port.Function, choices map[string]Access) error {
+	for _, f := range fns {
+		a, ok := choices[f.Name]
+		if kind, item := itemKinds[port.ItemKind(f.Name)]; !ok && item {
+			a = Proposed(kind)
+		} else if !ok {
+			a = AccessAsk
+		}
+		if err := c.writeAccess(ctx, conn, f.Name, a); err != nil {
+			return fmt.Errorf("function %s: %w", f.Name, err)
 		}
 	}
-	return conn, fns, c.Engine.setLevel(ctx, conn, port.LevelCustom)
+	return nil
+}
+
+func (c *Console) adoptSignedInFunctions(ctx context.Context, conn string) error {
+	unlock, err := c.lockConnector(ctx, conn)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	fns, err := c.Engine.functions(ctx, conn)
+	if err != nil || len(fns) == 0 {
+		return err
+	}
+	if err := c.acceptListed(ctx, conn, fns); err != nil {
+		return err
+	}
+	return c.applyChoices(ctx, conn, fns, nil)
 }
 
 // AliasBase is the alias a listing name proposes: its last segment without an mcp- prefix, or the namespace's last label when that is only server or mcp.
@@ -402,16 +438,8 @@ func (c *Console) Install(ctx context.Context, m port.Manifest, choices map[stri
 		return conn, err
 	}
 	defer unlock()
-	for _, f := range fns {
-		a, ok := choices[f.Name]
-		if kind, item := itemKinds[port.ItemKind(f.Name)]; !ok && item {
-			a = Proposed(kind)
-		} else if !ok {
-			a = AccessAsk
-		}
-		if err := c.writeAccess(ctx, conn, f.Name, a); err != nil {
-			return conn, fmt.Errorf("function %s: %w", f.Name, err)
-		}
+	if err := c.applyChoices(ctx, conn, fns, choices); err != nil {
+		return conn, err
 	}
 	if err := c.startMode(conn, m); err != nil {
 		return conn, err
@@ -656,7 +684,8 @@ func (c *Console) BeginOAuth(ctx context.Context, conn string) (state, to string
 		URL   string `json:"url"`
 	}
 	kind, _ := c.credentialOwner(ctx, conn)
-	err = c.Engine.Call(ctx, http.MethodPost, connectorPath(conn, "/credentials:connect"), map[string]any{"owner": kind}, &out)
+	in := map[string]any{"owner": kind, "client_name": clientAppName, "redirect_url": c.OAuthRedirect, "client_metadata_url": c.clientMetadataURL()}
+	err = c.Engine.Call(ctx, http.MethodPost, connectorPath(conn, "/credentials:connect"), in, &out)
 	return out.State, out.URL, err
 }
 

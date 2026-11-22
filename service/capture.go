@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -172,8 +173,49 @@ func classOf(f port.Function, m port.Manifest) (port.Class, port.ClassSource) {
 	return listing.Base(f, m)
 }
 
+var errSignInNeeded = errors.New("the connector lists its functions after somebody signs in")
+
+func needsOAuth(m port.Manifest) bool {
+	return slices.ContainsFunc(m.Auth, func(a port.AuthSpec) bool { return a.Kind == port.CredentialOAuth2User })
+}
+
+func (s *Service) signedInCredential(ctx context.Context, c port.Connector, m port.Manifest) (port.Credential, bool, error) {
+	if !needsOAuth(m) {
+		return port.Credential{}, false, nil
+	}
+	var creds []port.Credential
+	if err := s.d.Store.Read(ctx, port.Scope{Tenant: c.Tenant}, func(tx port.Tx) (err error) {
+		creds, err = tx.ListCredentials(port.CredentialFilter{Connector: c.ID})
+		return err
+	}); err != nil {
+		return port.Credential{}, false, err
+	}
+	creds = slices.DeleteFunc(creds, func(cr port.Credential) bool {
+		return cr.Kind != port.CredentialOAuth2User || cr.Status != port.CredentialActive
+	})
+	if len(creds) == 0 {
+		return port.Credential{}, false, nil
+	}
+	if i := slices.IndexFunc(creds, func(cr port.Credential) bool { return cr.OwnerKind == port.OwnerWorkspace }); i > 0 {
+		return creds[i], true, nil
+	}
+	return creds[0], true, nil
+}
+
 func (s *Service) captureFunctions(ctx context.Context, c port.Connector, m port.Manifest) ([]port.Function, port.ListMeta, error) {
-	h, err := s.handle(ctx, c, m, "", "")
+	cred, signedIn, err := s.signedInCredential(ctx, c, m)
+	if err != nil {
+		return nil, port.ListMeta{}, err
+	}
+	fns, meta, err := s.captureWith(ctx, c, m, cred)
+	if err != nil && needsOAuth(m) && !signedIn {
+		err = fmt.Errorf("%w: %w", errSignInNeeded, err)
+	}
+	return fns, meta, err
+}
+
+func (s *Service) captureWith(ctx context.Context, c port.Connector, m port.Manifest, cred port.Credential) ([]port.Function, port.ListMeta, error) {
+	h, err := s.handle(ctx, c, m, cred.ID, cred.OwnerKind)
 	if err != nil {
 		return nil, port.ListMeta{}, err
 	}

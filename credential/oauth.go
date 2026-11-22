@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -19,21 +18,16 @@ import (
 	"github.com/versatile-sh/connector-engine/port"
 )
 
-type metadata struct {
-	AuthorizationEndpoint string `json:"authorization_endpoint"`
-	TokenEndpoint         string `json:"token_endpoint"`
-	RevocationEndpoint    string `json:"revocation_endpoint"`
-}
-
-// Broker is the OAuthBroker for pre-registered clients: PKCE S256, a bound state, single-flight refresh and revocation. Issuer requests go through HTTP, or a zero egress guard when nil, and never follow a redirect.
+// Broker is the OAuthBroker for any registered client: PKCE S256, a bound state, single-flight refresh and revocation. Issuer requests go through HTTP, or a zero egress guard when nil, and never follow a redirect.
+// Discovery serves the issuer metadata and may be shared with the ClientResolver; nil makes a private one over HTTP.
 type Broker struct {
-	HTTP *http.Client
+	HTTP      *http.Client
+	Discovery *Discoverer
 
-	once    sync.Once
-	http    *http.Client
-	mu      sync.Mutex
-	found   map[string]metadata
-	refresh singleflight.Group
+	once         sync.Once
+	discoverOnce sync.Once
+	http         *http.Client
+	refresh      singleflight.Group
 }
 
 // NewVerifier returns a fresh PKCE code verifier for an AuthorizationRequest.
@@ -51,37 +45,16 @@ func (b *Broker) client() *http.Client {
 	return b.http
 }
 
-func (b *Broker) discover(ctx context.Context, issuer string) (metadata, error) {
-	b.mu.Lock()
-	m, ok := b.found[issuer]
-	b.mu.Unlock()
-	if ok {
-		return m, nil
-	}
-	base := strings.TrimRight(issuer, "/")
-	var lastErr error
-	for _, path := range []string{"/.well-known/oauth-authorization-server", "/.well-known/openid-configuration"} {
-		body, err := fetch.Do(ctx, b.client(), http.MethodGet, base+path, nil, nil)
-		if err != nil {
-			lastErr = port.Errorf(port.CodeOf(err), "issuer metadata is unreachable")
-			continue
+func (b *Broker) discover(ctx context.Context, issuer string) (ServerMetadata, error) {
+	b.discoverOnce.Do(func() {
+		if b.Discovery == nil {
+			b.Discovery = &Discoverer{HTTP: b.HTTP}
 		}
-		if err := json.Unmarshal(body, &m); err != nil || !secure(m.TokenEndpoint) || (m.RevocationEndpoint != "" && !secure(m.RevocationEndpoint)) {
-			lastErr = port.Errorf(port.CodeInvalidArgument, "issuer metadata has no https token endpoint")
-			continue
-		}
-		b.mu.Lock()
-		if b.found == nil {
-			b.found = map[string]metadata{}
-		}
-		b.found[issuer] = m
-		b.mu.Unlock()
-		return m, nil
-	}
-	return m, lastErr
+	})
+	return b.Discovery.Server(ctx, issuer)
 }
 
-func (b *Broker) config(ctx context.Context, c port.OAuthClient, scopes []string) (*oauth2.Config, metadata, context.Context, error) {
+func (b *Broker) config(ctx context.Context, c port.OAuthClient, scopes []string) (*oauth2.Config, ServerMetadata, context.Context, error) {
 	m, err := b.discover(ctx, c.Issuer)
 	if err != nil {
 		return nil, m, ctx, err
@@ -177,8 +150,8 @@ func (b *Broker) Revoke(ctx context.Context, c port.OAuthClient, token []byte) e
 }
 
 func secure(endpoint string) bool {
-	u, err := url.Parse(endpoint)
-	return err == nil && u.Scheme == "https" && u.Host != "" && u.User == nil
+	_, ok := fetchable(endpoint)
+	return ok
 }
 
 func tokenSet(t *oauth2.Token, previousRefresh []byte) port.TokenSet {

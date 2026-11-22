@@ -168,7 +168,8 @@ export const ptBR: Record<MessageKey, string> = {
   "creds.valueHint": "Selado pelo gateway, nunca mais exibido.",
   "creds.oauth": "Entrar com o provedor",
   "creds.clientId": "Client ID",
-  "creds.clientIdHint": "Um cliente pré-registrado, quando o provedor exige.",
+  "creds.clientIdHint": "Deixe vazio para o console se cadastrar sozinho no provedor; preencha quando o provedor exigir um cliente que você cadastrou.",
+  "creds.manualClient": "Este servidor não permite o cadastro automático. Cadastre este console no provedor e informe aqui o client id e o secret.",
   "creds.clientSecret": "Client secret",
   "creds.connect": "Conectar",
 

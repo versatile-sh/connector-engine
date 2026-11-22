@@ -31,6 +31,10 @@ In the console, an Owner or Admin sets each connector's mode (`PUT /api/connecto
 - Changing the mode rebinds every key of the connector at once. A call already held keeps the approvers it was held with. Switching to `per_person` keeps the shared credential stored, unused; switching back uses it again.
 - Owners and Admins see how many people signed in (`signed_in_count` of `people_count`).
 
+## OAuth clients
+
+A connector that signs in with OAuth needs a client at the provider's issuer. A client you registered wins; otherwise the engine registers one itself through a client metadata document or dynamic registration, once per tenant and issuer, and refuses with `client_registration_required` when the issuer allows neither. The registered client (secret and registration access token included) is sealed under the tenant key, never logged, and registered again when the redirect address changes or its secret expires. See [import a connector](../getting-started/import-a-connector.md#a-server-that-asks-you-to-sign-in).
+
 ## Names an app sees
 
 | Item | Listed as |

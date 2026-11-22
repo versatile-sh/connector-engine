@@ -238,7 +238,9 @@ func TestFilterQuitAndKeys(t *testing.T) {
 
 func TestTheScreenFitsTheTerminal(t *testing.T) {
 	for _, size := range [][2]int{{80, 24}, {140, 40}} {
-		m := started(t, fixture())
+		api := fixture()
+		api.conns[0].Functions[2].Estimated = true
+		m := started(t, api)
 		next, _ := m.Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 		m = next.(Model)
 		for _, keys := range [][]string{nil, {"enter"}, {"tab"}, {"tab", "tab"}, {"tab", "tab", "tab"}} {
@@ -286,6 +288,21 @@ func TestTheSelectedFunctionStaysOnScreen(t *testing.T) {
 		if !strings.Contains(v, "● "+fns[i].Name) || !strings.Contains(v, "Notes") || len(strings.Split(v, "\n")) != 24 {
 			t.Fatalf("after %d downs %s is not on screen:\n%s", i, fns[i].Name, v)
 		}
+	}
+}
+
+func TestAnEstimatedKindIsMarked(t *testing.T) {
+	api := fixture()
+	api.conns[0].Functions[2].Estimated = true
+	v := ansi.Strip(press(t, sized(t, api, 80, 24), "enter").render())
+	for _, l := range strings.Split(v, "\n") {
+		marked := strings.Contains(l, "· estimated")
+		if strings.Contains(l, "create") != marked || marked && strings.Contains(l, "search") {
+			t.Fatalf("only create is estimated:\n%s", v)
+		}
+	}
+	if !strings.Contains(v, "· estimated") {
+		t.Fatalf("create is not marked estimated:\n%s", v)
 	}
 }
 

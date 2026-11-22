@@ -245,7 +245,11 @@ func (m Model) detailView(w int) ([]string, int) {
 		if ri == m.row {
 			sel = len(out)
 		}
-		out = append(out, dot(ri == m.row)+base.Render(name+" ")+strings.Join(cells, base.Render("  ")))
+		row := dot(ri == m.row) + base.Render(name+" ") + strings.Join(cells, base.Render("  "))
+		if f.Estimated {
+			row += dim.Render("  · estimated")
+		}
+		out = append(out, row)
 	}
 	if len(k.Functions) == 0 {
 		out = append(out, "", dim.Render("this connector has no functions"))

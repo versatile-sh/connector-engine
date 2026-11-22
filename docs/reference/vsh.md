@@ -180,7 +180,7 @@ approved 18eb5f5700a4eb5f6bfadba9a5091f44
 |---|---|
 | all | `tab` / `shift+tab` or `1`–`4` switch screens, `q` quits, `esc` goes back or quits, `ctrl+c` quits |
 | Connectors | `↑` `↓` move, `/` filters, `enter` opens a connector |
-| a connector | its functions by read, write and destructive; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
+| a connector | its functions by read, write and destructive, a kind estimated from the name marked `· estimated` in grey as in the web console; `←` `→` or `space` set Off, On or Ask; `[` `]` switch between Default and each key; `f` makes a key Follow or Custom; `r` all read On, `w` all write Ask, `x` everything Off, each in one request |
 | Keys | `n` creates a key and shows it once, `d` revokes one after a `y` |
 | Approvals | `a` approves, `d` denies |
 | Activity | the calls of the last hour, newest last, every 2 seconds |

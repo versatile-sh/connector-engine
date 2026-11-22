@@ -55,7 +55,12 @@ mise run up | mise run unlock
     | docker compose exec -T engine connector-engine unlock
         -> unix socket /run/connector-engine-unlock/unlock.sock   tmpfs inside the container, 0700, uid 65532
         -> secrets/hostkey: unwrap root.key.wrapped in memory, open the store
+  then, the same for the console, and a confirmation:
+    the container that took the key is still the running one, --op status no longer says locked,
+    and GET 127.0.0.1:$CONSOLE_PORT/api/ready reports ready (the console asks engine:8080/readyz)
 ```
+
+`mise run unlock` delivers only to a running container and does not trust the first answer: a container that `mise run up` recreated, or an engine that restarted after it took the key, comes back locked. When the confirmation fails within a minute, it delivers again, up to 6 attempts with a backoff of 1, 2, 4, 8 and 16 seconds, then exits non-zero with `unlock failed: the engine and the console did not both confirm unlocked after 6 attempts`. `UNLOCK_ATTEMPTS`, `UNLOCK_BACKOFF` (first wait, in seconds) and `UNLOCK_CONFIRM` (seconds of confirmation per attempt) change those numbers.
 
 - The key travels on pipes only: never in argv, an environment variable, a log line, a compose file or a file on any disk. `vsh keychain` writes it on the stdin of `security -i` (macOS) and `secret-tool store` (Linux), never as an argument.
 - The socket is in a `tmpfs` mount of each container, owned by the image user. No other container and no host process reaches it; `docker exec` needs the Docker socket, which is root-equivalent anyway.

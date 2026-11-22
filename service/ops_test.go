@@ -69,7 +69,7 @@ func TestRotateKeyIsTheOperatorsAndValidatesItsScope(t *testing.T) {
 	want(t, port.IsCode(err, port.CodePermissionDenied), true, "a tenant admin may not rotate")
 }
 
-func TestClientRegistrationIsSealedAndFeedsTheRegistrar(t *testing.T) {
+func TestClientRegistrationIsSealedAndFeedsTheClientResolver(t *testing.T) {
 	w := newWorld(t, opts{})
 	got := st.Ok(w.Svc.PutClientRegistration(w.Ctx, w.admin, service.ClientRegistrationInput{Issuer: "https://idp.example", ClientID: "cid", Secret: "s3cret", RedirectURL: "https://engine/cb"}))
 	want(t, got.Secret == nil && got.ClientID == "cid", true, "the answer carries no secret")
@@ -83,9 +83,9 @@ func TestClientRegistrationIsSealedAndFeedsTheRegistrar(t *testing.T) {
 	_, err = w.Svc.PutClientRegistration(w.Ctx, w.alice, service.ClientRegistrationInput{Issuer: "https://idp.example", ClientID: "c"})
 	want(t, port.IsCode(err, port.CodePermissionDenied), true, "admin only")
 
-	reg := credential.NewRegistrar().WithStore(w.Store, w.Secrets)
+	reg := credential.NewClientResolver().WithStore(w.Store, w.Secrets)
 	c := st.Ok(reg.Resolve(w.Ctx, tenant, "https://idp.example"))
-	want(t, c.ClientID+"/"+string(c.ClientSecret), "cid/s3cret", "the registrar opens the sealed client")
+	want(t, c.ClientID+"/"+string(c.ClientSecret), "cid/s3cret", "the resolver opens the sealed client")
 	want(t, c.Registration, port.RegistrationPreRegistered, "marked pre-registered")
 	_, err = reg.Resolve(w.Ctx, "t2", "https://idp.example")
 	want(t, port.IsCode(err, port.CodeNotFound), true, "another tenant has none")

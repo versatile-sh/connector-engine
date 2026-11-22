@@ -96,7 +96,7 @@ type ConnectStart struct {
 // BeginConnect starts an authorization for the signed-in person; CompleteConnect refuses any other person.
 func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector port.ConnectorID, owner port.OwnerKind) (ConnectStart, error) {
 	var out ConnectStart
-	if s.d.Broker == nil || s.d.Registrar == nil {
+	if s.d.Broker == nil || s.d.ClientResolver == nil {
 		return out, port.Errorf(port.CodeUnavailable, "no OAuth broker is configured")
 	}
 	c, err := s.connectorOf(ctx, p, connector, authz.ConnectorRead)
@@ -123,7 +123,7 @@ func (s *Service) BeginConnect(ctx context.Context, p port.Principal, connector 
 		return out, port.Errorf(port.CodeInvalidArgument, "listing %s has no OAuth authorization", c.Listing.Listing)
 	}
 	spec := m.Auth[i]
-	client, err := s.d.Registrar.Resolve(ctx, c.Tenant, spec.Issuer)
+	client, err := s.d.ClientResolver.Resolve(ctx, c.Tenant, spec.Issuer)
 	if err != nil {
 		return out, err
 	}
@@ -190,7 +190,7 @@ func (s *Service) RefreshCredential(ctx context.Context, tenant port.TenantID, i
 	if err := json.Unmarshal(plain, &tok); err != nil {
 		return port.Errorf(port.CodeInternal, "credential %s holds no token set", id)
 	}
-	client, err := s.d.Registrar.Resolve(ctx, tenant, cred.Issuer)
+	client, err := s.d.ClientResolver.Resolve(ctx, tenant, cred.Issuer)
 	if err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (s *Service) revokeCredentialRow(tx port.Tx, c port.Credential, by string) 
 }
 
 func (s *Service) revokeUpstream(ctx context.Context, creds []port.Credential) {
-	if s.d.Broker == nil || s.d.Registrar == nil {
+	if s.d.Broker == nil || s.d.ClientResolver == nil {
 		return
 	}
 	for _, c := range creds {
@@ -244,7 +244,7 @@ func (s *Service) revokeUpstream(ctx context.Context, creds []port.Credential) {
 		if err != nil || json.Unmarshal(plain, &tok) != nil {
 			continue
 		}
-		if client, err := s.d.Registrar.Resolve(ctx, c.Tenant, c.Issuer); err == nil {
+		if client, err := s.d.ClientResolver.Resolve(ctx, c.Tenant, c.Issuer); err == nil {
 			_ = s.d.Broker.Revoke(ctx, client, []byte(tok.Access))
 		}
 	}

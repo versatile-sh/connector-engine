@@ -102,7 +102,7 @@ type ClientRegistrationInput struct {
 	RedirectURL string `json:"redirect_url,omitempty"`
 }
 
-// PutClientRegistration stores the pre-registered client the tenant uses for an issuer; credential.Registrar reads it.
+// PutClientRegistration stores the pre-registered client the tenant uses for an issuer; credential.ClientResolver reads it.
 func (s *Service) PutClientRegistration(ctx context.Context, p port.Principal, in ClientRegistrationInput) (port.ClientRegistration, error) {
 	tenant := p.Claims.Tenant
 	if err := s.authorize(ctx, p, authz.ClientRegister, s.tenantResource(p)); err != nil {

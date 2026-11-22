@@ -172,7 +172,7 @@ func (a *App) compose(ctx context.Context, b builder) error {
 		Scanner: scanner, Suggester: suggester,
 		Store: store, Clock: a.Clock, Secrets: secrets, Runtime: runtime, Sources: a.sources, Verifier: digest.Verifier{}, Filter: a.Filter,
 		Authorizer: authorizer, Log: a.log,
-		Broker: &credential.Broker{HTTP: b.guard(b.issuerHosts()).Client()}, Registrar: credential.NewRegistrar(clients...).WithStore(store, secrets),
+		Broker: &credential.Broker{HTTP: b.guard(b.issuerHosts()).Client()}, ClientResolver: credential.NewClientResolver(clients...).WithStore(store, secrets),
 	}, svcCfg)
 	if err != nil {
 		return err

@@ -130,8 +130,8 @@ func TestBeginNeedsStateAndVerifier(t *testing.T) {
 	}
 }
 
-func TestRegistrarPrefersTheTenantClient(t *testing.T) {
-	r := credential.NewRegistrar(
+func TestClientResolverPrefersTheTenantClient(t *testing.T) {
+	r := credential.NewClientResolver(
 		credential.Registered{Client: port.OAuthClient{Issuer: "https://i", ClientID: "default"}},
 		credential.Registered{Tenant: "t1", Client: port.OAuthClient{Issuer: "https://i", ClientID: "mine"}},
 	)

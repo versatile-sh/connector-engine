@@ -20,7 +20,7 @@ Only the console port is published, on `127.0.0.1`. The compose project is `conn
 | Command | What it does |
 |---|---|
 | `mise run up` / `mise run down` / `mise run logs` / `mise run ps` | start, stop, follow, list the stack |
-| `mise run unlock` | deliver the unlock key from the host keychain after a restart |
+| `mise run unlock` | deliver the unlock key from the host keychain after a restart, and wait until the engine and the console confirm they are unlocked |
 | `mise run notify` | desktop popups for calls waiting for approval |
 | `mise run export` / `mise run import -- ...` | full backup or shareable setup, and restore ([account and backup](../using/account-backup.md)) |
 | `mise run reset-password` | set a new console password from this machine, even for the last Owner; `RESET_USER=<username>` names whose once there are several users |

@@ -12,7 +12,7 @@ git pull
 mise run up                     # rebuilds the image and restarts the stack
 ```
 
-`mise run up` rebuilds with `--build`, then runs `mise run unlock` and prints:
+`mise run up` rebuilds with `--build`, then runs `mise run unlock`, which waits until the recreated engine and console confirm they are unlocked ([keychain](keychain.md#how-the-unlock-key-reaches-the-container)), and prints:
 
 ```text
 console: http://127.0.0.1:7465   agent endpoint: http://127.0.0.1:7465/mcp

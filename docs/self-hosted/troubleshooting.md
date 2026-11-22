@@ -15,6 +15,7 @@ mise run logs
 | an AI app gets `the gateway is locked: run mise run unlock on this computer, then retry` | the engine restarted (reboot, crash, `docker restart`) and waits for its unlock key | `mise run unlock` |
 | `the gateway is not answering; after a restart it stays locked until you run mise run unlock on this computer, then retry` | the engine is down or still locked while the console is unlocked | `mise run unlock`; if it persists, `mise run logs` |
 | the engine log says `waiting for the host to deliver the unlock key` | same as above | `mise run unlock` |
+| `mise run unlock` (or `mise run up`) ends with `unlock failed: the engine and the console did not both confirm unlocked after 6 attempts` | the engine or the console kept restarting, or stayed locked, after each delivery; the lines before it say which | `mise run logs`, fix what makes it exit, then `mise run unlock` |
 | an approval link answers 503 | the console is locked | `mise run unlock`, then open the link again |
 | `mise run up` fails with a bind error on port 7465 | another program uses the port | `CONSOLE_PORT=9123 mise run up` and keep it in `selfhosted/deploy/.env` |
 | `mise run up` fails on `include` | Docker Compose older than 2.20 | update Docker Compose |

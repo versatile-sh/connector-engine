@@ -5,8 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
+	"github.com/versatile-sh/connector-engine/credential"
 	"github.com/versatile-sh/connector-engine/internal/egress"
 	"github.com/versatile-sh/connector-engine/port"
 	"github.com/versatile-sh/connector-engine/source/skillcatalog"
@@ -113,6 +115,9 @@ func (c *Console) previewListingText(ctx context.Context, body []byte) (Preview,
 
 func previewMCP(ctx context.Context, raw string, in importRequest, reach Reach) (Preview, error) {
 	p, err := Probe(ctx, raw, reach)
+	if si := new(SignInError); errors.As(err, &si) && !in.HeaderSecret {
+		p, err = signInProbe(ctx, raw, reach, si)
+	}
 	if err != nil {
 		return Preview{}, err
 	}
@@ -121,8 +126,42 @@ func previewMCP(ctx context.Context, raw string, in importRequest, reach Reach) 
 		return Preview{}, err
 	}
 	u, _ := url.Parse(p.URL)
-	return Preview{Kind: "mcp", URL: p.URL, Host: u.Host, Name: m.Name, Title: m.Title, Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name,
+	var auth []string
+	if p.OAuth != nil {
+		auth = []string{string(port.CredentialOAuth2User)}
+	}
+	return Preview{Kind: "mcp", Auth: auth, URL: p.URL, Host: u.Host, Name: m.Name, Title: m.Title, Description: m.Description, Icon: m.Icon, Publisher: m.Publisher.Name,
 		Version: m.Version, RemoteURL: p.URL, WebsiteURL: p.WebsiteURL, Protocol: p.Protocol, Tools: nonNil(p.Tools), Items: p.Items, HostLoopback: reach.LoopbackHost != "" && egress.IsLoopback(u.Hostname()), manifest: m}, nil
+}
+
+func signInProbe(ctx context.Context, raw string, reach Reach, si *SignInError) (Probed, error) {
+	u, err := reach.CheckURL(raw)
+	if err != nil {
+		return Probed{}, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+	found, err := (&credential.Discoverer{HTTP: reach.Client()}).Resource(ctx, u.String(), si.Challenges)
+	if err != nil {
+		return Probed{}, unreachable(si)
+	}
+	name := hostName(u.Hostname())
+	return Probed{URL: u.String(), Name: name, Title: titleCase(name), OAuth: &OAuthHint{Issuer: found.Issuer, Resource: found.URL}}, nil
+}
+
+func hostName(host string) string {
+	labels := strings.Split(host, ".")
+	for len(labels) > 2 && slices.Contains([]string{"mcp", "www", "api", "server"}, labels[0]) {
+		labels = labels[1:]
+	}
+	return labels[0]
+}
+
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 func (c *Console) previewSkill(src, host string, body []byte) (Preview, error) {

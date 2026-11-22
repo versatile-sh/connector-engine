@@ -168,7 +168,8 @@ export const es: Record<MessageKey, string> = {
   "creds.valueHint": "Sellado por el gateway, nunca se vuelve a mostrar.",
   "creds.oauth": "Entrar con el proveedor",
   "creds.clientId": "Client ID",
-  "creds.clientIdHint": "Un cliente registrado de antemano, cuando el proveedor lo exige.",
+  "creds.clientIdHint": "Déjalo vacío para que la consola se registre sola con el proveedor; complétalo cuando el proveedor exija un cliente que registraste.",
+  "creds.manualClient": "Este servidor no permite el registro automático. Registra esta consola con el proveedor e indica aquí el id y el secreto del cliente.",
   "creds.clientSecret": "Client secret",
   "creds.connect": "Conectar",
 

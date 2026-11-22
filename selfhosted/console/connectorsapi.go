@@ -214,6 +214,8 @@ func (c *Console) setHeaders(w http.ResponseWriter, r *http.Request) {
 type pendingOAuth struct {
 	issuer  string
 	person  string
+	conn    string
+	fresh   bool
 	expires time.Time
 }
 
@@ -222,12 +224,12 @@ type connectStates struct {
 	m  map[string]pendingOAuth
 }
 
-func (cs *connectStates) add(state, issuer, person string) {
+func (cs *connectStates) add(state, issuer, person, conn string, fresh bool) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 	now := time.Now()
 	expire(cs.m, now, func(v pendingOAuth) time.Time { return v.expires })
-	put(&cs.m, state, pendingOAuth{issuer: issuer, person: person, expires: now.Add(oauthStateTTL)})
+	put(&cs.m, state, pendingOAuth{issuer: issuer, person: person, conn: conn, fresh: fresh, expires: now.Add(oauthStateTTL)})
 }
 
 func (cs *connectStates) take(state string) (pendingOAuth, bool) {
@@ -261,12 +263,17 @@ func (c *Console) beginOAuth(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	fns, err := c.Engine.functions(r.Context(), conn)
+	if err != nil {
+		c.fail(w, err)
+		return
+	}
 	state, to, err := c.BeginOAuth(r.Context(), conn)
 	if err != nil {
 		c.fail(w, err)
 		return
 	}
-	c.connects.add(state, issuer, actorOf(r.Context()))
+	c.connects.add(state, issuer, actorOf(r.Context()), conn, len(fns) == 0)
 	writeJSON(w, http.StatusOK, map[string]string{"url": to})
 }
 
@@ -296,6 +303,11 @@ func (c *Console) oauthCallback(w http.ResponseWriter, r *http.Request) {
 			c.logger().Warn("oauth completion failed", "error", err)
 			back("failed")
 			return
+		}
+		if pend.fresh {
+			if err := c.adoptSignedInFunctions(WithActor(r.Context(), pend.person), pend.conn); err != nil {
+				c.logger().Warn("adopting the functions after sign-in failed", "error", err)
+			}
 		}
 		back("connected")
 	}

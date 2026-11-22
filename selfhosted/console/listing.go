@@ -104,6 +104,9 @@ func ManifestFor(p Probed, headerSecret bool) (port.Manifest, error) {
 		Name: host + "/" + name, Version: version, Title: firstOf(p.Title, p.Name), Description: p.Description, Icon: p.Icon,
 		Kind: port.KindMCPRemote, Remote: &port.Remote{URL: p.URL, Transport: "streamable-http"}, Publisher: port.Publisher{Name: u.Host},
 	}
+	if p.OAuth != nil {
+		m.Auth = []port.AuthSpec{{Kind: port.CredentialOAuth2User, Issuer: p.OAuth.Issuer, Resource: p.OAuth.Resource, OwnerKindsAllowed: []port.OwnerKind{port.OwnerWorkspace, port.OwnerUser}}}
+	}
 	if headerSecret {
 		m.Auth = []port.AuthSpec{{Kind: port.CredentialCustomHeaders, OwnerKindsAllowed: []port.OwnerKind{port.OwnerWorkspace, port.OwnerUser}}}
 	}

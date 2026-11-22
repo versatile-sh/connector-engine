@@ -157,7 +157,7 @@ func TestAKeyKeepsItsOwnerAndAnOwnerlessKeyBelongsToTheLegacyPerson(t *testing.T
 
 func TestAProviderSignInCompletesAsThePersonWhoBeganIt(t *testing.T) {
 	c, rec := recordedConsole(t)
-	c.connects.add("s1", "https://issuer.test", "p-bob")
+	c.connects.add("s1", "https://issuer.test", "p-bob", "", false)
 	w := httptest.NewRecorder()
 	c.oauthCallback(w, httptest.NewRequest(http.MethodGet, "/oauth/callback?state=s1&code=c1", nil))
 	if loc := w.Header().Get("Location"); loc != "/connectors?oauth=connected" {
@@ -170,7 +170,7 @@ func TestAProviderSignInCompletesAsThePersonWhoBeganIt(t *testing.T) {
 
 func TestAProviderSignInBegunByAnotherUserIsRefusedInThisUsersBrowser(t *testing.T) {
 	c, rec := recordedConsole(t)
-	c.connects.add("s1", "https://issuer.test", "p-bob")
+	c.connects.add("s1", "https://issuer.test", "p-bob", "", false)
 	req := httptest.NewRequest(http.MethodGet, "/oauth/callback?state=s1&code=c1", nil)
 	req.AddCookie(sessionOf(t, c.State, "owner"))
 	w := httptest.NewRecorder()

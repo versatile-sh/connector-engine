@@ -229,6 +229,9 @@ message AuthSpec {
 message BeginConnectRequest {
   string id = 1;
   string owner = 2;
+  string client_name = 3;
+  string redirect_url = 4;
+  string client_metadata_url = 5;
 }
 
 message Binding {
@@ -330,7 +333,11 @@ message ClientRegistration {
   string client_id = 3;
   Sealed secret = 4;
   string redirect_url = 5;
-  google.protobuf.Timestamp updated_at = 6;
+  string registration = 6;
+  Sealed registration_access_token = 7;
+  string registration_client_uri = 8;
+  google.protobuf.Timestamp expires_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
 }
 
 message ClientRegistrationInput {

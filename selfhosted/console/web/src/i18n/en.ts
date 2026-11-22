@@ -166,7 +166,8 @@ export const en = {
   "creds.valueHint": "Sealed by the gateway, never shown again.",
   "creds.oauth": "Sign in with the provider",
   "creds.clientId": "Client ID",
-  "creds.clientIdHint": "A pre-registered client, when the provider needs one.",
+  "creds.clientIdHint": "Leave empty to let the console register itself with the provider; fill it in when the provider needs a client you registered.",
+  "creds.manualClient": "This server does not allow automatic registration. Register this console with the provider and enter the client id and secret here.",
   "creds.clientSecret": "Client secret",
   "creds.connect": "Connect",
 

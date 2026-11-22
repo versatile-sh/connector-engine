@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -81,6 +81,13 @@ type Probed struct {
 	Icon        string       `json:"icon,omitempty"`
 	Tools       []ProbedTool `json:"tools"`
 	Items       []Item       `json:"items"`
+	OAuth       *OAuthHint   `json:"oauth,omitempty"`
+}
+
+// OAuthHint is what a server that answered 401 said about its sign-in: the issuer to ask and the resource a token is for.
+type OAuthHint struct {
+	Issuer   string `json:"issuer"`
+	Resource string `json:"resource"`
 }
 
 // Propose pre-classifies a tool from its hints, which come from an untrusted server, or from its name when it declares none: only a read is on.
@@ -160,9 +167,29 @@ func Nature(f port.Function, m port.Manifest) (kind port.Class, estimated bool) 
 // ErrSignInRequired means the server answered 401: it lists its functions only to a signed-in client.
 var ErrSignInRequired = errors.New("asks you to sign in before it lists its functions")
 
+// SignInError is a 401 from an MCP server, with the WWW-Authenticate values it carried; it matches ErrSignInRequired.
+type SignInError struct {
+	Host       string
+	Challenges []string
+}
+
+// Error words the refusal for a person.
+func (e *SignInError) Error() string { return e.Host + ": " + ErrSignInRequired.Error() }
+
+// Is reports whether target is ErrSignInRequired.
+func (e *SignInError) Is(target error) bool { return target == ErrSignInRequired }
+
 type signInGate struct {
-	next  http.RoundTripper
-	asked atomic.Bool
+	next       http.RoundTripper
+	mu         sync.Mutex
+	asked      bool
+	challenges []string
+}
+
+func (g *signInGate) answered() (bool, []string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.asked, g.challenges
 }
 
 func (g *signInGate) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -172,7 +199,9 @@ func (g *signInGate) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	res, err := next.RoundTrip(r)
 	if err == nil && res.StatusCode == http.StatusUnauthorized {
-		g.asked.Store(true)
+		g.mu.Lock()
+		g.asked, g.challenges = true, slices.Clone(res.Header.Values("WWW-Authenticate"))
+		g.mu.Unlock()
 	}
 	return res, err
 }
@@ -191,8 +220,8 @@ func Probe(ctx context.Context, rawURL string, reach Reach) (Probed, error) {
 	gate := &signInGate{next: httpClient.Transport}
 	httpClient.Transport = gate
 	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: u.String(), HTTPClient: httpClient, DisableStandaloneSSE: true, MaxRetries: -1}, nil)
-	if err != nil && gate.asked.Load() {
-		return Probed{}, unreachable(fmt.Errorf("%s: %w", u.Host, ErrSignInRequired))
+	if asked, challenges := gate.answered(); err != nil && asked {
+		return Probed{}, unreachable(&SignInError{Host: u.Host, Challenges: challenges})
 	}
 	if err != nil {
 		return Probed{}, unreachable(fmt.Errorf("could not connect to %s: %w", u.Host, err))

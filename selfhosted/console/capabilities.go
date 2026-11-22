@@ -154,7 +154,7 @@ var publicRoutes = []string{
 	"GET /.well-known/oauth-protected-resource", "OPTIONS /.well-known/oauth-protected-resource",
 	"GET /.well-known/oauth-protected-resource/mcp", "OPTIONS /.well-known/oauth-protected-resource/mcp",
 	"GET /.well-known/oauth-authorization-server", "OPTIONS /.well-known/oauth-authorization-server",
-	"POST /oauth/register", "OPTIONS /oauth/register", "POST /oauth/token", "OPTIONS /oauth/token",
+	"POST /oauth/register", "OPTIONS /oauth/register", "GET /oauth/client.json", "OPTIONS /oauth/client.json", "POST /oauth/token", "OPTIONS /oauth/token",
 	"GET /api/approvals/{id}", "POST /api/approvals/{id}/decide", "GET /api/notify/stream",
 	"POST /api/invite/inspect", "POST /api/invite/accept",
 	"GET /",

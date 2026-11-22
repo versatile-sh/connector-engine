@@ -280,14 +280,18 @@ type Call struct {
 	LateAnswer  bool           `json:"late_answer,omitempty"`
 }
 
-// ClientRegistration is the OAuth client an admin registered for an issuer of one tenant; the secret is sealed under the tenant key.
+// ClientRegistration is the OAuth client of an issuer for one tenant, given by an admin or registered on its own (CIMD or DCR); the secret and the registration access token are sealed under the tenant key.
 type ClientRegistration struct {
-	Tenant      TenantID  `json:"tenant"`
-	Issuer      string    `json:"issuer"`
-	ClientID    string    `json:"client_id"`
-	Secret      *Sealed   `json:"secret,omitempty"`
-	RedirectURL string    `json:"redirect_url,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	Tenant                  TenantID     `json:"tenant"`
+	Issuer                  string       `json:"issuer"`
+	ClientID                string       `json:"client_id"`
+	Secret                  *Sealed      `json:"secret,omitempty"`
+	RedirectURL             string       `json:"redirect_url,omitempty"`
+	Registration            Registration `json:"registration,omitempty"`
+	RegistrationAccessToken *Sealed      `json:"registration_access_token,omitempty"`
+	RegistrationClientURI   string       `json:"registration_client_uri,omitempty"`
+	ExpiresAt               time.Time    `json:"expires_at,omitzero"`
+	UpdatedAt               time.Time    `json:"updated_at"`
 }
 
 // SourceSync is what the last sync of a listing source did.

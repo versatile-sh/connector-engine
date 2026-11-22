@@ -314,8 +314,11 @@ type CallRequest struct {
 
 // BeginConnectRequest starts the authorization of a credential for a connector.
 type BeginConnectRequest struct {
-	ID    port.ConnectorID `json:"id"`
-	Owner port.OwnerKind   `json:"owner"`
+	ID                port.ConnectorID `json:"id"`
+	Owner             port.OwnerKind   `json:"owner"`
+	ClientName        string           `json:"client_name,omitempty"`
+	RedirectURL       string           `json:"redirect_url,omitempty"`
+	ClientMetadataURL string           `json:"client_metadata_url,omitempty"`
 }
 
 // CompleteConnectRequest finishes an authorization with the state and the code the issuer returned.

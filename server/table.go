@@ -274,7 +274,7 @@ var operations = []Operation{
 		return e.Svc.CreateCredential(ctx, p, in)
 	}),
 	op("beginConnect", post, "/v1/connectors/{id}/credentials:connect", "BeginConnect", ok200, func(ctx context.Context, e *Env, p port.Principal, in BeginConnectRequest) (service.ConnectStart, error) {
-		return e.Svc.BeginConnect(ctx, p, in.ID, in.Owner)
+		return e.Svc.BeginConnect(ctx, p, in.ID, in.Owner, port.ClientApp{Name: in.ClientName, RedirectURL: in.RedirectURL, MetadataURL: in.ClientMetadataURL})
 	}),
 	op("completeConnect", post, "/v1/credentials:complete", "CompleteConnect", ok200, func(ctx context.Context, e *Env, p port.Principal, in CompleteConnectRequest) (port.Credential, error) {
 		return e.Svc.CompleteConnect(ctx, p, in.State, in.Code)

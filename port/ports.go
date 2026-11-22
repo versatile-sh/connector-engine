@@ -204,9 +204,18 @@ type OAuthBroker interface {
 	Revoke(ctx context.Context, c OAuthClient, token []byte) error
 }
 
+// ClientApp is how the console presents itself to an issuer that registers clients on its own: its name, its redirect URI and, when it has a public https address, its client metadata document.
+type ClientApp struct {
+	Name        string `json:"name,omitempty"`
+	RedirectURL string `json:"redirect_url,omitempty"`
+	MetadataURL string `json:"metadata_url,omitempty"`
+}
+
 // ClientResolver resolves the OAuth client for an issuer: pre-registered, CIMD, DCR, then manual.
+// Resolve only reads what is stored or configured; Acquire also registers one when the issuer allows it and fails with client_registration_required when it does not.
 type ClientResolver interface {
 	Resolve(ctx context.Context, tenant TenantID, issuer string) (OAuthClient, error)
+	Acquire(ctx context.Context, tenant TenantID, issuer string, app ClientApp) (OAuthClient, error)
 }
 
 // KeyScope is what Rotate re-wraps: the root key, or one tenant's key-encryption key.

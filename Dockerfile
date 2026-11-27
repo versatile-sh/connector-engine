@@ -25,18 +25,18 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
     go build -ldflags "-s -w" -o /out/testmcp ./internal/testmcp && \
     mkdir -p /dirs/var/lib/connector-engine/secrets /dirs/var/lib/connector-console /dirs/run/connector-engine
 
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931 AS testmcp
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:8ce6dd87e9823c5b48dcfb2c8604714ccb351ce59607327bcc4957448da279b5 AS testmcp
 COPY --from=build /out/testmcp /usr/local/bin/testmcp
 ENTRYPOINT ["/usr/local/bin/testmcp"]
 
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931 AS headless
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:8ce6dd87e9823c5b48dcfb2c8604714ccb351ce59607327bcc4957448da279b5 AS headless
 COPY --from=build --chown=65532:65532 /dirs/ /
 COPY --from=build /out/connector-engine /out/core/vsh /usr/local/bin/
 USER 65532:65532
 EXPOSE 8080 8081
 ENTRYPOINT ["/usr/local/bin/connector-engine"]
 
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:8ce6dd87e9823c5b48dcfb2c8604714ccb351ce59607327bcc4957448da279b5
 COPY --from=build --chown=65532:65532 /dirs/ /
 COPY --from=build /out/connector-engine /out/connector-engine-selfhosted /out/vsh /out/connector-console /usr/local/bin/
 USER 65532:65532
